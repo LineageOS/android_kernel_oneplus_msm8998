@@ -4603,7 +4603,7 @@ static void handle_usb_removal(struct smbchg_chip *chip)
 	/* Clear typec current status */
 	if (chip->typec_psy)
 		chip->typec_current_ma = 0;
-	smbchg_change_usb_supply_type(chip, POWER_SUPPLY_TYPE_UNKNOWN);
+	smbchg_change_usb_supply_type(chip, POWER_SUPPLY_TYPE_USB);
 	extcon_set_cable_state_(chip->extcon, EXTCON_USB, chip->usb_present);
 	if (chip->dpdm_reg)
 		regulator_disable(chip->dpdm_reg);
