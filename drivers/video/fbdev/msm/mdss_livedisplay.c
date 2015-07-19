@@ -148,6 +148,10 @@ int mdss_livedisplay_update(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 	if (mlc == NULL)
 		return -ENODEV;
 
+	if (mdss_dsi_is_hw_config_dual(ctrl_pdata->shared_data))
+		if (mlc->mfd == NULL)
+			return -ENODEV;
+
 	if (!mlc->caps || !mdss_panel_is_power_on_interactive(pinfo->panel_power_state))
 		return 0;
 
