@@ -1955,6 +1955,10 @@ static int __init kmemleak_late_init(void)
 {
 	struct dentry *dentry;
 
+		if (!kmemleak_skip_disable) {
+		kmemleak_disable();
+		return 0;
+	}
 	kmemleak_initialized = 1;
 
 	if (kmemleak_error) {
