@@ -20,6 +20,7 @@
 #include <linux/notifier.h>
 #include <linux/types.h>
 
+#define VENDOR_EDIT 1 /* david@bsp define VENDOR_EDIT */
 /*
  * All voltages, currents, charges, energies, time and temperatures in uV,
  * µA, µAh, µWh, seconds and tenths of degree Celsius unless otherwise
@@ -107,6 +108,18 @@ enum {
 enum power_supply_property {
 	/* Properties of type `int' */
 	POWER_SUPPLY_PROP_STATUS = 0,
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	POWER_SUPPLY_PROP_SET_ALLOW_READ_EXTERN_FG_IIC,
+	POWER_SUPPLY_PROP_CC_TO_CV_POINT,
+	POWER_SUPPLY_PROP_CHG_PROTECT_STATUS,
+	POWER_SUPPLY_PROP_FASTCHG_STATUS,
+	POWER_SUPPLY_PROP_FASTCHG_STARTING,
+	POWER_SUPPLY_CUTOFF_VOLT_WITH_CHARGER,
+	POWER_SUPPLY_PROP_UPDATE_LCD_IS_OFF,
+	POWER_SUPPLY_PROP_CHECK_USB_UNPLUG,
+	POWER_SUPPLY_PROP_SWITCH_DASH,
+#endif
 	POWER_SUPPLY_PROP_CHARGE_TYPE,
 	POWER_SUPPLY_PROP_HEALTH,
 	POWER_SUPPLY_PROP_PRESENT,

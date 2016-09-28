@@ -1,19 +1,21 @@
-dts-dirs += altera
-dts-dirs += amd
-dts-dirs += apm
-dts-dirs += arm
-dts-dirs += broadcom
-dts-dirs += cavium
-dts-dirs += exynos
-dts-dirs += freescale
-dts-dirs += hisilicon
-dts-dirs += marvell
-dts-dirs += mediatek
-dts-dirs += qcom
-dts-dirs += rockchip
-dts-dirs += sprd
-dts-dirs += xilinx
-
+#dts-dirs += altera
+#dts-dirs += amd
+#dts-dirs += apm
+#dts-dirs += arm
+#dts-dirs += broadcom
+#dts-dirs += cavium
+#dts-dirs += exynos
+#dts-dirs += freescale
+#dts-dirs += hisilicon
+#dts-dirs += marvell
+#dts-dirs += mediatek
+#dts-dirs += qcom
+#dts-dirs += rockchip
+#dts-dirs += sprd
+#dts-dirs += xilinx
+#//VENDOR_EDIT shankai@bsp  ,change dtsi file name to oem 
+dts-dirs += oem
+# //ENDIF 
 subdir-y	:= $(dts-dirs)
 
 dtstree		:= $(srctree)/$(src)

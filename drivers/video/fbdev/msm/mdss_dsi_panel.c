@@ -25,7 +25,12 @@
 
 #include "mdss_dsi.h"
 #include "mdss_dba_utils.h"
-
+//#ifdef VENDOR_EDIT
+#include <linux/clk.h>
+//#endif
+#if defined(CONFIG_IRIS2P_FULL_SUPPORT)
+#include "mdss_dsi_iris2p_lightup.h"
+#endif
 #define DT_CMD_HDR 6
 #define DEFAULT_MDP_TRANSFER_TIME 14000
 
@@ -398,6 +403,110 @@ exit:
 	return rc;
 }
 
+//#ifdef VENDOR_EDIT
+int mdss_dsi_px_clk_req(struct mdss_panel_data *pdata, int enable)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	int rc = 0;
+
+	if (pdata == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+				panel_data);
+	if (enable) {
+        if(!IS_ERR(ctrl_pdata->px_clk_src) && (!ctrl_pdata->px_clk_enabled)){
+            clk_set_rate(ctrl_pdata->px_clk_src, 19200000);
+            rc = clk_prepare_enable(ctrl_pdata->px_clk_src);
+            if (rc){
+                pr_err("px clk_prepare_enable failed, rc=%d\n", rc);
+            }
+            ctrl_pdata->px_clk_enabled = 1;
+		}
+	} else{
+		if(!IS_ERR(ctrl_pdata->px_clk_src) && ctrl_pdata->px_clk_enabled){
+		    clk_disable_unprepare(ctrl_pdata->px_clk_src);
+		    ctrl_pdata->px_clk_enabled = 0;
+		}
+	}
+	return rc;
+}
+int mdss_dsi_dsp_vci_en(struct mdss_panel_data *pdata, int enable)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	struct mdss_panel_info *pinfo = NULL;
+	int rc = 0;
+
+	if (pdata == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+				panel_data);
+
+    if (!gpio_is_valid(ctrl_pdata->disp_vci_en_gpio)) {
+		pr_debug("%s:%d, vci_en_gpio line not configured\n",
+			   __func__, __LINE__);
+		return rc;
+	}
+	pr_debug("%s: vci_en_gpio enable = %d\n", __func__, enable);
+	pinfo = &(ctrl_pdata->panel_data.panel_info);
+
+	if (enable) {
+	    rc = gpio_request(ctrl_pdata->disp_vci_en_gpio,
+					"disp_vci_en");
+		if (rc) {
+			pr_err("request vci_enable gpio failed, rc=%d\n",
+				       rc);
+			return rc;
+		}
+        rc = gpio_direction_output(ctrl_pdata->disp_vci_en_gpio, 1);
+	} else {
+	    gpio_set_value((ctrl_pdata->disp_vci_en_gpio), 0);
+	}
+	return rc;
+}
+int mdss_dsi_isp_1v1_en(struct mdss_panel_data *pdata, int enable)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	struct mdss_panel_info *pinfo = NULL;
+	int rc = 0;
+
+	if (pdata == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+				panel_data);
+
+    if (!gpio_is_valid(ctrl_pdata->isp_1v1_en_gpio)) {
+		pr_debug("%s:%d, isp_1v1_en line not configured\n",
+			   __func__, __LINE__);
+		return rc;
+	}
+	pr_debug("%s: isp_1v1_en enable = %d\n", __func__, enable);
+	pinfo = &(ctrl_pdata->panel_data.panel_info);
+
+	if (enable) {
+	    rc = gpio_request(ctrl_pdata->isp_1v1_en_gpio,
+					"isp_1v1_en_gpio");
+		if (rc) {
+			pr_err("request isp_1v1 gpio failed, rc=%d\n",
+				       rc);
+			return rc;
+		}
+        rc = gpio_direction_output(ctrl_pdata->isp_1v1_en_gpio, 1);
+	} else {
+	    gpio_set_value((ctrl_pdata->isp_1v1_en_gpio), 0);
+	}
+	return rc;
+}
+//#endif
+
 /**
  * mdss_dsi_roi_merge() -  merge two roi into single roi
  *
@@ -725,7 +834,7 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
-	pr_debug("%s: ndx=%d\n", __func__, ctrl->ndx);
+	pr_err("%s: ndx=%d\n", __func__, ctrl->ndx);
 
 	if (pinfo->dcs_cmd_by_left) {
 		if (ctrl->ndx != DSI_CTRL_LEFT)
@@ -741,16 +850,26 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	pr_debug("%s: ndx=%d cmd_cnt=%d\n", __func__,
 				ctrl->ndx, on_cmds->cmd_cnt);
 
+#if defined(CONFIG_IRIS2P_FULL_SUPPORT)
+#if !defined(WITHOUT_IRIS)
+	iris_init(ctrl);
+#endif
 	if (on_cmds->cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, on_cmds, CMD_REQ_COMMIT);
-
+#if !defined(WITHOUT_IRIS)
+	iris_lightup(ctrl);
+#endif
+#else
+	if (on_cmds->cmd_cnt)
+		mdss_dsi_panel_cmds_send(ctrl, on_cmds, CMD_REQ_COMMIT);
+#endif
 	if (pinfo->compression_mode == COMPRESSION_DSC)
 		mdss_dsi_panel_dsc_pps_send(ctrl, pinfo);
 
 	if (ctrl->ds_registered)
 		mdss_dba_utils_video_on(pinfo->dba_data, pinfo);
 end:
-	pr_debug("%s:-\n", __func__);
+	pr_err("%s:-\n", __func__);
 	return ret;
 }
 
@@ -813,10 +932,16 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		if (ctrl->ndx != DSI_CTRL_LEFT)
 			goto end;
 	}
-
+#if defined(CONFIG_IRIS2P_FULL_SUPPORT)
+#if !defined(WITHOUT_IRIS)
+	iris_lightoff(ctrl);
+#endif
 	if (ctrl->off_cmds.cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, &ctrl->off_cmds, CMD_REQ_COMMIT);
-
+#else
+	if (ctrl->off_cmds.cmd_cnt)
+		mdss_dsi_panel_cmds_send(ctrl, &ctrl->off_cmds, CMD_REQ_COMMIT);
+#endif
 	if (ctrl->ds_registered && pinfo->is_pluggable) {
 		mdss_dba_utils_video_off(pinfo->dba_data);
 		mdss_dba_utils_hdcp_enable(pinfo->dba_data, false);
@@ -2532,6 +2657,10 @@ static int mdss_panel_parse_dt(struct device_node *np,
 
 	pinfo->is_dba_panel = of_property_read_bool(np,
 			"qcom,dba-panel");
+#if defined(CONFIG_IRIS2P_FULL_SUPPORT)
+	iris_init_params_parse(np, ctrl_pdata);
+	iris_init_cmd_setup(ctrl_pdata);
+#endif
 
 	if (pinfo->is_dba_panel) {
 		bridge_chip_name = of_get_property(np,

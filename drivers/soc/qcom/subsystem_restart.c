@@ -1022,8 +1022,10 @@ static void device_restart_work_hdlr(struct work_struct *work)
 	 * sync() and fclose() on attempting the dump.
 	 */
 	msleep(100);
+	#ifndef JUST_FOR_BRINGUP
 	panic("subsys-restart: Resetting the SoC - %s crashed.",
-							dev->desc->name);
+						dev->desc->name);
+	#endif
 }
 
 int subsystem_restart_dev(struct subsys_device *dev)

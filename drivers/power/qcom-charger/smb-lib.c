@@ -9,6 +9,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+#define pr_fmt(fmt) "SMBLIB: %s: " fmt, __func__
 
 #include <linux/device.h>
 #include <linux/regmap.h>
@@ -19,6 +20,22 @@
 #include "smb-lib.h"
 #include "smb-reg.h"
 #include "pmic-voter.h"
+
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+#include "oem_external_fg.h"
+#include <linux/gpio.h>
+#include <linux/delay.h>
+
+struct smb_charger *g_chg;
+static struct external_battery_gauge *fast_charger = NULL;
+static int smblib_charging_en(struct smb_charger *chg, bool en);
+static bool qpnp_set_fast_chg_allow(struct smb_charger *chg, bool enable);
+static bool set_prop_fast_switch_to_normal_false(struct smb_charger *chg);
+extern void mcu_en_gpio_set(int value);
+extern void set_mcu_en_gpio_value(int value);
+extern void usb_sw_gpio_set(int value);
+#endif
 
 #define smblib_dbg(chg, reason, fmt, ...)			\
 	do {							\
@@ -381,11 +398,20 @@ static int smblib_update_usb_type(struct smb_charger *chg)
 	const struct apsd_result *apsd_result;
 
 	/* if PD is active, APSD is disabled so won't have a valid result */
-	if (chg->pd_active)
+	if (chg->pd_active) {
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+		pr_info("pd is active! return directly\n");
+#endif
 		return rc;
+	}
 
 	apsd_result = smblib_get_apsd_result(chg);
 	chg->usb_psy_desc.type = apsd_result->pst;
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	pr_info("type = %d\n", chg->usb_psy_desc.type);
+#endif
 	return rc;
 }
 
@@ -1512,6 +1538,10 @@ int smblib_set_prop_pd_active(struct smb_charger *chg,
 {
 	int rc;
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	pr_info("set pd_active = %d\n", val->intval);
+#endif
 	if (!get_effective_result(chg->pd_allowed_votable)) {
 		dev_err(chg->dev, "PD is not allowed\n");
 		return -EINVAL;
@@ -1673,6 +1703,12 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 	int rc;
 	u8 stat;
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	pr_info("IRQ: %s %s\n",
+		   irq_data->name, chg->vbus_present ? "attached" : "detached");
+#endif
+
 	/* fetch the DPDM regulator */
 	if (!chg->dpdm_reg && of_get_property(chg->dev->of_node,
 					      "dpdm-supply", NULL)) {
@@ -1684,8 +1720,13 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 		}
 	}
 
-	if (!chg->dpdm_reg)
+	if (!chg->dpdm_reg) {
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+		pr_info("skip_dpdm_float\n");
+#endif
 		goto skip_dpdm_float;
+	}
 
 	rc = smblib_read(chg, USBIN_BASE + INT_RT_STS_OFFSET, &stat);
 	if (rc < 0) {
@@ -1694,6 +1735,10 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 	}
 
 	chg->vbus_present = (bool)(stat & USBIN_PLUGIN_RT_STS_BIT);
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	pr_info("vbus=%d\n", chg->vbus_present);
+#endif
 
 	if (chg->vbus_present) {
 		if (!regulator_is_enabled(chg->dpdm_reg)) {
@@ -1711,6 +1756,14 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 				dev_err(chg->dev, "Couldn't disable dpdm regulator rc=%d\n",
 					rc);
 		}
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+		qpnp_set_fast_chg_allow(chg, false);
+		set_prop_fast_switch_to_normal_false(chg);
+		pr_info("switch off fastchg\n");
+		usb_sw_gpio_set(0);
+		mcu_en_gpio_set(1);
+#endif
 	}
 
 skip_dpdm_float:
@@ -1842,6 +1895,18 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 		break;
 	}
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	/* TODO: check battery temp before enable it */
+	smblib_charging_en(chg, true);
+
+	pr_info("apsd result = 0x%x\n", apsd_result->bit);
+	if (apsd_result->bit == OCP_CHARGER_BIT) {
+		pr_info("Dash insert!\n");
+		schedule_delayed_work(&chg->check_switch_dash_work,
+					msecs_to_jiffies(500));
+	}
+#endif
 	rc = smblib_update_usb_type(chg);
 	if (rc < 0)
 		dev_err(chg->dev, "Couldn't update usb type rc=%d\n", rc);
@@ -1863,6 +1928,10 @@ irqreturn_t smblib_handle_usb_source_change(int irq, void *data)
 		return IRQ_HANDLED;
 	}
 	smblib_dbg(chg, PR_REGISTER, "APSD_STATUS = 0x%02x\n", stat);
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	pr_info("APSD_STATUS = 0x%02x\n", stat);
+#endif
 
 	smblib_handle_apsd_done(chg,
 		(bool)(stat & APSD_DTC_STATUS_DONE_BIT));
@@ -1983,7 +2052,203 @@ static void smblib_hvdcp_detect_work(struct work_struct *work)
 	}
 }
 
+<<<<<<< HEAD
 static void bms_update_work(struct work_struct *work)
+=======
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+static int smblib_charging_en(struct smb_charger *chg, bool en)
+{
+	int rc;
+
+	pr_info("enable=%d\n", en);
+	rc = smblib_masked_write(chg, CHARGING_ENABLE_CMD_REG,
+				 CHARGING_ENABLE_CMD_BIT,
+				 en ? CHARGING_ENABLE_CMD_BIT : 0);
+	if (rc < 0) {
+		pr_err("Couldn't %s charging rc=%d\n",
+			en ? "enable" : "disable", rc);
+		return rc;
+	}
+
+	return 0;
+}
+
+static bool is_usb_present(struct smb_charger *chg)
+{
+	int rc = 0;
+	u8 stat;
+
+	rc = smblib_read(chg, TYPE_C_STATUS_4_REG, &stat);
+	if (rc < 0) {
+		pr_err("Couldn't read TYPE_C_STATUS_4 rc=%d\n", rc);
+		return rc;
+	}
+	pr_debug("TYPE_C_STATUS_4 = 0x%02x\n", stat);
+
+	return (bool)(stat & CC_ATTACHED_BIT);
+}
+
+static bool is_dc_present(struct smb_charger *chg)
+
+{
+	int rc = 0;
+	u8 stat;
+
+	rc = smblib_read(chg, DC_INT_RT_STS_REG, &stat);
+	if (rc < 0) {
+		pr_err("Couldn't read DC_INT_RT_STS_REG rc=%d\n", rc);
+		return rc;
+	}
+	pr_debug("DC_INT_RT_STS_REG = 0x%02x\n", stat);
+
+	return (bool)(stat & DCIN_PLUGIN_RT_STS_BIT);
+}
+
+static bool set_prop_fast_switch_to_normal_false(struct smb_charger *chg)
+{
+	if (fast_charger && fast_charger->set_switch_to_noraml_false)
+		return fast_charger->set_switch_to_noraml_false();
+	else
+		pr_err("can not find fast_charger register\n");
+	return false;
+}
+
+static bool qpnp_set_fast_chg_allow(struct smb_charger *chg, bool enable)
+{
+	if (fast_charger && fast_charger->set_fast_chg_allow)
+		return fast_charger->set_fast_chg_allow(enable);
+	else
+		pr_err("can not find fast_charger register\n");
+	return false;
+}
+
+bool is_fastchg_allowed(struct smb_charger *chg)
+{
+	/* TODO: Need to check battery temp and fw status here */
+	return true;
+}
+
+static bool qpnp_get_fast_chg_allow(struct smb_charger *chg)
+{
+	if (fast_charger && fast_charger->get_fast_chg_allow)
+		return fast_charger->get_fast_chg_allow();
+	else
+		pr_err("can not find fast_charger register\n");
+	return false;
+}
+
+static bool usb_switched = false;
+static void switch_fast_chg(struct smb_charger *chg)
+{
+	bool fastchg_allowed, is_allowed;
+
+	if (gpio_get_value(135)) /* usb-sw-gpio */
+		return;
+	if (!is_usb_present(chg))
+		return;
+
+	fastchg_allowed = qpnp_get_fast_chg_allow(chg);
+	if (!fastchg_allowed) {
+		is_allowed = is_fastchg_allowed(chg);
+		if (is_allowed) {
+			/* swtich on fast chg */
+			set_mcu_en_gpio_value(1);
+			msleep(10);
+			usb_sw_gpio_set(1);
+			msleep(10);
+			mcu_en_gpio_set(0);
+			usb_switched = true;
+			qpnp_set_fast_chg_allow(chg, true);
+			pr_info("switch dash on!\n");
+		}
+	}
+}
+
+static void smblib_check_allow_switch_dash_work(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+		struct smb_charger *chg = container_of(dwork,
+				struct smb_charger, check_switch_dash_work);
+	const struct apsd_result *apsd_result;
+	bool charger_present;
+
+	charger_present = is_usb_present(chg) | is_dc_present(chg);
+	pr_info("charger_present=%d\n", charger_present);
+	if (!charger_present)
+		return;
+
+	apsd_result = smblib_get_apsd_result(chg);
+	if (apsd_result->bit == OCP_CHARGER_BIT)
+		switch_fast_chg(chg);
+}
+
+int smblib_check_allow_switch_dash(struct smb_charger *chg,
+				const union power_supply_propval *val)
+{
+	if (val->intval < 0)
+		return -EINVAL;
+
+	schedule_delayed_work(&chg->check_switch_dash_work,
+				msecs_to_jiffies(500));
+	return 0;
+}
+
+static int update_dash_unplug_status(void)
+{
+	/* TODO: check if vbus > 2.5v */
+	pr_info("\n");
+	return 0;
+}
+
+static int set_dash_charger_present(int status)
+{
+	int charger_present;
+	bool pre_dash_present;
+
+	pr_info("\n");
+	if (g_chg) {
+		pre_dash_present = g_chg->dash_present;
+		charger_present = is_usb_present(g_chg) | is_dc_present(g_chg);
+		g_chg->dash_present = status && charger_present;
+		if (g_chg->dash_present && !pre_dash_present) {
+			pr_info("set dash online\n");
+			smblib_charging_en(g_chg, false);
+		}
+		//power_supply_changed(chg->batt_psy);
+		pr_info("dash_present = %d, charger_present = %d\n",
+				g_chg->dash_present, charger_present);
+	} else {
+		pr_err("set_dash_charger_present error\n");
+	}
+	return 0;
+}
+
+static struct notify_dash_event notify_unplug_event  = {
+	.notify_event					= update_dash_unplug_status,
+	.notify_dash_charger_present	= set_dash_charger_present,
+};
+
+void fastcharge_information_register(struct external_battery_gauge *fast_chg)
+{
+	if (fast_charger) {
+		fast_charger = fast_chg;
+		pr_err("multiple battery gauge called\n");
+	} else {
+		fast_charger = fast_chg;
+	}
+}
+EXPORT_SYMBOL(fastcharge_information_register);
+
+void fastcharge_information_unregister(struct external_battery_gauge *fast_chg)
+{
+	fast_charger = NULL;
+}
+EXPORT_SYMBOL(fastcharge_information_unregister);
+#endif
+
+static void smblib_bms_update_work(struct work_struct *work)
+>>>>>>> origin/QC8998_DEV
 {
 	struct smb_charger *chg = container_of(work, struct smb_charger,
 						bms_update_work);
@@ -2193,7 +2458,16 @@ int smblib_init(struct smb_charger *chg)
 	INIT_WORK(&chg->pl_detect_work, smblib_pl_detect_work);
 	INIT_DELAYED_WORK(&chg->hvdcp_detect_work, smblib_hvdcp_detect_work);
 	INIT_DELAYED_WORK(&chg->pl_taper_work, smblib_pl_taper_work);
+<<<<<<< HEAD
 	INIT_DELAYED_WORK(&chg->step_soc_req_work, step_soc_req_work);
+=======
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	INIT_DELAYED_WORK(&chg->check_switch_dash_work, smblib_check_allow_switch_dash_work);
+	notify_dash_unplug_register(&notify_unplug_event);
+	g_chg = chg;
+#endif
+>>>>>>> origin/QC8998_DEV
 	chg->fake_capacity = -EINVAL;
 
 	switch (chg->mode) {
@@ -2228,6 +2502,7 @@ int smblib_init(struct smb_charger *chg)
 
 int smblib_deinit(struct smb_charger *chg)
 {
+<<<<<<< HEAD
 	switch (chg->mode) {
 	case PARALLEL_MASTER:
 		power_supply_unreg_notifier(&chg->nb);
@@ -2241,6 +2516,24 @@ int smblib_deinit(struct smb_charger *chg)
 	}
 
 	smblib_iio_deinit(chg);
+=======
+	destroy_votable(chg->usb_suspend_votable);
+	destroy_votable(chg->dc_suspend_votable);
+	destroy_votable(chg->fcc_max_votable);
+	destroy_votable(chg->fcc_votable);
+	destroy_votable(chg->fv_votable);
+	destroy_votable(chg->usb_icl_votable);
+	destroy_votable(chg->dc_icl_votable);
+	destroy_votable(chg->pd_allowed_votable);
+	destroy_votable(chg->awake_votable);
+	destroy_votable(chg->pl_disable_votable);
+
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	notify_dash_unplug_unregister(&notify_unplug_event);
+#endif
+	power_supply_unreg_notifier(&chg->nb);
+>>>>>>> origin/QC8998_DEV
 
 	return 0;
 }

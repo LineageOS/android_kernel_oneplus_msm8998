@@ -201,6 +201,10 @@ struct fg_chip {
 	bool			batt_id_avail;
 	bool			profile_loaded;
 	bool			battery_missing;
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	bool			use_external_fg;
+#endif
 	struct completion	soc_update;
 	struct completion	soc_ready;
 	struct delayed_work	profile_load_work;

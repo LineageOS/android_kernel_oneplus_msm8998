@@ -585,6 +585,10 @@ static enum power_supply_property smb2_batt_props[] = {
 	POWER_SUPPLY_PROP_PRESENT,
 	POWER_SUPPLY_PROP_CHARGE_TYPE,
 	POWER_SUPPLY_PROP_CAPACITY,
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	POWER_SUPPLY_PROP_CHARGE_NOW,
+#endif
 	POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL,
 	POWER_SUPPLY_PROP_CHARGER_TEMP,
 	POWER_SUPPLY_PROP_CHARGER_TEMP_MAX,
@@ -616,6 +620,11 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CAPACITY:
 		rc = smblib_get_prop_batt_capacity(chg, val);
 		break;
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	case POWER_SUPPLY_PROP_CHARGE_NOW:
+		smblib_get_prop_usb_voltage_now(chg, val);
+#endif
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
 		rc = smblib_get_prop_system_temp_level(chg, val);
 		break;
@@ -647,6 +656,16 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
 		rc = smblib_set_prop_system_temp_level(chg, val);
 		break;
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	case POWER_SUPPLY_PROP_CHECK_USB_UNPLUG:
+		/* TODO: update_dash_unplug_status */
+		pr_info("POWER_SUPPLY_PROP_CHECK_USB_UNPLUG\n");
+		break;
+	case POWER_SUPPLY_PROP_SWITCH_DASH:
+		pr_info("POWER_SUPPLY_PROP_SWITCH_DASH\n");
+		rc = smblib_check_allow_switch_dash(chg, val);
+#endif
 	case POWER_SUPPLY_PROP_CAPACITY:
 		rc = smblib_set_prop_batt_capacity(chg, val);
 		break;
@@ -921,6 +940,11 @@ static int smb2_init_hw(struct smb2 *chip)
 	if (chip->dt.usb_icl_ua < 0)
 		smblib_get_charge_param(chg, &chg->param.usb_icl,
 					&chip->dt.usb_icl_ua);
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	pr_info("SMB2: vbat_max=%d, ibat_max=%d, iusb_max=%d\n",
+		chip->dt.fv_uv, chip->dt.fcc_ua, chip->dt.usb_icl_ua);
+#endif
 
 	if (chip->dt.dc_icl_ua < 0)
 		smblib_get_charge_param(chg, &chg->param.dc_icl,
@@ -1013,7 +1037,12 @@ static int smb2_init_hw(struct smb2 *chip)
 	}
 
 	rc = smblib_masked_write(chg, QNOVO_PT_ENABLE_CMD_REG,
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+			QNOVO_PT_ENABLE_CMD_BIT, 0); /* disable QNOVO */
+#else
 			QNOVO_PT_ENABLE_CMD_BIT, QNOVO_PT_ENABLE_CMD_BIT);
+#endif
 	if (rc < 0) {
 		dev_err(chg->dev, "Couldn't enable qnovo rc=%d\n", rc);
 		return rc;

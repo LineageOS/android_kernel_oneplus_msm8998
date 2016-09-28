@@ -295,13 +295,19 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 	if (mdss_dsi_pinctrl_set_state(ctrl_pdata, false))
 		pr_debug("reset disable: pinctrl not enabled\n");
 
+//#ifdef VENDOR_EDIT
+    mdss_dsi_isp_1v1_en(pdata, 1);
+    mdss_dsi_dsp_vci_en(pdata, 1);
+//#endif
 	ret = msm_dss_enable_vreg(
 		ctrl_pdata->panel_power_data.vreg_config,
 		ctrl_pdata->panel_power_data.num_vreg, 0);
 	if (ret)
 		pr_err("%s: failed to disable vregs for %s\n",
 			__func__, __mdss_dsi_pm_name(DSI_PANEL_PM));
-
+    //#ifdef VENDOR_EDIT
+    mdss_dsi_px_clk_req(pdata, 0);
+    //#endif
 end:
 	return ret;
 }
@@ -318,7 +324,11 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
-
+//#ifdef VENDOR_EDIT
+    mdss_dsi_px_clk_req(pdata, 1);
+    mdss_dsi_isp_1v1_en(pdata, 1);
+    mdss_dsi_dsp_vci_en(pdata, 1);
+//#endif
 	ret = msm_dss_enable_vreg(
 		ctrl_pdata->panel_power_data.vreg_config,
 		ctrl_pdata->panel_power_data.num_vreg, 1);
@@ -4049,7 +4059,49 @@ static int mdss_dsi_parse_gpio_params(struct platform_device *ctrl_pdev,
 		pr_debug("%s:%d mode gpio not specified\n", __func__, __LINE__);
 		ctrl_pdata->lcd_mode_sel_gpio = -EINVAL;
 	}
+//#ifdef VENDOR_EDIT
+	ctrl_pdata->disp_vci_en_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
+		"qcom,platform-vci-gpio", 0);
+	if (!gpio_is_valid(ctrl_pdata->disp_vci_en_gpio))
+		pr_err("%s:%d, vci gpio not specified\n",
+						__func__, __LINE__);
+	ctrl_pdata->isp_1v1_en_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
+		"qcom,isp-1v1-en-gpio", 0);
+	if (!gpio_is_valid(ctrl_pdata->isp_1v1_en_gpio))
+		pr_err("%s:%d, isp-1v1-en gpio not specified\n",
+						__func__, __LINE__);
 
+    ctrl_pdata->px_bp_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node, "qcom,px-bp-gpio", 0);
+    if (gpio_is_valid(ctrl_pdata->px_bp_gpio)){
+        if (gpio_request(ctrl_pdata->px_bp_gpio, "px-bp-gpio")){
+            pr_err("%s:%d, px_bp_gpio request fail.\n",
+						__func__, __LINE__);
+        }else
+            gpio_direction_output(ctrl_pdata->px_bp_gpio, 0);
+    }else{
+        pr_err("%s:%d, px_bp_gpio gpio not specified\n", __func__, __LINE__);
+    }
+
+    if (!of_property_read_string(ctrl_pdev->dev.of_node, "qcom,px-ext-clk", &ctrl_pdata->px_clk_src_name)){
+        if (!strcmp(ctrl_pdata->px_clk_src_name, "BBCLK2")) {
+            ctrl_pdata->px_clk_src = clk_get(&ctrl_pdev->dev, "px_ext_clk");
+            if(IS_ERR(ctrl_pdata->px_clk_src)) {
+                pr_err("can not get px_ext_clk\n");
+            }else{
+                 clk_set_rate(ctrl_pdata->px_clk_src, 19200000);
+                 if (clk_prepare_enable(ctrl_pdata->px_clk_src)){
+                    pr_err("Enable px_clk fail!\n");
+                    ctrl_pdata->px_clk_enabled = 0;
+                }else{
+                    ctrl_pdata->px_clk_enabled = 1;
+                }
+            }
+        }
+    }else{
+        pr_err("%s:%d, can not get px_clk_src_name.\n",
+						__func__, __LINE__);
+    }
+//#endif
 	return 0;
 }
 

@@ -507,6 +507,9 @@ struct mdss_dsi_ctrl_pdata {
 	struct completion bta_comp;
 	spinlock_t irq_lock;
 	spinlock_t mdp_lock;
+#if defined(CONFIG_IRIS2_FULL_SUPPORT) || defined(CONFIG_IRIS2P_FULL_SUPPORT)
+	spinlock_t iris_lock;
+#endif
 	int mdp_busy;
 	struct mutex mutex;
 	struct mutex cmd_mutex;
@@ -561,7 +564,18 @@ struct mdss_dsi_ctrl_pdata {
 	struct mdss_dsi_debugfs_info *debugfs_info;
 
 	struct dsi_err_container err_cont;
-
+//#ifdef VENDOR_EDIT
+	int disp_vci_en_gpio;
+//#endif
+//#ifdef VENDOR_EDIT
+	int px_clk_req_gpio;
+	int px_clk_clk_en_gpio;
+	const char *px_clk_src_name;
+	struct	clk	*px_clk_src;
+	int px_clk_enabled;
+	int px_bp_gpio;
+	int isp_1v1_en_gpio;
+//#endif
 	struct kobject *kobj;
 	int fb_node;
 
@@ -689,7 +703,11 @@ void mdss_dsi_dsc_config(struct mdss_dsi_ctrl_pdata *ctrl,
 	struct dsc_desc *dsc);
 void mdss_dsi_dfps_config_8996(struct mdss_dsi_ctrl_pdata *ctrl);
 void mdss_dsi_set_burst_mode(struct mdss_dsi_ctrl_pdata *ctrl);
-
+//#ifdef VENDOR_EDIT
+int mdss_dsi_px_clk_req(struct mdss_panel_data *pdata, int enable);
+int mdss_dsi_dsp_vci_en(struct mdss_panel_data *pdata, int enable);
+int mdss_dsi_isp_1v1_en(struct mdss_panel_data *pdata, int enable);
+//#endif
 static inline const char *__mdss_dsi_pm_name(enum dsi_pm_type module)
 {
 	switch (module) {

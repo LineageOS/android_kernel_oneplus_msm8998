@@ -22,6 +22,10 @@
 #include <linux/qpnp/qpnp-revid.h>
 #include "fg-core.h"
 #include "fg-reg.h"
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+#include "oem_external_fg.h"
+#endif
 
 #define FG_GEN3_DEV_NAME	"qcom,fg-gen3"
 
@@ -194,6 +198,29 @@ module_param_named(
 );
 
 /* Other functions HERE */
+
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+static struct external_battery_gauge *external_fg = NULL;
+
+void external_battery_gauge_register(struct external_battery_gauge *batt_gauge)
+{
+	if (external_fg) {
+		external_fg = batt_gauge;
+		pr_err("qpnp-charger %s multiple battery gauge called\n",
+								__func__);
+	} else {
+		external_fg = batt_gauge;
+	}
+}
+EXPORT_SYMBOL(external_battery_gauge_register);
+
+void external_battery_gauge_unregister(struct external_battery_gauge *batt_gauge)
+{
+	external_fg = NULL;
+}
+EXPORT_SYMBOL(external_battery_gauge_unregister);
+#endif
 
 static int fg_awake_cb(struct votable *votable, void *data, int awake,
 			const char *client)
@@ -478,6 +505,8 @@ static int fg_get_sram_prop(struct fg_chip *chip, enum fg_sram_param_id id,
 	return 0;
 }
 
+#ifndef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
 #define BATT_TEMP_NUMR		1
 #define BATT_TEMP_DENR		1
 static int fg_get_battery_temp(struct fg_chip *chip, int *val)
@@ -502,6 +531,7 @@ static int fg_get_battery_temp(struct fg_chip *chip, int *val)
 	*val = temp;
 	return 0;
 }
+#endif
 
 #define BATT_ESR_NUMR		244141
 #define BATT_ESR_DENR		1000
@@ -550,6 +580,8 @@ static int fg_get_battery_resistance(struct fg_chip *chip, int *val)
 	return 0;
 }
 
+#ifndef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
 #define BATT_CURRENT_NUMR	488281
 #define BATT_CURRENT_DENR	1000
 static int fg_get_battery_current(struct fg_chip *chip, int *val)
@@ -576,6 +608,7 @@ static int fg_get_battery_current(struct fg_chip *chip, int *val)
 	*val = div_s64((s64)temp * BATT_CURRENT_NUMR, BATT_CURRENT_DENR);
 	return 0;
 }
+#endif
 
 #define BATT_VOLTAGE_NUMR	122070
 #define BATT_VOLTAGE_DENR	1000
@@ -602,6 +635,8 @@ static int fg_get_battery_voltage(struct fg_chip *chip, int *val)
 	return 0;
 }
 
+#ifndef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
 #define MAX_TRIES_SOC		5
 static int fg_get_msoc_raw(struct fg_chip *chip, int *val)
 {
@@ -646,6 +681,7 @@ static int fg_get_prop_capacity(struct fg_chip *chip, int *val)
 	*val = DIV_ROUND_CLOSEST(msoc * FULL_CAPACITY, FULL_SOC_RAW);
 	return 0;
 }
+#endif
 
 #define DEFAULT_BATT_TYPE	"Unknown Battery"
 #define MISSING_BATT_TYPE	"Missing Battery"
@@ -796,8 +832,11 @@ static int fg_set_esr_timer(struct fg_chip *chip, int cycles, bool charging,
 	return 0;
 }
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+#define DEFALUT_BATT_TEMP	250
+#endif
 /* PSY CALLBACKS STAY HERE */
-
 static int fg_psy_get_property(struct power_supply *psy,
 				       enum power_supply_property psp,
 				       union power_supply_propval *pval)
@@ -807,16 +846,47 @@ static int fg_psy_get_property(struct power_supply *psy,
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_CAPACITY:
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+		if (chip->use_external_fg && external_fg
+				&& external_fg->get_battery_soc)
+			pval->intval = external_fg->get_battery_soc();
+		else if(get_extern_fg_regist_done() == false)
+			pval->intval = get_prop_pre_shutdown_soc();
+		else
+			pval->intval = 50;
+#else
 		rc = fg_get_prop_capacity(chip, &pval->intval);
+#endif
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		rc = fg_get_battery_voltage(chip, &pval->intval);
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+		if (chip->use_external_fg && external_fg
+				&& external_fg->get_average_current)
+			pval->intval = external_fg->get_average_current();
+		else
+			pval->intval = 0;
+#else
 		rc = fg_get_battery_current(chip, &pval->intval);
+#endif
 		break;
 	case POWER_SUPPLY_PROP_TEMP:
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+		if (chip->use_external_fg && external_fg
+				&& external_fg->get_average_current)
+			pval->intval = external_fg->get_battery_temperature();
+		else if (get_extern_fg_regist_done() == false)
+			pval->intval = DEFALUT_BATT_TEMP;
+		else
+			pval->intval = -400;
+#else
 		rc = fg_get_battery_temp(chip, &pval->intval);
+#endif
 		break;
 	case POWER_SUPPLY_PROP_RESISTANCE:
 		rc = fg_get_battery_resistance(chip, &pval->intval);
@@ -829,6 +899,10 @@ static int fg_psy_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_RESISTANCE_ID:
 		rc = fg_get_batt_id(chip, &pval->intval);
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+		pr_info("BATT_ID=%d\n", pval->intval);
+#endif
 		break;
 	case POWER_SUPPLY_PROP_BATTERY_TYPE:
 		pval->strval = fg_get_battery_type(chip);
@@ -843,11 +917,35 @@ static int fg_psy_get_property(struct power_supply *psy,
 	return rc;
 }
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+static void oem_update_cc_cv_setpoint(struct fg_chip *chip,int cv_float_point);
+static void oneplus_set_allow_read_iic(struct fg_chip *chip,bool status);
+static void oneplus_set_lcd_off_status(struct fg_chip *chip,bool status);
+#endif
+
 static int fg_psy_set_property(struct power_supply *psy,
 				  enum power_supply_property psp,
 				  const union power_supply_propval *pval)
 {
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	struct fg_chip *chip = power_supply_get_drvdata(psy);
+#endif
+
 	switch (psp) {
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	case POWER_SUPPLY_PROP_CC_TO_CV_POINT:
+		oem_update_cc_cv_setpoint(chip, pval->intval);
+		break;
+	case POWER_SUPPLY_PROP_SET_ALLOW_READ_EXTERN_FG_IIC:
+		oneplus_set_allow_read_iic(chip, pval->intval);
+		break;
+	case POWER_SUPPLY_PROP_UPDATE_LCD_IS_OFF:
+		oneplus_set_lcd_off_status(chip, pval->intval);
+		break;
+#endif
 	default:
 		break;
 	}
@@ -1425,6 +1523,12 @@ static int fg_parse_dt(struct fg_chip *chip)
 	else
 		chip->dt.rsense_sel = (u8)temp & SOURCE_SELECT_MASK;
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	chip->use_external_fg = of_property_read_bool(node, "oem,use_external_fg");
+	pr_info("use_external_fg=%d\n", chip->use_external_fg);
+#endif
+
 	chip->dt.jeita_thresholds[JEITA_COLD] = DEFAULT_BATT_TEMP_COLD;
 	chip->dt.jeita_thresholds[JEITA_COOL] = DEFAULT_BATT_TEMP_COOL;
 	chip->dt.jeita_thresholds[JEITA_WARM] = DEFAULT_BATT_TEMP_WARM;
@@ -1474,6 +1578,33 @@ static void fg_cleanup(struct fg_chip *chip)
 
 	dev_set_drvdata(chip->dev, NULL);
 }
+
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+static void oem_update_cc_cv_setpoint(struct fg_chip *chip,int cv_float_point)
+{
+	/* TODO: write CC_CV_SETPOINT_REG */
+	return;
+}
+
+static void oneplus_set_allow_read_iic(struct fg_chip *chip,bool status)
+{
+	if (chip->use_external_fg && external_fg
+			&& external_fg->set_alow_reading)
+		external_fg->set_alow_reading(status);
+	else
+		pr_info("set allow read extern fg iic fail\n");
+}
+
+static void oneplus_set_lcd_off_status(struct fg_chip *chip,bool status)
+{
+	if (chip->use_external_fg && external_fg
+			&& external_fg->set_lcd_off_status)
+		external_fg->set_lcd_off_status(status);
+	else
+		pr_info("set lcd off status fail\n");
+}
+#endif
 
 static int fg_gen3_probe(struct platform_device *pdev)
 {

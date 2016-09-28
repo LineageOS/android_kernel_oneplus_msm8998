@@ -144,9 +144,20 @@ struct smb_charger {
 	struct delayed_work	hvdcp_detect_work;
 	struct delayed_work	ps_change_timeout_work;
 	struct delayed_work	pl_taper_work;
+<<<<<<< HEAD
 	struct delayed_work	step_soc_req_work;
+=======
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	struct delayed_work	check_switch_dash_work;
+#endif
+>>>>>>> origin/QC8998_DEV
 
 	/* cached status */
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	bool		dash_present;
+#endif
 	int			voltage_min_uv;
 	int			voltage_max_uv;
 	bool			pd_active;
@@ -225,6 +236,11 @@ int smblib_set_prop_batt_capacity(struct smb_charger *chg,
 int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 				const union power_supply_propval *val);
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+int smblib_check_allow_switch_dash(struct smb_charger *chg,
+				const union power_supply_propval *val);
+#endif
 int smblib_get_prop_dc_present(struct smb_charger *chg,
 				union power_supply_propval *val);
 int smblib_get_prop_dc_online(struct smb_charger *chg,
