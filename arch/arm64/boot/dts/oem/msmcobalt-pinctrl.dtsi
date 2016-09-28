@@ -2827,5 +2827,35 @@
 				};
 			};
 		};
+
+		tri_state_key_mux {
+                        tri_state_key_active: tri_state_key_active {
+                                mux {
+                                        pins = "gpio42","gpio9","gpio40";
+                                        function = "gpio";
+                                };
+
+                                config {
+                                        pins = "gpio42","gpio9","gpio40";
+                                        drive-strength = <2>;
+                                        bias-disable;
+                                };
+                        };
+
+                        tri_state_key_suspend: tri_state_key_suspend {
+                                mux {
+                                        pins = "gpio42","gpio9","gpio40";
+                                        function = "gpio";
+                                };
+
+                                config {
+                                        pins = "gpio42","gpio9","gpio40";
+                                        drive-strength = <2>;
+                                        bias-disable;
+                                };
+                        };
+                };
+
 	};
 };
+
