@@ -144,14 +144,11 @@ struct smb_charger {
 	struct delayed_work	hvdcp_detect_work;
 	struct delayed_work	ps_change_timeout_work;
 	struct delayed_work	pl_taper_work;
-<<<<<<< HEAD
 	struct delayed_work	step_soc_req_work;
-=======
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 	struct delayed_work	check_switch_dash_work;
 #endif
->>>>>>> origin/QC8998_DEV
 
 	/* cached status */
 #ifdef VENDOR_EDIT

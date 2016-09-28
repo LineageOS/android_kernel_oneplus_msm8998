@@ -2052,9 +2052,6 @@ static void smblib_hvdcp_detect_work(struct work_struct *work)
 	}
 }
 
-<<<<<<< HEAD
-static void bms_update_work(struct work_struct *work)
-=======
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 static int smblib_charging_en(struct smb_charger *chg, bool en)
@@ -2247,8 +2244,7 @@ void fastcharge_information_unregister(struct external_battery_gauge *fast_chg)
 EXPORT_SYMBOL(fastcharge_information_unregister);
 #endif
 
-static void smblib_bms_update_work(struct work_struct *work)
->>>>>>> origin/QC8998_DEV
+static void bms_update_work(struct work_struct *work)
 {
 	struct smb_charger *chg = container_of(work, struct smb_charger,
 						bms_update_work);
@@ -2458,16 +2454,13 @@ int smblib_init(struct smb_charger *chg)
 	INIT_WORK(&chg->pl_detect_work, smblib_pl_detect_work);
 	INIT_DELAYED_WORK(&chg->hvdcp_detect_work, smblib_hvdcp_detect_work);
 	INIT_DELAYED_WORK(&chg->pl_taper_work, smblib_pl_taper_work);
-<<<<<<< HEAD
 	INIT_DELAYED_WORK(&chg->step_soc_req_work, step_soc_req_work);
-=======
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 	INIT_DELAYED_WORK(&chg->check_switch_dash_work, smblib_check_allow_switch_dash_work);
 	notify_dash_unplug_register(&notify_unplug_event);
 	g_chg = chg;
 #endif
->>>>>>> origin/QC8998_DEV
 	chg->fake_capacity = -EINVAL;
 
 	switch (chg->mode) {
@@ -2502,7 +2495,6 @@ int smblib_init(struct smb_charger *chg)
 
 int smblib_deinit(struct smb_charger *chg)
 {
-<<<<<<< HEAD
 	switch (chg->mode) {
 	case PARALLEL_MASTER:
 		power_supply_unreg_notifier(&chg->nb);
@@ -2516,24 +2508,11 @@ int smblib_deinit(struct smb_charger *chg)
 	}
 
 	smblib_iio_deinit(chg);
-=======
-	destroy_votable(chg->usb_suspend_votable);
-	destroy_votable(chg->dc_suspend_votable);
-	destroy_votable(chg->fcc_max_votable);
-	destroy_votable(chg->fcc_votable);
-	destroy_votable(chg->fv_votable);
-	destroy_votable(chg->usb_icl_votable);
-	destroy_votable(chg->dc_icl_votable);
-	destroy_votable(chg->pd_allowed_votable);
-	destroy_votable(chg->awake_votable);
-	destroy_votable(chg->pl_disable_votable);
 
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 	notify_dash_unplug_unregister(&notify_unplug_event);
 #endif
-	power_supply_unreg_notifier(&chg->nb);
->>>>>>> origin/QC8998_DEV
 
 	return 0;
 }
