@@ -1703,12 +1703,6 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 	int rc;
 	u8 stat;
 
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20160926 Add dash charging */
-	pr_info("IRQ: %s %s\n",
-		   irq_data->name, chg->vbus_present ? "attached" : "detached");
-#endif
-
 	/* fetch the DPDM regulator */
 	if (!chg->dpdm_reg && of_get_property(chg->dev->of_node,
 					      "dpdm-supply", NULL)) {
@@ -1735,10 +1729,6 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 	}
 
 	chg->vbus_present = (bool)(stat & USBIN_PLUGIN_RT_STS_BIT);
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20160926 Add dash charging */
-	pr_info("vbus=%d\n", chg->vbus_present);
-#endif
 
 	if (chg->vbus_present) {
 		if (!regulator_is_enabled(chg->dpdm_reg)) {
@@ -1769,6 +1759,11 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 skip_dpdm_float:
 	smblib_dbg(chg, PR_INTERRUPT, "IRQ: %s %s\n",
 		   irq_data->name, chg->vbus_present ? "attached" : "detached");
+#ifdef VENDOR_EDIT
+	/* david.liu@bsp, 20160926 Add dash charging */
+	pr_info("IRQ: %s %s\n",
+		   irq_data->name, chg->vbus_present ? "attached" : "detached");
+#endif
 	return IRQ_HANDLED;
 }
 

@@ -624,6 +624,7 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 /* david.liu@bsp, 20160926 Add dash charging */
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
 		smblib_get_prop_usb_voltage_now(chg, val);
+		break;
 #endif
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
 		rc = smblib_get_prop_system_temp_level(chg, val);
@@ -665,6 +666,7 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_SWITCH_DASH:
 		pr_info("POWER_SUPPLY_PROP_SWITCH_DASH\n");
 		rc = smblib_check_allow_switch_dash(chg, val);
+		break;
 #endif
 	case POWER_SUPPLY_PROP_CAPACITY:
 		rc = smblib_set_prop_batt_capacity(chg, val);
