@@ -574,7 +574,16 @@
 			gpio-key,wakeup;
 			debounce-interval = <15>;
 		};
-
+		//#VENDOR_EDIT shankai@bsp ,add for volum_down support,2016,9-29
+		vol_down {
+			label = "volume_down";
+			gpios = <&pmcobalt_gpios 5 0x1>;
+			linux,input-type = <1>;
+			linux,code = <114>;
+			//gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
+		//#ENDIF
 		cam_snapshot {
 			label = "cam_snapshot";
 			gpios = <&pmcobalt_gpios 7 0x1>;

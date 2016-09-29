@@ -109,7 +109,9 @@
 			gpio@c400 {
 				reg = <0xc400 0x100>;
 				qcom,pin-num = <5>;
-				status = "disabled";
+			//#VENDOR_EDIT shankai@bsp ,add for volum_down support,2016,9-29
+				status = "okay";
+			//#ENDIF
 			};
 
 			gpio@c500 {
