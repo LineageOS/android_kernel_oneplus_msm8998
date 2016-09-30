@@ -255,8 +255,13 @@
 		dmas = <&dma_blsp2 10 64 0x20000020 0x20>,
 			<&dma_blsp2 11 32 0x20000020 0x20>;
 		dma-names = "tx", "rx";
-		qcom,master-id = <84>;
-		qcom,clk-freq-out = <400000>;
+//#ifndef VENDOR_EDIT wangdongdong@MultiMediaService,2016/09/30, modify I2C configuration
+		//qcom,master-id = <84>;
+		//qcom,clk-freq-out = <400000>;
+//#else
+                qcom,master-id = <86>;
+		qcom,clk-freq-out = <100000>;
+//#endif
 		qcom,clk-freq-in  = <19200000>;
 		clock-names = "iface_clk", "core_clk";
 		clocks = <&clock_gcc clk_gcc_blsp2_ahb_clk>,
@@ -264,7 +269,11 @@
 		pinctrl-names = "i2c_active", "i2c_sleep";
 		pinctrl-0 = <&i2c_9_active>;
 		pinctrl-1 = <&i2c_9_sleep>;
-		status = "disabled";
+//#ifndef VENDOR_EDIT wangdongdong@MultiMediaService,2016/09/30, modify I2C configuration
+		//status = "disabled";
+//#else
+                status = "ok";
+//#endif
 	};
 
 	i2c_10: i2c@c1b8000 { /* BLSP2 QUP4 */
