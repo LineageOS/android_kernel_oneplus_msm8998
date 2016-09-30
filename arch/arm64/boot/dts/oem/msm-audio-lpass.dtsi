@@ -111,8 +111,18 @@
 		dai_mi2s3: qcom,msm-dai-q6-mi2s-quat {
 			compatible = "qcom,msm-dai-q6-mi2s";
 			qcom,msm-dai-q6-mi2s-dev-id = <3>;
-			qcom,msm-mi2s-rx-lines = <1>;
-			qcom,msm-mi2s-tx-lines = <2>;
+//#ifndef VENDOR_EDIT wangdongdong@MultiMediaService,2016/09/30,modify i2s configuration
+			//qcom,msm-mi2s-rx-lines = <1>;
+			//qcom,msm-mi2s-tx-lines = <2>;
+//#else
+                        qcom,msm-mi2s-rx-lines = <2>;
+			qcom,msm-mi2s-tx-lines = <1>;
+                        qcom,msm-mi2s-slave = <0>;
+                        qcom,msm-mi2s-ext-mclk = <0>;
+                        pinctrl-names = "default", "sleep";
+                        pinctrl-0 = <&quat_mi2s_active  &quat_mi2s_sd0_active &quat_mi2s_sd1_active >;
+			pinctrl-1 = <&quat_mi2s_sleep  &quat_mi2s_sd0_sleep &quat_mi2s_sd1_sleep >;
+//#endif
 		};
 
 		dai_mi2s4: qcom,msm-dai-q6-mi2s-quin {

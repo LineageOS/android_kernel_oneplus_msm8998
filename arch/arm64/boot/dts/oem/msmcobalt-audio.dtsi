@@ -30,6 +30,18 @@
 		reg-names = "avtimer_lsb_addr", "avtimer_msb_addr";
 		qcom,clk-div = <27>;
 	};
+//#ifdef VENDOR_EDIT wangdongdong@MultiMediaService,2016/09/30, add for smartpa 9891
+        i2c@c1b7000{
+               status = "ok";
+               test_tfa9891: tfa9891@36 {
+		  compatible = "nxp,tfa9891";
+		  reg = <0x36>;
+		  reset-gpio= <&tlmm 49 0>;
+                  irq-gpio= <&tlmm 50 0>;
+		  status = "ok";
+		 };
+        };
+//#endif
 
 	sound-9335 {
 		compatible = "qcom,msmcobalt-asoc-snd-tasha";
@@ -54,8 +66,13 @@
 			"MIC BIAS1", "Digital Mic0",
 			"DMIC1", "MIC BIAS1",
 			"MIC BIAS1", "Digital Mic1",
-			"DMIC2", "MIC BIAS3",
-			"MIC BIAS3", "Digital Mic2",
+//#ifndef VENDOR_EDIT wangdongdong@MultiMediaService,2016/09/30, modify dmic micbias
+			//"DMIC2", "MIC BIAS3",
+			//"MIC BIAS3", "Digital Mic2",
+//#else
+                        "DMIC2", "MIC BIAS4",
+			"MIC BIAS4", "Digital Mic2", 
+//#endif
 			"DMIC3", "MIC BIAS3",
 			"MIC BIAS3", "Digital Mic3",
 			"DMIC4", "MIC BIAS4",
@@ -64,10 +81,15 @@
 			"MIC BIAS4", "Digital Mic5",
 			"SpkrLeft IN", "SPK1 OUT",
 			"SpkrRight IN", "SPK2 OUT";
-
-		qcom,msm-mbhc-hphl-swh = <0>;
-		qcom,msm-mbhc-gnd-swh = <0>;
-		qcom,us-euro-gpios = <&wcd_us_euro_gpio>;
+			
+//#ifndef VENDOR_EDIT wangdongdong@MultiMediaService,2016/09/30, modify headset configuration
+		//qcom,msm-mbhc-hphl-swh = <0>;
+		//qcom,msm-mbhc-gnd-swh = <0>;
+		//qcom,us-euro-gpios = <&wcd_us_euro_gpio>;
+//#else
+                qcom,msm-mbhc-hphl-swh = <1>;
+		qcom,msm-mbhc-gnd-swh = <1>;
+//#endif
 		qcom,tasha-mclk-clk-freq = <9600000>;
 		asoc-platform = <&pcm0>, <&pcm1>, <&pcm2>, <&voip>, <&voice>,
 				<&loopback>, <&compress>, <&hostless>,
@@ -89,7 +111,13 @@
 				<&incall_record_tx>, <&incall_music_rx>,
 				<&incall_music_2_rx>, <&sb_5_rx>, <&sb_6_rx>,
 				<&sb_7_rx>, <&sb_7_tx>, <&sb_8_tx>,
-				<&usb_audio_rx>, <&usb_audio_tx>;
+//#ifndef VENDOR_EDIT wangdongdong@MultiMediaService,2016/09/30, add I2S patch
+				//<&usb_audio_rx>, <&usb_audio_tx>;
+//#else
+                                <&usb_audio_rx>, <&usb_audio_tx>,
+				<&dai_mi2s0>, <&dai_mi2s1>,
+				<&dai_mi2s2>, <&dai_mi2s3>;
+//#endif
 		asoc-cpu-names = "msm-dai-q6-hdmi.8", "msm-dai-q6-dp.24608",
 				"msm-dai-q6-dev.16384", "msm-dai-q6-dev.16385",
 				"msm-dai-q6-dev.16386", "msm-dai-q6-dev.16387",
@@ -103,15 +131,23 @@
 				"msm-dai-q6-dev.32770", "msm-dai-q6-dev.16394",
 				"msm-dai-q6-dev.16396", "msm-dai-q6-dev.16398",
 				"msm-dai-q6-dev.16399", "msm-dai-q6-dev.16401",
-				"msm-dai-q6-dev.28672", "msm-dai-q6-dev.28673";
+//#ifndef VENDOR_EDIT wangdongdong@MultiMediaService,2016/09/30, add I2S patch
+				//"msm-dai-q6-dev.28672", "msm-dai-q6-dev.28673";
+//#else
+                                "msm-dai-q6-dev.28672", "msm-dai-q6-dev.28673",
+				"msm-dai-q6-mi2s.0", "msm-dai-q6-mi2s.1",
+				"msm-dai-q6-mi2s.2", "msm-dai-q6-mi2s.3";
+//#endif
 		asoc-codec = <&stub_codec>, <&ext_disp_audio_codec>;
 		asoc-codec-names = "msm-stub-codec.1",
 				   "msm-ext-disp-audio-codec-rx";
-		qcom,wsa-max-devs = <2>;
-		qcom,wsa-devs = <&wsa881x_211>, <&wsa881x_212>,
-				<&wsa881x_213>, <&wsa881x_214>;
-		qcom,wsa-aux-dev-prefix = "SpkrLeft", "SpkrRight",
-					  "SpkrLeft", "SpkrRight";
+//#ifdef VENDOR_EDIT wangdongdong@MultiMediaService, delete wsa configuration
+		//qcom,wsa-max-devs = <2>;
+		//qcom,wsa-devs = <&wsa881x_211>, <&wsa881x_212>,
+		//		<&wsa881x_213>, <&wsa881x_214>;
+		//qcom,wsa-aux-dev-prefix = "SpkrLeft", "SpkrRight",
+		//			  "SpkrLeft", "SpkrRight";
+//#endif
 	};
 
 	sound-tavil {
@@ -204,13 +240,14 @@
 				       <&glink_spi_xprt_wdsp 2>;
 		qcom,img-filename = "cpe_9340";
 	};
-
-	wcd_us_euro_gpio: msm_cdc_pinctrl@75 {
+//#ifdef VENDOR_EDIT wangdongdong@MultiMediaService, delete unused info
+	/*wcd_us_euro_gpio: msm_cdc_pinctrl@75 {
 		compatible = "qcom,msm-cdc-pinctrl";
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&wcd_gnd_mic_swap_active>;
 		pinctrl-1 = <&wcd_gnd_mic_swap_idle>;
-	};
+	};*/
+//#endif
 
 	wcd9xxx_intc: wcd9xxx-irq {
 		status = "ok";
