@@ -153,7 +153,7 @@
 		qcom,sensor-position = <0>;
 		qcom,sensor-mode = <0>;
 		qcom,cci-master = <1>;
-		status = "ok";
+		status = "disabled"; /* davidliu@bsp, disable it for usb */
 		clocks = <&clock_mmss clk_mclk2_clk_src>,
 			<&clock_mmss clk_mmss_camss_mclk2_clk>;
 		clock-names = "cam_src_clk", "cam_clk";
@@ -280,7 +280,7 @@
 		qcom,sensor-position = <0>;
 		qcom,sensor-mode = <0>;
 		qcom,cci-master = <1>;
-		status = "ok";
+		status = "disabled"; /* davidliu@bsp, disable it for usb */
 		clocks = <&clock_mmss clk_mclk2_clk_src>,
 			<&clock_mmss clk_mmss_camss_mclk2_clk>;
 		clock-names = "cam_src_clk", "cam_clk";
