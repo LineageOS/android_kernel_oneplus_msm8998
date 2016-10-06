@@ -20,7 +20,6 @@
 #include <linux/notifier.h>
 #include <linux/types.h>
 
-#define VENDOR_EDIT 1 /* david@bsp define VENDOR_EDIT */
 /*
  * All voltages, currents, charges, energies, time and temperatures in uV,
  * µA, µAh, µWh, seconds and tenths of degree Celsius unless otherwise
