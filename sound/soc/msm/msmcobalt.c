@@ -1732,48 +1732,64 @@ static int msm_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 #ifdef VENDOR_EDIT
 /*wangdongdong@MultiMediaService,add i2s patch*/
         case MSM_BACKEND_DAI_PRI_MI2S_RX:
+                param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
+                               mi2s_rx_cfg[PRIM_MI2S_RX].bit_format);
 		rate->min = rate->max = mi2s_rx_cfg[PRIM_MI2S_RX].sample_rate;
 		channels->min = channels->max =
 			mi2s_rx_cfg[PRIM_MI2S_RX].channels;
 		break;
 
 	case MSM_BACKEND_DAI_PRI_MI2S_TX:
+                param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
+                               mi2s_tx_cfg[PRIM_MI2S_TX].bit_format);
 		rate->min = rate->max = mi2s_tx_cfg[PRIM_MI2S_TX].sample_rate;
 		channels->min = channels->max =
 			mi2s_tx_cfg[PRIM_MI2S_TX].channels;
 		break;
 
 	case MSM_BACKEND_DAI_SECONDARY_MI2S_RX:
+                param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
+                               mi2s_rx_cfg[SEC_MI2S_RX].bit_format);
 		rate->min = rate->max = mi2s_rx_cfg[SEC_MI2S_RX].sample_rate;
 		channels->min = channels->max =
 			mi2s_rx_cfg[SEC_MI2S_RX].channels;
 		break;
 
 	case MSM_BACKEND_DAI_SECONDARY_MI2S_TX:
+                param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
+                               mi2s_tx_cfg[SEC_MI2S_TX].bit_format);
 		rate->min = rate->max = mi2s_tx_cfg[SEC_MI2S_TX].sample_rate;
 		channels->min = channels->max =
 			mi2s_tx_cfg[SEC_MI2S_TX].channels;
 		break;
 
 	case MSM_BACKEND_DAI_TERTIARY_MI2S_RX:
+                param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
+                               mi2s_rx_cfg[TERT_MI2S_RX].bit_format);
 		rate->min = rate->max = mi2s_rx_cfg[TERT_MI2S_RX].sample_rate;
 		channels->min = channels->max =
 			mi2s_rx_cfg[TERT_MI2S_RX].channels;
 		break;
 
 	case MSM_BACKEND_DAI_TERTIARY_MI2S_TX:
+                param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
+                               mi2s_tx_cfg[TERT_MI2S_TX].bit_format);
 		rate->min = rate->max = mi2s_tx_cfg[TERT_MI2S_TX].sample_rate;
 		channels->min = channels->max =
 			mi2s_tx_cfg[TERT_MI2S_TX].channels;
 		break;
 
 	case MSM_BACKEND_DAI_QUATERNARY_MI2S_RX:
+                param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
+                               mi2s_rx_cfg[QUAT_MI2S_RX].bit_format);
 		rate->min = rate->max = mi2s_rx_cfg[QUAT_MI2S_RX].sample_rate;
 		channels->min = channels->max =
 			mi2s_rx_cfg[QUAT_MI2S_RX].channels;
 		break;
 
 	case MSM_BACKEND_DAI_QUATERNARY_MI2S_TX:
+                param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
+                               mi2s_tx_cfg[QUAT_MI2S_TX].bit_format);
 		rate->min = rate->max = mi2s_tx_cfg[QUAT_MI2S_TX].sample_rate;
 		channels->min = channels->max =
 			mi2s_tx_cfg[QUAT_MI2S_TX].channels;
