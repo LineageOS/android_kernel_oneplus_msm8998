@@ -2138,6 +2138,8 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 							RX_GAIN_OFFSET_M1P5_DB);
 		}
 	} else {
+#ifndef VENDOR_EDIT
+/*wangdongdong@MultiMediaService,2016/10/09,remove wsa device to avoid null pointer*/
 		if (rtd_aux && rtd_aux->component)
 			if (!strcmp(rtd_aux->component->name, WSA8810_NAME_1) ||
 			    !strcmp(rtd_aux->component->name, WSA8810_NAME_2)) {
@@ -2145,6 +2147,7 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 				tasha_set_spkr_gain_offset(rtd->codec,
 							RX_GAIN_OFFSET_M1P5_DB);
 		}
+#endif
 		card = rtd->card->snd_card;
 		entry = snd_register_module_info(card->module, "codecs",
 						 card->proc_root);
