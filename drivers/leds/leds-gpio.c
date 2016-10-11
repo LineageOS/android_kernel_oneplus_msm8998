@@ -250,8 +250,9 @@ static int gpio_led_probe(struct platform_device *pdev)
 	struct gpio_leds_priv *priv;
 	int i, ret = 0;
 
-	if (pdata) { 
-      if (pdata->num_leds) { 
+#ifdef VENDOR_EDIT /*wulaibin 2016-10-11 add for button-backlight;pdata is NULL point*/
+	if (pdata) {
+      if (pdata->num_leds) {
 		priv = devm_kzalloc(&pdev->dev,
 				sizeof_gpio_leds_priv(pdata->num_leds),
 					GFP_KERNEL);
@@ -271,7 +272,30 @@ static int gpio_led_probe(struct platform_device *pdev)
 			}
 		 }
 	  }
-	} else {
+	}
+#else
+    if(pdata && pdata->num_leds){ 
+		priv = devm_kzalloc(&pdev->dev,
+				sizeof_gpio_leds_priv(pdata->num_leds),
+					GFP_KERNEL);
+		if (!priv)
+			return -ENOMEM;
+
+		priv->num_leds = pdata->num_leds;
+		for (i = 0; i < priv->num_leds; i++) {
+			ret = create_gpio_led(&pdata->leds[i],
+					      &priv->leds[i],
+					      &pdev->dev, pdata->gpio_blink_set);
+			if (ret < 0) {
+				/* On failure: unwind the led creations */
+				for (i = i - 1; i >= 0; i--)
+					delete_gpio_led(&priv->leds[i]);
+				return ret;
+			}
+		 }
+	 }
+#endif /*VENDOR_EDIT*/
+	else {
 		priv = gpio_leds_create(pdev);
 		if (IS_ERR(priv))
 			return PTR_ERR(priv);

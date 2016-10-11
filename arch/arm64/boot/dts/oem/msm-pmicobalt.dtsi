@@ -130,6 +130,7 @@
 			};
 		};
 
+/*#ifdef VENDOR_EDIT //wulaibin 2016-10-11 add for button-backlight*/
    gpio-leds {
       compatible = "gpio-leds";
       status = "okay";
@@ -139,6 +140,7 @@
       linux,default-trigger = "none";
      };
    };
+/*end VENDOR_EDIT*/
 
 
 		qcom,qpnp-qnovo@1500 {
