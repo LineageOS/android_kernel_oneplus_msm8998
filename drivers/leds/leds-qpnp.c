@@ -2493,11 +2493,12 @@ static ssize_t duty_pcts_store(struct device *dev,
 	struct led_classdev *led_cdev = dev_get_drvdata(dev);
 	char *buffer;
 	ssize_t ret;
-	int i = 0;
+	int rets;
+	//int i = 0;
 	int max_duty_pcts;
 	struct pwm_config_data *pwm_cfg;
 	u32 previous_num_duty_pcts;
-	int value;
+	//int value;
 	int *previous_duty_pcts;
 
 	led = container_of(led_cdev, struct qpnp_led_data, cdev);
@@ -2528,6 +2529,7 @@ static ssize_t duty_pcts_store(struct device *dev,
 
 	buffer = (char *)buf;
 
+	#ifndef VENDOR_EDIT
 	for (i = 0; i < max_duty_pcts; i++) {
 		if (buffer == NULL)
 			break;
@@ -2537,6 +2539,26 @@ static ssize_t duty_pcts_store(struct device *dev,
 		if (ret <= 1)
 			break;
 	}
+
+	#else
+	rets= sscanf((const char *)buffer,
+		"bean %x %x %x %x %x %x %x %x %x %x %x ",
+			    &pwm_cfg->old_duty_pcts[0], &pwm_cfg->old_duty_pcts[1],
+			    &pwm_cfg->old_duty_pcts[2], &pwm_cfg->old_duty_pcts[3],
+			    &pwm_cfg->old_duty_pcts[4], &pwm_cfg->old_duty_pcts[5],
+			    &pwm_cfg->old_duty_pcts[6],&pwm_cfg->old_duty_pcts[7],
+			    &pwm_cfg->old_duty_pcts[8], &pwm_cfg->old_duty_pcts[9],
+			    &pwm_cfg->old_duty_pcts[10]);
+	printk("bean set rets = %d\n",rets);
+	if(rets != 11)
+	{
+		pr_err("duty_pcts_store: Invalid paramter:%d\n", rets);
+			return -1;
+	}
+
+	num_duty_pcts = 11;
+
+	#endif /*VENDOR_EDIT*/
 
 	if (num_duty_pcts >= max_duty_pcts) {
 		dev_err(&led->pdev->dev,

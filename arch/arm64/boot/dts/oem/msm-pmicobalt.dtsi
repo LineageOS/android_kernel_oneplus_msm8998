@@ -358,11 +358,12 @@
 		};
 	};
 
+/*#ifndef VENDOR_EDIT //wulaibin 2016-09-27 modify for rgb blink feature*/
 	qcom,pmicobalt@3 {
 		compatible ="qcom,spmi-pmic";
 		reg = <0x3 SPMI_USID>;
-		#address-cells = <2>;
-		#size-cells = <0>;
+		#address-cells = <1>;
+		#size-cells = <1>;
 
 		pmicobalt_pwm_1: pwm@b100 {
 			compatible = "qcom,qpnp-pwm";
@@ -453,6 +454,17 @@
 				qcom,pwm-us = <1000>;
 				qcom,max-current = <12>;
 				qcom,default-state = "off";
+				qcom,use-blink;
+				qcom,duty-pcts = [00 05 0a 0f 14 1d 28 32 3c 4b 64];
+				qcom,duty-ms = <20>;
+				qcom,start-idx = <1>;
+				qcom,idx-len = <11>;
+
+				qcom,lut-flags = <0x1f>;
+				qcom,ramp-step-ms = <100>;
+				qcom,pause-lo = <2000>;
+				qcom,pause-hi = <1000>;
+				
 				linux,name = "red";
 				linux,default-trigger =
 					"battery-charging";
@@ -466,6 +478,17 @@
 				qcom,pwm-us = <1000>;
 				qcom,max-current = <12>;
 				qcom,default-state = "off";
+				qcom,use-blink;
+				qcom,duty-pcts = [00 05 0a 0f 14 1d 28 32 3c 4b 64];
+				qcom,duty-ms = <20>;
+				qcom,start-idx = <13>;
+				qcom,idx-len = <11>;
+
+				qcom,lut-flags = <0x1f>;
+				qcom,ramp-step-ms = <100>;
+				qcom,pause-lo = <2000>;
+				qcom,pause-hi = <1000>;
+				
 				linux,name = "green";
 				linux,default-trigger = "battery-full";
 			};
@@ -478,10 +501,22 @@
 				qcom,pwm-us = <1000>;
 				qcom,max-current = <12>;
 				qcom,default-state = "off";
+				qcom,use-blink;
+				qcom,duty-pcts = [00 05 0a 0f 14 1d 28 32 3c 4b 64];
+				qcom,duty-ms = <20>;
+				qcom,start-idx = <13>;
+				qcom,idx-len = <11>;
+
+				qcom,lut-flags = <0x1f>;
+				qcom,ramp-step-ms = <100>;
+				qcom,pause-lo = <2000>;
+				qcom,pause-hi = <1000>;
+				
 				linux,name = "blue";
 				linux,default-trigger = "boot-indication";
-			};
+			};		
 		};
+/*#end VENDOR_EDIT*/	
 
 		labibb: qpnp-labibb-regulator {
 			compatible = "qcom,qpnp-labibb-regulator";
