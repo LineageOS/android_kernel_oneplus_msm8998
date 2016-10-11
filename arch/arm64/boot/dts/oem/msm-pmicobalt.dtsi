@@ -587,8 +587,9 @@
 			qcom,en-ext-pfet-sc-pro;
 		};
 
+/*#ifndef VENDOR_EDIT //wulaibin 2016-09-27 modify for vibrator feature*/
 		pmicobalt_haptics: qcom,haptic@c000 {
-			status = "disabled";
+			status = "okay";
 			compatible = "qcom,qpnp-haptic";
 			reg = <0xc000 0x100>;
 			interrupts = <0x3 0xc0 0x0>,
@@ -598,7 +599,7 @@
 			qcom,play-mode = "direct";
 			qcom,vmax-mv = <3200>;
 			qcom,ilim-ma = <800>;
-			qcom,wave-shape = "square";
+			qcom,wave-shape = "sine";
 			qcom,wave-play-rate-us = <6667>;
 			qcom,int-pwm-freq-khz = <505>;
 			qcom,sc-deb-cycles = <8>;
@@ -610,6 +611,7 @@
 			qcom,lra-auto-res-mode = "qwd";
 			qcom,lra-res-cal-period = <4>;
 		};
+/*#end VENDOR_EDIT*/
 
 		flash_led: qcom,leds@d300 {
 			compatible = "qcom,qpnp-flash-led-v2";
