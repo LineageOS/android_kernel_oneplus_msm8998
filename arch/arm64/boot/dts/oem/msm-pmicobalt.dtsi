@@ -72,7 +72,7 @@
 			gpio@c400 {
 				reg = <0xc400 0x100>;
 				qcom,pin-num = <5>;
-				status = "disabled";
+				status = "okay";
 			};
 
 			gpio@c500 {
@@ -129,6 +129,17 @@
 				status = "disabled";
 			};
 		};
+
+   gpio-leds {
+      compatible = "gpio-leds";
+      status = "okay";
+      keypad-backlight {
+      gpios = <&pmicobalt_gpios 5 0>; //here maybe pm8998_gpios, depends on what you use.
+      label = "button-backlight";
+      linux,default-trigger = "none";
+     };
+   };
+
 
 		qcom,qpnp-qnovo@1500 {
 			compatible = "qcom,qpnp-qnovo";
@@ -464,7 +475,7 @@
 				qcom,ramp-step-ms = <100>;
 				qcom,pause-lo = <2000>;
 				qcom,pause-hi = <1000>;
-				
+
 				linux,name = "red";
 				linux,default-trigger =
 					"battery-charging";
@@ -488,7 +499,7 @@
 				qcom,ramp-step-ms = <100>;
 				qcom,pause-lo = <2000>;
 				qcom,pause-hi = <1000>;
-				
+
 				linux,name = "green";
 				linux,default-trigger = "battery-full";
 			};
@@ -511,12 +522,12 @@
 				qcom,ramp-step-ms = <100>;
 				qcom,pause-lo = <2000>;
 				qcom,pause-hi = <1000>;
-				
+
 				linux,name = "blue";
 				linux,default-trigger = "boot-indication";
-			};		
+			};
 		};
-/*#end VENDOR_EDIT*/	
+/*#end VENDOR_EDIT*/
 
 		labibb: qpnp-labibb-regulator {
 			compatible = "qcom,qpnp-labibb-regulator";
