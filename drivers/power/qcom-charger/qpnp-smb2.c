@@ -9,6 +9,10 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20161014 Add charging standard */
+#define pr_fmt(fmt) "SMB2: %s: " fmt, __func__
+#endif
 
 #include <linux/device.h>
 #include <linux/module.h>
@@ -234,7 +238,101 @@ static int smb2_parse_dt(struct smb2 *chip)
 		return -EINVAL;
 	}
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20161014 Add charging standard */
+	/* read ibatmax setting for different temp regions */
+	rc = of_property_read_u32(node, "ibatmax-little-cold-ma",
+			&chg->ibatmax[BATT_TEMP_LITTLE_COLD]);
+	rc = of_property_read_u32(node, "ibatmax-cool-ma",
+			&chg->ibatmax[BATT_TEMP_COOL]);
+	rc = of_property_read_u32(node, "ibatmax-little-cool-ma",
+			&chg->ibatmax[BATT_TEMP_LITTLE_COOL]);
+	rc = of_property_read_u32(node, "ibatmax-pre-normal-ma",
+			&chg->ibatmax[BATT_TEMP_PRE_NORMAL]);
+	rc = of_property_read_u32(node, "ibatmax-normal-ma",
+			&chg->ibatmax[BATT_TEMP_NORMAL]);
+	rc = of_property_read_u32(node, "ibatmax-warm-ma",
+			&chg->ibatmax[BATT_TEMP_WARM]);
+	/* read vbatmax setting for different temp regions */
+	rc = of_property_read_u32(node, "vbatmax-little-cold-mv",
+			&chg->vbatmax[BATT_TEMP_LITTLE_COLD]);
+	rc = of_property_read_u32(node, "vbatmax-cool-mv",
+			&chg->vbatmax[BATT_TEMP_COOL]);
+	rc = of_property_read_u32(node, "vbatmax-little-cool-mv",
+			&chg->vbatmax[BATT_TEMP_LITTLE_COOL]);
+	rc = of_property_read_u32(node, "vbatmax-pre-normal-mv",
+			&chg->vbatmax[BATT_TEMP_PRE_NORMAL]);
+	rc = of_property_read_u32(node, "vbatmax-normal-mv",
+			&chg->vbatmax[BATT_TEMP_NORMAL]);
+	rc = of_property_read_u32(node, "vbatmax-warm-mv",
+			&chg->vbatmax[BATT_TEMP_WARM]);
+	/* read vbatdet setting for different temp regions */
+	rc = of_property_read_u32(node, "vbatdet-little-cold-mv",
+			&chg->vbatdet[BATT_TEMP_LITTLE_COLD]);
+	rc = of_property_read_u32(node, "vbatdet-cool-mv",
+			&chg->vbatdet[BATT_TEMP_COOL]);
+	rc = of_property_read_u32(node, "vbatdet-little-cool-mv",
+			&chg->vbatdet[BATT_TEMP_LITTLE_COOL]);
+	rc = of_property_read_u32(node, "vbatdet-pre-normal-mv",
+			&chg->vbatdet[BATT_TEMP_PRE_NORMAL]);
+	rc = of_property_read_u32(node, "vbatdet-normal-mv",
+			&chg->vbatdet[BATT_TEMP_NORMAL]);
+	rc = of_property_read_u32(node, "vbatdet-warm-mv",
+			&chg->vbatdet[BATT_TEMP_WARM]);
+	/* read temp region setting*/
+	rc = of_property_read_u32(node, "cold-bat-decidegc",
+			&chg->BATT_TEMP_T0);
+	chg->BATT_TEMP_T0 = 0 - chg->BATT_TEMP_T0;
+	rc = of_property_read_u32(node, "little-cold-bat-decidegc",
+			&chg->BATT_TEMP_T1);
+	rc = of_property_read_u32(node, "cool-bat-decidegc",
+			&chg->BATT_TEMP_T2);
+	rc = of_property_read_u32(node, "little-cool-bat-decidegc",
+			&chg->BATT_TEMP_T3);
+	rc = of_property_read_u32(node, "pre-normal-bat-decidegc",
+			&chg->BATT_TEMP_T4);
+	rc = of_property_read_u32(node, "warm-bat-decidegc",
+			&chg->BATT_TEMP_T5);
+	rc = of_property_read_u32(node, "hot-bat-decidegc",
+			&chg->BATT_TEMP_T6);
+	if (rc < 0)
+		pr_err("read temp region setting failed!!!!\n");
+	else {
+		pr_info("T0=%d, T1=%d, T2=%d, T3=%d, T4=%d, T5=%d, T6=%d\n",
+			chg->BATT_TEMP_T0, chg->BATT_TEMP_T1, chg->BATT_TEMP_T2,
+			chg->BATT_TEMP_T3, chg->BATT_TEMP_T4, chg->BATT_TEMP_T5,
+			chg->BATT_TEMP_T6);
+		pr_info("BATT_TEMP_LITTLE_COLD=%d, %d, %d\n",
+			chg->ibatmax[BATT_TEMP_LITTLE_COLD],
+			chg->vbatmax[BATT_TEMP_LITTLE_COLD],
+			chg->vbatdet[BATT_TEMP_LITTLE_COLD]);
+		pr_info("BATT_TEMP_COOL=%d, %d, %d\n",
+			chg->ibatmax[BATT_TEMP_COOL],
+			chg->vbatmax[BATT_TEMP_COOL],
+			chg->vbatdet[BATT_TEMP_COOL]);
+		pr_info("BATT_TEMP_LITTLE_COOL=%d, %d, %d\n",
+			chg->ibatmax[BATT_TEMP_LITTLE_COOL],
+			chg->vbatmax[BATT_TEMP_LITTLE_COOL],
+			chg->vbatdet[BATT_TEMP_LITTLE_COOL]);
+		pr_info("BATT_TEMP_PRE_NORMAL=%d, %d, %d\n",
+			chg->ibatmax[BATT_TEMP_PRE_NORMAL],
+			chg->vbatmax[BATT_TEMP_PRE_NORMAL],
+			chg->vbatdet[BATT_TEMP_PRE_NORMAL]);
+		pr_info("BATT_TEMP_NORMAL=%d, %d, %d\n",
+			chg->ibatmax[BATT_TEMP_NORMAL],
+			chg->vbatmax[BATT_TEMP_NORMAL],
+			chg->vbatdet[BATT_TEMP_NORMAL]);
+		pr_info("BATT_TEMP_WARM=%d, %d, %d\n",
+			chg->ibatmax[BATT_TEMP_WARM],
+			chg->vbatmax[BATT_TEMP_WARM],
+			chg->vbatdet[BATT_TEMP_WARM]);
+		}
+
+	/* disable step_chg */
+	chg->step_chg_enabled = false;
+#else
 	chg->step_chg_enabled = true;
+#endif
 
 	if (of_property_count_u32_elems(node, "qcom,step-soc-thresholds")
 			!= STEP_CHARGING_MAX_STEPS - 1)
@@ -588,6 +686,10 @@ static enum power_supply_property smb2_batt_props[] = {
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 	POWER_SUPPLY_PROP_CHARGE_NOW,
+	POWER_SUPPLY_PROP_CHG_PROTECT_STATUS,
+	POWER_SUPPLY_PROP_FASTCHG_STATUS,
+	POWER_SUPPLY_PROP_FASTCHG_STARTING,
+	POWER_SUPPLY_PROP_TEMP,
 #endif
 	POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL,
 	POWER_SUPPLY_PROP_CHARGER_TEMP,
@@ -603,7 +705,12 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20161014 Add charging standard */
+		val->intval = get_prop_batt_status(chg);
+#else
 		rc = smblib_get_prop_batt_status(chg, val);
+#endif
 		break;
 	case POWER_SUPPLY_PROP_HEALTH:
 		rc = smblib_get_prop_batt_health(chg, val);
@@ -623,7 +730,19 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
-		smblib_get_prop_usb_voltage_now(chg, val);
+		rc = smblib_get_prop_usb_voltage_now(chg, val);
+		break;
+	case POWER_SUPPLY_PROP_CHG_PROTECT_STATUS:
+		val->intval = get_prop_chg_protect_status(chg);
+		break;
+	case POWER_SUPPLY_PROP_FASTCHG_STATUS:
+		val->intval = get_prop_fastchg_status(chg);
+		break;
+	case POWER_SUPPLY_PROP_FASTCHG_STARTING:
+		val->intval = op_get_fast_chg_ing(chg);
+		break;
+	case POWER_SUPPLY_PROP_TEMP:
+		val->intval = get_prop_batt_temp(chg);
 		break;
 #endif
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
@@ -660,12 +779,21 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 	case POWER_SUPPLY_PROP_CHECK_USB_UNPLUG:
-		/* TODO: update_dash_unplug_status */
-		pr_info("POWER_SUPPLY_PROP_CHECK_USB_UNPLUG\n");
+		if (chg->vbus_present && !chg->dash_present)
+			update_dash_unplug_status();
 		break;
 	case POWER_SUPPLY_PROP_SWITCH_DASH:
 		pr_info("POWER_SUPPLY_PROP_SWITCH_DASH\n");
-		rc = smblib_check_allow_switch_dash(chg, val);
+		rc = check_allow_switch_dash(chg, val);
+		break;
+	case POWER_SUPPLY_PROP_CHARGE_NOW:
+		rc = smblib_set_prop_chg_voltage(chg, val);
+		break;
+	case POWER_SUPPLY_PROP_TEMP:
+		rc = smblib_set_prop_batt_temp(chg, val);
+		break;
+	case POWER_SUPPLY_PROP_CHG_PROTECT_STATUS:
+		rc = smblib_set_prop_chg_protect_status(chg, val);
 		break;
 #endif
 	case POWER_SUPPLY_PROP_CAPACITY:
@@ -685,6 +813,12 @@ static int smb2_batt_prop_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_INPUT_SUSPEND:
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
 	case POWER_SUPPLY_PROP_CAPACITY:
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20161014 Add charging standard */
+	case POWER_SUPPLY_PROP_CHARGE_NOW:
+	case POWER_SUPPLY_PROP_TEMP:
+	case POWER_SUPPLY_PROP_CHG_PROTECT_STATUS:
+#endif
 		return 1;
 	default:
 		break;
@@ -944,7 +1078,7 @@ static int smb2_init_hw(struct smb2 *chip)
 					&chip->dt.usb_icl_ua);
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
-	pr_info("SMB2: vbat_max=%d, ibat_max=%d, iusb_max=%d\n",
+	pr_info("vbat_max=%d, ibat_max=%d, iusb_max=%d\n",
 		chip->dt.fv_uv, chip->dt.fcc_ua, chip->dt.usb_icl_ua);
 #endif
 
@@ -1151,7 +1285,12 @@ static struct smb2_irq_info smb2_irqs[] = {
 	{ "wdog-snarl",			NULL },
 	{ "wdog-bark",			NULL },
 	{ "aicl-fail",			smblib_handle_debug },
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20161014 Add charging standard */
+	{ "aicl-done",			smblib_handle_aicl_done, true },
+#else
 	{ "aicl-done",			smblib_handle_debug },
+#endif
 	{ "high-duty-cycle",		smblib_handle_debug },
 	{ "input-current-limiting",	smblib_handle_debug },
 	{ "temperature-change",		smblib_handle_debug },
@@ -1277,6 +1416,11 @@ static int smb2_probe(struct platform_device *pdev)
 
 	/* set driver data before resources request it */
 	platform_set_drvdata(pdev, chip);
+
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20161014 Add charging standard */
+	op_charge_info_init(chg);
+#endif
 
 	rc = smb2_init_vbus_regulator(chip);
 	if (rc < 0) {

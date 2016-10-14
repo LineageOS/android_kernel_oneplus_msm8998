@@ -160,6 +160,35 @@
 			qcom,fcc-max-ua = <3000000>;
 			qcom,usb-icl-ua = <1800000>;
 			qcom,fv-max-uv = <4320000>;
+			/* ibatmax setting for different temp regions */
+			ibatmax-little-cold-ma = <300>;
+			ibatmax-cool-ma = <400>;
+			ibatmax-little-cool-ma = <700>;
+			ibatmax-pre-normal-ma = <1200>;
+			ibatmax-normal-ma = <1900>; //1910
+			ibatmax-warm-ma = <700>;
+			/* vbatmax setting for different temp regions */
+			vbatmax-little-cold-mv = <3975>; //3980
+			vbatmax-cool-mv = <4320>;
+			vbatmax-little-cool-mv = <4320>;
+			vbatmax-pre-normal-mv = <4320>;
+			vbatmax-normal-mv = <4320>;
+			vbatmax-warm-mv = <4080>;
+			/* vbatdet setting for different temp regions */
+			vbatdet-little-cold-mv = <3700>;
+			vbatdet-cool-mv = <4100>;
+			vbatdet-little-cool-mv = <4220>;
+			vbatdet-pre-normal-mv = <4220>;
+			vbatdet-normal-mv = <4220>;
+			vbatdet-warm-mv = <4000>;
+			/* vbatdet setting for different temp regions */
+			cold-bat-decidegc = <30>;
+			little-cold-bat-decidegc = <0>;
+			cool-bat-decidegc = <50>;
+			little-cool-bat-decidegc = <120>;
+			pre-normal-bat-decidegc = <160>;
+			warm-bat-decidegc = <450>;
+			hot-bat-decidegc = <530>;
 /* #endif */
 			qcom,pmic-revid = <&pmicobalt_revid>;
 

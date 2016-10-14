@@ -51,15 +51,24 @@ typedef enum {
 	BATT_TEMP_INVALID,
 } temp_region_type;
 
-void  regsister_notify_usb_enumeration_status(struct  notify_usb_enumeration_status *event);
-void notify_dash_unplug_register(struct  notify_dash_event *event);
-void notify_dash_unplug_unregister(struct  notify_dash_event *event);
+enum batt_status_type {
+	BATT_STATUS_GOOD,
+	BATT_STATUS_BAD_TEMP, /* cold or hot */
+	BATT_STATUS_BAD,
+	BATT_STATUS_REMOVED, /* on v2.2 only */
+	BATT_STATUS_INVALID_v1 = BATT_STATUS_REMOVED,
+	BATT_STATUS_INVALID
+};
+
+void regsister_notify_usb_enumeration_status(struct notify_usb_enumeration_status *event);
+void notify_dash_unplug_register(struct notify_dash_event *event);
+void notify_dash_unplug_unregister(struct notify_dash_event *event);
 void fastcharge_information_unregister(struct external_battery_gauge *fast_chg);
 void fastcharge_information_register(struct external_battery_gauge *fast_chg);
 void external_battery_gauge_register(struct external_battery_gauge *batt_gauge);
 void external_battery_gauge_unregister(struct external_battery_gauge *batt_gauge);
 void bq27541_information_register(struct external_battery_gauge *fast_chg);
 void bq27541_information_unregister(struct external_battery_gauge *fast_chg);
-bool get_extern_fg_regist_done(void );
+bool get_extern_fg_regist_done(void);
 int get_prop_pre_shutdown_soc(void);
 #endif
