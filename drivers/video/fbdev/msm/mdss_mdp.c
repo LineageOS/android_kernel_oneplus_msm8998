@@ -1345,7 +1345,12 @@ int mdss_iommu_ctrl(int enable)
 		return mdata->iommu_ref_cnt;
 }
 
-static void mdss_mdp_memory_retention_enter(void)
+#define MEM_RETAIN_ON 1
+#define MEM_RETAIN_OFF 0
+#define PERIPH_RETAIN_ON 1
+#define PERIPH_RETAIN_OFF 0
+
+static void mdss_mdp_memory_retention_ctrl(bool mem_ctrl, bool periph_ctrl)
 {
 	struct clk *mdss_mdp_clk = NULL;
 	struct clk *mdp_vote_clk = mdss_mdp_get_clk(MDSS_CLK_MDP_CORE);
@@ -1366,49 +1371,35 @@ static void mdss_mdp_memory_retention_enter(void)
 
 	__mdss_mdp_reg_access_clk_enable(mdata, true);
 	if (mdss_mdp_clk) {
-		clk_set_flags(mdss_mdp_clk, CLKFLAG_RETAIN_MEM);
-		clk_set_flags(mdss_mdp_clk, CLKFLAG_PERIPH_OFF_SET);
-		clk_set_flags(mdss_mdp_clk, CLKFLAG_NORETAIN_PERIPH);
-	}
+		if (mem_ctrl)
+			clk_set_flags(mdss_mdp_clk, CLKFLAG_RETAIN_MEM);
+		else
+			clk_set_flags(mdss_mdp_clk, CLKFLAG_NORETAIN_MEM);
 
-	if (mdss_mdp_lut_clk) {
-		clk_set_flags(mdss_mdp_lut_clk, CLKFLAG_RETAIN_MEM);
-		clk_set_flags(mdss_mdp_lut_clk, CLKFLAG_PERIPH_OFF_SET);
-		clk_set_flags(mdss_mdp_lut_clk, CLKFLAG_NORETAIN_PERIPH);
-	}
-	__mdss_mdp_reg_access_clk_enable(mdata, false);
-}
-
-static void mdss_mdp_memory_retention_exit(void)
-{
-	struct clk *mdss_mdp_clk = NULL;
-	struct clk *mdp_vote_clk = mdss_mdp_get_clk(MDSS_CLK_MDP_CORE);
-	struct clk *mdss_mdp_lut_clk = NULL;
-	struct clk *mdp_lut_vote_clk = mdss_mdp_get_clk(MDSS_CLK_MDP_LUT);
-	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
-
-	if (mdp_vote_clk) {
-		if (test_bit(MDSS_CAPS_MDP_VOTE_CLK_NOT_SUPPORTED,
-				mdata->mdss_caps_map)) {
-			mdss_mdp_clk = mdp_vote_clk;
-			mdss_mdp_lut_clk = mdp_lut_vote_clk;
+		if (periph_ctrl) {
+			clk_set_flags(mdss_mdp_clk, CLKFLAG_RETAIN_PERIPH);
+			clk_set_flags(mdss_mdp_clk, CLKFLAG_PERIPH_OFF_CLEAR);
 		} else {
-			mdss_mdp_clk = clk_get_parent(mdp_vote_clk);
-			mdss_mdp_lut_clk = clk_get_parent(mdp_lut_vote_clk);
+			clk_set_flags(mdss_mdp_clk, CLKFLAG_PERIPH_OFF_SET);
+			clk_set_flags(mdss_mdp_clk, CLKFLAG_NORETAIN_PERIPH);
 		}
 	}
 
-	__mdss_mdp_reg_access_clk_enable(mdata, true);
-	if (mdss_mdp_clk) {
-		clk_set_flags(mdss_mdp_clk, CLKFLAG_RETAIN_MEM);
-		clk_set_flags(mdss_mdp_clk, CLKFLAG_RETAIN_PERIPH);
-		clk_set_flags(mdss_mdp_clk, CLKFLAG_PERIPH_OFF_CLEAR);
-	}
-
 	if (mdss_mdp_lut_clk) {
-		clk_set_flags(mdss_mdp_lut_clk, CLKFLAG_RETAIN_MEM);
-		clk_set_flags(mdss_mdp_lut_clk, CLKFLAG_RETAIN_PERIPH);
-		clk_set_flags(mdss_mdp_lut_clk, CLKFLAG_PERIPH_OFF_CLEAR);
+		if (mem_ctrl)
+			clk_set_flags(mdss_mdp_lut_clk, CLKFLAG_RETAIN_MEM);
+		else
+			clk_set_flags(mdss_mdp_lut_clk, CLKFLAG_NORETAIN_MEM);
+
+		if (periph_ctrl) {
+			clk_set_flags(mdss_mdp_lut_clk, CLKFLAG_RETAIN_PERIPH);
+			clk_set_flags(mdss_mdp_lut_clk,
+				CLKFLAG_PERIPH_OFF_CLEAR);
+		} else {
+			clk_set_flags(mdss_mdp_lut_clk, CLKFLAG_PERIPH_OFF_SET);
+			clk_set_flags(mdss_mdp_lut_clk,
+				CLKFLAG_NORETAIN_PERIPH);
+		}
 	}
 	__mdss_mdp_reg_access_clk_enable(mdata, false);
 }
@@ -1441,17 +1432,21 @@ static int mdss_mdp_idle_pc_restore(void)
 	mdss_hw_init(mdata);
 	mdss_iommu_ctrl(0);
 
-	/**
-	 * sleep 10 microseconds to make sure AD auto-reinitialization
-	 * is done
-	 */
-	udelay(10);
-	mdss_mdp_memory_retention_exit();
-
 	mdss_mdp_ctl_restore(true);
 	mdata->idle_pc = false;
 
 end:
+	if (mdata->mem_retain) {
+		/**
+		 * sleep 10 microseconds to make sure AD auto-reinitialization
+		 * is done
+		 */
+		udelay(10);
+		mdss_mdp_memory_retention_ctrl(MEM_RETAIN_ON,
+			PERIPH_RETAIN_ON);
+		mdata->mem_retain = false;
+	}
+
 	mutex_unlock(&mdp_fs_idle_pc_lock);
 	return rc;
 }
@@ -1831,6 +1826,20 @@ static u32 mdss_get_props(void)
 	return props;
 }
 
+static void mdss_rpm_set_msg_ram(bool enable)
+{
+	u32 read_reg = 0;
+	void __iomem *rpm_msg_ram = ioremap(0x7781FC, 4);
+
+	if (rpm_msg_ram) {
+		writel_relaxed(enable, rpm_msg_ram);
+		read_reg = readl_relaxed(rpm_msg_ram);
+		pr_debug("%s enable=%d read_val=%x\n", __func__, enable,
+				read_reg);
+		iounmap(rpm_msg_ram);
+	}
+}
+
 void mdss_mdp_init_default_prefill_factors(struct mdss_data_type *mdata)
 {
 	mdata->prefill_data.prefill_factors.fmt_mt_nv12_factor = 8;
@@ -1883,7 +1892,8 @@ static void mdss_mdp_hw_rev_caps_init(struct mdss_data_type *mdata)
 		mdata->pixel_ram_size = 50 * 1024;
 		set_bit(MDSS_QOS_PER_PIPE_IB, mdata->mdss_qos_map);
 		set_bit(MDSS_QOS_OVERHEAD_FACTOR, mdata->mdss_qos_map);
-		set_bit(MDSS_QOS_CDP, mdata->mdss_qos_map);
+		set_bit(MDSS_QOS_CDP, mdata->mdss_qos_map); /* cdp supported */
+		mdata->enable_cdp = true; /* enable cdp */
 		set_bit(MDSS_QOS_OTLIM, mdata->mdss_qos_map);
 		set_bit(MDSS_QOS_PER_PIPE_LUT, mdata->mdss_qos_map);
 		set_bit(MDSS_QOS_SIMPLIFIED_PREFILL, mdata->mdss_qos_map);
@@ -1978,12 +1988,14 @@ static void mdss_mdp_hw_rev_caps_init(struct mdss_data_type *mdata)
 		set_bit(MDSS_QOS_PER_PIPE_IB, mdata->mdss_qos_map);
 		set_bit(MDSS_QOS_REMAPPER, mdata->mdss_qos_map);
 		set_bit(MDSS_QOS_OVERHEAD_FACTOR, mdata->mdss_qos_map);
-		set_bit(MDSS_QOS_CDP, mdata->mdss_qos_map);
+		set_bit(MDSS_QOS_CDP, mdata->mdss_qos_map); /* cdp supported */
+		mdata->enable_cdp = false; /* disable cdp */
 		set_bit(MDSS_QOS_OTLIM, mdata->mdss_qos_map);
 		set_bit(MDSS_QOS_PER_PIPE_LUT, mdata->mdss_qos_map);
 		set_bit(MDSS_QOS_SIMPLIFIED_PREFILL, mdata->mdss_qos_map);
 		set_bit(MDSS_QOS_TS_PREFILL, mdata->mdss_qos_map);
 		set_bit(MDSS_QOS_IB_NOCR, mdata->mdss_qos_map);
+		set_bit(MDSS_QOS_WB2_WRITE_GATHER_EN, mdata->mdss_qos_map);
 		set_bit(MDSS_CAPS_YUV_CONFIG, mdata->mdss_caps_map);
 		set_bit(MDSS_CAPS_SCM_RESTORE_NOT_REQUIRED,
 			mdata->mdss_caps_map);
@@ -1997,6 +2009,7 @@ static void mdss_mdp_hw_rev_caps_init(struct mdss_data_type *mdata)
 		mdss_mdp_init_default_prefill_factors(mdata);
 		mdss_set_quirk(mdata, MDSS_QUIRK_DSC_RIGHT_ONLY_PU);
 		mdss_set_quirk(mdata, MDSS_QUIRK_DSC_2SLICE_PU_THRPUT);
+		mdss_set_quirk(mdata, MDSS_QUIRK_MMSS_GDSC_COLLAPSE);
 		mdata->has_wb_ubwc = true;
 		set_bit(MDSS_CAPS_10_BIT_SUPPORTED, mdata->mdss_caps_map);
 		set_bit(MDSS_CAPS_AVR_SUPPORTED, mdata->mdss_caps_map);
@@ -3381,14 +3394,17 @@ static int mdss_mdp_parse_dt_pipe(struct platform_device *pdev)
 	mdata->has_panic_ctrl = of_property_read_bool(pdev->dev.of_node,
 		"qcom,mdss-has-panic-ctrl");
 	if (mdata->has_panic_ctrl) {
-		mdss_mdp_parse_dt_pipe_panic_ctrl(pdev,
-			"qcom,mdss-pipe-vig-panic-ctrl-offsets",
+		if (mdata->vig_pipes)
+			mdss_mdp_parse_dt_pipe_panic_ctrl(pdev,
+				"qcom,mdss-pipe-vig-panic-ctrl-offsets",
 				mdata->vig_pipes, mdata->nvig_pipes);
-		mdss_mdp_parse_dt_pipe_panic_ctrl(pdev,
-			"qcom,mdss-pipe-rgb-panic-ctrl-offsets",
+		if (mdata->rgb_pipes)
+			mdss_mdp_parse_dt_pipe_panic_ctrl(pdev,
+				"qcom,mdss-pipe-rgb-panic-ctrl-offsets",
 				mdata->rgb_pipes, mdata->nrgb_pipes);
-		mdss_mdp_parse_dt_pipe_panic_ctrl(pdev,
-			"qcom,mdss-pipe-dma-panic-ctrl-offsets",
+		if (mdata->dma_pipes)
+			mdss_mdp_parse_dt_pipe_panic_ctrl(pdev,
+				"qcom,mdss-pipe-dma-panic-ctrl-offsets",
 				mdata->dma_pipes, mdata->ndma_pipes);
 	}
 
@@ -4879,17 +4895,38 @@ static void mdss_mdp_footswitch_ctrl(struct mdss_data_type *mdata, int on)
 			active_cnt = atomic_read(&mdata->active_intf_cnt);
 			if (active_cnt != 0) {
 				/*
+				 * Advise RPM to not turn MMSS GDSC off during
+				 * idle case.
+				 */
+				if (mdss_has_quirk(mdata,
+						MDSS_QUIRK_MMSS_GDSC_COLLAPSE))
+					mdss_rpm_set_msg_ram(true);
+				/*
 				 * Turning off GDSC while overlays are still
 				 * active.
 				 */
+
+				mdss_mdp_memory_retention_ctrl(MEM_RETAIN_ON,
+					PERIPH_RETAIN_OFF);
 				mdata->idle_pc = true;
 				pr_debug("idle pc. active overlays=%d\n",
 					active_cnt);
-				mdss_mdp_memory_retention_enter();
 			} else {
+				/*
+				 * Advise RPM to turn MMSS GDSC off during
+				 * suspend case
+				 */
+				if (mdss_has_quirk(mdata,
+						MDSS_QUIRK_MMSS_GDSC_COLLAPSE))
+					mdss_rpm_set_msg_ram(false);
+
 				mdss_mdp_cx_ctrl(mdata, false);
 				mdss_mdp_batfet_ctrl(mdata, false);
+				mdss_mdp_memory_retention_ctrl(
+					MEM_RETAIN_OFF,
+					PERIPH_RETAIN_OFF);
 			}
+			mdata->mem_retain = true;
 			if (mdata->en_svs_high)
 				mdss_mdp_config_cx_voltage(mdata, false);
 			regulator_disable(mdata->fs);

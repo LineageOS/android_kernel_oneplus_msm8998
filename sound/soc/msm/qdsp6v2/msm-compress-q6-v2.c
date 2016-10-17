@@ -709,6 +709,10 @@ static int msm_compr_send_media_format_block(struct snd_compr_stream *cstream,
 		}
 
 		switch (prtd->codec_param.codec.format) {
+		case SNDRV_PCM_FORMAT_S32_LE:
+			bit_width = 32;
+			sample_word_size = 32;
+			break;
 		case SNDRV_PCM_FORMAT_S24_LE:
 			bit_width = 24;
 			sample_word_size = 32;
@@ -723,14 +727,16 @@ static int msm_compr_send_media_format_block(struct snd_compr_stream *cstream,
 			sample_word_size = 16;
 			break;
 		}
-		ret = q6asm_media_format_block_pcm_format_support_v3(
+		ret = q6asm_media_format_block_pcm_format_support_v4(
 							prtd->audio_client,
 							prtd->sample_rate,
 							prtd->num_channels,
 							bit_width, stream_id,
 							use_default_chmap,
 							chmap,
-							sample_word_size);
+							sample_word_size,
+							ASM_LITTLE_ENDIAN,
+							DEFAULT_QF);
 		if (ret < 0)
 			pr_err("%s: CMD Format block failed\n", __func__);
 
@@ -1010,7 +1016,7 @@ static int msm_compr_configure_dsp(struct snd_compr_stream *cstream)
 	} else {
 		pr_debug("%s: stream_id %d bits_per_sample %d\n",
 				__func__, ac->stream_id, bits_per_sample);
-		ret = q6asm_stream_open_write_v3(ac,
+		ret = q6asm_stream_open_write_v4(ac,
 				prtd->codec, bits_per_sample,
 				ac->stream_id,
 				prtd->gapless_state.use_dsp_gapless_mode);
@@ -1762,7 +1768,12 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 			prtd->app_pointer  = 0;
 			prtd->first_buffer = 1;
 			prtd->last_buffer = 0;
-			prtd->gapless_state.gapless_transition = 1;
+			/*
+			 * Set gapless transition flag only if EOS hasn't been
+			 * acknowledged already.
+			 */
+			if (atomic_read(&prtd->eos))
+				prtd->gapless_state.gapless_transition = 1;
 			prtd->marker_timestamp = 0;
 
 			/*
@@ -1937,7 +1948,7 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 
 		pr_debug("%s: open_write stream_id %d bits_per_sample %d",
 				__func__, stream_id, bits_per_sample);
-		rc = q6asm_stream_open_write_v3(prtd->audio_client,
+		rc = q6asm_stream_open_write_v4(prtd->audio_client,
 				prtd->codec, bits_per_sample,
 				stream_id,
 				prtd->gapless_state.use_dsp_gapless_mode);
@@ -2005,20 +2016,25 @@ static int msm_compr_pointer(struct snd_compr_stream *cstream,
 	gapless_transition = prtd->gapless_state.gapless_transition;
 	spin_unlock_irqrestore(&prtd->lock, flags);
 
+	if (gapless_transition)
+		pr_debug("%s session time in gapless transition",
+			 __func__);
+
 	/*
-	 Query timestamp from DSP if some data is with it.
-	 This prevents timeouts.
+	 - Do not query if no buffer has been given.
+	 - Do not query on a gapless transition.
+	   Playback for the 2nd stream can start (thus returning time
+	   starting from 0) before the driver knows about EOS of first stream.
 	*/
-	if (!first_buffer || gapless_transition) {
-		if (gapless_transition)
-			pr_debug("%s session time in gapless transition",
-				 __func__);
+
+	if (!first_buffer && !gapless_transition) {
 		if (pdata->use_legacy_api)
 			rc = q6asm_get_session_time_legacy(prtd->audio_client,
-							&timestamp);
+						&prtd->marker_timestamp);
 		else
 			rc = q6asm_get_session_time(prtd->audio_client,
-							&timestamp);
+						&prtd->marker_timestamp);
+
 		if (rc < 0) {
 			pr_err("%s: Get Session Time return value =%lld\n",
 				__func__, timestamp);
@@ -2027,9 +2043,8 @@ static int msm_compr_pointer(struct snd_compr_stream *cstream,
 			else
 				return -EAGAIN;
 		}
-	} else {
-		timestamp = prtd->marker_timestamp;
 	}
+	timestamp = prtd->marker_timestamp;
 
 	/* DSP returns timestamp in usec */
 	pr_debug("%s: timestamp = %lld usec\n", __func__, timestamp);

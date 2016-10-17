@@ -16,10 +16,14 @@
 #include <linux/irqreturn.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/consumer.h>
+<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161014 Add charging standard */
 #include "oem_external_fg.h"
 #endif
+=======
+#include "storm-watch.h"
+>>>>>>> origin/qc8998
 
 enum print_reason {
 	PR_INTERRUPT	= BIT(0),
@@ -55,8 +59,9 @@ struct smb_regulator {
 };
 
 struct smb_irq_data {
-	void		*parent_data;
-	const char	*name;
+	void			*parent_data;
+	const char		*name;
+	struct storm_watch	storm_data;
 };
 
 struct smb_chg_param {
@@ -154,11 +159,15 @@ struct smb_charger {
 	struct delayed_work	ps_change_timeout_work;
 	struct delayed_work	pl_taper_work;
 	struct delayed_work	step_soc_req_work;
+<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 	struct delayed_work	check_switch_dash_work;
 	struct delayed_work heartbeat_work;
 #endif
+=======
+	struct delayed_work	clear_hdc_work;
+>>>>>>> origin/qc8998
 
 	/* cached status */
 #ifdef VENDOR_EDIT
@@ -218,6 +227,11 @@ struct smb_charger {
 	int			fake_capacity;
 
 	bool			step_chg_enabled;
+	bool			is_hdc;
+	bool			chg_done;
+
+	/* workaround flag */
+	u32			wa_flags;
 };
 
 int smblib_read(struct smb_charger *chg, u16 addr, u8 *val);
@@ -261,6 +275,7 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data);
 irqreturn_t smblib_handle_usb_source_change(int irq, void *data);
 irqreturn_t smblib_handle_icl_change(int irq, void *data);
 irqreturn_t smblib_handle_usb_typec_change(int irq, void *data);
+irqreturn_t smblib_handle_high_duty_cycle(int irq, void *data);
 
 int smblib_get_prop_input_suspend(struct smb_charger *chg,
 				union power_supply_propval *val);
@@ -275,6 +290,16 @@ int smblib_get_prop_batt_charge_type(struct smb_charger *chg,
 int smblib_get_prop_batt_health(struct smb_charger *chg,
 				union power_supply_propval *val);
 int smblib_get_prop_system_temp_level(struct smb_charger *chg,
+				union power_supply_propval *val);
+int smblib_get_prop_input_current_limited(struct smb_charger *chg,
+				union power_supply_propval *val);
+int smblib_get_prop_batt_voltage_now(struct smb_charger *chg,
+				union power_supply_propval *val);
+int smblib_get_prop_batt_current_now(struct smb_charger *chg,
+				union power_supply_propval *val);
+int smblib_get_prop_batt_temp(struct smb_charger *chg,
+				union power_supply_propval *val);
+int smblib_get_prop_step_chg_step(struct smb_charger *chg,
 				union power_supply_propval *val);
 
 int smblib_set_prop_input_suspend(struct smb_charger *chg,

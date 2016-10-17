@@ -281,6 +281,8 @@ struct sde_rot_mgr {
 
 	u32 hwacquire_timeout;
 	struct sde_mult_factor pixel_per_clk;
+	struct sde_mult_factor fudge_factor;
+	struct sde_mult_factor overhead;
 
 	int (*ops_config_hw)(struct sde_rot_hw_resource *hw,
 			struct sde_rot_entry *entry);
@@ -293,6 +295,8 @@ struct sde_rot_mgr {
 	void (*ops_hw_free)(struct sde_rot_mgr *mgr,
 			struct sde_rot_hw_resource *hw);
 	int (*ops_hw_init)(struct sde_rot_mgr *mgr);
+	void (*ops_hw_pre_pmevent)(struct sde_rot_mgr *mgr, bool pmon);
+	void (*ops_hw_post_pmevent)(struct sde_rot_mgr *mgr, bool pmon);
 	void (*ops_hw_destroy)(struct sde_rot_mgr *mgr);
 	ssize_t (*ops_hw_show_caps)(struct sde_rot_mgr *mgr,
 			struct device_attribute *attr, char *buf, ssize_t len);
@@ -404,6 +408,8 @@ int sde_rotator_verify_config(struct sde_rot_mgr *rot_dev,
 int sde_rotator_validate_request(struct sde_rot_mgr *rot_dev,
 	struct sde_rot_file_private *ctx,
 	struct sde_rot_entry_container *req);
+
+int sde_rotator_clk_ctrl(struct sde_rot_mgr *mgr, int enable);
 
 static inline void sde_rot_mgr_lock(struct sde_rot_mgr *mgr)
 {

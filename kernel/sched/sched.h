@@ -1039,6 +1039,7 @@ extern unsigned int min_capacity;
 extern unsigned int max_load_scale_factor;
 extern unsigned int max_possible_capacity;
 extern unsigned int min_max_possible_capacity;
+extern unsigned int max_power_cost;
 extern unsigned int sched_upmigrate;
 extern unsigned int sched_downmigrate;
 extern unsigned int sched_init_task_load_windows;
@@ -1069,7 +1070,7 @@ extern void clear_boost_kick(int cpu);
 extern void clear_hmp_request(int cpu);
 extern void mark_task_starting(struct task_struct *p);
 extern void set_window_start(struct rq *rq);
-extern void migrate_sync_cpu(int cpu);
+extern void migrate_sync_cpu(int cpu, int new_cpu);
 extern void update_cluster_topology(void);
 extern void set_task_last_wake(struct task_struct *p, u64 wallclock);
 extern void set_task_last_switch_out(struct task_struct *p, u64 wallclock);
@@ -1398,6 +1399,8 @@ extern u64 cpu_upmigrate_discourage_read_u64(struct cgroup_subsys_state *css,
 					struct cftype *cft);
 extern int cpu_upmigrate_discourage_write_u64(struct cgroup_subsys_state *css,
 				struct cftype *cft, u64 upmigrate_discourage);
+extern void sched_hmp_parse_dt(void);
+extern void init_sched_hmp_boost_policy(void);
 
 #else	/* CONFIG_SCHED_HMP */
 
@@ -1424,7 +1427,8 @@ static inline void clear_boost_kick(int cpu) { }
 static inline void clear_hmp_request(int cpu) { }
 static inline void mark_task_starting(struct task_struct *p) { }
 static inline void set_window_start(struct rq *rq) { }
-static inline void migrate_sync_cpu(int cpu) { }
+static inline void migrate_sync_cpu(int cpu, int new_cpu) {}
+static inline void init_clusters(void) {}
 static inline void update_cluster_topology(void) { }
 static inline void set_task_last_wake(struct task_struct *p, u64 wallclock) { }
 static inline void set_task_last_switch_out(struct task_struct *p,
@@ -1587,6 +1591,8 @@ static inline void post_big_task_count_change(void) { }
 static inline void set_hmp_defaults(void) { }
 
 static inline void clear_reserved(int cpu) { }
+static inline void sched_hmp_parse_dt(void) {}
+static inline  void init_sched_hmp_boost_policy(void) {}
 
 #define trace_sched_cpu_load(...)
 #define trace_sched_cpu_load_lb(...)
@@ -1953,6 +1959,7 @@ extern const struct sched_class idle_sched_class;
 extern void update_group_capacity(struct sched_domain *sd, int cpu);
 
 extern void trigger_load_balance(struct rq *rq);
+extern void nohz_balance_clear_nohz_mask(int cpu);
 
 extern void idle_enter_fair(struct rq *this_rq);
 extern void idle_exit_fair(struct rq *this_rq);

@@ -114,6 +114,7 @@ struct qmi_client_info {
 };
 static LIST_HEAD(qmi_client_list);
 static DEFINE_MUTEX(qmi_list_lock);
+static DEFINE_MUTEX(qmi_client_release_lock);
 
 static DEFINE_MUTEX(notif_add_lock);
 
@@ -386,7 +387,8 @@ static void root_service_service_arrive(struct work_struct *work)
 	mutex_unlock(&notif_add_lock);
 }
 
-static void root_service_service_exit(struct qmi_client_info *data)
+static void root_service_service_exit(struct qmi_client_info *data,
+					enum pd_subsys_state state)
 {
 	struct service_notif_info *service_notif = NULL;
 	int rc;
@@ -401,7 +403,7 @@ static void root_service_service_exit(struct qmi_client_info *data)
 		if (service_notif->instance_id == data->instance_id) {
 			rc = service_notif_queue_notification(service_notif,
 					SERVREG_NOTIF_SERVICE_STATE_DOWN_V01,
-					NULL);
+					&state);
 			if (rc & NOTIFY_STOP_MASK)
 				pr_err("Notifier callback aborted for %s with error %d\n",
 					service_notif->service_path, rc);
@@ -416,16 +418,18 @@ static void root_service_service_exit(struct qmi_client_info *data)
 	 * Destroy client handle and try connecting when
 	 * service comes up again.
 	 */
+	mutex_lock(&qmi_client_release_lock);
 	data->service_connected = false;
 	qmi_handle_destroy(data->clnt_handle);
 	data->clnt_handle = NULL;
+	mutex_unlock(&qmi_client_release_lock);
 }
 
 static void root_service_exit_work(struct work_struct *work)
 {
 	struct qmi_client_info *data = container_of(work,
 					struct qmi_client_info, svc_exit);
-	root_service_service_exit(data);
+	root_service_service_exit(data, UNKNOWN);
 }
 
 static int service_event_notify(struct notifier_block *this,
@@ -456,10 +460,15 @@ static int ssr_event_notify(struct notifier_block *this,
 {
 	struct qmi_client_info *info = container_of(this,
 					struct qmi_client_info, ssr_notifier);
+	struct notif_data *notif = data;
 	switch (code) {
-	case	SUBSYS_BEFORE_SHUTDOWN:
-		pr_debug("Root PD service Down (SSR notification)\n");
-		root_service_service_exit(info);
+	case	SUBSYS_AFTER_SHUTDOWN:
+		pr_debug("Root PD DOWN(SSR notification), crashed?%d\n",
+						notif->crashed);
+		if (notif->crashed)
+			root_service_service_exit(info, CRASHED);
+		else
+			root_service_service_exit(info, SHUTDOWN);
 		break;
 	default:
 		break;

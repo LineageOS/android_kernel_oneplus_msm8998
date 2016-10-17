@@ -83,6 +83,7 @@ DEFINE_EXT_CLK(ext_dp_phy_pll_vco, NULL);
 DEFINE_EXT_CLK(ext_dp_phy_pll_link, NULL);
 
 static DEFINE_VDD_REGULATORS(vdd_dig, VDD_DIG_NUM, 1, vdd_corner, NULL);
+static DEFINE_VDD_REGULATORS(vdd_mmsscc_mx, VDD_DIG_NUM, 1, vdd_corner, NULL);
 
 static struct alpha_pll_masks pll_masks_p = {
 	.lock_mask = BIT(31),
@@ -102,7 +103,7 @@ static struct pll_vote_clk mmpll0_pll = {
 		.parent = &mmsscc_xo.c,
 		.dbg_name = "mmpll0",
 		.ops = &clk_ops_pll_vote,
-		VDD_DIG_FMAX_MAP2(LOWER, 404000000, NOMINAL, 808000000),
+		VDD_MM_PLL_FMAX_MAP2(LOWER, 404000000, NOMINAL, 808000000),
 		CLK_INIT(mmpll0_pll.c),
 	},
 };
@@ -119,7 +120,7 @@ static struct pll_vote_clk mmpll1_pll = {
 		.parent = &mmsscc_xo.c,
 		.dbg_name = "mmpll1_pll",
 		.ops = &clk_ops_pll_vote,
-		VDD_DIG_FMAX_MAP2(LOWER, 406000000, NOMINAL, 812000000),
+		VDD_MM_PLL_FMAX_MAP2(LOWER, 406000000, NOMINAL, 812000000),
 		CLK_INIT(mmpll1_pll.c),
 	},
 };
@@ -136,7 +137,7 @@ static struct alpha_pll_clk mmpll3_pll = {
 		.parent = &mmsscc_xo.c,
 		.dbg_name = "mmpll3_pll",
 		.ops = &clk_ops_fixed_fabia_alpha_pll,
-		VDD_DIG_FMAX_MAP2(LOWER, 465000000, LOW, 930000000),
+		VDD_MM_PLL_FMAX_MAP2(LOWER, 465000000, LOW, 930000000),
 		CLK_INIT(mmpll3_pll.c),
 	},
 };
@@ -153,7 +154,7 @@ static struct alpha_pll_clk mmpll4_pll = {
 		.parent = &mmsscc_xo.c,
 		.dbg_name = "mmpll4_pll",
 		.ops = &clk_ops_fixed_fabia_alpha_pll,
-		VDD_DIG_FMAX_MAP2(LOWER, 384000000, LOW, 768000000),
+		VDD_MM_PLL_FMAX_MAP2(LOWER, 384000000, LOW, 768000000),
 		CLK_INIT(mmpll4_pll.c),
 	},
 };
@@ -170,7 +171,7 @@ static struct alpha_pll_clk mmpll5_pll = {
 		.parent = &mmsscc_xo.c,
 		.dbg_name = "mmpll5_pll",
 		.ops = &clk_ops_fixed_fabia_alpha_pll,
-		VDD_DIG_FMAX_MAP2(LOWER, 412500000, LOW, 825000000),
+		VDD_MM_PLL_FMAX_MAP2(LOWER, 412500000, LOW, 825000000),
 		CLK_INIT(mmpll5_pll.c),
 	},
 };
@@ -187,7 +188,7 @@ static struct alpha_pll_clk mmpll6_pll = {
 		.parent = &mmsscc_xo.c,
 		.dbg_name = "mmpll6_pll",
 		.ops = &clk_ops_fixed_fabia_alpha_pll,
-		VDD_DIG_FMAX_MAP2(LOWER, 360000000, NOMINAL, 720000000),
+		VDD_MM_PLL_FMAX_MAP2(LOWER, 360000000, NOMINAL, 720000000),
 		CLK_INIT(mmpll6_pll.c),
 	},
 };
@@ -204,7 +205,7 @@ static struct alpha_pll_clk mmpll7_pll = {
 		.parent = &mmsscc_xo.c,
 		.dbg_name = "mmpll7_pll",
 		.ops = &clk_ops_fixed_fabia_alpha_pll,
-		VDD_DIG_FMAX_MAP2(LOWER, 480000000, NOMINAL, 960000000),
+		VDD_MM_PLL_FMAX_MAP1(LOW, 960000000),
 		CLK_INIT(mmpll7_pll.c),
 	},
 };
@@ -221,7 +222,7 @@ static struct alpha_pll_clk mmpll10_pll = {
 		.parent = &mmsscc_xo.c,
 		.dbg_name = "mmpll10_pll",
 		.ops = &clk_ops_fixed_fabia_alpha_pll,
-		VDD_DIG_FMAX_MAP2(LOWER, 288000000, NOMINAL, 576000000),
+		VDD_MM_PLL_FMAX_MAP2(LOWER, 288000000, NOMINAL, 576000000),
 		CLK_INIT(mmpll10_pll.c),
 	},
 };
@@ -239,6 +240,7 @@ static struct rcg_clk ahb_clk_src = {
 	.set_rate = set_rate_hid,
 	.freq_tbl = ftbl_ahb_clk_src,
 	.current_freq = &rcg_dummy_freq,
+	.non_local_control_timeout = 1000,
 	.base = &virt_base,
 	.c = {
 		.dbg_name = "ahb_clk_src",
@@ -480,10 +482,9 @@ static struct clk_freq_tbl ftbl_video_core_clk_src[] = {
 };
 
 static struct clk_freq_tbl ftbl_video_core_clk_src_vq[] = {
-	F_MM( 100000000,   mmsscc_gpll0,    6,    0,     0),
 	F_MM( 200000000,   mmsscc_gpll0,    3,    0,     0),
 	F_MM( 269330000, mmpll0_pll_out,    3,    0,     0),
-	F_MM( 404000000, mmpll0_pll_out,    2,    0,     0),
+	F_MM( 355200000, mmpll6_pll_out,  2.5,    0,     0),
 	F_MM( 444000000, mmpll6_pll_out,    2,    0,     0),
 	F_MM( 533000000, mmpll3_pll_out,    2,    0,     0),
 	F_END
@@ -734,10 +735,9 @@ static struct clk_freq_tbl ftbl_video_subcore_clk_src[] = {
 };
 
 static struct clk_freq_tbl ftbl_video_subcore_clk_src_vq[] = {
-	F_MM( 100000000,   mmsscc_gpll0,    6,    0,     0),
 	F_MM( 200000000,   mmsscc_gpll0,    3,    0,     0),
 	F_MM( 269330000, mmpll0_pll_out,    3,    0,     0),
-	F_MM( 404000000, mmpll0_pll_out,    2,    0,     0),
+	F_MM( 355200000, mmpll6_pll_out,  2.5,    0,     0),
 	F_MM( 444000000, mmpll6_pll_out,    2,    0,     0),
 	F_MM( 533000000, mmpll3_pll_out,    2,    0,     0),
 	F_END
@@ -1112,16 +1112,16 @@ static struct rcg_clk dp_pixel_clk_src = {
 		.parent = &ext_dp_phy_pll_vco.c,
 		.ops = &clk_ops_rcg_dp,
 		.flags = CLKFLAG_NO_RATE_CACHE,
-		VDD_DIG_FMAX_MAP3(LOWER, 148380000, LOW, 296740000,
-					NOMINAL, 593470000),
+		VDD_DIG_FMAX_MAP3(LOWER, 148380, LOW, 296740,
+					NOMINAL, 593470),
 		CLK_INIT(dp_pixel_clk_src.c),
 	},
 };
 
 static struct clk_freq_tbl ftbl_dp_link_clk_src[] = {
-	F_SLEW( 162000000,  324000000, ext_dp_phy_pll_link,   2,   0,   0),
-	F_SLEW( 270000000,  540000000, ext_dp_phy_pll_link,   2,   0,   0),
-	F_SLEW( 540000000, 1080000000, ext_dp_phy_pll_link,   2,   0,   0),
+	F_SLEW( 162000,  324000, ext_dp_phy_pll_link,   2,   0,   0),
+	F_SLEW( 270000,  540000, ext_dp_phy_pll_link,   2,   0,   0),
+	F_SLEW( 540000, 1080000, ext_dp_phy_pll_link,   2,   0,   0),
 	F_END
 };
 
@@ -1135,8 +1135,8 @@ static struct rcg_clk dp_link_clk_src = {
 		.dbg_name = "dp_link_clk_src",
 		.ops = &clk_ops_rcg,
 		.flags = CLKFLAG_NO_RATE_CACHE,
-		VDD_DIG_FMAX_MAP3(LOWER, 162000000, LOW, 270000000,
-					NOMINAL, 540000000),
+		VDD_DIG_FMAX_MAP3(LOWER, 162000, LOW, 270000,
+					NOMINAL, 540000),
 		CLK_INIT(dp_link_clk_src.c),
 	},
 };
@@ -1148,9 +1148,9 @@ static struct rcg_clk dp_link_clk_src = {
  * clocks.
  */
 static struct clk_freq_tbl ftbl_dp_crypto_clk_src[] = {
-	F_MM( 101250000, ext_dp_phy_pll_link,   1,   5,   16),
-	F_MM( 168750000, ext_dp_phy_pll_link,   1,   5,   16),
-	F_MM( 337500000, ext_dp_phy_pll_link,   1,   5,   16),
+	F_MM( 101250, ext_dp_phy_pll_link,   1,   5,   16),
+	F_MM( 168750, ext_dp_phy_pll_link,   1,   5,   16),
+	F_MM( 337500, ext_dp_phy_pll_link,   1,   5,   16),
 	F_END
 };
 
@@ -1163,8 +1163,8 @@ static struct rcg_clk dp_crypto_clk_src = {
 	.c = {
 		.dbg_name = "dp_crypto_clk_src",
 		.ops = &clk_ops_rcg_mnd,
-		VDD_DIG_FMAX_MAP3(LOWER, 101250000, LOW, 168750000,
-					NOMINAL, 337500000),
+		VDD_DIG_FMAX_MAP3(LOWER, 101250, LOW, 168750,
+					NOMINAL, 337500),
 		CLK_INIT(dp_crypto_clk_src.c),
 	},
 };
@@ -2626,7 +2626,6 @@ static struct clk_lookup msm_clocks_mmss_cobalt[] = {
 	CLK_LIST(mmss_misc_ahb_clk),
 	CLK_LIST(mmss_misc_cxo_clk),
 	CLK_LIST(mmss_mnoc_ahb_clk),
-	CLK_LIST(mmss_mnoc_maxi_clk),
 	CLK_LIST(mmss_video_subcore0_clk),
 	CLK_LIST(mmss_video_subcore1_clk),
 	CLK_LIST(mmss_video_ahb_clk),
@@ -2635,6 +2634,7 @@ static struct clk_lookup msm_clocks_mmss_cobalt[] = {
 	CLK_LIST(mmss_video_maxi_clk),
 	CLK_LIST(mmss_vmem_ahb_clk),
 	CLK_LIST(mmss_vmem_maxi_clk),
+	CLK_LIST(mmss_mnoc_maxi_clk),
 	CLK_LIST(mmss_debug_mux),
 };
 
@@ -2732,23 +2732,12 @@ static void msm_mmsscc_hamster_fixup(void)
 
 static void msm_mmsscc_v2_fixup(void)
 {
-	cpp_clk_src.c.fmax[VDD_DIG_LOW] = 200000000;
-	cpp_clk_src.c.fmax[VDD_DIG_LOW_L1] = 480000000;
-	csi0_clk_src.c.fmax[VDD_DIG_LOW] = 256000000;
-	csi0_clk_src.c.fmax[VDD_DIG_LOW_L1] = 300000000;
-	csi1_clk_src.c.fmax[VDD_DIG_LOW] = 256000000;
-	csi1_clk_src.c.fmax[VDD_DIG_LOW_L1] = 300000000;
-	csi2_clk_src.c.fmax[VDD_DIG_LOW] = 256000000;
-	csi2_clk_src.c.fmax[VDD_DIG_LOW_L1] = 300000000;
-	csi3_clk_src.c.fmax[VDD_DIG_LOW] = 256000000;
-	csi3_clk_src.c.fmax[VDD_DIG_LOW_L1] = 300000000;
-	csiphy_clk_src.c.fmax[VDD_DIG_LOW] = 256000000;
+	csi0_clk_src.c.fmax[VDD_DIG_NOMINAL] = 480000000;
+	csi1_clk_src.c.fmax[VDD_DIG_NOMINAL] = 480000000;
+	csi2_clk_src.c.fmax[VDD_DIG_NOMINAL] = 480000000;
+	csi3_clk_src.c.fmax[VDD_DIG_NOMINAL] = 480000000;
 
 	dp_pixel_clk_src.c.fmax[VDD_DIG_LOWER] = 148380000;
-
-	video_subcore0_clk_src.c.fmax[VDD_DIG_LOW_L1] = 355200000;
-	video_subcore1_clk_src.c.fmax[VDD_DIG_LOW_L1] = 355200000;
-	video_core_clk_src.c.fmax[VDD_DIG_LOW_L1] = 355200000;
 }
 
 int msm_mmsscc_cobalt_probe(struct platform_device *pdev)
@@ -2780,6 +2769,14 @@ int msm_mmsscc_cobalt_probe(struct platform_device *pdev)
 	if (IS_ERR(reg)) {
 		if (PTR_ERR(reg) != -EPROBE_DEFER)
 			dev_err(&pdev->dev, "Unable to get vdd_dig regulator!");
+		return PTR_ERR(reg);
+	}
+
+	reg = vdd_mmsscc_mx.regulator[0] = devm_regulator_get(&pdev->dev,
+							"vdd_mmsscc_mx");
+	if (IS_ERR(reg)) {
+		if (PTR_ERR(reg) != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "Unable to get vdd_mmsscc_mx regulator!");
 		return PTR_ERR(reg);
 	}
 

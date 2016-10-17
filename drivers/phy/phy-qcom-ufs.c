@@ -191,27 +191,20 @@ ufs_qcom_phy_init_clks(struct phy *generic_phy,
 		       struct ufs_qcom_phy *phy_common)
 {
 	int err;
-	struct ufs_qcom_phy *phy = get_ufs_qcom_phy(generic_phy);
 
-	err = ufs_qcom_phy_clk_get(generic_phy, "tx_iface_clk",
-				   &phy_common->tx_iface_clk);
 	/*
 	 * tx_iface_clk does not exist in newer version of ufs-phy HW,
 	 * so don't return error if it is not found
 	 */
-	if (err)
-		dev_dbg(phy->dev, "%s: failed to get tx_iface_clk\n",
-			__func__);
+	__ufs_qcom_phy_clk_get(generic_phy, "tx_iface_clk",
+				   &phy_common->tx_iface_clk, false);
 
-	err = ufs_qcom_phy_clk_get(generic_phy, "rx_iface_clk",
-				   &phy_common->rx_iface_clk);
 	/*
 	 * rx_iface_clk does not exist in newer version of ufs-phy HW,
 	 * so don't return error if it is not found
 	 */
-	if (err)
-		dev_dbg(phy->dev, "%s: failed to get rx_iface_clk\n",
-			__func__);
+	__ufs_qcom_phy_clk_get(generic_phy, "rx_iface_clk",
+				   &phy_common->rx_iface_clk, false);
 
 	err = ufs_qcom_phy_clk_get(generic_phy, "ref_clk_src",
 				   &phy_common->ref_clk_src);
@@ -788,3 +781,21 @@ int ufs_qcom_phy_configure_lpm(struct phy *generic_phy, bool enable)
 	return ret;
 }
 EXPORT_SYMBOL(ufs_qcom_phy_configure_lpm);
+
+void ufs_qcom_phy_dump_regs(struct ufs_qcom_phy *phy, int offset,
+				int len, char *prefix)
+{
+	print_hex_dump(KERN_ERR, prefix,
+			len > 4 ? DUMP_PREFIX_OFFSET : DUMP_PREFIX_NONE,
+			16, 4, phy->mmio + offset, len, false);
+}
+EXPORT_SYMBOL(ufs_qcom_phy_dump_regs);
+
+void ufs_qcom_phy_dbg_register_dump(struct phy *generic_phy)
+{
+	struct ufs_qcom_phy *ufs_qcom_phy = get_ufs_qcom_phy(generic_phy);
+
+	if (ufs_qcom_phy->phy_spec_ops->dbg_register_dump)
+		ufs_qcom_phy->phy_spec_ops->dbg_register_dump(ufs_qcom_phy);
+}
+EXPORT_SYMBOL(ufs_qcom_phy_dbg_register_dump);

@@ -241,8 +241,8 @@ DEFINE_EXT_CLK(gpll4_out_main, &gpll4.c);
 
 static struct clk_freq_tbl ftbl_hmss_ahb_clk_src[] = {
 	F(  19200000, cxo_clk_src_ao,    1,    0,     0),
-	F(  37500000, gpll0_out_main,   16,    0,     0),
-	F(  75000000, gpll0_out_main,    8,    0,     0),
+	F(  50000000, gpll0_out_main,   12,    0,     0),
+	F( 100000000, gpll0_out_main,    6,    0,     0),
 	F_END
 };
 
@@ -1197,6 +1197,17 @@ static struct branch_clk gcc_aggre1_ufs_axi_clk = {
 		.parent = &ufs_axi_clk_src.c,
 		.ops = &clk_ops_branch,
 		CLK_INIT(gcc_aggre1_ufs_axi_clk.c),
+	},
+};
+
+static struct hw_ctl_clk gcc_aggre1_ufs_axi_hw_ctl_clk = {
+	.cbcr_reg = GCC_AGGRE1_UFS_AXI_CBCR,
+	.base = &virt_base,
+	.c = {
+		.dbg_name = "gcc_aggre1_ufs_axi_hw_ctl_clk",
+		.parent = &gcc_aggre1_ufs_axi_clk.c,
+		.ops = &clk_ops_branch_hw_ctl,
+		CLK_INIT(gcc_aggre1_ufs_axi_hw_ctl_clk.c),
 	},
 };
 
@@ -2363,7 +2374,7 @@ static struct mux_clk gcc_debug_mux = {
 		{ &debug_cpu_clk.c, 0x00c0 },
 		{ &snoc_clk.c, 0x0000 },
 		{ &cnoc_clk.c, 0x000e },
-		{ &bimc_clk.c, 0x00a9 },
+		{ &bimc_clk.c, 0x014e },
 		{ &gcc_mmss_sys_noc_axi_clk.c, 0x001f },
 		{ &gcc_mmss_noc_cfg_ahb_clk.c, 0x0020 },
 		{ &gcc_usb30_master_clk.c, 0x003e },
@@ -2597,6 +2608,7 @@ static struct clk_lookup msm_clocks_gcc_cobalt[] = {
 	CLK_LIST(gcc_qusb2phy_sec_reset),
 	CLK_LIST(gpll0_out_msscc),
 	CLK_LIST(gcc_aggre1_ufs_axi_clk),
+	CLK_LIST(gcc_aggre1_ufs_axi_hw_ctl_clk),
 	CLK_LIST(gcc_aggre1_usb3_axi_clk),
 	CLK_LIST(gcc_bimc_mss_q6_axi_clk),
 	CLK_LIST(gcc_blsp1_ahb_clk),

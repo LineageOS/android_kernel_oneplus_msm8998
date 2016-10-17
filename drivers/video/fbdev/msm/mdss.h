@@ -163,6 +163,7 @@ enum mdss_hw_quirk {
 	MDSS_QUIRK_FMT_PACK_PATTERN,
 	MDSS_QUIRK_NEED_SECURE_MAP,
 	MDSS_QUIRK_SRC_SPLIT_ALWAYS,
+	MDSS_QUIRK_MMSS_GDSC_COLLAPSE,
 	MDSS_QUIRK_MAX,
 };
 
@@ -191,6 +192,7 @@ enum mdss_qos_settings {
 	MDSS_QOS_TS_PREFILL,
 	MDSS_QOS_REMAPPER,
 	MDSS_QOS_IB_NOCR,
+	MDSS_QOS_WB2_WRITE_GATHER_EN,
 	MDSS_QOS_MAX,
 };
 
@@ -404,6 +406,7 @@ struct mdss_data_type {
 	u32 enable_gate;
 	u32 enable_bw_release;
 	u32 enable_rotator_bw_release;
+	u32 enable_cdp;
 	u32 serialize_wait4pp;
 	u32 wait4autorefresh;
 	u32 lines_before_active;
@@ -456,6 +459,7 @@ struct mdss_data_type {
 	u32 nmax_concurrent_ad_hw;
 	struct workqueue_struct *ad_calc_wq;
 	u32 ad_debugen;
+	bool mem_retain;
 
 	struct mdss_intr hist_intr;
 

@@ -473,7 +473,7 @@ static int wcd_cpe_load_fw(struct wcd_cpe_core *core,
 	bool load_segment;
 
 	if (!core || !core->cpe_handle) {
-		pr_err("%s: Error CPE core %p\n", __func__,
+		pr_err("%s: Error CPE core %pK\n", __func__,
 		       core);
 		return -EINVAL;
 	}
@@ -2051,6 +2051,7 @@ struct wcd_cpe_core *wcd_cpe_init(const char *img_fname,
 		goto schedule_dload_work;
 	}
 
+	arch_setup_dma_ops(core->dev, 0, 0, NULL, 0);
 	core->cpe_dump_v_addr = dma_alloc_coherent(core->dev,
 						   core->hw_info.dram_size,
 						   &core->cpe_dump_addr,

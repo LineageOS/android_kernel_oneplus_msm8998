@@ -21,6 +21,7 @@ const struct snd_soc_dapm_route tavil_slim_audio_map[] = {
 	{"AIF1 CAP", NULL, "AIF1_CAP Mixer"},
 	{"AIF2 CAP", NULL, "AIF2_CAP Mixer"},
 	{"AIF3 CAP", NULL, "AIF3_CAP Mixer"},
+	{"AIF4 MAD", NULL, "AIF4_MAD Mixer"},
 
 	/* Virtual input widget Mixer */
 	{"AIF1_CAP Mixer", "SLIM TX0", "SLIM TX0"},
@@ -64,6 +65,8 @@ const struct snd_soc_dapm_route tavil_slim_audio_map[] = {
 	{"AIF3_CAP Mixer", "SLIM TX10", "SLIM TX10"},
 	{"AIF3_CAP Mixer", "SLIM TX11", "SLIM TX11"},
 	{"AIF3_CAP Mixer", "SLIM TX13", "SLIM TX13"},
+
+	{"AIF4_MAD Mixer", "SLIM TX13", "SLIM TX13"},
 
 	{"SLIM RX0 MUX", "AIF1_PB", "AIF1 PB"},
 	{"SLIM RX1 MUX", "AIF1_PB", "AIF1 PB"},
@@ -121,6 +124,7 @@ const struct snd_soc_dapm_route tavil_audio_map[] = {
 	{"MAD_INP MUX", "MAD", "MAD_SEL MUX"},
 	{"MAD_INP MUX", "DEC1", "ADC MUX1"},
 
+	{"MAD_BROADCAST", "Switch", "MAD_INP MUX"},
 	{"MAD_CPE1", "Switch", "MAD_INP MUX"},
 	{"MAD_CPE2", "Switch", "MAD_INP MUX"},
 
@@ -311,6 +315,43 @@ const struct snd_soc_dapm_route tavil_audio_map[] = {
 	{"ADC MUX12", "AMIC", "AMIC MUX12"},
 	{"ADC MUX13", "DMIC", "DMIC MUX13"},
 	{"ADC MUX13", "AMIC", "AMIC MUX13"},
+
+	{"ADC MUX0", "ANC_FB_TUNE1", "ADC MUX10"},
+	{"ADC MUX0", "ANC_FB_TUNE1", "ADC MUX11"},
+	{"ADC MUX0", "ANC_FB_TUNE2", "ADC MUX12"},
+	{"ADC MUX0", "ANC_FB_TUNE2", "ADC MUX13"},
+	{"ADC MUX1", "ANC_FB_TUNE1", "ADC MUX10"},
+	{"ADC MUX1", "ANC_FB_TUNE1", "ADC MUX11"},
+	{"ADC MUX1", "ANC_FB_TUNE2", "ADC MUX12"},
+	{"ADC MUX1", "ANC_FB_TUNE2", "ADC MUX13"},
+	{"ADC MUX2", "ANC_FB_TUNE1", "ADC MUX10"},
+	{"ADC MUX2", "ANC_FB_TUNE1", "ADC MUX11"},
+	{"ADC MUX2", "ANC_FB_TUNE2", "ADC MUX12"},
+	{"ADC MUX2", "ANC_FB_TUNE2", "ADC MUX13"},
+	{"ADC MUX3", "ANC_FB_TUNE1", "ADC MUX10"},
+	{"ADC MUX3", "ANC_FB_TUNE1", "ADC MUX11"},
+	{"ADC MUX3", "ANC_FB_TUNE2", "ADC MUX12"},
+	{"ADC MUX3", "ANC_FB_TUNE2", "ADC MUX13"},
+	{"ADC MUX4", "ANC_FB_TUNE1", "ADC MUX10"},
+	{"ADC MUX4", "ANC_FB_TUNE1", "ADC MUX11"},
+	{"ADC MUX4", "ANC_FB_TUNE2", "ADC MUX12"},
+	{"ADC MUX4", "ANC_FB_TUNE2", "ADC MUX13"},
+	{"ADC MUX5", "ANC_FB_TUNE1", "ADC MUX10"},
+	{"ADC MUX5", "ANC_FB_TUNE1", "ADC MUX11"},
+	{"ADC MUX5", "ANC_FB_TUNE2", "ADC MUX12"},
+	{"ADC MUX5", "ANC_FB_TUNE2", "ADC MUX13"},
+	{"ADC MUX6", "ANC_FB_TUNE1", "ADC MUX10"},
+	{"ADC MUX6", "ANC_FB_TUNE1", "ADC MUX11"},
+	{"ADC MUX6", "ANC_FB_TUNE2", "ADC MUX12"},
+	{"ADC MUX6", "ANC_FB_TUNE2", "ADC MUX13"},
+	{"ADC MUX7", "ANC_FB_TUNE1", "ADC MUX10"},
+	{"ADC MUX7", "ANC_FB_TUNE1", "ADC MUX11"},
+	{"ADC MUX7", "ANC_FB_TUNE2", "ADC MUX12"},
+	{"ADC MUX7", "ANC_FB_TUNE2", "ADC MUX13"},
+	{"ADC MUX8", "ANC_FB_TUNE1", "ADC MUX10"},
+	{"ADC MUX8", "ANC_FB_TUNE1", "ADC MUX11"},
+	{"ADC MUX8", "ANC_FB_TUNE2", "ADC MUX12"},
+	{"ADC MUX8", "ANC_FB_TUNE2", "ADC MUX13"},
 
 	{"DMIC MUX0", "DMIC0", "DMIC0"},
 	{"DMIC MUX0", "DMIC1", "DMIC1"},
@@ -859,6 +900,29 @@ const struct snd_soc_dapm_route tavil_audio_map[] = {
 	{"RX INT8 CHAIN", NULL, "RX INT8 SEC MIX"},
 	{"RX INT8 CHAIN", NULL, "RX_BIAS"},
 	{"SPK2 OUT", NULL, "RX INT8 CHAIN"},
+
+	/* ANC Routing */
+	{"ANC0 FB MUX", "ANC_IN_EAR", "RX INT0 MIX2"},
+	{"ANC0 FB MUX", "ANC_IN_HPHL", "RX INT1 MIX2"},
+	{"ANC0 FB MUX", "ANC_IN_LO1", "RX INT3 MIX2"},
+	{"ANC0 FB MUX", "ANC_IN_EAR_SPKR", "RX INT7 MIX2"},
+	{"ANC1 FB MUX", "ANC_IN_HPHR", "RX INT2 MIX2"},
+	{"ANC1 FB MUX", "ANC_IN_LO2", "RX INT4 MIX2"},
+
+	{"ANC OUT EAR Enable", "Switch", "ADC MUX10"},
+	{"ANC OUT EAR Enable", "Switch", "ADC MUX11"},
+	{"RX INT0 MIX2", NULL, "ANC OUT EAR Enable"},
+
+	{"ANC EAR PA", NULL, "RX INT0 DAC"},
+	{"ANC EAR", NULL, "ANC EAR PA"},
+
+	{"ANC OUT EAR SPKR Enable", "Switch", "ADC MUX10"},
+	{"ANC OUT EAR SPKR Enable", "Switch", "ADC MUX11"},
+	{"RX INT7 MIX2", NULL, "ANC OUT EAR SPKR Enable"},
+
+	{"ANC SPKR PA Enable", "Switch", "RX INT7 CHAIN"},
+	{"ANC SPK1 PA", NULL, "ANC SPKR PA Enable"},
+	{"SPK1 OUT", NULL, "ANC SPK1 PA"},
 
 	/*
 	 * SRC0, SRC1 inputs to Sidetone RX Mixer
