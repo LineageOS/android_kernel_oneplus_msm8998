@@ -1803,25 +1803,16 @@ irqreturn_t smblib_handle_debug(int irq, void *data)
 
 static void smblib_pl_handle_chg_state_change(struct smb_charger *chg, u8 stat)
 {
-<<<<<<< HEAD
-	struct smb_irq_data *irq_data = data;
-	struct smb_charger *chg = irq_data->parent_data;
-	union power_supply_propval pval = {0, };
-	int rc;
-
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20161014 Add charging standard */
-	pr_info("IRQ: %s\n", irq_data->name);
-#endif
-	smblib_dbg(chg, PR_INTERRUPT, "IRQ: %s\n", irq_data->name);
-=======
 	bool pl_enabled;
->>>>>>> origin/qc8998
 
 	if (chg->mode != PARALLEL_MASTER)
 		return;
 
 	pl_enabled = !get_effective_result_locked(chg->pl_disable_votable);
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20161014 Add charging standard */
+	pr_info("IRQ: stat=%d, pl_enabled=%d\n", stat, pl_enabled);
+#endif
 	switch (stat) {
 	case FAST_CHARGE:
 	case FULLON_CHARGE:
@@ -3714,7 +3705,6 @@ int smblib_init(struct smb_charger *chg)
 	INIT_DELAYED_WORK(&chg->hvdcp_detect_work, smblib_hvdcp_detect_work);
 	INIT_DELAYED_WORK(&chg->pl_taper_work, smblib_pl_taper_work);
 	INIT_DELAYED_WORK(&chg->step_soc_req_work, step_soc_req_work);
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 	INIT_DELAYED_WORK(&chg->check_switch_dash_work,
@@ -3726,9 +3716,7 @@ int smblib_init(struct smb_charger *chg)
 	notify_dash_unplug_register(&notify_unplug_event);
 	g_chg = chg;
 #endif
-=======
 	INIT_DELAYED_WORK(&chg->clear_hdc_work, clear_hdc_work);
->>>>>>> origin/qc8998
 	chg->fake_capacity = -EINVAL;
 
 	switch (chg->mode) {

@@ -16,14 +16,11 @@
 #include <linux/irqreturn.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/consumer.h>
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161014 Add charging standard */
 #include "oem_external_fg.h"
 #endif
-=======
 #include "storm-watch.h"
->>>>>>> origin/qc8998
 
 enum print_reason {
 	PR_INTERRUPT	= BIT(0),
@@ -159,15 +156,12 @@ struct smb_charger {
 	struct delayed_work	ps_change_timeout_work;
 	struct delayed_work	pl_taper_work;
 	struct delayed_work	step_soc_req_work;
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 	struct delayed_work	check_switch_dash_work;
 	struct delayed_work heartbeat_work;
 #endif
-=======
 	struct delayed_work	clear_hdc_work;
->>>>>>> origin/qc8998
 
 	/* cached status */
 #ifdef VENDOR_EDIT

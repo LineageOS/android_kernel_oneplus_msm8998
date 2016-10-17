@@ -1463,21 +1463,6 @@ static struct smb2_irq_info smb2_irqs[] = {
 		.handler	= smblib_handle_debug,
 	},
 /* MISCELLANEOUS IRQs */
-<<<<<<< HEAD
-	{ "wdog-snarl",			NULL },
-	{ "wdog-bark",			NULL },
-	{ "aicl-fail",			smblib_handle_debug },
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20161014 Add charging standard */
-	{ "aicl-done",			smblib_handle_aicl_done, true },
-#else
-	{ "aicl-done",			smblib_handle_debug },
-#endif
-	{ "high-duty-cycle",		smblib_handle_debug },
-	{ "input-current-limiting",	smblib_handle_debug },
-	{ "temperature-change",		smblib_handle_debug },
-	{ "switcher-power-ok",		smblib_handle_debug },
-=======
 	{
 		.name		= "wdog-snarl",
 		.handler	= NULL,
@@ -1490,10 +1475,18 @@ static struct smb2_irq_info smb2_irqs[] = {
 		.name		= "aicl-fail",
 		.handler	= smblib_handle_debug,
 	},
+#ifdef VENDOR_EDIT
+	/* david.liu@bsp, 20161014 Add charging standard */
+	{
+		.name		= "aicl-done",
+		.handler	= smblib_handle_aicl_done,
+	},
+#else
 	{
 		.name		= "aicl-done",
 		.handler	= smblib_handle_debug,
 	},
+#endif
 	{
 		.name		= "high-duty-cycle",
 		.handler	= smblib_handle_high_duty_cycle,
@@ -1511,7 +1504,6 @@ static struct smb2_irq_info smb2_irqs[] = {
 		.name		= "switcher-power-ok",
 		.handler	= smblib_handle_debug,
 	},
->>>>>>> origin/qc8998
 };
 
 static int smb2_get_irq_index_byname(const char *irq_name)
