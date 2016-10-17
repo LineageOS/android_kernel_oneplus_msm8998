@@ -268,9 +268,6 @@ module_param_named(
 	sram_update_period_ms, fg_sram_update_period_ms, int, S_IRUSR | S_IWUSR
 );
 
-<<<<<<< HEAD
-/* Other functions HERE */
-
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 static struct external_battery_gauge *external_fg = NULL;
@@ -294,171 +291,6 @@ void external_battery_gauge_unregister(struct external_battery_gauge *batt_gauge
 EXPORT_SYMBOL(external_battery_gauge_unregister);
 #endif
 
-static int fg_awake_cb(struct votable *votable, void *data, int awake,
-			const char *client)
-{
-	struct fg_chip *chip = data;
-
-	if (awake)
-		pm_stay_awake(chip->dev);
-	else
-		pm_relax(chip->dev);
-
-	pr_debug("client: %s awake: %d\n", client, awake);
-	return 0;
-}
-
-static bool is_charger_available(struct fg_chip *chip)
-{
-	if (!chip->batt_psy)
-		chip->batt_psy = power_supply_get_by_name("battery");
-
-	if (!chip->batt_psy)
-		return false;
-
-	return true;
-}
-
-static void status_change_work(struct work_struct *work)
-{
-	struct fg_chip *chip = container_of(work,
-			struct fg_chip, status_change_work);
-	union power_supply_propval prop = {0, };
-
-	if (!is_charger_available(chip)) {
-		fg_dbg(chip, FG_STATUS, "Charger not available?!\n");
-		return;
-	}
-
-	power_supply_get_property(chip->batt_psy, POWER_SUPPLY_PROP_STATUS,
-			&prop);
-	switch (prop.intval) {
-	case POWER_SUPPLY_STATUS_CHARGING:
-		fg_dbg(chip, FG_POWER_SUPPLY, "Charging\n");
-		break;
-	case POWER_SUPPLY_STATUS_DISCHARGING:
-		fg_dbg(chip, FG_POWER_SUPPLY, "Discharging\n");
-		break;
-	case POWER_SUPPLY_STATUS_FULL:
-		fg_dbg(chip, FG_POWER_SUPPLY, "Full\n");
-		break;
-	default:
-		break;
-	}
-}
-
-#define PROFILE_LEN			224
-#define PROFILE_COMP_LEN		32
-#define SOC_READY_WAIT_MS		2000
-static void profile_load_work(struct work_struct *work)
-{
-	struct fg_chip *chip = container_of(work,
-				struct fg_chip,
-				profile_load_work.work);
-	int rc;
-	u8 buf[PROFILE_COMP_LEN], val;
-	bool tried_again = false, profiles_same = false;
-
-	if (!chip->batt_id_avail) {
-		pr_err("batt_id not available\n");
-		return;
-	}
-
-	rc = fg_sram_read(chip, PROFILE_INTEGRITY_WORD,
-			PROFILE_INTEGRITY_OFFSET, &val, 1, FG_IMA_DEFAULT);
-	if (rc < 0) {
-		pr_err("failed to read profile integrity rc=%d\n", rc);
-		return;
-	}
-
-	vote(chip->awake_votable, PROFILE_LOAD, true, 0);
-	if (val == 0x01) {
-		fg_dbg(chip, FG_STATUS, "Battery profile integrity bit is set\n");
-		rc = fg_sram_read(chip, PROFILE_LOAD_WORD, PROFILE_LOAD_OFFSET,
-				buf, PROFILE_COMP_LEN, FG_IMA_DEFAULT);
-		if (rc < 0) {
-			pr_err("Error in reading battery profile, rc:%d\n", rc);
-			goto out;
-		}
-		profiles_same = memcmp(chip->batt_profile, buf,
-					PROFILE_COMP_LEN) == 0;
-		if (profiles_same) {
-			fg_dbg(chip, FG_STATUS, "Battery profile is same\n");
-			goto done;
-		}
-		fg_dbg(chip, FG_STATUS, "profiles are different?\n");
-	}
-
-	fg_dbg(chip, FG_STATUS, "profile loading started\n");
-	rc = fg_masked_write(chip, BATT_SOC_RESTART(chip), RESTART_GO_BIT, 0);
-	if (rc < 0) {
-		pr_err("Error in writing to %04x, rc=%d\n",
-			BATT_SOC_RESTART(chip), rc);
-		goto out;
-	}
-
-	/* load battery profile */
-	rc = fg_sram_write(chip, PROFILE_LOAD_WORD, PROFILE_LOAD_OFFSET,
-			chip->batt_profile, PROFILE_LEN, FG_IMA_ATOMIC);
-	if (rc < 0) {
-		pr_err("Error in writing battery profile, rc:%d\n", rc);
-		goto out;
-	}
-
-	rc = fg_masked_write(chip, BATT_SOC_RESTART(chip), RESTART_GO_BIT,
-			RESTART_GO_BIT);
-	if (rc < 0) {
-		pr_err("Error in writing to %04x, rc=%d\n",
-			BATT_SOC_RESTART(chip), rc);
-		goto out;
-	}
-
-wait:
-	rc = wait_for_completion_interruptible_timeout(&chip->soc_ready,
-		msecs_to_jiffies(SOC_READY_WAIT_MS));
-
-	/* If we were interrupted wait again one more time. */
-	if (rc == -ERESTARTSYS && !tried_again) {
-		tried_again = true;
-		goto wait;
-	} else if (rc <= 0) {
-		pr_err("wait for soc_ready timed out rc=%d\n", rc);
-		goto out;
-	}
-
-	fg_dbg(chip, FG_STATUS, "SOC is ready\n");
-
-	/* Set the profile integrity bit */
-	val = 0x1;
-	rc = fg_sram_write(chip, PROFILE_INTEGRITY_WORD,
-			PROFILE_INTEGRITY_OFFSET, &val, 1, FG_IMA_DEFAULT);
-	if (rc < 0) {
-		pr_err("failed to write profile integrity rc=%d\n", rc);
-		goto out;
-	}
-
-	fg_dbg(chip, FG_STATUS, "profile loaded successfully");
-done:
-	rc = fg_sram_read(chip, NOM_CAP_WORD, NOM_CAP_OFFSET, buf, 2,
-			FG_IMA_DEFAULT);
-	if (rc < 0) {
-		pr_err("Error in reading %04x[%d] rc=%d\n", NOM_CAP_WORD,
-			NOM_CAP_OFFSET, rc);
-		goto out;
-	}
-
-	chip->nom_cap_uah = (int)(buf[0] | buf[1] << 8) * 1000;
-	chip->profile_loaded = true;
-out:
-	vote(chip->awake_votable, PROFILE_LOAD, false, 0);
-	rc = fg_masked_write(chip, BATT_SOC_RESTART(chip), RESTART_GO_BIT, 0);
-	if (rc < 0)
-		pr_err("Error in writing to %04x, rc=%d\n",
-			BATT_SOC_RESTART(chip), rc);
-}
-
-=======
->>>>>>> origin/qc8998
 /* All getters HERE */
 
 static int fg_decode_value_16b(struct fg_sram_param *sp,
@@ -916,12 +748,6 @@ static int fg_set_esr_timer(struct fg_chip *chip, int cycles, bool charging,
 	return 0;
 }
 
-<<<<<<< HEAD
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20160926 Add dash charging */
-#define DEFALUT_BATT_TEMP	250
-#endif
-=======
 /* Other functions HERE */
 
 static int fg_awake_cb(struct votable *votable, void *data, int awake,
@@ -1232,7 +1058,10 @@ out:
 			BATT_SOC_RESTART(chip), rc);
 }
 
->>>>>>> origin/qc8998
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+#define DEFALUT_BATT_TEMP	250
+#endif
 /* PSY CALLBACKS STAY HERE */
 static int fg_psy_get_property(struct power_supply *psy,
 				       enum power_supply_property psp,
@@ -1330,11 +1159,7 @@ static int fg_psy_set_property(struct power_supply *psy,
 				  enum power_supply_property psp,
 				  const union power_supply_propval *pval)
 {
-<<<<<<< HEAD
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20160926 Add dash charging */
 	struct fg_chip *chip = power_supply_get_drvdata(psy);
-#endif
 
 	switch (psp) {
 #ifdef VENDOR_EDIT
@@ -1349,10 +1174,6 @@ static int fg_psy_set_property(struct power_supply *psy,
 		oneplus_set_lcd_off_status(chip, pval->intval);
 		break;
 #endif
-=======
-	struct fg_chip *chip = power_supply_get_drvdata(psy);
-
-	switch (psp) {
 	case POWER_SUPPLY_PROP_CYCLE_COUNT_ID:
 		if ((pval->intval > 0) && (pval->intval <= BUCKET_COUNT)) {
 			chip->cyc_ctr.id = pval->intval;
@@ -1362,7 +1183,6 @@ static int fg_psy_set_property(struct power_supply *psy,
 			return -EINVAL;
 		}
 		break;
->>>>>>> origin/qc8998
 	default:
 		break;
 	}
