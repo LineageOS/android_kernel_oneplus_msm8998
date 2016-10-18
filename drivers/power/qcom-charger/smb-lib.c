@@ -2711,6 +2711,23 @@ static int get_prop_batt_capacity(struct smb_charger *chg)
 	return capacity;
 }
 
+#define DEFAULT_BATT_TEMP		200
+int get_prop_batt_temp(struct smb_charger *chg)
+{
+	int temp, rc;
+
+	if (chg->use_fake_temp)
+		return chg->fake_temp;
+
+	rc = get_property_from_fg(chg, POWER_SUPPLY_PROP_TEMP, &temp);
+	if (rc) {
+		pr_err("Couldn't get temperature rc = %d\n", rc);
+		temp = DEFAULT_BATT_TEMP;
+	}
+
+	return temp;
+}
+
 #define DEFAULT_BATT_CURRENT_NOW	0
 static int get_prop_batt_current_now(struct smb_charger *chg)
 {
@@ -3097,7 +3114,7 @@ static int op_check_battery_temp(struct smb_charger *chg)
 	if(!chg->vbus_present)
 		return rc;
 
-	temp = smblib_get_prop_batt_temp(chg);
+	temp = get_prop_batt_temp(chg);
 	if (temp < chg->mBattTempBoundT0) /* COLD */
 		rc = handle_batt_temp_cold(chg);
 	else if (temp >=  chg->mBattTempBoundT0 &&
@@ -3287,7 +3304,7 @@ void checkout_term_current(struct smb_charger *chg, int batt_temp)
 		chg->chg_done = true;
 		term_current_reached = 0;
 		pr_err("chg_done: temp=%d, soc_calib=%d, VOLT=%d, current:%d\n",
-				smblib_get_prop_batt_temp(chg), get_prop_batt_capacity(chg),
+				get_prop_batt_temp(chg), get_prop_batt_capacity(chg),
 				get_prop_batt_voltage_now(chg) / 1000,
 				get_prop_batt_current_now(chg) / 1000);
 		op_charging_en(chg, false);
@@ -3349,7 +3366,7 @@ static void op_heartbeat_work(struct work_struct *work)
 		}
 	}
 
-	batt_temp = smblib_get_prop_batt_temp(chg);
+	batt_temp = get_prop_batt_temp(chg);
 	checkout_term_current(chg, batt_temp);
 	if (!chg->chg_ovp && chg->chg_done
 			&& temp_region > BATT_TEMP_COLD
@@ -3374,7 +3391,7 @@ out:
 				get_prop_batt_capacity(chg),
 				get_prop_batt_voltage_now(chg) / 1000,
 				get_prop_batt_current_now(chg) / 1000,
-				smblib_get_prop_batt_temp(chg),
+				get_prop_batt_temp(chg),
 				chg->usb_psy_desc.type,
 				get_prop_charger_voltage_now(chg));
 	}
@@ -3410,7 +3427,7 @@ int get_prop_chg_protect_status(struct smb_charger *chg)
 	if (!charger_present)
 		return 0;
 
-	temp = smblib_get_prop_batt_temp(chg);
+	temp = get_prop_batt_temp(chg);
 	vbus_mv = get_prop_charger_voltage_now(chg);
 	batt_present = get_prop_batt_present(chg);
 	temp_region = op_battery_temp_region_get(chg);
