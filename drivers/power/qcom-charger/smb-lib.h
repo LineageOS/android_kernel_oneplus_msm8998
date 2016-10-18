@@ -188,7 +188,6 @@ struct smb_charger {
 	bool				dash_present;
 	bool				usb_enum_status;
 	bool				non_std_chg_present;
-	bool				chg_done;
 	bool				time_out;
 	bool				disable_normal_chg_for_dash;
 	bool				dash_on;
@@ -310,7 +309,6 @@ void op_charge_info_init(struct smb_charger *chg);
 int update_dash_unplug_status(void);
 int get_prop_batt_status(struct smb_charger *chg);
 int get_prop_chg_protect_status(struct smb_charger *chg);
-int get_prop_batt_temp(struct smb_charger *chg);
 int check_allow_switch_dash(struct smb_charger *chg,
 				const union power_supply_propval *val);
 int smblib_set_prop_chg_voltage(struct smb_charger *chg,
