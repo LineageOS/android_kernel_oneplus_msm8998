@@ -32,9 +32,9 @@
 
 		qca,bt-vdd-io-current-level = <1>; /* LPM/PFM */
 		qca,bt-vdd-xtal-current-level = <1>; /* LPM/PFM */
-		qca,bt-vdd-core-current-level = <0>; /* LPM/PFM */
-		qca,bt-vdd-pa-current-level = <0>; /* LPM/PFM */
-		qca,bt-vdd-ldo-current-level = <0>; /* LPM/PFM */
+		qca,bt-vdd-core-current-level = <1>; /* LPM/PFM */
+		qca,bt-vdd-pa-current-level = <1>; /* LPM/PFM */
+		qca,bt-vdd-ldo-current-level = <1>; /* LPM/PFM */
 	};
 };
 
@@ -395,6 +395,12 @@
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
 	qcom,5v-boost-gpio = <&tlmm 51 0>;
 };
+&dsi_dual_sharp_1080_120hz_cmd {
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+};
 
 //#ifdef VENDOR_EDIT
 &dsi_samsung_s6e3fa3_1080p_cmd {
@@ -543,9 +549,7 @@
 };
 
 &soc {
-	sound-9335 {
-		qcom,wcn-btfm;
-	};
+
 
 	tri_state_key {
                 compatible = "oneplus,tri-state-key";

@@ -21,9 +21,6 @@
 		interrupt-controller;
 		#interrupt-cells = <1>;
 		vdd-supply = <&gdsc_mdss>;
-		vdd-cx-supply = <&pmcobalt_s1_level>;
-		vdd-cx-min-uV = <RPM_SMD_REGULATOR_LEVEL_LOW_SVS>;
-		vdd-cx-max-uV = <RPM_SMD_REGULATOR_LEVEL_TURBO>;
 
 		/* Bus Scale Settings */
 		qcom,msm-bus,name = "mdss_mdp";
@@ -487,15 +484,17 @@
 			 <&clock_mmss clk_mmss_mdss_mdp_clk>,
 			 <&clock_mmss clk_mmss_mdss_hdmi_dp_ahb_clk>,
 			 <&clock_mmss clk_mmss_mdss_dp_aux_clk>,
+			 <&clock_gcc clk_ln_bb_clk1>,
+			 <&clock_gcc clk_gcc_usb3_clkref_clk>,
 			 <&clock_mmss clk_mmss_mdss_dp_link_clk>,
 			 <&clock_mmss clk_mmss_mdss_dp_link_intf_clk>,
 			 <&clock_mmss clk_mmss_mdss_dp_crypto_clk>,
 			 <&clock_mmss clk_mmss_mdss_dp_pixel_clk>;
 		clock-names = "core_mnoc_clk", "core_iface_clk", "core_bus_clk",
 			"core_mdp_core_clk", "core_alt_iface_clk",
-			"core_aux_clk", "ctrl_link_clk",
-			"ctrl_link_iface_clk", "ctrl_crypto_clk",
-			"ctrl_pixel_clk";
+			"core_aux_clk", "core_ref_clk_src", "core_ref_clk",
+			"ctrl_link_clk", "ctrl_link_iface_clk",
+			"ctrl_crypto_clk", "ctrl_pixel_clk";
 
 		qcom,dp-usbpd-detection = <&pmicobalt_pdphy>;
 
