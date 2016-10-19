@@ -124,7 +124,8 @@ dtb-$(CONFIG_ARCH_MSMCOBALT) += msmcobalt-sim.dtb \
 	msmcobalt-v2.1-qrd.dtb \
 	apqcobalt-v2.1-mtp.dtb \
 	apqcobalt-v2.1-cdp.dtb \
-	apqcobalt-v2.1-qrd.dtb
+	apqcobalt-v2.1-qrd.dtb \
+	cheeseburger-evb.dtb
 
 dtb-$(CONFIG_ARCH_MSMHAMSTER) += msmhamster-rumi.dtb
 

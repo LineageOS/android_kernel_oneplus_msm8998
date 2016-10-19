@@ -9,13 +9,10 @@
 #dts-dirs += hisilicon
 #dts-dirs += marvell
 #dts-dirs += mediatek
-#dts-dirs += qcom
+dts-dirs += qcom
 #dts-dirs += rockchip
 #dts-dirs += sprd
 #dts-dirs += xilinx
-#//VENDOR_EDIT shankai@bsp  ,change dtsi file name to oem 
-dts-dirs += oem
-# //ENDIF 
 subdir-y	:= $(dts-dirs)
 
 dtstree		:= $(srctree)/$(src)
