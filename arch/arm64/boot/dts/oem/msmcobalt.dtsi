@@ -2881,6 +2881,7 @@
 	};
 
 	tspp: msm_tspp@0c1e7000 {
+		status = "disabled"; /* davidliu@bsp, disable it for usb */
 		compatible = "qcom,msm_tspp";
 		reg = <0x0c1e7000 0x200>, /* MSM_TSIF0_PHYS */
 		      <0x0c1e8000 0x200>, /* MSM_TSIF1_PHYS */
