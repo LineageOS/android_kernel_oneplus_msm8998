@@ -326,9 +326,6 @@ int pd_phy_open(struct pd_phy_params *params)
 	int ret;
 	struct usb_pdphy *pdphy = __pdphy;
 
-	/* david.liu@oneplus.tw, 20160922 Add to ignore pd */
-	return -ENODEV;
-
 	if (!pdphy) {
 		pr_err("%s: pdphy not found\n", __func__);
 		return -ENODEV;
