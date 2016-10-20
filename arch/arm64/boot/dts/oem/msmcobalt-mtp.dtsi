@@ -564,6 +564,24 @@
                 pinctrl-1 = <&tri_state_key_suspend>;
         };
 
+	/*#ifdef VENDOR_EDIT //liuyan add for fingerprint register as platform device not spi device */
+	fpc_fpc1020 {
+		compatible = "fpc,fpc1020";
+		interrupt-parent = <&tlmm>;
+		/*fpc,reset-gpio    = <&tlmm 75 0>;*/
+		fpc,irq-gpio    = <&tlmm 121 0>;
+		fpc,gpio_id0    = <&tlmm 39 0>;
+		fpc,gpio_id1    = <&tlmm 41 0>;
+		fpc,gpio_1V8_EN = <&tlmm 25 0x00>;
+		/*vcc_spi-supply  = <&pm8994_l13>;*/
+		/*vdd_ana-supply  = <&pm8994_l13>;*/
+		/*vdd_io-supply   = <&pm8994_s4>;*/
+    /*
+		pinctrl-names = "fpc1020_enable", "fpc1020_disable";
+		pinctrl-0 = <&fpc_fpc1020_enable>;
+		pinctrl-1 = <&fpc_fpc1020_disable>;*/
+	};
+	/* #endif VENDOR_EDIT //liuyan add for tri-state-key end*/
 
 	gpio_keys {
 		compatible = "gpio-keys";
