@@ -280,14 +280,63 @@ static void update_cpu_freq(void)
 
 static void soc_mitigate(struct work_struct *work)
 {
+#ifdef VENDOR_EDIT
+	/* david.liu@bsp, 20161021 Fix system crash */
+	static struct power_supply *batt_psy;
+	union power_supply_propval ret = {0,};
+	int battery_percentage;
+	enum bcl_threshold_state prev_soc_state;
+
+	if (!batt_psy)
+		batt_psy = power_supply_get_by_name("battery");
+
+	if (batt_psy) {
+		battery_percentage = power_supply_get_property(batt_psy,
+				POWER_SUPPLY_PROP_CAPACITY, &ret);
+		battery_percentage = ret.intval;
+		battery_soc_val = battery_percentage;
+		pr_debug("Battery SOC reported:%d", battery_soc_val);
+		trace_bcl_sw_mitigation("SoC reported", battery_soc_val);
+		prev_soc_state = bcl_soc_state;
+		bcl_soc_state = (battery_soc_val <= soc_low_threshold) ?
+					BCL_LOW_THRESHOLD : BCL_HIGH_THRESHOLD;
+		if (bcl_soc_state == prev_soc_state)
+			return;
+		trace_bcl_sw_mitigation_event(
+			(bcl_soc_state == BCL_LOW_THRESHOLD)
+			? "trigger SoC mitigation"
+			: "clear SoC mitigation");
+
+		if (bcl_hotplug_enabled)
+			queue_work(gbcl->bcl_hotplug_wq, &bcl_hotplug_work);
+		update_cpu_freq();
+	}
+#else
 	if (bcl_hotplug_enabled)
 		queue_work(gbcl->bcl_hotplug_wq, &bcl_hotplug_work);
 	update_cpu_freq();
+#endif
 }
 
 static int power_supply_callback(struct notifier_block *nb,
 				  unsigned long event, void *data)
 {
+#ifdef VENDOR_EDIT
+	/* david.liu@bsp, 20161021 Fix system crash */
+	struct power_supply *psy = data;
+
+	if (gbcl->bcl_mode != BCL_DEVICE_ENABLED) {
+		pr_debug("BCL is not enabled\n");
+		return NOTIFY_OK;
+	}
+
+	if (strcmp(psy->desc->name, "battery"))
+		return NOTIFY_OK;
+
+	schedule_work(&gbcl->soc_mitig_work);
+
+	return NOTIFY_OK;
+#else
 	struct power_supply *psy = data;
 	static struct power_supply *batt_psy;
 	union power_supply_propval ret = {0,};
@@ -323,6 +372,7 @@ static int power_supply_callback(struct notifier_block *nb,
 		schedule_work(&gbcl->soc_mitig_work);
 	}
 	return NOTIFY_OK;
+#endif
 }
 
 static int bcl_get_battery_voltage(int *vbatt_mv)
