@@ -708,7 +708,7 @@ static int bq27541_battery_soc(struct bq27541_device_info *di, int suspend_time_
 	int soc_delt = 0;
 	static int soc_pre;
 	bool fg_soc_changed=false;
- 	return 50;
+
 #ifdef VENDOR_EDIT
 	/* Add for get right soc when sleep long time */
 	if (atomic_read(&di->suspended) == 1) {
