@@ -22,6 +22,16 @@
 			linux,code = <114>;
 			debounce-interval = <15>;
 		};
+		hallsensor_key {
+			label = "hallsensor_key";
+			gpios = <&tlmm 124 1>;
+			interrupt-parent = <&tlmm>;
+			interrupts = <124 0x0>;
+			linux,input-type = <5>;
+			linux,code = <0>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
 	};
 
 	tlmm: pinctrl@03400000 {
