@@ -212,4 +212,9 @@ source "drivers/bif/Kconfig"
 
 source "drivers/sensors/Kconfig"
 
+#ifdef VENDOR_EDIT
+#ruanbanmao add for 15801 nfc. 2015/10/16
+source "drivers/nfc/Kconfig"
+#endif
+
 endmenu

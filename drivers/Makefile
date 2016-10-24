@@ -181,3 +181,8 @@ obj-$(CONFIG_BIF)		+= bif/
 
 obj-$(CONFIG_SENSORS_SSC)	+= sensors/
 obj-$(CONFIG_ESOC)              += esoc/
+
+#ifdef VENDOR_EDIT
+#ruanbanmao@nfc add for 15801 nfc 2015/10/16
+obj-$(CONFIG_NFC)		+= nfc/
+#endif
