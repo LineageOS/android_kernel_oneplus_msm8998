@@ -606,6 +606,18 @@
 			debounce-interval = <15>;
 		};
 		//#ENDIF
+		//#VENDOR_EDIT wulaibin@bsp ,add for hallsensor support,2016,10-24
+		hallsensor_key {
+			label = "hallsensor_key";
+			gpios = <&tlmm 124 1>;
+			interrupt-parent = <&tlmm>;
+			interrupts = <124 0x0>;
+			linux,input-type = <5>;
+			linux,code = <0>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
+		//#endif
 		cam_snapshot {
 			label = "cam_snapshot";
 			gpios = <&pmcobalt_gpios 7 0x1>;
