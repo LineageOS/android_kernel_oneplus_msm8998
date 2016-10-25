@@ -499,6 +499,14 @@ static void update_charger_present_status(struct work_struct *work)
 	oneplus_notify_pmic_check_charger_present();
 }
 
+static int op_get_device_type(void)
+{
+	if (bq27541_data && bq27541_data->get_device_type)
+		return bq27541_data->get_device_type();
+	else
+		return 0;
+}
+
 static int onplus_get_battery_mvolts(void)
 {
 	if (bq27541_data && bq27541_data->get_battery_mvolts)
@@ -609,7 +617,7 @@ void di_watchdog(unsigned long data)
 	/* switch off fast chg */
 	switch_mode_to_normal();
 	schedule_work(&di->charger_present_status_work);
-	pr_info("switch off fastchg\n");
+	pr_err("switch off fastchg\n");
 
 	wake_unlock(&di->fastchg_wake_lock);
 }
@@ -617,9 +625,10 @@ void di_watchdog(unsigned long data)
 #define MAX_BUFFER_SIZE 1024
 #define ALLOW_DATA 0x2
 #define REJECT_DATA 0x11
-static void dash_write(struct fastchg_device_info *di,int data)
+static void dash_write(struct fastchg_device_info *di, int data)
 {
 	int i;
+	int device_type = op_get_device_type();
 
 	msleep(2);
 	gpio_direction_output(di->ap_data, 0);
@@ -629,7 +638,7 @@ static void dash_write(struct fastchg_device_info *di,int data)
 		} else if (i == 1) {
 			gpio_set_value(di->ap_data, data & 0x1);
 		} else {
-			gpio_set_value(di->ap_data,0);
+			gpio_set_value(di->ap_data, device_type);
 		}
 		gpio_set_value(di->ap_clk, 0);
 		usleep_range(1000, 1000);
@@ -652,7 +661,7 @@ static int dash_read(struct fastchg_device_info *di)
 		bit = gpio_get_value(di->ap_data);
 		data |= bit<<(6-i);
 	}
-	pr_info("recv data:0x%x\n", data);
+	pr_err("recv data:0x%x\n", data);
 	return data;
 }
 
@@ -680,7 +689,7 @@ static ssize_t dash_dev_read(struct file *filp, char __user *buf,
 		if (ret)
 			goto fail;
 		if (di->irq_enabled) {
-			pr_info("dash false wakeup,ret=%d\n", ret);
+			pr_err("dash false wakeup,ret=%d\n", ret);
 		}
 		data = dash_read(di);
 		mutex_unlock(&di->read_mutex);
@@ -738,7 +747,8 @@ static long  dash_dev_ioctl(struct file *filp, unsigned int cmd,
 				mod_timer(&di->watchdog,
 						jiffies + msecs_to_jiffies(15000));
 			} else if (arg == DASH_NOTIFY_FAST_PRESENT + 2) {
-				dash_write(di,REJECT_DATA);
+				pr_err("REJECT_DATA\n");
+				dash_write(di, REJECT_DATA);
 			} else if (arg == DASH_NOTIFY_FAST_PRESENT + 3) {
 				dash_write(di, ALLOW_DATA);
 			}
@@ -751,7 +761,7 @@ static long  dash_dev_ioctl(struct file *filp, unsigned int cmd,
 				di->fast_switch_to_normal = false;
 				di->fast_normal_to_warm = false;
 				di->fast_chg_ing = false;
-				pr_info("fastchg stop unexpectly, witch off fastchg\n");
+				pr_err("fastchg stop unexpectly, witch off fastchg\n");
 				switch_mode_to_normal();
 				del_timer(&di->watchdog);
 				dash_write(di, REJECT_DATA);
@@ -771,7 +781,7 @@ static long  dash_dev_ioctl(struct file *filp, unsigned int cmd,
 				remain_cap = onplus_get_batt_remaining_capacity();
 				soc = onplus_get_battery_soc();
 				current_now = onplus_get_average_current();
-				pr_info("volt:%d,temp:%d,remain_cap:%d,soc:%d,current:%d\n",
+				pr_err("volt:%d,temp:%d,remain_cap:%d,soc:%d,current:%d\n",
 						volt, temp, remain_cap, soc,current_now);
 				if (!di->batt_psy)
 					di->batt_psy = power_supply_get_by_name("battery");
@@ -787,7 +797,7 @@ static long  dash_dev_ioctl(struct file *filp, unsigned int cmd,
 		case DASH_NOTIFY_BAD_CONNECTED:
 		case DASH_NOTIFY_NORMAL_TEMP_FULL:
 			if (arg == DASH_NOTIFY_NORMAL_TEMP_FULL + 1) {
-				pr_info("fastchg full, switch off fastchg, set usb_sw_gpio 0\n");
+				pr_err("fastchg full, switch off fastchg, set usb_sw_gpio 0\n");
 				switch_mode_to_normal();
 				del_timer(&di->watchdog);
 			} else if (arg == DASH_NOTIFY_NORMAL_TEMP_FULL + 2) {
@@ -802,7 +812,7 @@ static long  dash_dev_ioctl(struct file *filp, unsigned int cmd,
 			break;
 		case DASH_NOTIFY_TEMP_OVER:
 			if (arg == DASH_NOTIFY_TEMP_OVER + 1) {
-				pr_info("fastchg temp over\n");
+				pr_err("fastchg temp over\n");
 				switch_mode_to_normal();
 				del_timer(&di->watchdog);
 			} else if (arg == DASH_NOTIFY_TEMP_OVER + 2) {
@@ -818,7 +828,7 @@ static long  dash_dev_ioctl(struct file *filp, unsigned int cmd,
 			break;
 		case DASH_NOTIFY_UNDEFINED_CMD:
 			if (di->fast_chg_started) {
-				pr_info("switch off fastchg\n");
+				pr_err("UNDEFINED_CMD, switch off fastchg\n");
 				switch_mode_to_normal();
 				msleep(500); /* avoid i2c conflict */
 				/* data err */

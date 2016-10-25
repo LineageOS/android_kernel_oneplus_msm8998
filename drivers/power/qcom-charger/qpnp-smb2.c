@@ -1156,6 +1156,14 @@ static int smb2_init_hw(struct smb2 *chip)
 	vote(chg->dc_icl_votable,
 		DEFAULT_VOTER, true, chip->dt.dc_icl_ua);
 
+#ifdef VENDOR_EDIT
+	/* disable HVDCP */
+	rc = smblib_masked_write(chg, USBIN_OPTIONS_1_CFG_REG,
+		HVDCP_EN_BIT, 0);
+	if (rc < 0)
+		dev_err(chg->dev, "Couldn't disable HVDCP rc=%d\n", rc);
+#endif
+
 	/* Configure charge enable for software control; active high */
 	rc = smblib_masked_write(chg, CHGR_CFG2_REG,
 				 CHG_EN_POLARITY_BIT |
