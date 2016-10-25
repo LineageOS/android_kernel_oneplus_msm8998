@@ -109,7 +109,7 @@
 };
 
 &sdhc_2 {
-	status = "disable";
+	status = "disabled";
 };
 
 &pmicobalt_haptics {
@@ -399,11 +399,11 @@
 };
 
 &mdss_dsi1 {
-	status = "disable";
+	status = "disabled";
 };
 
 &labibb {
-	status = "disable";
+	status = "disabled";
 };
 
 
@@ -492,4 +492,9 @@
 	qcom,camera@1 {
 		status = "disabled";
 	};
+
+	qcom,eeprom@2 {
+		status = "disabled";
+	};
+
 };
