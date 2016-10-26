@@ -863,6 +863,17 @@ static bool bq27541_is_battery_id_valid(void)
 	return true;
 }
 
+#ifdef CONFIG_GAUGE_BQ27411
+/* david.liu@bsp, 20161025 Add BQ27411 dash charging */
+static int bq27541_get_device_type(void)
+{
+	if (bq27541_di)
+		return bq27541_di->device_type;
+
+	return 0;
+}
+#endif
+
 static int bq27541_get_battery_soc(void)
 {
 	return bq27541_battery_soc(bq27541_di, 0);
@@ -929,13 +940,16 @@ static struct external_battery_gauge bq27541_batt_gauge = {
 	.is_battery_temp_within_range   = bq27541_is_battery_temp_within_range,
 	.is_battery_id_valid        = bq27541_is_battery_id_valid,
 	.get_batt_remaining_capacity        =bq27541_get_batt_remaining_capacity,
-
 #ifdef VENDOR_EDIT
+#ifdef CONFIG_GAUGE_BQ27411
+	/* david.liu@bsp, 20161025 Add BQ27411 dash charging */
+	.get_device_type            = bq27541_get_device_type,
+#endif
 	.get_battery_soc            = bq27541_get_battery_soc,
 	.get_average_current        = bq27541_get_average_current,
-	.set_alow_reading		= bq27541_set_alow_reading,
-	.set_lcd_off_status		= bq27541_set_lcd_off_status,
-	.fast_chg_started_status	= bq27541_get_fastchg_started_status,
+	.set_alow_reading           = bq27541_set_alow_reading,
+	.set_lcd_off_status         = bq27541_set_lcd_off_status,
+	.fast_chg_started_status    = bq27541_get_fastchg_started_status,
 #endif
 };
 #define BATTERY_SOC_UPDATE_MS 6000
