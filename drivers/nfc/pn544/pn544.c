@@ -123,7 +123,7 @@ static unsigned char debug_level = Pn544_FULL_DEBUG;
 #endif
 /*ruanbanmao add for debug 2015/1217*/
 
-//#define NFC_DEBUG
+#define NFC_DEBUG
 
 #ifdef NFC_DEBUG
 
