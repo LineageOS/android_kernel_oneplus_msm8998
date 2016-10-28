@@ -104,9 +104,13 @@ static void check_poison_mem(struct page *page,
 
 	if (!__ratelimit(&ratelimit))
 		return;
-	else if (start == end && single_bit_flip(*start, PAGE_POISON))
+	else if (start == end && single_bit_flip(*start, PAGE_POISON)){
 		pr_err("pagealloc: single bit error on page with phys start 0x%lx\n",
 			(unsigned long)page_to_phys(page));
+                //#ifdef VENDOR_EDIT
+                printk(KERN_ERR "virt: %p, phys: 0x%llx\n", start, virt_to_phys(start));
+                //#endif VENDOR_EDIT
+        }
 	else
 		pr_err("pagealloc: memory corruption on page with phys start 0x%lx\n",
 			(unsigned long)page_to_phys(page));
