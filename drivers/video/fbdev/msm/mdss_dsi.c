@@ -296,8 +296,8 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 		pr_debug("reset disable: pinctrl not enabled\n");
 
 //#ifdef VENDOR_EDIT
-    mdss_dsi_isp_1v1_en(pdata, 1);
-    mdss_dsi_dsp_vci_en(pdata, 1);
+    mdss_dsi_isp_1v1_en(pdata, 0);
+    mdss_dsi_disp_vci_en(pdata, 0);
 //#endif
 	ret = msm_dss_enable_vreg(
 		ctrl_pdata->panel_power_data.vreg_config,
@@ -327,7 +327,7 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 //#ifdef VENDOR_EDIT
     mdss_dsi_px_clk_req(pdata, 1);
     mdss_dsi_isp_1v1_en(pdata, 1);
-    mdss_dsi_dsp_vci_en(pdata, 1);
+    mdss_dsi_disp_vci_en(pdata, 1);
 //#endif
 	ret = msm_dss_enable_vreg(
 		ctrl_pdata->panel_power_data.vreg_config,

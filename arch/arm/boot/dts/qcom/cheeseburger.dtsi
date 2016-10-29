@@ -371,20 +371,16 @@
 };
 
 &mdss_dsi0 {
-	qcom,dsi-pref-prim-pan = <&dsi_dual_nt35597_video>;
 	qcom,dsi-pref-prim-pan = <&dsi_samsung_s6e3fa3_1080p_cmd>;
 	pinctrl-names = "mdss_default", "mdss_sleep";
 	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
 	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
 	qcom,platform-reset-gpio = <&tlmm 94 0>;
 	qcom,platform-te-gpio = <&tlmm 11 0>;
-	qcom,panel-mode-gpio = <>;
-        qcom,platform-vci-gpio = <&tlmm 21 0>;
-        qcom,isp-1v1-en-gpio = <&tlmm 95 0>;
-        qcom,px-bp-gpio = <&tlmm 24 0>;
-        qcom,px-ext-clk = "BBCLK2";
-	lab-supply = <>;
-	ibb-supply = <>;
+  qcom,platform-vci-gpio = <&tlmm 21 0>;
+  qcom,isp-1v1-en-gpio = <&tlmm 95 0>;
+  qcom,px-bp-gpio = <&tlmm 24 0>;
+  qcom,px-ext-clk = "BBCLK2";
 	clocks = <&clock_mmss clk_mmss_mdss_byte0_clk>,
 		<&clock_mmss clk_mmss_mdss_pclk0_clk>,
 		<&clock_mmss clk_mmss_mdss_esc0_clk>,

@@ -706,7 +706,7 @@ void mdss_dsi_dfps_config_8996(struct mdss_dsi_ctrl_pdata *ctrl);
 void mdss_dsi_set_burst_mode(struct mdss_dsi_ctrl_pdata *ctrl);
 //#ifdef VENDOR_EDIT
 int mdss_dsi_px_clk_req(struct mdss_panel_data *pdata, int enable);
-int mdss_dsi_dsp_vci_en(struct mdss_panel_data *pdata, int enable);
+int mdss_dsi_disp_vci_en(struct mdss_panel_data *pdata, int enable);
 int mdss_dsi_isp_1v1_en(struct mdss_panel_data *pdata, int enable);
 //#endif
 static inline const char *__mdss_dsi_pm_name(enum dsi_pm_type module)

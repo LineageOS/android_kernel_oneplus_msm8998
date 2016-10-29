@@ -433,7 +433,7 @@ int mdss_dsi_px_clk_req(struct mdss_panel_data *pdata, int enable)
 	}
 	return rc;
 }
-int mdss_dsi_dsp_vci_en(struct mdss_panel_data *pdata, int enable)
+int mdss_dsi_disp_vci_en(struct mdss_panel_data *pdata, int enable)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_panel_info *pinfo = NULL;
@@ -465,7 +465,8 @@ int mdss_dsi_dsp_vci_en(struct mdss_panel_data *pdata, int enable)
 		}
         rc = gpio_direction_output(ctrl_pdata->disp_vci_en_gpio, 1);
 	} else {
-	    gpio_set_value((ctrl_pdata->disp_vci_en_gpio), 0);
+	    gpio_set_value(ctrl_pdata->disp_vci_en_gpio, 0);
+	    gpio_free(ctrl_pdata->disp_vci_en_gpio);
 	}
 	return rc;
 }
@@ -501,7 +502,8 @@ int mdss_dsi_isp_1v1_en(struct mdss_panel_data *pdata, int enable)
 		}
         rc = gpio_direction_output(ctrl_pdata->isp_1v1_en_gpio, 1);
 	} else {
-	    gpio_set_value((ctrl_pdata->isp_1v1_en_gpio), 0);
+	    gpio_set_value(ctrl_pdata->isp_1v1_en_gpio, 0);
+	    gpio_free(ctrl_pdata->isp_1v1_en_gpio);
 	}
 	return rc;
 }
@@ -839,7 +841,7 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
-	pr_err("%s: ndx=%d\n", __func__, ctrl->ndx);
+	pr_debug("%s: ndx=%d\n", __func__, ctrl->ndx);
 
 	if (pinfo->dcs_cmd_by_left) {
 		if (ctrl->ndx != DSI_CTRL_LEFT)
@@ -874,7 +876,7 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	if (ctrl->ds_registered)
 		mdss_dba_utils_video_on(pinfo->dba_data, pinfo);
 end:
-	pr_err("%s:-\n", __func__);
+	pr_debug("%s:-\n", __func__);
 	return ret;
 }
 
