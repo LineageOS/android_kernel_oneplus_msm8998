@@ -22,17 +22,17 @@
 
 
 
-#define FPGA_DEBUG
+//#define FPGA_DEBUG
 #ifdef FPGA_DEBUG
 #define WAKEUP_TIME 500
 #define CMD_PROC 10
-#define INIT_INT 100
+#define MCU_PROC 10
 #define INIT_WAIT 100
 #else
 #define WAKEUP_TIME 50
-#define CMD_PROC 2
-#define INIT_INT 100
-#define INIT_WAIT 20
+#define CMD_PROC 0
+#define MCU_PROC 1
+#define INIT_WAIT 0
 #endif
 
 //#define MIPI_SWAP
@@ -56,13 +56,26 @@
 #define IRIS_DPORT_ADDR		0xF1220000
 
 /* SYS register */
+#define CLKGATE_CTRL0 0x0
+#define CLKGATE_CTRL1 0x4
+#define CLKGATE_PWIL_SW 0x8
 #define CLKMUX_CTRL	0x0c
 #define CLKDIV_CTRL	0x10
+#define PPLL_B_CTRL0	0x140
 #define PPLL_B_CTRL1	0x144
 #define PPLL_B_CTRL2	0x148
+#define DPLL_B_CTRL0	0x150
 #define DPLL_B_CTRL1	0x154
 #define DPLL_B_CTRL2	0x158
+#define MPLL_B_CTRL0	0x160
+#define MPLL_B_CTRL1	0x164
+#define MPLL_B_CTRL2	0x168
 #define PLL_CTRL	0x200
+#define DCLK_SRC_SEL	0x210
+#define INCLK_SRC_SEL	0x214
+#define MCUCLK_SRC_SEL	0x218
+#define PCLK_SRC_SEL	0x21c
+#define MCLK_SRC_SEL	0x228
 #define ALT_CTRL0	0x248
 #define DFT_EFUSE_CTRL	0x10000
 #define DFT_EFUSE_CTRL_1	0x10004
@@ -95,7 +108,9 @@
 #define DBI_HANDLER_CTRL	0x0000c
 #define FRAME_COLUMN_ADDR	0x00018
 #define ABNORMAL_COUNT_THRES	0x0001c
+#define INTEN	0x1ffe8
 #define DEVICE_READY		0x20000
+#define INTERRUPT_ENABLE	0x20008
 #define DSI_FUNCTIONAL_PROGRAMMING	0x2000c
 #define EOT_ECC_CRC_DISABLE	0x20024
 #define DATA_LANE_TIMING_PARAMETER	0x2002c
@@ -139,8 +154,8 @@
 	(__u8)(((x) >> 8 ) & 0xff)
 
 #define FW_COL_CNT  85
-#define FW_DW_CMD_CNT  16
-#define DSI_DMA_TX_BUF_SIZE	SZ_64K
+#define FW_DW_CMD_CNT  1200
+#define DSI_DMA_TX_BUF_SIZE	SZ_512K
 #define DCS_WRITE_MEM_START 0x2C
 #define DCS_WRITE_MEM_CONTINUE 0x3C
 
@@ -197,12 +212,14 @@ enum iris_abypass_status {
 
 enum iris_abypss_switch_state {
 	PASS_THROUGH_STATE = 0,
+	MCU_STOP_ENTER_STATE,
 	TTL_CMD_BYPASS_STATE,
 	ANALOG_BYPASS_ENTER_STATE,
 	RX0_POWER_DOWN_STATE,
 	ANALOG_BYPASS_STATE,
 	RX0_POWER_UP_STATE ,
 	RFB_STATE,
+	MCU_STOP_EXIT_STATE,
 	ANALOG_BYPASS_EXIT_STATE,
 	LOW_POWER_ENTER_STATE,
 	LOW_POWER_EXIT_STATE,
@@ -234,6 +251,39 @@ struct iris_timing_info {
 	u16 fps;
 };
 
+struct iris_pll_setting {
+	u32 ppll_ctrl0;
+	u32 ppll_ctrl1;
+	u32 ppll_ctrl2;
+
+	u32 dpll_ctrl0;
+	u32 dpll_ctrl1;
+	u32 dpll_ctrl2;
+
+	u32 mpll_ctrl0;
+	u32 mpll_ctrl1;
+	u32 mpll_ctrl2;
+
+	u32 txpll_div;
+	u32 txpll_sel;
+	u32 reserved;
+};
+
+struct iris_clock_source {
+	u8 sel;
+	u8 div;
+	u8 div_en;
+};
+
+struct iris_clock_setting {
+	struct iris_clock_source dclk;
+	struct iris_clock_source inclk;
+	struct iris_clock_source mcuclk;
+	struct iris_clock_source pclk;
+	struct iris_clock_source mclk;
+	struct iris_clock_source escclk;
+};
+
 struct iris_setting_disable_info {
 	u32 last_frame_repeat_cnt;
 
@@ -251,17 +301,14 @@ struct iris_setting_disable_info {
 
 	u32 cm_c6axes_disable_val;
 	u32 cm_c3d_disable_val;
+	u32 color_temp_disable_val;
+	u32 reading_mode_disable_val;
 	u32 cm_ftcen_disable_val;
 };
 
 struct iris_setting_info {
-	u32 dpll_clock;
-	u32 dpll0;
-	u32 dpll1;
-	u32 dpll2;
-	u32 ppll1;
-	u32 ppll2;
-	u32 tx_escclk_setting;
+	struct iris_pll_setting pll_setting;
+	struct iris_clock_setting clock_setting;
 
 	u32 mipirx_dsi_functional_program;
 	u32 mipirx_eot_ecc_crc_disable;
@@ -325,6 +372,12 @@ struct iris_abypass_ctrl {
 	int frame_delay;
 };
 
+struct iris_power_status {
+	int low_power;
+	int low_power_state;
+	int work_state_wait;
+};
+
 struct iris_info_t {
 	struct iris_work_mode work_mode;
 	struct iris_timing_info input_timing;
@@ -340,7 +393,8 @@ struct iris_info_t {
 	struct iris_tx_switch_cmd tx_switch_cmd;
 	struct iris_intf_switch_info intf_switch_info;
 	struct iris_abypass_ctrl abypss_ctrl;
-	int low_power;
+	struct iris_power_status power_status;
+	bool panel_cmd_sync_wait_broadcast;
 };
 
 struct iris_grcp_cmd {
@@ -366,5 +420,3 @@ typedef union
 
 
 #endif
-
-

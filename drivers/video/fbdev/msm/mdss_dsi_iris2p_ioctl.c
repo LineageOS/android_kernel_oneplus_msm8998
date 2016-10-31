@@ -14,6 +14,7 @@
 #include "mdss_dsi_iris2p_ioctl.h"
 #include "mdss_dsi_iris2p_mode_switch.h"
 
+static u32 f_Iris_ip_reg_addr = IRIS_PWIL_ADDR;
 static struct completion iris_vsync_comp;
 static struct demo_win_info iris_demo_win_info;
 static uint16_t ratio[LEVEL_MAX] = { 8, 6, 5, 4, 4 };
@@ -102,7 +103,7 @@ int iris_dynamic_fps_set(struct mdss_panel_data *pdata, int curr_fps, int new_fp
 	vsync_period = iris_info.output_timing.vbp + iris_info.output_timing.vfp + iris_info.output_timing.vsw + iris_info.output_timing.vres;
 	hsync_period = iris_info.output_timing.hbp + iris_info.output_timing.hfp + iris_info.output_timing.hsw + iris_info.output_timing.hres;
 
-	pr_info("#######%s, %d. vbp = %d, vfp = %d, vsw = %d, vsync_period = %d.\n", __func__, __LINE__,
+	pr_debug("#######%s, %d. vbp = %d, vfp = %d, vsw = %d, vsync_period = %d.\n", __func__, __LINE__,
 		iris_info.output_timing.vbp, iris_info.output_timing.vfp, iris_info.output_timing.vsw, vsync_period);
 
 	diff = curr_fps - new_fps;
@@ -110,7 +111,7 @@ int iris_dynamic_fps_set(struct mdss_panel_data *pdata, int curr_fps, int new_fp
 	add_v_lines = mult_frac(vsync_period, diff, new_fps);
 	iris_info.output_timing.vfp += add_v_lines;
 
-	pr_info("#######%s, %d. diff = %d, add_v_lines = %d, v_front_porch = %d, vsync_period = %d.\n", __func__, __LINE__,
+	pr_debug("#######%s, %d. diff = %d, add_v_lines = %d, v_front_porch = %d, vsync_period = %d.\n", __func__, __LINE__,
 		diff, add_v_lines, iris_info.output_timing.vfp, vsync_period);
 
 	iris_dtg_dfps_cmds[20] = (__u8)(iris_info.output_timing.vfp & 0xff);
@@ -316,6 +317,9 @@ static int iris_configure(struct msm_fb_data_type *mfd, u32 type, u32 value)
 		pqlt_cur_setting->cm_setting.cm3d = (value & 0x1f) >> 3;
 		pqlt_cur_setting->cm_setting.demomode = (value & 0x700) >> 8;
 		pqlt_cur_setting->cm_setting.ftc_en = (value & 0x800) >> 11;
+		pqlt_cur_setting->cm_setting.color_temp_en= (value & 0x1000) >> 12;
+		pqlt_cur_setting->cm_setting.color_temp= (value & 0xfffe000) >> 13;
+		pqlt_cur_setting->cm_setting.sensor_auto_en= (value & 0x10000000) >> 28;
 		pqlt_cur_setting->cm_setting.update = 1;
 		iris_info.update.cm_setting = true;
 		break;
@@ -323,6 +327,30 @@ static int iris_configure(struct msm_fb_data_type *mfd, u32 type, u32 value)
 		pqlt_cur_setting->pq_setting.cinema_en = value & 0x1;
 		pqlt_cur_setting->pq_setting.update = 1;
 		iris_info.update.pq_setting = true;
+    case IRIS_DBG_TARGET_PI_REGADDR_SET:
+        f_Iris_ip_reg_addr = value;
+        mutex_unlock(&iris_cfg->config_mutex);
+        return 0;
+    case IRIS_DBG_TARGET_REGADDR_VALUE_SET:
+        iris_register_write(mfd, f_Iris_ip_reg_addr, value);
+        mutex_unlock(&iris_cfg->config_mutex);
+        return 0;
+
+		break;
+	case IRIS_LUX_VALUE:
+		pqlt_cur_setting->lux_value.luxvalue= value & 0xffff;
+		pqlt_cur_setting->lux_value.update = 1;
+		iris_info.update.lux_value= true;
+		break;
+	case IRIS_CCT_VALUE:
+		pqlt_cur_setting->cct_value.cctvalue= value & 0xffff;
+		pqlt_cur_setting->cct_value.update = 1;
+		iris_info.update.cct_value= true;
+		break;
+	case IRIS_READING_MODE:
+		pqlt_cur_setting->reading_mode.readingmode= value & 0x1;
+		pqlt_cur_setting->reading_mode.update = 1;
+		iris_info.update.reading_mode= true;
 		break;
 	default:
 		mutex_unlock(&iris_cfg->config_mutex);
@@ -378,6 +406,18 @@ static int iris_configure(struct msm_fb_data_type *mfd, u32 type, u32 value)
 		configValue = *((u32 *)&pqlt_cur_setting->cm_setting);
 		configAddr = IRIS_CM_SETTING_ADDR;
 		iris_info.update.cm_setting = false;
+	} else if (iris_info.update.lux_value) {
+		configValue = *((u32 *)&pqlt_cur_setting->lux_value);
+		configAddr = IRIS_LUX_VALUE_ADDR;
+		iris_info.update.lux_value= false;
+	} else if (iris_info.update.cct_value) {
+		configValue = *((u32 *)&pqlt_cur_setting->cct_value);
+		configAddr = IRIS_CCT_VALUE_ADDR;
+		iris_info.update.cct_value= false;
+	} else if (iris_info.update.reading_mode) {
+		configValue = *((u32 *)&pqlt_cur_setting->reading_mode);
+		configAddr = IRIS_READING_MODE_ADDR;
+		iris_info.update.reading_mode= false;
 	}
 
 	if (0 == configValue && 0 == configAddr) {
@@ -405,6 +445,9 @@ int iris_configure_ex(struct msm_fb_data_type *mfd, u32 type, u32 count, u32 *va
 	int color = 0, colsize = 0, rowsize = 0, modectrl = 0x3f00, peakingctrl = 0, winstart = 0, winend = 0;
 	int displaywidth = (iris_info.work_mode.tx_ch  ?  iris_info.output_timing.hres * 2 : iris_info.output_timing.hres);
 	int ret;
+
+    if(count <= 1)
+        return  iris_configure( mfd, type, *values);
 
 	pdemo_win_info = (struct demo_win_info *)values;
 
@@ -560,7 +603,7 @@ int iris_configure_ex(struct msm_fb_data_type *mfd, u32 type, u32 count, u32 *va
 static int iris_configure_get(struct msm_fb_data_type *mfd, u32 type, u32 count, u32 *values)
 {
 	int ret = 0;
-
+	u32 f_Iris_ip_reg_addr_value = 0;
 	struct mdss_overlay_private *mdp5_data;
 	struct mdss_panel_data *pdata;
 	struct mdss_dsi_ctrl_pdata *ctrl;
@@ -638,6 +681,20 @@ static int iris_configure_get(struct msm_fb_data_type *mfd, u32 type, u32 count,
 	case  IRIS_CHIP_VERSION:
 		*values = IRIS_CHIP_HW_VER;
 		break;
+    case IRIS_DBG_TARGET_REGADDR_VALUE_GET:
+        f_Iris_ip_reg_addr_value = iris_pi_read(ctrl, f_Iris_ip_reg_addr);
+        *values = f_Iris_ip_reg_addr_value;
+        pr_debug("addr[0x%x]value[0x%x]\n", f_Iris_ip_reg_addr, f_Iris_ip_reg_addr_value);
+        break;
+	case IRIS_LUX_VALUE:
+		*values = pqlt_cur_setting->lux_value.luxvalue;
+		break;
+	case IRIS_CCT_VALUE:
+		*values = pqlt_cur_setting->cct_value.cctvalue;
+		break;
+	case IRIS_READING_MODE:
+		*values = pqlt_cur_setting->reading_mode.readingmode;
+		break;
 	default:
 		return -EFAULT;
 	}
@@ -676,7 +733,7 @@ static int iris_tx_dsi_mode_switch(struct msm_fb_data_type *mfd, void __user *ar
 	uint32_t dsi_mode;
 
 	ret = copy_from_user(&dsi_mode, argp, sizeof(uint32_t));
-	pr_info("%s, new mode = %d\n", __func__, dsi_mode);
+	pr_debug("%s, new mode = %d\n", __func__, dsi_mode);
 
 	iris_mipitx_intf_switch_state_reset(mfd, dsi_mode, 1);
 	return ret;
@@ -772,7 +829,7 @@ static int iris_notify_video_frame_rate(struct msm_fb_data_type *mfd,
 		pr_err("copy from user error\n");
 		return -EINVAL;
 	}
-	pr_info("frame_rate_ms = %u\n", frame_rate_ms);
+	pr_debug("frame_rate_ms = %u\n", frame_rate_ms);
 
 	// round to integer for 23976 and 29976
 	mfd->iris_conf.input_frame_rate = (frame_rate_ms + 100) / 1000;
@@ -1147,7 +1204,7 @@ static int iris_set_mode(struct msm_fb_data_type *mfd, void __user *argp)
 
 	ret = copy_from_user(&mode, argp, sizeof(uint32_t));
 
-	pr_info("iris_set_mode: new mode = %d, old  mode = %d\n",
+	pr_debug("iris_set_mode: new mode = %d, old  mode = %d\n",
 		mode, iris_cfg->sf_notify_mode);
 
 	if (mode != iris_cfg->sf_notify_mode)

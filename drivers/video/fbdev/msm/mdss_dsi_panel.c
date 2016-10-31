@@ -29,7 +29,9 @@
 #include <linux/clk.h>
 //#endif
 #if defined(CONFIG_IRIS2P_FULL_SUPPORT)
+#include "mdss_dsi_iris2p.h"
 #include "mdss_dsi_iris2p_lightup.h"
+#include "mdss_dsi_iris2p_mode_switch.h"
 #endif
 #define DT_CMD_HDR 6
 #define DEFAULT_MDP_TRANSFER_TIME 14000
@@ -189,8 +191,11 @@ static void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 
 	cmdreq.rlen = 0;
 	cmdreq.cb = NULL;
-
+#ifdef CONFIG_IRIS2P_FULL_SUPPORT
+    iris_panel_cmd_passthrough(ctrl, &cmdreq);
+#else
 	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+#endif
 }
 
 static char led_pwm1[2] = {0x51, 0x0};	/* DTYPE_DCS_WRITE1 */
@@ -220,8 +225,12 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL;
 	cmdreq.rlen = 0;
 	cmdreq.cb = NULL;
-
+#ifdef CONFIG_IRIS2P_FULL_SUPPORT
+    iris_panel_cmd_passthrough(ctrl, &cmdreq);
+#else
 	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+#endif
+
 }
 
 static int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
@@ -858,14 +867,9 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 				ctrl->ndx, on_cmds->cmd_cnt);
 
 #if defined(CONFIG_IRIS2P_FULL_SUPPORT)
-#if !defined(WITHOUT_IRIS)
 	iris_init(ctrl);
-#endif
-	if (on_cmds->cmd_cnt)
-		mdss_dsi_panel_cmds_send(ctrl, on_cmds, CMD_REQ_COMMIT);
-#if !defined(WITHOUT_IRIS)
+	iris_panel_cmds(ctrl, &ctrl->on_cmds);
 	iris_lightup(ctrl);
-#endif
 #else
 	if (on_cmds->cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, on_cmds, CMD_REQ_COMMIT);
@@ -940,11 +944,8 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 			goto end;
 	}
 #if defined(CONFIG_IRIS2P_FULL_SUPPORT)
-#if !defined(WITHOUT_IRIS)
 	iris_lightoff(ctrl);
-#endif
-	if (ctrl->off_cmds.cmd_cnt)
-		mdss_dsi_panel_cmds_send(ctrl, &ctrl->off_cmds, CMD_REQ_COMMIT);
+    iris_panel_cmds(ctrl, &ctrl->off_cmds);
 #else
 	if (ctrl->off_cmds.cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, &ctrl->off_cmds, CMD_REQ_COMMIT);
@@ -2665,6 +2666,8 @@ static int mdss_panel_parse_dt(struct device_node *np,
 	pinfo->is_dba_panel = of_property_read_bool(np,
 			"qcom,dba-panel");
 #if defined(CONFIG_IRIS2P_FULL_SUPPORT)
+	//mdss_dsi_parse_reset_seq(np, pinfo->px_rst_seq, &(pinfo->px_rst_seq_len),
+	//	"qcom,iris-reset-sequence");
 	iris_init_params_parse(np, ctrl_pdata);
 	iris_init_cmd_setup(ctrl_pdata);
 #endif

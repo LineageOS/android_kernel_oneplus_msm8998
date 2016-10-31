@@ -76,7 +76,28 @@ struct iris_cm_setting {
 	uint32_t cm3d:5;
 	uint32_t demomode:3;
 	uint32_t ftc_en:1;
-	uint32_t reserved:19;
+	uint32_t color_temp_en:1;
+	uint32_t color_temp:15;
+	uint32_t sensor_auto_en:1;
+	uint32_t reserved:2;
+	uint32_t update:1;
+};
+
+struct iris_lux_value {
+	uint32_t luxvalue:16;
+	uint32_t reserved:15;
+	uint32_t update:1;
+};
+
+struct iris_cct_value {
+	uint32_t cctvalue:16;
+	uint32_t reserved:15;
+	uint32_t update:1;
+};
+
+struct iris_reading_mode {
+	uint32_t readingmode:1;
+	uint32_t reserved:30;
 	uint32_t update:1;
 };
 
@@ -94,7 +115,11 @@ struct iris_conf_update {
 	uint32_t color_adjust:1;
 	uint32_t lce_setting:1;
 	uint32_t cm_setting:1;
-	uint32_t reserved:25;
+	uint32_t cmd_setting:1;
+	uint32_t lux_value:1;
+	uint32_t cct_value:1;
+	uint32_t reading_mode:1;
+	uint32_t reserved:21;
 };
 // ---------------------------------------------------------------------------
 //! Structure definition for demo window.
@@ -148,6 +173,9 @@ struct quality_setting {
 	struct iris_config_setting lp_memc_setting;
 	struct iris_lce_setting lce_setting;
 	struct iris_cm_setting cm_setting;
+	struct iris_lux_value lux_value;
+	struct iris_cct_value cct_value;
+	struct iris_reading_mode reading_mode;
 	u8 color_adjust;
 };
 

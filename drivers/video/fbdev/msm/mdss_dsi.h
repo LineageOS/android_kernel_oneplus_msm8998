@@ -951,5 +951,8 @@ static inline enum dsi_physical_lane_id mdss_dsi_logical_to_physical_lane(
 
 	return i;
 }
+#if defined(CONFIG_IRIS2_LIGHTUP_ONLY) || defined(CONFIG_IRIS2_FULL_SUPPORT) || defined(CONFIG_IRIS2P_FULL_SUPPORT)
+void mdss_dsi_cmd_hs_mode(int enable, struct mdss_panel_data *pdata);
+#endif
 
 #endif /* MDSS_DSI_H */

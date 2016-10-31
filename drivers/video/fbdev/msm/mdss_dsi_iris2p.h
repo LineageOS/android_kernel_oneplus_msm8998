@@ -89,6 +89,9 @@
 #define IRIS_COLOR_ADJUST_ADDR	(IRIS_GRCP_CTRL_ADDR+0x12fe0) //ALG_PARM11
 #define IRIS_CM_SETTING_ADDR	(IRIS_GRCP_CTRL_ADDR+0x12fe4) //ALG_PARM12
 #define IRIS_LCE_SETTING_ADDR	(IRIS_GRCP_CTRL_ADDR+0x12fe8) //ALG_PARM13
+#define IRIS_LUX_VALUE_ADDR     (IRIS_GRCP_CTRL_ADDR+0x12ffc)
+#define IRIS_CCT_VALUE_ADDR     (IRIS_GRCP_CTRL_ADDR+0x12ff8)
+#define IRIS_READING_MODE_ADDR	(IRIS_GRCP_CTRL_ADDR+0x12ff4)
 
 
 #define IRIS_TRUECUT_INFO_ADDR	(IRIS_GRCP_CTRL_ADDR+0x12fec)
@@ -281,7 +284,7 @@ void iris_reg_add(u32 addr, u32 val);
 void iris_regs_clear(void);
 void iris_update_configure(void);
 u32 iris_get_vtotal(struct iris_timing_info *info);
-//int iris_proc_constant_ratio(struct iris_config *iris_cfg);
+int iris_proc_constant_ratio(struct iris_config *iris_cfg);
 #if !defined(FPGA_PLATFORM)
 u32 iris_pi_read(struct mdss_dsi_ctrl_pdata *ctrl, u32 addr);
 //u32 iris_pi_write(struct mdss_dsi_ctrl_pdata *ctrl, u32 addr, u32 value);
@@ -290,7 +293,7 @@ u32 iris_lp_memc_calc(u32 value);
 bool iris_is_dbc_setting_disable(void);
 bool iris_is_lce_setting_disable(void);
 bool iris_is_cmdin_videout(void);
-//void iris_set_te(struct iris_config *iris_cfg, int te_flag);
+void iris_set_te(struct iris_config *iris_cfg, int te_flag);
 bool iris_is_peaking_setting_disable(void);
 bool iris_is_cm_setting_disable(void);
 #endif //MDSS_DSI_IRIS_H

@@ -31,6 +31,8 @@ int iris_debug_kickoff60 = 0;
 int iris_debug_lastframerepeat = 0;
 int iris_debug_pt_disable = 0;
 int iris_debug_dtg_v12 = 1;
+int iris_debug_power_opt_disable = 0;
+int iris_debug_firmware = 0;
 
 // FIXME mdp5 use add vsync handler and no find DMA_P bit
 //void mdp4_dsi_video_wait4dmap_done(int cndx);

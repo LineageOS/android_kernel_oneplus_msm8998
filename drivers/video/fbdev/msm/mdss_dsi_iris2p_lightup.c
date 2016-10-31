@@ -25,7 +25,6 @@
 
 #include "mdss_mdp.h"
 #include "mdss_fb.h"
-
 #include "mdss_dsi.h"
 #include "mdss_dsi_iris2p_lightup_priv.h"
 #include "mdss_dsi_iris2p_extern.h"
@@ -34,7 +33,8 @@
 
 static u8 iris_power_mode;
 static u8 iris_signal_mode;
-//static u16 iris_mipirx_status;
+static u16 iris_mipirx_status;
+static u8 cmd_send_flag = 0;
 char iris_read_cmd_buf[16];
 
 static char grcp_header[GRCP_HEADER] = {
@@ -47,11 +47,13 @@ static char grcp_header[GRCP_HEADER] = {
 };
 static struct iris_grcp_cmd init_cmd[INIT_CMD_NUM];
 static struct iris_grcp_cmd grcp_cmd;
-//static struct msm_fb_data_type *gp_mfd;
+static struct msm_fb_data_type *gp_mfd;
 static struct mdss_dsi_ctrl_pdata *g_ctrl;
+static u8 *fw_buf = NULL;
+
+
 
 //#define DUMP_DATA_FOR_BOOTLOADER
-
 #ifdef DUMP_DATA_FOR_BOOTLOADER
 void iris_dump_packet(u8 *data, int size)
 {
@@ -73,7 +75,7 @@ static void iris_mipi_signal_mode_cb(int len)
 		return;
 	}
 	iris_signal_mode = (u8)iris_read_cmd_buf[0];
-	pr_info("signal mode [%02x]\n", iris_signal_mode);
+	pr_debug("signal mode [%02x]\n", iris_signal_mode);
 }
 
 u8 iris_mipi_signal_mode_read(struct mdss_dsi_ctrl_pdata *ctrl, int state)
@@ -108,7 +110,7 @@ static void iris_mipi_power_mode_cb(int len)
 		return;
 	}
 	iris_power_mode = (u8)iris_read_cmd_buf[0];
-	pr_info("power mode [%02x]\n", iris_power_mode);
+	pr_debug("power mode [%02x]\n", iris_power_mode);
 }
 
 u8 iris_mipi_power_mode_read(struct mdss_dsi_ctrl_pdata *ctrl, int state)
@@ -155,7 +157,14 @@ static void iris_dsi_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 	cmdreq.rlen = 0;
 	cmdreq.cb = NULL;
 
-	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+	if (cmd_send_flag) {
+		if (cmdreq.flags & CMD_REQ_HS_MODE)
+			mdss_dsi_set_tx_power_mode(0, &ctrl->panel_data);
+		mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+		if (cmdreq.flags & CMD_REQ_HS_MODE)
+			mdss_dsi_set_tx_power_mode(1, &ctrl->panel_data);
+	} else
+		mdss_dsi_cmdlist_put(ctrl, &cmdreq);
 }
 
 int iris_power_mode_check(struct mdss_dsi_ctrl_pdata *ctrl, u8 value, int state)
@@ -177,7 +186,7 @@ int iris_power_mode_check(struct mdss_dsi_ctrl_pdata *ctrl, u8 value, int state)
 		pr_err("power mode check %x failed\n", value);
 		return FAILED;
 	} else
-		pr_info("power mode check %x success\n", value);
+		pr_debug("power mode check %x success\n", value);
 
 	return SUCCESS;
 }
@@ -213,7 +222,7 @@ int iris_proxy_check_reset(struct mdss_dsi_ctrl_pdata *ctrl)
 		pr_err("reboot workaround, power mode check failed\n");
 		return FAILED;
 	} else
-		pr_info("reboot times, succeed, power mode check success\n");
+		pr_debug("reboot times, succeed, power mode check success\n");
 
 	return SUCCESS;
 
@@ -332,6 +341,63 @@ void iris_dsc_info_parse(struct device_node *np,
 	poutput_dsc->bpp = (!rc ? tmp : 0x80);
 }
 
+void iris_clock_tree_parse(struct device_node *np,
+						struct mdss_panel_info *panel_info, struct iris_info_t *piris_info)
+{
+	int rc = 0, len = 0, cnt, num;
+	struct iris_pll_setting *pll = &(piris_info->setting_info.pll_setting);
+	struct iris_clock_source *clock = &(piris_info->setting_info.clock_setting.dclk);
+	u32 data[12];
+	const char *data1;
+	struct property *prop;
+	char clk_default[6] = {0xb, 0xb, 0x3, 0xb, 0x3, 0x0};
+
+	prop = of_find_property(np, "qcom,iris-pll-setting", &num);
+	num /= sizeof(u32);
+	if (!prop || !num) {
+		pr_info("parse error\n");
+	} else {
+		rc = of_property_read_u32_array(np, "qcom,iris-pll-setting", data, 12);
+		if (rc) {
+			pll->ppll_ctrl0 = 0x2;
+			pll->ppll_ctrl1 = 0x3e1201;
+			pll->ppll_ctrl2 = 0x800000;
+
+			pll->dpll_ctrl0 = 0x2002;
+			pll->dpll_ctrl1 = 0x3d1201;
+			pll->dpll_ctrl2 = 0xe00000;
+
+			pll->mpll_ctrl0 = 0x2;
+			pll->mpll_ctrl1 = 0x3e0901;
+			pll->mpll_ctrl2 = 0x800000;
+
+			pll->txpll_div = 0x0;
+			pll->txpll_sel = 0x2;
+			pll->reserved = 0x0;
+		} else {
+			*pll = *((struct iris_pll_setting *)data);
+		}
+	}
+	pr_info("%x, %x, %x, %x, %x, %x, %x, %x, %x, %x, %x, %x\n",
+		pll->ppll_ctrl0, pll->ppll_ctrl1, pll->ppll_ctrl2,
+		pll->dpll_ctrl0, pll->dpll_ctrl1, pll->dpll_ctrl2,
+		pll->mpll_ctrl0, pll->mpll_ctrl1, pll->mpll_ctrl2,
+		pll->txpll_div, pll->txpll_sel, pll->reserved);
+
+	data1 = of_get_property(np, "qcom,iris-clock-setting", &len);
+	if ((!data1) || (len != 6)) {
+		data1 = clk_default;
+	}
+	for (cnt = 0; cnt < 6; cnt++) {
+		clock->sel = data1[cnt] & 0xf;
+		clock->div = (data1[cnt] >> 4) & 0xf;
+		clock->div_en = !!clock->div;
+		pr_info("%x %d, %d, %d\n", data1[cnt], clock->sel, clock->div, clock->div_en);
+		clock++;
+	}
+
+}
+
 void iris_setting_info_parse(struct device_node *np,
 						struct mdss_panel_info *panel_info, struct iris_info_t *piris_info)
 {
@@ -339,21 +405,6 @@ void iris_setting_info_parse(struct device_node *np,
 	u32 tmp;
 	struct device_node *settings_node = NULL;
 	struct iris_setting_info *psetting_info = &(piris_info->setting_info);
-
-	rc = of_property_read_u32(np, "qcom,iris-dpll-clk", &tmp);
-	psetting_info->dpll_clock = (!rc ? tmp : 26664280);
-	rc = of_property_read_u32(np, "qcom,iris-dpll0", &tmp);
-	psetting_info->dpll0 = (!rc ? tmp : 0xa);
-	rc = of_property_read_u32(np, "qcom,iris-dpll1", &tmp);
-	psetting_info->dpll1 = (!rc ? tmp : 0x143b01);
-	rc = of_property_read_u32(np, "qcom,iris-dpll2", &tmp);
-	psetting_info->dpll2 = (!rc ? tmp : 0xbd2788);
-	rc = of_property_read_u32(np, "qcom,iris-ppll1", &tmp);
-	psetting_info->ppll1 = (!rc ? tmp : 0x341101);
-	rc = of_property_read_u32(np, "qcom,iris-ppll2", &tmp);
-	psetting_info->ppll2 = (!rc ? tmp : 0x155555);
-	rc = of_property_read_u32(np, "qcom,iris-tx-escclk-setting", &tmp);
-	psetting_info->tx_escclk_setting = (!rc ? tmp : 0x10);
 
 	rc = of_property_read_u32(np, "qcom,mipirx-dsi-functional-program", &tmp);
 	psetting_info->mipirx_dsi_functional_program = (!rc ? tmp : 0x62);
@@ -423,6 +474,10 @@ void iris_setting_info_parse(struct device_node *np,
 		pdisable_info->cm_c3d_disable_val = (!rc ? tmp : 0);
 		rc = of_property_read_u32(settings_node, "pxlw,iris-disable-cm-fleshtone", &tmp);
 		pdisable_info->cm_ftcen_disable_val = (!rc ? tmp : 0);
+		rc = of_property_read_u32(settings_node, "pxlw,iris-disable-color-temp-en", &tmp);
+		pdisable_info->color_temp_disable_val = (!rc ? tmp : 0);
+		rc = of_property_read_u32(settings_node, "pxlw,iris-disable-reading-mode", &tmp);
+		pdisable_info->reading_mode_disable_val= (!rc ? tmp : 0);
 
 		/* init APP code default value */
 		rc = of_property_read_u32(settings_node, "pxlw,iris-pq-peaking-default", &tmp);
@@ -457,6 +512,15 @@ void iris_setting_info_parse(struct device_node *np,
 		rc = of_property_read_u32(settings_node, "pxlw,iris-lce-demo-mode-default", &tmp);
                 psetting_info->quality_def.lce_setting.demomode = (!rc ? tmp : 0x00);
 
+		rc = of_property_read_u32(settings_node, "pxlw,iris-lux-value-default", &tmp);
+                psetting_info->quality_def.lux_value.luxvalue= (!rc ? tmp : 0x00);
+
+		rc = of_property_read_u32(settings_node, "pxlw,iris-cct-value-default", &tmp);
+                psetting_info->quality_def.cct_value.cctvalue= (!rc ? tmp : 0x00);
+
+		rc = of_property_read_u32(settings_node, "pxlw,iris-reading-mode-default", &tmp);
+				psetting_info->quality_def.reading_mode.readingmode= (!rc ? tmp : 0x00);
+
 		rc = of_property_read_u32(settings_node, "pxlw,iris-cm-6axes-default", &tmp);
                 psetting_info->quality_def.cm_setting.cm6axes = (!rc ? tmp : 0x00);
 		rc = of_property_read_u32(settings_node, "pxlw,iris-cm-3d-default", &tmp);
@@ -465,6 +529,12 @@ void iris_setting_info_parse(struct device_node *np,
                 psetting_info->quality_def.cm_setting.demomode = (!rc ? tmp : 0x00);
 		rc = of_property_read_u32(settings_node, "pxlw,iris-cm-fleshtone-default", &tmp);
                 psetting_info->quality_def.cm_setting.ftc_en = (!rc ? tmp : 0x00);
+		rc = of_property_read_u32(settings_node, "pxlw,iris-color-temp-en-default", &tmp);
+		psetting_info->quality_def.cm_setting.color_temp_en= (!rc ? tmp : 0x00);
+		rc = of_property_read_u32(settings_node, "pxlw,iris-color-temp-default", &tmp);
+		psetting_info->quality_def.cm_setting.color_temp= (!rc ? tmp : 0x00);
+		rc = of_property_read_u32(settings_node, "pxlw,iris-sensor-auto-en-default", &tmp);
+		psetting_info->quality_def.cm_setting.sensor_auto_en= (!rc ? tmp : 0x00);
 
 		/* init AP default value */
 		rc = of_property_read_u32(settings_node, "pxlw,iris-pq-peaking-init", &tmp);
@@ -499,6 +569,15 @@ void iris_setting_info_parse(struct device_node *np,
 		rc = of_property_read_u32(settings_node, "pxlw,iris-lce-demo-mode-init", &tmp);
 		psetting_info->quality_cur.lce_setting.demomode = (!rc ? tmp : 0x00);
 
+		rc = of_property_read_u32(settings_node, "pxlw,iris-lux-value-init", &tmp);
+		psetting_info->quality_cur.lux_value.luxvalue= (!rc ? tmp : 0x00);
+
+		rc = of_property_read_u32(settings_node, "pxlw,iris-cct-value-init", &tmp);
+		psetting_info->quality_cur.cct_value.cctvalue= (!rc ? tmp : 0x00);
+
+		rc = of_property_read_u32(settings_node, "pxlw,iris-reading-mode-init", &tmp);
+		psetting_info->quality_cur.reading_mode.readingmode= (!rc ? tmp : 0x00);
+
 		rc = of_property_read_u32(settings_node, "pxlw,iris-cm-6axes-init", &tmp);
 		psetting_info->quality_cur.cm_setting.cm6axes = (!rc ? tmp : 0x00);
 		rc = of_property_read_u32(settings_node, "pxlw,iris-cm-3d-init", &tmp);
@@ -507,6 +586,12 @@ void iris_setting_info_parse(struct device_node *np,
 		psetting_info->quality_cur.cm_setting.demomode = (!rc ? tmp : 0x00);
 		rc = of_property_read_u32(settings_node, "pxlw,iris-cm-fleshtone-init", &tmp);
 		psetting_info->quality_cur.cm_setting.ftc_en = (!rc ? tmp : 0x00);
+		rc = of_property_read_u32(settings_node, "pxlw,iris-color-temp-en-init", &tmp);
+		psetting_info->quality_cur.cm_setting.color_temp_en= (!rc ? tmp : 0x00);
+		rc = of_property_read_u32(settings_node, "pxlw,iris-color-temp-init", &tmp);
+		psetting_info->quality_cur.cm_setting.color_temp= (!rc ? tmp : 0x00);
+		rc = of_property_read_u32(settings_node, "pxlw,iris-sensor-auto-en-init", &tmp);
+		psetting_info->quality_cur.cm_setting.sensor_auto_en= (!rc ? tmp : 0x00);
 	} else {
 		pr_err("could not find pxlw,mdss_iris_settings child\n");
 	}
@@ -610,6 +695,16 @@ void iris_on_cmds_parse(struct device_node *np, struct mdss_dsi_ctrl_pdata *ctrl
 			"qcom,mdss-dsi-on-command-to-cmd-panel", "qcom,mdss-dsi-on-command-to-cmd-panel-state");
 }
 
+void iris_off_cmds_parse(struct device_node *np, struct mdss_dsi_ctrl_pdata *ctrl_pdata)
+{
+	if (MIPI_VIDEO_MODE == iris_info.work_mode.tx_mode)
+		iris_dsi_parse_dcs_cmds(np, &ctrl_pdata->off_cmds,
+			"qcom,mdss-dsi-off-command-to-video-panel", "qcom,mdss-dsi-off-command-to-video-panel-state");
+	else
+		iris_dsi_parse_dcs_cmds(np, &ctrl_pdata->off_cmds,
+			"qcom,mdss-dsi-off-command-to-cmd-panel", "qcom,mdss-dsi-off-command-to-cmd-panel-state");
+}
+
 void iris_tx_switch_cmd_parse(struct device_node *np, struct iris_info_t *piris_info)
 {
 	struct iris_tx_switch_cmd *ptx_switch_cmd = &(piris_info->tx_switch_cmd);
@@ -646,7 +741,7 @@ void iris_analog_bypass_info_parse(struct device_node *np, struct iris_info_t *p
 	pabypss_ctrl->abypass_debug = false;
 	pabypss_ctrl->abypass_to_pt_enable = 0;
 	pabypss_ctrl->pt_to_abypass_enable = 0;
-	pabypss_ctrl->abypss_switch_state = PASS_THROUGH_STATE;
+	pabypss_ctrl->abypss_switch_state = MCU_STOP_ENTER_STATE;
 	pabypss_ctrl->base_time = 0;
 	pabypss_ctrl->frame_delay = 0;
 
@@ -672,13 +767,19 @@ void iris_init_params_parse(struct device_node *np, struct mdss_dsi_ctrl_pdata *
 		iris_workmode_parse(np, panel_info, &iris_info);
 		iris_timing_parse(np, panel_info, &iris_info);
 		iris_dsc_info_parse(np, panel_info, &iris_info);
+		iris_clock_tree_parse(np, panel_info, &iris_info);
 		iris_setting_info_parse(np, panel_info, &iris_info);
 		iris_tx_switch_cmd_parse(np, &iris_info);
 		iris_intf_switch_info_parse(np, &iris_info);
 		iris_analog_bypass_info_parse(np, &iris_info);
+
+		iris_info.panel_cmd_sync_wait_broadcast = of_property_read_bool(
+			np, "qcom,iris-panel-cmd-sync-wait-broadcast");
 	}
-	if (iris_info.work_mode.rx_mode != iris_info.work_mode.tx_mode)
+	if (iris_info.work_mode.rx_mode != iris_info.work_mode.tx_mode) {
 		iris_on_cmds_parse(np, ctrl_pdata);
+		iris_off_cmds_parse(np, ctrl_pdata);
+	}
 }
 
 void iris_cmd_reg_add(struct iris_grcp_cmd *pcmd, u32 addr, u32 val)
@@ -690,24 +791,33 @@ void iris_cmd_reg_add(struct iris_grcp_cmd *pcmd, u32 addr, u32 val)
 
 void iris_sys_reg_config(struct iris_info_t *piris_info, struct iris_grcp_cmd *pcmd)
 {
-	u32 clkmux_ctrl = 0x42180102, clkdiv_ctrl = 0x08;
-	u8 escclk_src, escclk_div, escclk_div_en;
+	u32 clkmux_ctrl = 0x42180100, clkdiv_ctrl = 0x08;
+	struct iris_pll_setting *pll = &piris_info->setting_info.pll_setting;
+	struct iris_clock_setting *clock = &piris_info->setting_info.clock_setting;
 
-	escclk_src = piris_info->setting_info.tx_escclk_setting & 0x0f;
-	escclk_div = (piris_info->setting_info.tx_escclk_setting >> 4) & 0x0f;
-	escclk_div_en = (piris_info->setting_info.tx_escclk_setting >> 8) & 0x1;
-	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + CLKMUX_CTRL, clkmux_ctrl | (escclk_src << 11));
-	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + CLKDIV_CTRL, clkdiv_ctrl | (escclk_div << 3) | (escclk_div_en << 7));
+	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + CLKMUX_CTRL, clkmux_ctrl | (clock->escclk.sel << 11) | pll->txpll_sel);
+	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + CLKDIV_CTRL, clkdiv_ctrl | (clock->escclk.div << 3) | (clock->escclk.div_en << 7));
 
-	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + PPLL_B_CTRL1, piris_info->setting_info.ppll1);
-	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + PPLL_B_CTRL2, piris_info->setting_info.ppll2);
+	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + DCLK_SRC_SEL, clock->dclk.sel | (clock->dclk.div << 8) | (clock->dclk.div_en << 10));
+	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + INCLK_SRC_SEL, clock->inclk.sel | (clock->inclk.div << 8) | (clock->inclk.div_en << 10));
+	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + MCUCLK_SRC_SEL, clock->mcuclk.sel | (clock->mcuclk.div << 8) | (clock->mcuclk.div_en << 12));
+	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + PCLK_SRC_SEL, clock->pclk.sel | (clock->pclk.div << 8) | (clock->pclk.div_en << 10));
+	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + MCLK_SRC_SEL, clock->mclk.sel | (clock->mclk.div << 8) | (clock->mclk.div_en << 10));
 
-//	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + 0x150, piris_info->setting_info.dpll0);
-	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + DPLL_B_CTRL1, piris_info->setting_info.dpll1);
-	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + DPLL_B_CTRL2, piris_info->setting_info.dpll2);
-	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + PLL_CTRL, 0x1800a);
+	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + PPLL_B_CTRL0, pll->ppll_ctrl0);
+	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + PPLL_B_CTRL1, pll->ppll_ctrl1);
+	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + PPLL_B_CTRL2, pll->ppll_ctrl2);
+
+	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + DPLL_B_CTRL0, pll->dpll_ctrl0);
+	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + DPLL_B_CTRL1, pll->dpll_ctrl1);
+	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + DPLL_B_CTRL2, pll->dpll_ctrl2);
+
+	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + MPLL_B_CTRL0, pll->mpll_ctrl0);
+	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + MPLL_B_CTRL1, pll->mpll_ctrl1);
+	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + MPLL_B_CTRL2, pll->mpll_ctrl2);
+
+	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + PLL_CTRL, 0x1800e);
 	iris_cmd_reg_add(pcmd, IRIS_SYS_ADDR + PLL_CTRL, 0x18000);
-
 }
 
 void iris_mipirx_reg_config(struct iris_info_t *piris_info, struct iris_grcp_cmd *pcmd)
@@ -743,6 +853,8 @@ void iris_mipirx_reg_config(struct iris_info_t *piris_info, struct iris_grcp_cmd
 			iris_cmd_reg_add(pcmd, mipirx_addr + FRAME_COLUMN_ADDR, frame_col_addr << 16);
 			iris_cmd_reg_add(pcmd, mipirx_addr + ABNORMAL_COUNT_THRES, 0xffffffff);
 		}
+		iris_cmd_reg_add(pcmd, mipirx_addr + INTEN, 0x3);
+		iris_cmd_reg_add(pcmd, mipirx_addr + INTERRUPT_ENABLE, 0x0);
 		iris_cmd_reg_add(pcmd, mipirx_addr + DSI_FUNCTIONAL_PROGRAMMING, psetting_info->mipirx_dsi_functional_program);
 		iris_cmd_reg_add(pcmd, mipirx_addr + EOT_ECC_CRC_DISABLE, psetting_info->mipirx_eot_ecc_crc_disable);
 		iris_cmd_reg_add(pcmd, mipirx_addr + DATA_LANE_TIMING_PARAMETER, psetting_info->mipirx_data_lane_timing_param);
@@ -757,6 +869,10 @@ void iris_mipitx_reg_config(struct iris_info_t *piris_info, struct iris_grcp_cmd
 	struct iris_setting_info *psetting_info = &(piris_info->setting_info);
 	struct iris_timing_info *poutput_timing = &(piris_info->output_timing);
 	u32 tx_ch, mipitx_addr = IRIS_MIPI_TX_ADDR, dual_ch_ctrl, dsi_tx_ctrl = 0;
+	u32 ddrclk_div, ddrclk_div_en;
+
+	ddrclk_div = piris_info->setting_info.pll_setting.txpll_div;
+	ddrclk_div_en = !!ddrclk_div;
 
 	for (tx_ch = 0; tx_ch < (pwork_mode->tx_ch + 1); tx_ch++) {
 #ifdef MIPI_SWAP
@@ -779,9 +895,9 @@ void iris_mipitx_reg_config(struct iris_info_t *piris_info, struct iris_grcp_cmd
 #endif
 		iris_cmd_reg_add(pcmd, mipitx_addr + DPHY_DATA_LANE_TIMING_PARA, psetting_info->mipitx_data_lane_timing_param);
 		iris_cmd_reg_add(pcmd, mipitx_addr + DPHY_CLOCK_LANE_TIMING_PARA, psetting_info->mipitx_clk_lane_timing_param);
-		iris_cmd_reg_add(pcmd, mipitx_addr + DPHY_PLL_PARA, psetting_info->mipitx_dphy_pll_para);
+		//iris_cmd_reg_add(pcmd, mipitx_addr + DPHY_PLL_PARA, psetting_info->mipitx_dphy_pll_para);
 		iris_cmd_reg_add(pcmd, mipitx_addr + DPHY_TRIM_1, psetting_info->mipitx_dphy_trim_1);
-		iris_cmd_reg_add(pcmd, mipitx_addr + DPHY_CTRL, 1);
+		iris_cmd_reg_add(pcmd, mipitx_addr + DPHY_CTRL, 1 | (ddrclk_div << 26) | (ddrclk_div_en << 28));
 
 		if (pwork_mode->tx_ch) {
 			dual_ch_ctrl = pwork_mode->tx_ch + ((poutput_timing->hres * 2) << 16);
@@ -812,10 +928,9 @@ void iris_init_cmd_setup(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 			init_cmd[cnt].cmd_len = GRCP_HEADER;
 		}
 
-		iris_mipirx_reg_config(&iris_info, &init_cmd[0]);
-		iris_sys_reg_config(&iris_info, &init_cmd[0]);
-
-		iris_mipitx_reg_config(&iris_info, &init_cmd[1]);
+		iris_mipitx_reg_config(&iris_info, &init_cmd[0]);
+		iris_mipirx_reg_config(&iris_info, &init_cmd[1]);
+		iris_sys_reg_config(&iris_info, &init_cmd[1]);
 
 		for (cnt = 0; cnt < INIT_CMD_NUM; cnt++) {
 			grcp_len = (init_cmd[cnt].cmd_len - GRCP_HEADER) / 4;
@@ -855,7 +970,7 @@ void iris_mipirx_mode_set(struct mdss_dsi_ctrl_pdata *ctrl, int mode, int state)
 	default:
 		break;
 	}
-	pr_info("iris: set mipirx mode: %d\n", mode);
+	pr_debug("iris: set mipirx mode: %d\n", mode);
 
 	panel_cmds.cmds = iris_mipirx_mode_cmds;
 	panel_cmds.cmd_cnt = ARRAY_SIZE(iris_mipirx_mode_cmds);
@@ -869,14 +984,14 @@ void iris_init_cmd_send(struct mdss_dsi_ctrl_pdata *ctrl, int state)
 {
 	struct dsi_cmd_desc iris_init_info_cmds[] = {
 		{{DTYPE_GEN_LWRITE, 1, 0, 0, CMD_PROC, CMD_PKT_SIZE}, init_cmd[0].cmd},
-		{{DTYPE_GEN_LWRITE, 1, 0, 0, CMD_PROC, CMD_PKT_SIZE}, init_cmd[1].cmd},
+		{{DTYPE_GEN_LWRITE, 1, 0, 0, MCU_PROC * 2, CMD_PKT_SIZE}, init_cmd[1].cmd},
 	};
 	struct dsi_panel_cmds panel_cmds;
 
 	iris_init_info_cmds[0].dchdr.dlen = init_cmd[0].cmd_len;
 	iris_init_info_cmds[1].dchdr.dlen = init_cmd[1].cmd_len;
 
-	pr_info("iris: send init cmd\n");
+	pr_debug("iris: send init cmd\n");
 
 	panel_cmds.cmds = iris_init_info_cmds;
 	panel_cmds.cmd_cnt = ARRAY_SIZE(iris_init_info_cmds);
@@ -886,7 +1001,7 @@ void iris_init_cmd_send(struct mdss_dsi_ctrl_pdata *ctrl, int state)
 	DUMP_PACKET(init_cmd[0].cmd, init_cmd[0].cmd_len);
 	DUMP_PACKET(init_cmd[1].cmd, init_cmd[1].cmd_len);
 }
-#if 0
+
 void iris_timing_info_send(struct mdss_dsi_ctrl_pdata *ctrl, int state)
 {
 	char iris_workmode[] = {
@@ -911,8 +1026,8 @@ void iris_timing_info_send(struct mdss_dsi_ctrl_pdata *ctrl, int state)
 		PWIL_U32(0x80)
 	};
 	struct dsi_cmd_desc iris_timing_info_cmd[] = {
-		{{DTYPE_GEN_LWRITE, 1, 0, 0, CMD_PROC, sizeof(iris_workmode)}, iris_workmode},
-		{{DTYPE_GEN_LWRITE, 1, 0, 0, CMD_PROC, sizeof(iris_timing)}, iris_timing}
+		{{DTYPE_GEN_LWRITE, 1, 0, 0, MCU_PROC, sizeof(iris_workmode)}, iris_workmode},
+		{{DTYPE_GEN_LWRITE, 1, 0, 0, MCU_PROC, sizeof(iris_timing)}, iris_timing}
 	};
 	struct iris_timing_info *pinput_timing = &(iris_info.input_timing);
 	struct iris_timing_info *poutput_timing = &(iris_info.output_timing);
@@ -940,7 +1055,7 @@ void iris_timing_info_send(struct mdss_dsi_ctrl_pdata *ctrl, int state)
 	*(u32 *)(iris_timing + 52) = cpu_to_le32((poutput_dsc->slice_height << 16) + poutput_dsc->slice_number);
 	*(u32 *)(iris_timing + 56) = cpu_to_le32(poutput_dsc->bpp);
 
-	pr_info("iris: send timing info\n");
+	pr_debug("iris: send timing info\n");
 
 	panel_cmds.cmds = iris_timing_info_cmd;
 	panel_cmds.cmd_cnt = ARRAY_SIZE(iris_timing_info_cmd);
@@ -1007,7 +1122,7 @@ void iris_timing_info_grcp_send(struct mdss_dsi_ctrl_pdata *ctrl, int state)
 	*(u32 *)(iris_timing + 72) = cpu_to_le32((poutput_dsc->slice_height << 16) + poutput_dsc->slice_number);
 	*(u32 *)(iris_timing + 76) = cpu_to_le32(poutput_dsc->bpp);
 
-	pr_info("iris: send timing info\n");
+	pr_debug("iris: send timing info\n");
 
 	panel_cmds.cmds = iris_timing_info_cmd;
 	panel_cmds.cmd_cnt = ARRAY_SIZE(iris_timing_info_cmd);
@@ -1040,7 +1155,7 @@ void iris_grcp_buffer_init(struct mdss_dsi_ctrl_pdata *ctrl, int state)
 	struct dsi_panel_cmds panel_cmds;
 
 
-	pr_info("iris: init GRCP buffer\n");
+	pr_debug("iris: init GRCP buffer\n");
 
 	panel_cmds.cmds = iris_grcp_buf_init_cmd;
 	panel_cmds.cmd_cnt = ARRAY_SIZE(iris_grcp_buf_init_cmd);
@@ -1075,7 +1190,7 @@ void iris_ctrl_cmd_send(struct mdss_dsi_ctrl_pdata *ctrl, u8 cmd, int state)
 	romcode_ctrl[20] = cmd;
 	*(u32 *)(romcode_ctrl + 28) = cpu_to_le32(iris_info.firmware_info.firmware_size);
 
-	pr_info("iris: send romcode ctrl cmd: %x\n", cmd);
+	pr_debug("iris: send romcode ctrl cmd: %x\n", cmd);
 
 	panel_cmds.cmds = iris_romcode_ctrl_cmd;
 	panel_cmds.cmd_cnt = ARRAY_SIZE(iris_romcode_ctrl_cmd);
@@ -1126,13 +1241,17 @@ void iris_dtg_set(struct mdss_dsi_ctrl_pdata *ctrl, int state)
 	iris_cmd_reg_add(&grcp_cmd, IRIS_DTG_ADDR + DTG_RESERVE, 0x1000000b);
 	iris_cmd_reg_add(&grcp_cmd, IRIS_DTG_ADDR + REGSEL, 1);
 
+#ifdef EFUSE_REWRITE
+	iris_cmd_reg_add(&grcp_cmd, IRIS_SYS_ADDR + DFT_EFUSE_CTRL, 0x80000100);
+	iris_cmd_reg_add(&grcp_cmd, IRIS_SYS_ADDR + DFT_EFUSE_CTRL_1, 0x0000200d);
+#endif
 	grcp_len = (grcp_cmd.cmd_len - GRCP_HEADER) / 4;
 	*(u32 *)(grcp_cmd.cmd + 8) = cpu_to_le32(grcp_len + 1);
 	*(u16 *)(grcp_cmd.cmd + 14) = cpu_to_le16(grcp_len);
 
 	iris_dtg_cmd[0].dchdr.dlen = grcp_cmd.cmd_len;
 
-	pr_info("iris: set dtg \n");
+	pr_debug("iris: set dtg \n");
 
 	panel_cmds.cmds = iris_dtg_cmd;
 	panel_cmds.cmd_cnt = ARRAY_SIZE(iris_dtg_cmd);
@@ -1140,6 +1259,45 @@ void iris_dtg_set(struct mdss_dsi_ctrl_pdata *ctrl, int state)
 	iris_dsi_cmds_send(ctrl, &panel_cmds);
 
 	DUMP_PACKET(grcp_cmd.cmd, grcp_cmd.cmd_len);
+}
+
+void iris_mipitx_tx_nop(struct mdss_dsi_ctrl_pdata *ctrl, int state)
+{
+	u32 grcp_len = 0;
+	struct dsi_cmd_desc iris_cmd[] = {
+		{{ DTYPE_GEN_LWRITE, 1, 0, 0, 5, CMD_PKT_SIZE}, grcp_cmd.cmd},
+	};
+	struct dsi_panel_cmds panel_cmds;
+
+
+	memset(&grcp_cmd, 0, sizeof(grcp_cmd));
+	memcpy(grcp_cmd.cmd, grcp_header, GRCP_HEADER);
+	grcp_cmd.cmd_len = GRCP_HEADER;
+
+	iris_cmd_reg_add(&grcp_cmd, IRIS_MIPI_TX_ADDR + WR_PACKET_HEADER_OFFS, 0x05000409);//nop
+	iris_cmd_reg_add(&grcp_cmd, IRIS_MIPI_TX_ADDR + WR_PACKET_PAYLOAD_OFFS, 0x00000000);
+
+#ifdef MIPI_SWAP
+	iris_cmd_reg_add(&grcp_cmd, IRIS_MIPI_TX_ADDR - IRIS_MIPI_ADDR_OFFSET + WR_PACKET_HEADER_OFFS, 0x05000409);//nop
+	iris_cmd_reg_add(&grcp_cmd, IRIS_MIPI_TX_ADDR - IRIS_MIPI_ADDR_OFFSET + WR_PACKET_PAYLOAD_OFFS, 0x00000000);
+#else
+	iris_cmd_reg_add(&grcp_cmd, IRIS_MIPI_TX_ADDR + IRIS_MIPI_ADDR_OFFSET + WR_PACKET_HEADER_OFFS, 0x05000409);//nop
+	iris_cmd_reg_add(&grcp_cmd, IRIS_MIPI_TX_ADDR + IRIS_MIPI_ADDR_OFFSET + WR_PACKET_PAYLOAD_OFFS, 0x00000000);
+#endif
+
+	grcp_len = (grcp_cmd.cmd_len - GRCP_HEADER) / 4;
+	*(u32 *)(grcp_cmd.cmd + 8) = cpu_to_le32(grcp_len + 1);
+	*(u16 *)(grcp_cmd.cmd + 14) = cpu_to_le16(grcp_len);
+
+	iris_cmd[0].dchdr.dlen = grcp_cmd.cmd_len;
+
+	pr_debug("iris: mipi_tx send null packet\n");
+	// iris_dump_packet(grcp_cmd.cmd, grcp_cmd.cmd_len);
+
+	panel_cmds.cmds = iris_cmd;
+	panel_cmds.cmd_cnt = ARRAY_SIZE(iris_cmd);
+	panel_cmds.link_state = state;
+	iris_dsi_cmds_send(ctrl, &panel_cmds);
 }
 
 void iris_pwil_mode_set(struct mdss_dsi_ctrl_pdata *ctrl, u8 mode, int state)
@@ -1161,7 +1319,7 @@ void iris_pwil_mode_set(struct mdss_dsi_ctrl_pdata *ctrl, u8 mode, int state)
 		pwil_mode[1] = 0x20;
 	}
 
-	pr_info("iris: set pwil mode: %x, %x\n", pwil_mode[0], pwil_mode[1]);
+	pr_debug("iris: set pwil mode: %x, %x\n", pwil_mode[0], pwil_mode[1]);
 
 	panel_cmds.cmds = iris_pwil_mode_cmd;
 	panel_cmds.cmd_cnt = ARRAY_SIZE(iris_pwil_mode_cmd);
@@ -1257,7 +1415,7 @@ void iris_firmware_download_prepare(struct mdss_dsi_ctrl_pdata *ctrl, size_t siz
 
 }
 
-void iris_firmware_download_restore(struct mdss_dsi_ctrl_pdata *ctrl)
+void iris_firmware_download_restore(struct mdss_dsi_ctrl_pdata *ctrl, bool cont_splash)
 {
 	char fw_download_restore[] = {
 		PWIL_TAG('P', 'W', 'I', 'L'),
@@ -1299,26 +1457,20 @@ void iris_firmware_download_restore(struct mdss_dsi_ctrl_pdata *ctrl)
 	panel_cmds.link_state = DSI_HS_MODE;
 	iris_dsi_cmds_send(ctrl, &panel_cmds);
 
-	iris_pwil_mode_set(ctrl, RFB_MODE, DSI_HS_MODE);
+	if (cont_splash) {
+		iris_pwil_mode_set(ctrl, RFB_MODE, DSI_HS_MODE);
 
-	if (MIPI_CMD_MODE == iris_info.work_mode.rx_mode)
-		iris_mipi_mem_addr_set(ctrl, col_addr, page_addr, DSI_HS_MODE);
+		if (MIPI_CMD_MODE == iris_info.work_mode.rx_mode)
+			iris_mipi_mem_addr_set(ctrl, col_addr, page_addr, DSI_HS_MODE);
+	}
 }
 
-
-int iris_firmware_data_send(struct mdss_dsi_ctrl_pdata *ctrl, const u8 *fw_data, size_t fw_size)
+int iris_firmware_data_send(struct mdss_dsi_ctrl_pdata *ctrl, u8 *buf, size_t fw_size)
 {
-	u8 *buf = NULL;
 	u32 pkt_size = FW_COL_CNT * 3, cmd_len = 0, cmd_cnt = 0, buf_indx = 0, cmd_indx = 0;
 	static struct dsi_cmd_desc fw_send_cmd[FW_DW_CMD_CNT];
 	struct dsi_panel_cmds panel_cmds;
 
-	buf = kzalloc(DSI_DMA_TX_BUF_SIZE, GFP_KERNEL);
-	if (!buf) {
-		pr_err("%s: failed to alloc mem, size = %d\n", __func__, DSI_DMA_TX_BUF_SIZE);
-		return FAILED;
-	}
-	memset(buf, 0, DSI_DMA_TX_BUF_SIZE);
 	memset(fw_send_cmd, 0, sizeof(fw_send_cmd));
 
 	while (fw_size) {
@@ -1327,13 +1479,6 @@ int iris_firmware_data_send(struct mdss_dsi_ctrl_pdata *ctrl, const u8 *fw_data,
 		else
 			cmd_len = fw_size;
 
-		if (0 == cmd_cnt)
-			buf[0] = DCS_WRITE_MEM_START;
-		else
-			buf[buf_indx] = DCS_WRITE_MEM_CONTINUE;
-
-		memcpy(buf + buf_indx + 1, fw_data, cmd_len);
-
 		cmd_indx = cmd_cnt % FW_DW_CMD_CNT;
 		fw_send_cmd[cmd_indx].dchdr.last = 0;
 		fw_send_cmd[cmd_indx].dchdr.dtype = 0x39;
@@ -1341,7 +1486,6 @@ int iris_firmware_data_send(struct mdss_dsi_ctrl_pdata *ctrl, const u8 *fw_data,
 		fw_send_cmd[cmd_indx].payload = buf + buf_indx;
 
 		fw_size -= cmd_len;
-		fw_data += cmd_len;
 		cmd_cnt++;
 		buf_indx += cmd_len + 1;
 
@@ -1351,11 +1495,8 @@ int iris_firmware_data_send(struct mdss_dsi_ctrl_pdata *ctrl, const u8 *fw_data,
 			panel_cmds.cmd_cnt = cmd_indx + 1;
 			panel_cmds.link_state = DSI_HS_MODE;
 			iris_dsi_cmds_send(ctrl, &panel_cmds);
-			buf_indx = 0;
 		}
 	}
-
-	kfree(buf);
 
 	return SUCCESS;
 }
@@ -1368,7 +1509,7 @@ static void iris_mipirx_status_cb(int len)
 	}
 
 	iris_mipirx_status = (iris_read_cmd_buf[0] & 0xFF) | ((iris_read_cmd_buf[1] & 0x0f) << 8);
-	pr_info("mipi_rx result [%04x]\n", iris_mipirx_status);
+	pr_debug("mipi_rx result [%04x]\n", iris_mipirx_status);
 }
 
 static u16 iris_fw_download_result_read(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1410,47 +1551,106 @@ int iris_fw_download_result_check(struct mdss_dsi_ctrl_pdata *ctrl)
 		pr_err("firmware download failed\n");
 		return FAILED;
 	} else
-		pr_info("firmware download success\n");
+		pr_debug("firmware download success\n");
 
 
 	return SUCCESS;
 }
 
-int iris2p_firmware_download(struct mdss_dsi_ctrl_pdata *ctrl, struct msm_fb_data_type *mfd, const char *name)
+int iris_firmware_data_read(const u8 *fw_data, size_t fw_size)
 {
-	const struct firmware *fw = NULL;
-	int ret = 0, result = SUCCESS;
+    u32 pkt_size = FW_COL_CNT * 3, cmd_len = 0, cmd_cnt = 0, buf_indx = 0;
 
-	iris_info.firmware_info.firmware_size = 0;
-	if (name) {
-		/* Firmware file must be in /system/etc/firmware/ */
-		ret = request_firmware(&fw, name, mfd->fbi->dev);
-		if (ret) {
-			pr_err("%s: failed to request firmware: %s, ret = %d\n",
-					__func__, name, ret);
-			result = FAILED;
-		} else {
-			pr_info("%s: request firmware: name = %s, size = %zu bytes\n",
-						__func__, name, fw->size);
-
-			iris_info.firmware_info.firmware_size = fw->size;
-			iris_firmware_download_prepare(ctrl, fw->size);
-			iris_firmware_data_send(ctrl, fw->data, fw->size);
-#ifdef READ_CMD_ENABLE
-			result = iris_fw_download_result_check(ctrl);
-#else
-			msleep(100);
-#endif
-			iris_firmware_download_restore(ctrl);
-			release_firmware(fw);
-		}
-	} else {
-		pr_err("%s: firmware is null\n", __func__);
-		result = FAILED;
+	fw_buf = kzalloc(DSI_DMA_TX_BUF_SIZE, GFP_KERNEL);
+	if (!fw_buf) {
+		pr_err("%s: failed to alloc mem, size = %d\n", __func__, DSI_DMA_TX_BUF_SIZE);
+		return FAILED;
 	}
+
+	memset(fw_buf, 0, DSI_DMA_TX_BUF_SIZE);
+
+	while (fw_size) {
+		if (fw_size >= pkt_size)
+			cmd_len = pkt_size;
+		else
+			cmd_len = fw_size;
+
+		if (0 == cmd_cnt)
+			fw_buf[0] = DCS_WRITE_MEM_START;
+		else
+			fw_buf[buf_indx] = DCS_WRITE_MEM_CONTINUE;
+
+		memcpy(fw_buf + buf_indx + 1, fw_data, cmd_len);
+
+		fw_size -= cmd_len;
+		fw_data += cmd_len;
+		cmd_cnt++;
+		buf_indx += cmd_len + 1;
+	}
+	return SUCCESS;
+}
+
+int iris_firmware_download_init(struct msm_fb_data_type *mfd, const char *name)
+{
+    const struct firmware *fw = NULL;
+    int ret = 0, result = SUCCESS;
+
+    iris_info.firmware_info.firmware_size = 0;
+    if (name) {
+        /* Firmware file must be in /system/etc/firmware/ */
+        ret = request_firmware(&fw, name, mfd->fbi->dev);
+        if (ret) {
+                pr_err("%s: failed to request firmware: %s, ret = %d\n",
+                    __func__, name, ret);
+			result = FAILED;
+        } else {
+            pr_info("%s: request firmware: name = %s, size = %zu bytes\n",
+                __func__, name, fw->size);
+            iris_firmware_data_read(fw->data, fw->size);
+            iris_info.firmware_info.firmware_size = fw->size;
+            release_firmware(fw);
+        }
+    } else {
+        pr_err("%s: firmware is null\n", __func__);
+        result = FAILED;
+    }
+
 	return result;
 }
-#endif
+int iris2p_firmware_download(struct mdss_dsi_ctrl_pdata *ctrl,
+							struct msm_fb_data_type *mfd, const char *name, bool cont_splash)
+{
+#define DISABLE_FW_DOWNLOAD 1
+#define RELOAD_FIRMWARE 2
+	int ret = SUCCESS, result = FAILED;
+	int fw_size = 0;
+
+	/*firmware debug*/
+	if (DISABLE_FW_DOWNLOAD == iris_debug_firmware) {
+		return FAILED;
+	} else if ((RELOAD_FIRMWARE == iris_debug_firmware) && fw_buf) {
+		kfree(fw_buf);
+		fw_buf = NULL;
+	}
+
+	if (!fw_buf)
+		ret = iris_firmware_download_init(mfd, name);
+
+	if (SUCCESS == ret) {
+		fw_size = iris_info.firmware_info.firmware_size;
+
+		iris_firmware_download_prepare(ctrl, fw_size);
+		iris_firmware_data_send(ctrl, fw_buf, fw_size);
+		#ifdef READ_CMD_ENABLE
+			result = iris_fw_download_result_check(ctrl);
+		#else
+			msleep(100);
+		#endif
+		iris_firmware_download_restore(ctrl, cont_splash);
+	}
+    return result;
+}
+
 void iris_dport_disable(struct mdss_dsi_ctrl_pdata *ctrl)
 {
 	char dport_disable[] = {
@@ -1468,7 +1668,7 @@ void iris_dport_disable(struct mdss_dsi_ctrl_pdata *ctrl)
 	};
 	struct dsi_panel_cmds panel_cmds;
 
-	pr_info("iris: send dport disable cmd\n");
+	pr_debug("iris: send dport disable cmd\n");
 
 	panel_cmds.cmds = iris_dport_disable_cmd;
 	panel_cmds.cmd_cnt = ARRAY_SIZE(iris_dport_disable_cmd);
@@ -1476,8 +1676,6 @@ void iris_dport_disable(struct mdss_dsi_ctrl_pdata *ctrl)
 	iris_dsi_cmds_send(ctrl, &panel_cmds);
 
 }
-#define EFUSE_REWRITE
-
 
 #ifdef EFUSE_REWRITE
 static void iris_sys_efuse_rewrite(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1494,14 +1692,19 @@ static void iris_sys_efuse_rewrite(struct mdss_dsi_ctrl_pdata *ctrl)
 
 	iris_cmd_reg_add(&grcp_cmd, IRIS_SYS_ADDR + DFT_EFUSE_CTRL, 0x80000100);
 	iris_cmd_reg_add(&grcp_cmd, IRIS_SYS_ADDR + DFT_EFUSE_CTRL_1, 0x0000200d);
-
+	#if 0
+		/* software reset */
+		iris_cmd_reg_add(&grcp_cmd, IRIS_SYS_ADDR + 0x28, 0x1);
+		iris_cmd_reg_add(&grcp_cmd, IRIS_SYS_ADDR + 0x28, 0x3);
+		iris_cmd_reg_add(&grcp_cmd, IRIS_SYS_ADDR + 0x28, 0x2);
+	#endif
 	grcp_len = (grcp_cmd.cmd_len - GRCP_HEADER) / 4;
 	*(u32 *)(grcp_cmd.cmd + 8) = cpu_to_le32(grcp_len + 1);
 	*(u16 *)(grcp_cmd.cmd + 14) = cpu_to_le16(grcp_len);
 
 	iris_grcp_cmd[0].dchdr.dlen = grcp_cmd.cmd_len;
 
-	pr_info("iris efuse rewrite\n");
+	pr_debug("iris efuse rewrite\n");
 
 	panel_cmds.cmds = iris_grcp_cmd;
 	panel_cmds.cmd_cnt = ARRAY_SIZE(iris_grcp_cmd);
@@ -1558,7 +1761,7 @@ void iris_low_power_mode_enter(struct mdss_dsi_ctrl_pdata *ctrl)
 
 	iris_grcp_cmd[0].dchdr.dlen = grcp_cmd.cmd_len;
 
-	pr_info("iris low power mode\n");
+	pr_debug("iris low power mode\n");
 
 	panel_cmds.cmds = iris_grcp_cmd;
 	panel_cmds.cmd_cnt = ARRAY_SIZE(iris_grcp_cmd);
@@ -1566,33 +1769,32 @@ void iris_low_power_mode_enter(struct mdss_dsi_ctrl_pdata *ctrl)
 	iris_dsi_cmds_send(ctrl, &panel_cmds);
 
 }
+
 void iris_init(struct mdss_dsi_ctrl_pdata *ctrl)
 {
-	//u32 column, page;
-	
+	u32 column, page;
+
 	if (ctrl->ndx != DSI_CTRL_LEFT)
 		return;
-
 #ifdef READ_CMD_ENABLE
-       iris_proxy_check_reset(ctrl);
-	//iris_power_mode_check(ctrl, 0x01, DSI_LP_MODE);
+	iris_proxy_check_reset(ctrl);
 #endif
 #ifdef EFUSE_REWRITE
 	iris_mipirx_mode_set(ctrl, PWIL_CMD, DSI_LP_MODE);
 	iris_sys_efuse_rewrite(ctrl);
 	iris_power_mode_check(ctrl, 0x01, DSI_LP_MODE);
 #endif
-
+    cmd_send_flag = 1;
 	iris_mipirx_mode_set(ctrl, PWIL_CMD, DSI_LP_MODE);
 	/* init sys/mipirx/mipitx */
 	iris_init_cmd_send(ctrl, DSI_LP_MODE);
 
-	iris_one_wired_cmd_init(ctrl);
-	iris_one_wired_cmd_send(ctrl, BYPASS_MODE_CHANGE);
-	msleep(100);
-	iris_low_power_mode_enter(ctrl);
-	return;
-#if 0
+	//iris_one_wired_cmd_init(ctrl);
+	//iris_one_wired_cmd_send(ctrl, BYPASS_MODE_CHANGE);
+	//msleep(100);
+	//iris_low_power_mode_enter(ctrl);
+	//return;
+
 	/* send work mode and timing info */
 #ifdef NEW_WORKFLOW
 	iris_timing_info_grcp_send(ctrl, DSI_LP_MODE);
@@ -1604,12 +1806,7 @@ void iris_init(struct mdss_dsi_ctrl_pdata *ctrl)
 	iris_ctrl_cmd_send(ctrl, CONFIG_DATAPATH, DSI_LP_MODE);
 
 	/*init grcp buffer*/
-	iris_grcp_buffer_init(ctrl, DSI_HS_MODE);
-	/* firmware download */
-	iris_info.firmware_info.fw_dw_result =
-			iris2p_firmware_download(ctrl, gp_mfd, IRIS_FIRMWARE_NAME);
-	if (SUCCESS == iris_info.firmware_info.fw_dw_result)
-		iris_ctrl_cmd_send(ctrl, ITCM_COPY, DSI_HS_MODE);
+	iris_grcp_buffer_init(ctrl, DSI_LP_MODE);
 
 	/* bypass panel on command */
 	iris_mipirx_mode_set(ctrl, BYPASS_CMD, DSI_HS_MODE);
@@ -1620,12 +1817,12 @@ void iris_init(struct mdss_dsi_ctrl_pdata *ctrl)
 		page = iris_info.output_timing.vres - 1;
 		iris_mipi_mem_addr_set(ctrl, column, page, DSI_LP_MODE);
 	}
-#endif
+	cmd_send_flag = 0;
 }
 
 void iris_lightup(struct mdss_dsi_ctrl_pdata *ctrl)
 {
-	//u32 column, page, cmd = ENABLE_DPORT;
+	u32 column, page, cmd = ENABLE_DPORT;
 
 	if (iris_info.work_mode.rx_ch) {
 		if (ctrl->ndx == DSI_CTRL_LEFT)
@@ -1633,10 +1830,14 @@ void iris_lightup(struct mdss_dsi_ctrl_pdata *ctrl)
 		else
 			ctrl = g_ctrl;
 	}
-	return;
-#if 0
+	//return;
+	cmd_send_flag = 1;
+	iris_mipirx_mode_set(ctrl, PWIL_CMD, DSI_HS_MODE);
+	/* firmware download */
+	iris_info.firmware_info.fw_dw_result =
+			iris2p_firmware_download(ctrl, gp_mfd, IRIS_FIRMWARE_NAME, false);
 	if (SUCCESS == iris_info.firmware_info.fw_dw_result)
-		cmd += REMAP;
+		cmd += REMAP + ITCM_COPY;
 
 	if (MIPI_VIDEO_MODE == iris_info.work_mode.rx_mode) {
 		iris_mipirx_mode_set(ctrl, PWIL_VIDEO, DSI_HS_MODE);
@@ -1644,8 +1845,9 @@ void iris_lightup(struct mdss_dsi_ctrl_pdata *ctrl)
 		iris_ctrl_cmd_send(ctrl, cmd, DSI_HS_MODE);
 		iris_pwil_mode_set(ctrl, RFB_MODE, DSI_HS_MODE);
 	} else {
-		iris_mipirx_mode_set(ctrl, PWIL_CMD, DSI_HS_MODE);
 		iris_dtg_set(ctrl, DSI_HS_MODE);
+		if (iris_info.work_mode.tx_ch)
+			iris_mipitx_tx_nop(ctrl, DSI_HS_MODE);
 		iris_ctrl_cmd_send(ctrl, cmd, DSI_HS_MODE);
 		iris_pwil_mode_set(ctrl, RFB_MODE, DSI_HS_MODE);
 
@@ -1658,9 +1860,11 @@ void iris_lightup(struct mdss_dsi_ctrl_pdata *ctrl)
 	{
 		iris_update_configure();
 		gp_mfd->iris_conf.ready = true;
+		iris_info.power_status.low_power = 0;
+		iris_info.power_status.low_power_state = 0;
+		iris_info.power_status.work_state_wait = 6;
 	}
-	iris_info.low_power = 0;
-#endif
+	cmd_send_flag = 0;
 }
 
 void iris_lightoff(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1668,9 +1872,9 @@ void iris_lightoff(struct mdss_dsi_ctrl_pdata *ctrl)
 	if (ctrl->ndx != DSI_CTRL_LEFT)
 		return;
 
-	//gp_mfd->iris_conf.ready = false;
+	gp_mfd->iris_conf.ready = false;
 
-	//iris_mode_switch_reset(ctrl);
+	iris_mode_switch_reset(ctrl);
 
 	/*disable dport*/
 	iris_dport_disable(ctrl);
@@ -1690,7 +1894,12 @@ void iris_panel_cmd_passthrough(struct mdss_dsi_ctrl_pdata *ctrl, struct dcs_cmd
 	};
 	struct dsi_panel_cmds panel_cmds;
 	struct dsi_cmd_desc *dsi_cmds = cmdreq->cmds;
+	struct iris_config *iris_cfg = &g_mfd->iris_conf;
 
+	if (iris_cfg->current_mode == IRIS_BYPASS_MODE) {
+		mdss_dsi_cmdlist_put(ctrl, cmdreq);
+		return;
+	}
 	memset(&grcp_cmd, 0, sizeof(grcp_cmd));
 	memcpy(grcp_cmd.cmd, grcp_header, GRCP_HEADER);
 	grcp_cmd.cmd_len = GRCP_HEADER;
@@ -1698,6 +1907,10 @@ void iris_panel_cmd_passthrough(struct mdss_dsi_ctrl_pdata *ctrl, struct dcs_cmd
 	memset(&header, 0, sizeof(header));
 	memset(&payload, 0, sizeof(payload));
 	header.stHdr.dtype = dsi_cmds->dchdr.dtype;
+
+	/* TODO: will re-design it*/
+	/*Gate on MIPITX0_DBICLK / MIPITX0_APBCLK */
+	//iris_cmd_reg_add(&grcp_cmd, IRIS_SYS_ADDR + 0x0, 0x2cc00044);
 
 	switch (dsi_cmds->dchdr.dtype) {
 	case DTYPE_DCS_WRITE:
@@ -1718,6 +1931,7 @@ void iris_panel_cmd_passthrough(struct mdss_dsi_ctrl_pdata *ctrl, struct dcs_cmd
 		header.stHdr.len[0] = dsi_cmds->dchdr.dlen & 0xff;
 		header.stHdr.len[1] = (dsi_cmds->dchdr.dlen >> 8) & 0xff;
 		pr_debug("%s, line%d, header=0x%x\n", __func__, __LINE__, header.hdr32);
+
 		iris_cmd_reg_add(&grcp_cmd, IRIS_MIPI_TX_ADDR + WR_PACKET_HEADER_OFFS, header.hdr32);
 		for (cnt = 0; cnt < dsi_cmds->dchdr.dlen; cnt = cnt+4) {
 			memcpy(payload.p, dsi_cmds->payload + cnt, 4);
@@ -1739,6 +1953,8 @@ void iris_panel_cmd_passthrough(struct mdss_dsi_ctrl_pdata *ctrl, struct dcs_cmd
 	panel_cmds.cmd_cnt = ARRAY_SIZE(iris_grcp_cmd);
 	panel_cmds.link_state = DSI_LP_MODE;
 	iris_dsi_cmds_send(ctrl, &panel_cmds);
+	iris_info.update.cmd_setting = true;
+
 }
 
 
@@ -1767,6 +1983,15 @@ int iris_one_wired_cmd_init(struct mdss_dsi_ctrl_pdata *ctrl)
 	msleep(2);
 
 	return SUCCESS;
+}
+
+int iris_passthrough_cmd_process(void)
+{
+  int ret = false;
+
+  iris_info.update.cmd_setting = false;
+
+  return ret;
 }
 
 void iris_one_wired_cmd_send(struct mdss_dsi_ctrl_pdata *ctrl, int cmd)
@@ -1810,69 +2035,95 @@ void iris_one_wired_cmd_send(struct mdss_dsi_ctrl_pdata *ctrl, int cmd)
  	/*end*/
 	udelay(start_end_delay);
 }
-#if 0
-int iris_power_clock_gate_on(struct msm_fb_data_type *mfd, int *pflag)
+
+void iris_all_clock_gate_on(struct msm_fb_data_type *mfd)
+{
+	struct iris_config *iris_cfg = &mfd->iris_conf;
+	struct iris_clock_setting *clock = &iris_info.setting_info.clock_setting;
+
+	if ((IRIS_MODE_BYPASS2PT == iris_cfg->sf_notify_mode) || (IRIS_BYPASS_MODE == iris_cfg->current_mode))
+		return;
+
+	iris_reg_add(IRIS_SYS_ADDR + CLKGATE_CTRL0, 0x2cc00044);
+	iris_reg_add(IRIS_SYS_ADDR + CLKGATE_CTRL1, 0x00000280);
+	iris_reg_add(IRIS_SYS_ADDR + CLKGATE_PWIL_SW, 0xff000000);
+	iris_reg_add(IRIS_SYS_ADDR + MCLK_SRC_SEL, clock->mclk.sel | (clock->mclk.div << 8) | (clock->mclk.div_en << 10));
+	//iris_reg_add(IRIS_SYS_ADDR + MCUCLK_SRC_SEL, clock->mcuclk.sel | (clock->mcuclk.div << 8) | (clock->mcuclk.div_en << 12) | (1 << 17));
+	iris_reg_add(IRIS_SYS_ADDR + MCUCLK_SRC_SEL, clock->mcuclk.sel | (clock->mcuclk.div << 8) | (clock->mcuclk.div_en << 12));
+	//iris_reg_add(IRIS_SYS_ADDR + 0x6c, 0x00160000);
+	iris_reg_add(IRIS_DPORT_ADDR + 0x0, 0xe2708007);
+	iris_reg_add(IRIS_PWIL_ADDR + 0x9c, 0x60000);
+	iris_reg_add(0xf104000c, 0x00000000);
+
+	pr_debug("clcok on\n");
+}
+
+int iris_power_clock_gate_on(struct msm_fb_data_type *mfd)
 {
 	struct iris_config *iris_cfg = &mfd->iris_conf;
 	u8 signal_mode = 0xff, mode_switch;
+	int *pflag = &iris_info.power_status.low_power_state;
 
-	if ((*pflag) || !gp_mfd->iris_conf.ready)
+	if ((*pflag) || !gp_mfd->iris_conf.ready || iris_debug_power_opt_disable)
 		return true;
 
 	mode_switch = iris_cfg->sf_mode_change_start
 		&& ((IRIS_MODE_FRC_PREPARE == iris_cfg->sf_notify_mode)
 		|| (IRIS_MODE_RFB_PREPARE == iris_cfg->sf_notify_mode)
-		|| (IRIS_MODE_PT_PREPARE == iris_cfg->sf_notify_mode));
+		|| (IRIS_MODE_PT_PREPARE == iris_cfg->sf_notify_mode)
+		|| (IRIS_MODE_PT2BYPASS == iris_cfg->sf_notify_mode)
+		|| (IRIS_MODE_BYPASS2PT == iris_cfg->sf_notify_mode));
 
 	if (iris_info.update.pq_setting || iris_info.update.dbc_setting || iris_info.update.color_adjust
-		|| iris_info.update.lce_setting || iris_info.update.cm_setting || mode_switch) {
-		if (iris_info.low_power) {
+		|| iris_info.update.lce_setting || iris_info.update.cm_setting
+		|| iris_info.update.cmd_setting || mode_switch || iris_info.update.reading_mode) {
+		if (iris_info.power_status.low_power) {
 
-			signal_mode = iris_mipi_signal_mode_read(g_ctrl, DSI_LP_MODE);
-			if (signal_mode != 0)
-				return false;
-
-			iris_reg_add(IRIS_SYS_ADDR + 0x0, 0x2cc00044);
-			iris_reg_add(IRIS_SYS_ADDR + 0x4, 0x00000280);
-			iris_reg_add(IRIS_SYS_ADDR + 0x8, 0xff000000);
-			iris_reg_add(IRIS_SYS_ADDR + 0x228, 0x00000003);
-			iris_reg_add(IRIS_SYS_ADDR + 0x218, 0x00000003);
-			iris_reg_add(IRIS_DPORT_ADDR + 0x0, 0xe2708007);
-			iris_reg_add(0xf104000c, 0x00000000);
-			iris_info.low_power = 0;
-			pr_info("clock on\n");
+			if ((IRIS_MODE_BYPASS2PT != iris_cfg->sf_notify_mode) && (IRIS_BYPASS_MODE != iris_cfg->current_mode)) {
+				signal_mode = iris_mipi_signal_mode_read(g_ctrl, DSI_LP_MODE);
+				if (signal_mode != 0)
+					return false;
+			}
+			iris_all_clock_gate_on(mfd);
+			iris_info.power_status.low_power = 0;
 		}
+
 		if (iris_cfg->sf_mode_change_start)
 			*pflag = 2;
 		else if (*pflag != 2)
 			*pflag = 1;
-		pr_info("flag = %d\n", *pflag);
+		pr_debug("flag = %d\n", *pflag);
 	}
 	return true;
 }
 
-void iris_low_power_mode_notify(struct msm_fb_data_type *mfd, int *pflag)
+void iris_low_power_mode_notify(struct msm_fb_data_type *mfd)
 {
 	struct iris_config *iris_cfg = &mfd->iris_conf;
+	int *pflag = &iris_info.power_status.low_power_state;
 
 	if (0 == *pflag)
 		return;
 
 	if (2 == *pflag) {
-		pr_info("mode: %d, %d\n", iris_cfg->current_mode, iris_cfg->sf_notify_mode);
+		pr_debug("mode: %d, %d\n", iris_cfg->current_mode, iris_cfg->sf_notify_mode);
 		if (!(((IRIS_RFB_MODE == iris_cfg->current_mode) && (IRIS_MODE_RFB == iris_cfg->sf_notify_mode))
 			|| ((IRIS_PT_MODE == iris_cfg->current_mode) && (IRIS_MODE_PT == iris_cfg->sf_notify_mode))
-			|| ((IRIS_FRC_MODE == iris_cfg->current_mode) && (IRIS_MODE_FRC == iris_cfg->sf_notify_mode))))
+			|| ((IRIS_FRC_MODE == iris_cfg->current_mode) && (IRIS_MODE_FRC == iris_cfg->sf_notify_mode))
+			|| ((IRIS_BYPASS_MODE == iris_cfg->current_mode) && (IRIS_MODE_BYPASS == iris_cfg->sf_notify_mode))))
 			return;
 	}
 	*pflag = 0;
-	iris_reg_add(IRIS_MIPI_RX_ADDR + 0x4, 0x1);
-	iris_info.low_power = 1;
-	pr_info("enter low power mode\n");
+	if (!((IRIS_BYPASS_MODE == iris_cfg->current_mode) && (IRIS_MODE_BYPASS == iris_cfg->sf_notify_mode))) {
+		iris_reg_add(IRIS_MIPI_RX_ADDR + 0x4, 0x1);
+		pr_debug("send flag\n");
+	}
+	iris_info.power_status.low_power = 1;
+	pr_debug("enter low power mode\n");
 }
-#endif
- void iris_low_power_mode_set(struct mdss_dsi_ctrl_pdata *ctrl, bool enable)
- {
+
+void iris_low_power_stop_mcu(struct mdss_dsi_ctrl_pdata *ctrl, bool stop, int state)
+{
 	u32 grcp_len = 0;
 	struct dsi_cmd_desc iris_grcp_cmd[] = {
 		{{ DTYPE_GEN_LWRITE, 1, 0, 0, 0, CMD_PKT_SIZE}, grcp_cmd.cmd},
@@ -1883,19 +2134,62 @@ void iris_low_power_mode_notify(struct msm_fb_data_type *mfd, int *pflag)
 	memcpy(grcp_cmd.cmd, grcp_header, GRCP_HEADER);
 	grcp_cmd.cmd_len = GRCP_HEADER;
 
+	if (stop) {
+		iris_cmd_reg_add(&grcp_cmd, IRIS_MIPI_RX_ADDR + 0x4, 2);
+	} else {
+		/* wake up MCU */
+		iris_cmd_reg_add(&grcp_cmd, 0xf0060008, 0x00000001);
+		iris_cmd_reg_add(&grcp_cmd, 0xf006000c, 0x00000001);
+	}
+
+	grcp_len = (grcp_cmd.cmd_len - GRCP_HEADER) / 4;
+	*(u32 *)(grcp_cmd.cmd + 8) = cpu_to_le32(grcp_len + 1);
+	*(u16 *)(grcp_cmd.cmd + 14) = cpu_to_le16(grcp_len);
+
+	iris_grcp_cmd[0].dchdr.dlen = grcp_cmd.cmd_len;
+
+	pr_debug("iris low power mcu stop: %d\n", stop);
+
+	panel_cmds.cmds = iris_grcp_cmd;
+	panel_cmds.cmd_cnt = ARRAY_SIZE(iris_grcp_cmd);
+	panel_cmds.link_state = state;
+	iris_dsi_cmds_send(ctrl, &panel_cmds);
+}
+
+ void iris_low_power_mode_set(struct mdss_dsi_ctrl_pdata *ctrl, bool enable)
+ {
+	u32 grcp_len = 0;
+	struct dsi_cmd_desc iris_grcp_cmd[] = {
+		{{ DTYPE_GEN_LWRITE, 1, 0, 0, 0, CMD_PKT_SIZE}, grcp_cmd.cmd},
+	};
+	struct dsi_panel_cmds panel_cmds;
+	struct iris_work_mode *pwork_mode = &(iris_info.work_mode);
+	struct iris_clock_setting *clock = &iris_info.setting_info.clock_setting;
+	struct iris_pll_setting *pll = &iris_info.setting_info.pll_setting;
+	int i;
+
+	memset(&grcp_cmd, 0, sizeof(grcp_cmd));
+	memcpy(grcp_cmd.cmd, grcp_header, GRCP_HEADER);
+	grcp_cmd.cmd_len = GRCP_HEADER;
+
 	if (enable) {
 		/* power down edram1~8 */
+		iris_cmd_reg_add(&grcp_cmd, 0xf1040000, 0x1e7fde51);
 		iris_cmd_reg_add(&grcp_cmd, 0xf104000c, 0xfffffffe);
 
 		/*disable DPHY*/
-		iris_cmd_reg_add(&grcp_cmd, 0xf0160000, 0x00000000);
-		iris_cmd_reg_add(&grcp_cmd, 0xf0160030, 0x00000000);
+		if(pwork_mode->rx_ch) {
+			iris_cmd_reg_add(&grcp_cmd, 0xf0160000, 0x00000000);
+			iris_cmd_reg_add(&grcp_cmd, 0xf0160030, 0x00000000);
+		}
 		iris_cmd_reg_add(&grcp_cmd, 0xf0180000, 0x0a00c138);
 		iris_cmd_reg_add(&grcp_cmd, 0xf0180004, 0x00000000);
 		iris_cmd_reg_add(&grcp_cmd, 0xf0180018, 0x00000101);
-		iris_cmd_reg_add(&grcp_cmd, 0xf01c0000, 0x0a00c138);
-		iris_cmd_reg_add(&grcp_cmd, 0xf01c0004, 0x00000000);
-		iris_cmd_reg_add(&grcp_cmd, 0xf01c0004, 0x00000101);
+		if(pwork_mode->tx_ch) {
+			iris_cmd_reg_add(&grcp_cmd, 0xf01c0000, 0x0a00c138);
+			iris_cmd_reg_add(&grcp_cmd, 0xf01c0004, 0x00000000);
+			iris_cmd_reg_add(&grcp_cmd, 0xf01c0018, 0x00000101);
+		}
 
 		/* set clock source to XCLK */
 		iris_cmd_reg_add(&grcp_cmd, 0xf0000210, 0x0000070b);
@@ -1915,36 +2209,60 @@ void iris_low_power_mode_notify(struct msm_fb_data_type *mfd, int *pflag)
 		iris_cmd_reg_add(&grcp_cmd, 0xf0000000, 0x3fc87fff);
 		iris_cmd_reg_add(&grcp_cmd, 0xf0000004, 0x00007f8e);
 
+		/* power down MIPI_RX1/FRC/CORE domain */
+		iris_cmd_reg_add(&grcp_cmd, 0xf0000038, 0x1007001f);
+		iris_cmd_reg_add(&grcp_cmd, 0xf0000040, 0x0207000f);
+		iris_cmd_reg_add(&grcp_cmd, 0xf000003c, 0x1007000f);
 	} else {
+
+		/* power up MIPI_RX1/FRC/CORE domain */
+		iris_cmd_reg_add(&grcp_cmd, 0xf0000040, 0x02070000);
+		if (pwork_mode->rx_ch)
+			iris_cmd_reg_add(&grcp_cmd, 0xf0000038, 0x10070000);
+		iris_cmd_reg_add(&grcp_cmd, 0xf000003c, 0x10070000);
 		/* gate on clock */
-		iris_cmd_reg_add(&grcp_cmd, 0xf0000000, 0x20000000);
-		iris_cmd_reg_add(&grcp_cmd, 0xf0000004, 0x00000000);
+		if (pwork_mode->rx_ch) {
+			iris_cmd_reg_add(&grcp_cmd, 0xf0000000, 0x20000000);
+			iris_cmd_reg_add(&grcp_cmd, 0xf0000004, 0x00000000);
+		} else {
+			iris_cmd_reg_add(&grcp_cmd, 0xf0000000, 0x2cc00044);
+			iris_cmd_reg_add(&grcp_cmd, 0xf0000004, 0x00000280);
+		}
 		iris_cmd_reg_add(&grcp_cmd, 0xf0000248, 0x02008000);
 
 		/* power up PLL */
-		iris_cmd_reg_add(&grcp_cmd, 0xf0000140, 0x00000002);
-		iris_cmd_reg_add(&grcp_cmd, 0xf0000150, 0x00002002);
-		iris_cmd_reg_add(&grcp_cmd, 0xf0000160, 0x00000002);
+		iris_cmd_reg_add(&grcp_cmd, 0xf0000140, pll->ppll_ctrl0);
+		iris_cmd_reg_add(&grcp_cmd, 0xf0000150, pll->dpll_ctrl0);
+		iris_cmd_reg_add(&grcp_cmd, 0xf0000160, pll->mpll_ctrl0);
+
+		/* add delay for core domain & PLL power up */
+		for (i = 0; i < 30; i++)
+			iris_cmd_reg_add(&grcp_cmd, 0xf0000280, 0x10);
 
 		/* restore clock source */
-		iris_cmd_reg_add(&grcp_cmd, 0xf0000210, 0x00000001);
-		iris_cmd_reg_add(&grcp_cmd, 0xf0000214, 0x00000001);
-		iris_cmd_reg_add(&grcp_cmd, 0xf0000218, 0x00000003);
-		iris_cmd_reg_add(&grcp_cmd, 0xf000021c, 0x00000001);
-		iris_cmd_reg_add(&grcp_cmd, 0xf0000228, 0x00000003);
+		iris_cmd_reg_add(&grcp_cmd, IRIS_SYS_ADDR + DCLK_SRC_SEL, clock->dclk.sel | (clock->dclk.div << 8) | (clock->dclk.div_en << 10));
+		iris_cmd_reg_add(&grcp_cmd, IRIS_SYS_ADDR + INCLK_SRC_SEL, clock->inclk.sel | (clock->inclk.div << 8) | (clock->inclk.div_en << 10));
+		iris_cmd_reg_add(&grcp_cmd, IRIS_SYS_ADDR + MCUCLK_SRC_SEL, clock->mcuclk.sel | (clock->mcuclk.div << 8) | (clock->mcuclk.div_en << 12));
+		iris_cmd_reg_add(&grcp_cmd, IRIS_SYS_ADDR + PCLK_SRC_SEL, clock->pclk.sel | (clock->pclk.div << 8) | (clock->pclk.div_en << 10));
+		iris_cmd_reg_add(&grcp_cmd, IRIS_SYS_ADDR + MCLK_SRC_SEL, clock->mclk.sel | (clock->mclk.div << 8) | (clock->mclk.div_en << 10));
 		iris_cmd_reg_add(&grcp_cmd, 0xf0000014, 0x00000001);
 		iris_cmd_reg_add(&grcp_cmd, 0xf0000014, 0x00000000);
 
 		/* enable DPHY */
-		iris_cmd_reg_add(&grcp_cmd, 0xf0160030, 0x00000001);
-		iris_cmd_reg_add(&grcp_cmd, 0xf0160000, 0x00000001);
+		if(pwork_mode->rx_ch) {
+			iris_cmd_reg_add(&grcp_cmd, 0xf0160030, 0x00000001);
+			iris_cmd_reg_add(&grcp_cmd, 0xf0160000, 0x00000001);
+		}
 		iris_cmd_reg_add(&grcp_cmd, 0xf0180004, 0x00000001);
 		iris_cmd_reg_add(&grcp_cmd, 0xf0180000, 0x0a00c139);
-		iris_cmd_reg_add(&grcp_cmd, 0xf01c0004, 0x00000001);
-		iris_cmd_reg_add(&grcp_cmd, 0xf01c0000, 0x0a00c139);
+		if(pwork_mode->tx_ch) {
+			iris_cmd_reg_add(&grcp_cmd, 0xf01c0004, 0x00000001);
+			iris_cmd_reg_add(&grcp_cmd, 0xf01c0000, 0x0a00c139);
+		}
 
 		/* power up edram1~8 */
 		iris_cmd_reg_add(&grcp_cmd, 0xf104000c, 0x00000000);
+		iris_cmd_reg_add(&grcp_cmd, 0xf1040000, 0x1e7fde52);
 	}
 
 	grcp_len = (grcp_cmd.cmd_len - GRCP_HEADER) / 4;
@@ -1953,7 +2271,7 @@ void iris_low_power_mode_notify(struct msm_fb_data_type *mfd, int *pflag)
 
 	iris_grcp_cmd[0].dchdr.dlen = grcp_cmd.cmd_len;
 
-	pr_info("iris low power mode: %d\n", enable);
+	pr_debug("iris low power mode: %d\n", enable);
 
 	panel_cmds.cmds = iris_grcp_cmd;
 	panel_cmds.cmd_cnt = ARRAY_SIZE(iris_grcp_cmd);
@@ -1961,12 +2279,22 @@ void iris_low_power_mode_notify(struct msm_fb_data_type *mfd, int *pflag)
 	iris_dsi_cmds_send(ctrl, &panel_cmds);
 
  }
-
-#if 0
-void iris_mipitx_te_source_change(void)
+ 
+void iris_mipitx_te_source_change(struct mdss_dsi_ctrl_pdata *ctrl)
 {
+
+	u32 grcp_len = 0;
+	struct dsi_cmd_desc iris_grcp_cmd[] = {
+		{{ DTYPE_GEN_LWRITE, 1, 0, 0, 0, CMD_PKT_SIZE}, grcp_cmd.cmd},
+	};
+	struct dsi_panel_cmds panel_cmds;
+
 	struct iris_work_mode *pwork_mode = &(iris_info.work_mode);
 	u32 tx_ch, mipitx_addr = IRIS_MIPI_TX_ADDR;
+
+	memset(&grcp_cmd, 0, sizeof(grcp_cmd));
+	memcpy(grcp_cmd.cmd, grcp_header, GRCP_HEADER);
+	grcp_cmd.cmd_len = GRCP_HEADER;
 
 	for (tx_ch = 0; tx_ch < (pwork_mode->tx_ch + 1); tx_ch++) {
 		#ifdef MIPI_SWAP
@@ -1974,9 +2302,21 @@ void iris_mipitx_te_source_change(void)
 		#else
 			mipitx_addr += tx_ch * IRIS_MIPI_ADDR_OFFSET;
 		#endif
-		iris_reg_add(mipitx_addr + TE_FLOW_CTRL, 0x00000100);
+		iris_cmd_reg_add(&grcp_cmd, mipitx_addr + TE_FLOW_CTRL, 0x00000100);
 	}
-	iris_reg_add(IRIS_SYS_ADDR + ALT_CTRL0, 0x00008000);
+
+	iris_cmd_reg_add(&grcp_cmd, IRIS_SYS_ADDR + ALT_CTRL0, 0x00008000);
+
+	grcp_len = (grcp_cmd.cmd_len - GRCP_HEADER) / 4;
+	*(u32 *)(grcp_cmd.cmd + 8) = cpu_to_le32(grcp_len + 1);
+	*(u16 *)(grcp_cmd.cmd + 14) = cpu_to_le16(grcp_len);
+
+	iris_grcp_cmd[0].dchdr.dlen = grcp_cmd.cmd_len;
+
+	panel_cmds.cmds = iris_grcp_cmd;
+	panel_cmds.cmd_cnt = ARRAY_SIZE(iris_grcp_cmd);
+	panel_cmds.link_state = DSI_LP_MODE;
+	iris_dsi_cmds_send(ctrl, &panel_cmds);
 }
 
 void iris_abypass_switch_state_init(int mode)
@@ -1987,17 +2327,17 @@ void iris_abypass_switch_state_init(int mode)
 	if (IRIS_MODE_PT2BYPASS == mode) {
 		iris_info.abypss_ctrl.pt_to_abypass_enable = 1;
 		iris_info.abypss_ctrl.abypass_to_pt_enable = 0;
-		iris_info.abypss_ctrl.abypss_switch_state = TTL_CMD_BYPASS_STATE;
+		iris_info.abypss_ctrl.abypss_switch_state = MCU_STOP_ENTER_STATE;
 		iris_info.abypss_ctrl.frame_delay = 0;
 
-		pr_info("pt->analog bypass\n");
+		pr_debug("pt->analog bypass\n");
 	} else if (IRIS_MODE_BYPASS2PT == mode) {
 		iris_info.abypss_ctrl.pt_to_abypass_enable = 0;
 		iris_info.abypss_ctrl.abypass_to_pt_enable = 1;
 		iris_info.abypss_ctrl.abypss_switch_state = LOW_POWER_EXIT_STATE;
 		iris_info.abypss_ctrl.frame_delay = 0;
 
-		pr_info("analog bypass->pt\n");
+		pr_debug("analog bypass->pt\n");
 	}
 }
   int iris_pt_to_abypass_switch(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -2006,6 +2346,7 @@ void iris_abypass_switch_state_init(int mode)
 	int *pswitch_state = &iris_info.abypss_ctrl.abypss_switch_state;
 	int *pframe_delay = &iris_info.abypss_ctrl.frame_delay;
 	int bypass_mode = BYPASS_CMD, pwil_mode = PWIL_CMD, ret = false;
+	u8 signal_mode = 0xff;
 
 	if (!iris_info.abypss_ctrl.pt_to_abypass_enable)
 		return ret;
@@ -2027,16 +2368,24 @@ void iris_abypass_switch_state_init(int mode)
 
 
 	switch (*pswitch_state) {
-	case PASS_THROUGH_STATE:
-		iris_pwil_mode_set(ctrl, PT_MODE, DSI_HS_MODE);
+	case MCU_STOP_ENTER_STATE:
+		/* MCU Stop */
+		iris_low_power_stop_mcu(ctrl, true, DSI_HS_MODE);
 		*pswitch_state = TTL_CMD_BYPASS_STATE;
-		*pframe_delay = 1;
+		*pframe_delay = 5;
 		break;
 	case TTL_CMD_BYPASS_STATE:
 		/* TTL/CMD bypass */
-		iris_mipirx_mode_set(ctrl, bypass_mode, DSI_HS_MODE);
-		*pswitch_state = ANALOG_BYPASS_ENTER_STATE;
-		*pframe_delay = 1;
+		signal_mode = iris_mipi_signal_mode_read(g_ctrl, DSI_LP_MODE);
+		if (signal_mode == 0) {
+			iris_mipirx_mode_set(ctrl, bypass_mode, DSI_HS_MODE);
+			*pswitch_state = ANALOG_BYPASS_ENTER_STATE;
+			*pframe_delay = 1;
+		} else {
+			*pframe_delay = 3;
+		}
+		pr_debug("signal_mode: 0x%x\n", signal_mode);
+
 		break;
 	case ANALOG_BYPASS_ENTER_STATE:
 		/* analog bypass */
@@ -2062,7 +2411,7 @@ void iris_abypass_switch_state_init(int mode)
 	default:
 		break;
 	}
-	pr_info("state: %d, delay: %d\n", *pswitch_state, *pframe_delay);
+	pr_debug("state: %d, delay: %d\n", *pswitch_state, *pframe_delay);
 
 	return ret;
 }
@@ -2095,10 +2444,17 @@ int iris_abypass_to_pt_switch(struct mdss_dsi_ctrl_pdata *ctrl)
 	case LOW_POWER_EXIT_STATE:
 		/* exit low power mode */
 		iris_low_power_mode_set(ctrl, false);
+		*pswitch_state = MCU_STOP_EXIT_STATE;
+		*pframe_delay = 1;
+		break;
+	case MCU_STOP_EXIT_STATE:
+		/* resume MCU */
+		iris_low_power_stop_mcu(ctrl, false, DSI_LP_MODE);
 		iris_mipirx_mode_set(ctrl, bypass_mode, DSI_LP_MODE);
 
 		*pswitch_state = ANALOG_BYPASS_EXIT_STATE;
-		*pframe_delay = 1;
+		/* AP should wait Firmware ready */
+		*pframe_delay = 15;
 		break;
 	case ANALOG_BYPASS_EXIT_STATE:
 		/* analog bypass */
@@ -2108,25 +2464,12 @@ int iris_abypass_to_pt_switch(struct mdss_dsi_ctrl_pdata *ctrl)
 		*pframe_delay = 1;
 		break;
 	case PASS_THROUGH_STATE:
-		iris_mipirx_mode_set(ctrl, pwil_mode, DSI_HS_MODE);
+		iris_mipirx_mode_set(ctrl, pwil_mode, DSI_LP_MODE);
 		iris_pwil_mode_set(ctrl, PT_MODE, DSI_HS_MODE);
 		/* change TX's TE source */
 		if (iris_info.work_mode.tx_mode)
-			iris_mipitx_te_source_change();
+			iris_mipitx_te_source_change(ctrl);
 
-		if (iris_info.abypss_ctrl.abypass_debug) {
-			iris_info.abypss_ctrl.abypass_debug = false;
-			*pswitch_state = RFB_STATE;
-			*pframe_delay = 1;
-		} else {
-			*pframe_delay = 0;
-			iris_info.abypss_ctrl.abypass_status = PASS_THROUGH_MODE;
-			iris_info.abypss_ctrl.abypass_to_pt_enable = 0;
-			ret = true;
-		}
-		break;
-	case RFB_STATE:
-		iris_pwil_mode_set(ctrl, RFB_MODE, DSI_HS_MODE);
 		*pframe_delay = 0;
 		iris_info.abypss_ctrl.abypass_status = PASS_THROUGH_MODE;
 		iris_info.abypss_ctrl.abypass_to_pt_enable = 0;
@@ -2135,29 +2478,33 @@ int iris_abypass_to_pt_switch(struct mdss_dsi_ctrl_pdata *ctrl)
 	default:
 		break;
 	}
-	pr_info("state: %d, delay: %d\n", *pswitch_state, *pframe_delay);
+	pr_debug("state: %d, delay: %d\n", *pswitch_state, *pframe_delay);
 
 	return ret;
 }
 
 void iris_abypass_switch_proc(struct mdss_dsi_ctrl_pdata *ctrl)
 {
+	if (!iris_info.abypss_ctrl.abypass_debug)
+		return;
+
 	if (iris_info.abypss_ctrl.analog_bypass_enable) {
-		if (iris_info.abypss_ctrl.abypass_status == PASS_THROUGH_MODE)
-			iris_pt_to_abypass_switch(ctrl);
-		if (iris_info.abypss_ctrl.abypass_status == ANALOG_BYPASS_MODE)
-			iris_abypass_to_pt_switch(ctrl);
+		if (iris_info.abypss_ctrl.abypass_status == PASS_THROUGH_MODE) {
+			if (true == iris_pt_to_abypass_switch(ctrl))
+				iris_info.abypss_ctrl.abypass_debug = false;
+		}
+		if (iris_info.abypss_ctrl.abypass_status == ANALOG_BYPASS_MODE) {
+			if (true == iris_abypass_to_pt_switch(ctrl))
+				iris_info.abypss_ctrl.abypass_debug = false;
+		}
  	}
- 
-
 }
-
 void iris_fw_download_cont_splash(struct mdss_dsi_ctrl_pdata *ctrl, bool video_freeze)
 {
 	struct mdss_mdp_ctl *ctl = mfd_to_ctl(gp_mfd);
 
 
-	pr_info("off video\n");
+	pr_debug("off video\n");
 	if (iris_info.work_mode.rx_mode) {
 		if (video_freeze) {
 			mdss_mdp_lock(gp_mfd, 1);
@@ -2175,15 +2522,18 @@ void iris_fw_download_cont_splash(struct mdss_dsi_ctrl_pdata *ctrl, bool video_f
 	}
 
 	/* firmware download */
-	pr_info("firmware download\n");
+	pr_debug("firmware download\n");
 	iris_info.firmware_info.fw_dw_result =
-		iris2p_firmware_download(ctrl, gp_mfd, IRIS_FIRMWARE_NAME);
+		iris2p_firmware_download(ctrl, gp_mfd, IRIS_FIRMWARE_NAME, true);
 	if (SUCCESS == iris_info.firmware_info.fw_dw_result) {
 		iris_ctrl_cmd_send(ctrl, ITCM_COPY + REMAP, DSI_HS_MODE);
 		gp_mfd->iris_conf.ready = true;
+		iris_info.power_status.low_power = 0;
+		iris_info.power_status.low_power_state = 0;
+		iris_info.power_status.work_state_wait = 6;
 	}
 
-	msleep(200);
+	msleep(50);
 	if (iris_info.work_mode.rx_mode) {
 		if (video_freeze) {
 			mdss_mdp_lock(gp_mfd, 0);
@@ -2194,9 +2544,10 @@ void iris_fw_download_cont_splash(struct mdss_dsi_ctrl_pdata *ctrl, bool video_f
 		/* restore to video mode */
 		iris_mipirx_mode_set(ctrl, PWIL_VIDEO, DSI_HS_MODE);
 	}
-	pr_info("on video\n");
+	pr_debug("on video\n");
 
 }
+
 
 static ssize_t iris_one_wired_write(struct file *file, const char __user *buff,
 	size_t count, loff_t *ppos)
@@ -2209,7 +2560,7 @@ static ssize_t iris_one_wired_write(struct file *file, const char __user *buff,
 	if (SUCCESS == iris_one_wired_cmd_init(g_ctrl))
 		iris_one_wired_cmd_send(g_ctrl, val);
 
-	pr_info("one wired %u\n", (u32)val);
+	pr_debug("one wired %u\n", (u32)val);
 
 	return count;
 }
@@ -2222,7 +2573,7 @@ static ssize_t iris_fw_dw_write(struct file *file, const char __user *buff,
 	if (kstrtoul_from_user(buff, count, 0, &val))
 		return -EFAULT;
 
-//	iris_fw_download_cont_splash(g_ctrl, 1);
+	iris_fw_download_cont_splash(g_ctrl, 1);
 
 	return count;
 }
@@ -2237,7 +2588,7 @@ static ssize_t iris_abypass_switch_write(struct file *file, const char __user *b
 		return -EFAULT;
 
 	if (!iris_info.abypss_ctrl.analog_bypass_enable) {
-		pr_info("analog bypass is not enabled\n");
+		pr_debug("analog bypass is not enabled\n");
 		return count;
 	}
 
@@ -2246,7 +2597,7 @@ static ssize_t iris_abypass_switch_write(struct file *file, const char __user *b
 	if (val) {
 		iris_info.abypss_ctrl.pt_to_abypass_enable = 1;
 		iris_info.abypss_ctrl.abypass_to_pt_enable = 0;
-		iris_info.abypss_ctrl.abypss_switch_state = PASS_THROUGH_STATE;
+		iris_info.abypss_ctrl.abypss_switch_state = MCU_STOP_ENTER_STATE;
 		iris_info.abypss_ctrl.frame_delay = 0;
 		pr_err("pt->analog bypass, %d\n", cnt);
 
@@ -2284,8 +2635,8 @@ int iris2p_debugfs_init(struct msm_fb_data_type *mfd)
 		return 0;
 
 	gp_mfd = mfd;
-	pr_info("gp_mfd %p\n", gp_mfd);
-	pr_info("%s:%d: mfd->panel.type: %i mfd->panel.id: %i\n", __func__, __LINE__, mfd->panel.type, mfd->panel.id);
+	pr_debug("gp_mfd %p\n", gp_mfd);
+	pr_debug("%s:%d: mfd->panel.type: %i mfd->panel.id: %i\n", __func__, __LINE__, mfd->panel.type, mfd->panel.id);
 
 	if (debugfs_create_file("iris_one_wired", 0644, NULL, mfd,
 				&iris_one_wired_fops) == NULL) {
@@ -2308,5 +2659,55 @@ int iris2p_debugfs_init(struct msm_fb_data_type *mfd)
 
 	return 0;
 }
-#endif
 
+static void iris_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
+			struct dsi_panel_cmds *pcmds)
+{
+	struct dcs_cmd_req cmdreq;
+	struct mdss_panel_info *pinfo;
+
+	pinfo = &(ctrl->panel_data.panel_info);
+	if (pinfo->dcs_cmd_by_left) {
+		if (ctrl->ndx != DSI_CTRL_LEFT)
+			return;
+	}
+
+	memset(&cmdreq, 0, sizeof(cmdreq));
+	cmdreq.cmds = pcmds->cmds;
+	cmdreq.cmds_cnt = pcmds->cmd_cnt;
+	cmdreq.flags = CMD_REQ_COMMIT;
+
+	/*Panel ON/Off commands should be sent in DSI Low Power Mode*/
+	if (pcmds->link_state == DSI_LP_MODE)
+		cmdreq.flags  |= CMD_REQ_LP_MODE;
+	else if (pcmds->link_state == DSI_HS_MODE)
+		cmdreq.flags |= CMD_REQ_HS_MODE;
+
+	cmdreq.rlen = 0;
+	cmdreq.cb = NULL;
+
+	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+}
+
+void iris_panel_cmds(struct mdss_dsi_ctrl_pdata *ctrl, struct dsi_panel_cmds *pcmds)
+{
+	bool broadcast;
+	bool trigger;
+
+	if (iris_info.panel_cmd_sync_wait_broadcast && ctrl->ndx == DSI_CTRL_LEFT)
+		pcmds = NULL;
+
+	if (pcmds && pcmds->cmd_cnt) {
+		if (iris_info.panel_cmd_sync_wait_broadcast) {
+			broadcast = ctrl->cmd_sync_wait_broadcast;
+			trigger = ctrl->cmd_sync_wait_trigger;
+			ctrl->cmd_sync_wait_broadcast = true;
+			ctrl->cmd_sync_wait_trigger = true;
+			iris_dsi_panel_cmds_send(ctrl, pcmds);
+			ctrl->cmd_sync_wait_broadcast = broadcast;
+			ctrl->cmd_sync_wait_trigger = trigger;
+		} else {
+			iris_dsi_panel_cmds_send(ctrl, pcmds);
+		}
+	}
+}

@@ -3218,3 +3218,22 @@ irqreturn_t mdss_dsi_isr(int irq, void *ptr)
 
 	return IRQ_HANDLED;
 }
+#if defined(CONFIG_IRIS2_LIGHTUP_ONLY) || defined(CONFIG_IRIS2_FULL_SUPPORT) || defined(CONFIG_IRIS2P_FULL_SUPPORT)
+void mdss_dsi_cmd_hs_mode(int enable, struct mdss_panel_data *pdata)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	u32 dsi_ctrl;
+	if (pdata == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return;
+	}
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+				panel_data);
+	dsi_ctrl = MIPI_INP((ctrl_pdata->ctrl_base) + 0x003c);
+	if (enable)
+		dsi_ctrl &= ~BIT(26);
+	else
+		dsi_ctrl |= BIT(26);
+	MIPI_OUTP((ctrl_pdata->ctrl_base) + 0x003c , dsi_ctrl);
+}
+#endif

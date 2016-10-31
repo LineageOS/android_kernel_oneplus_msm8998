@@ -66,7 +66,7 @@
 		qcom,mipitx-dphy-timing-margin = <0x40401>;
 		qcom,mipitx-lp-timing-para = <0xE010006>;
 		qcom,mipitx-data-lane-timing-param1 = <0x120B1005>;
-		qcom,mipitx-clock-lane-timing-param = <0x120A2807>;
+		qcom,mipitx-clock-lane-timing-param = <0x120A2805>;
 		qcom,mipitx-dphy-pll-para = <0x78F>;
 		qcom,mipitx-dphy-trim-1 = <0xEDB5380C>;
 

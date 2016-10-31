@@ -245,6 +245,33 @@ void iris_update_configure(void)
 	} else if (pqlt_def_setting->cm_setting.demomode != pqlt_cur_setting->cm_setting.demomode) {
 		pr_debug("cm demo mode update\n");
 		iris_info.update.cm_setting = true;
+	} else if (pqlt_def_setting->cm_setting.color_temp_en!= pqlt_cur_setting->cm_setting.color_temp_en) {
+		pr_debug("color temp enable update\n");
+		iris_info.update.cm_setting = true;
+	} else if (pqlt_def_setting->cm_setting.color_temp != pqlt_cur_setting->cm_setting.color_temp) {
+		pr_debug("color temp update\n");
+		iris_info.update.cm_setting = true;
+	} else if (pqlt_def_setting->cm_setting.sensor_auto_en!= pqlt_cur_setting->cm_setting.sensor_auto_en) {
+		pr_debug("sensor auto enable update\n");
+		iris_info.update.cm_setting = true;
+	}
+
+	/*lux value*/
+	if (pqlt_def_setting->lux_value.luxvalue!= pqlt_cur_setting->lux_value.luxvalue) {
+		pr_debug("lux value update\n");
+		iris_info.update.lux_value= true;
+	}
+
+	/*cct value*/
+	if (pqlt_def_setting->cct_value.cctvalue!= pqlt_cur_setting->cct_value.cctvalue) {
+		pr_debug("cct value update\n");
+		iris_info.update.cct_value= true;
+	}
+
+	/*reading mode*/
+	if (pqlt_def_setting->reading_mode.readingmode!= pqlt_cur_setting->reading_mode.readingmode) {
+		pr_debug("reading mode update\n");
+		iris_info.update.reading_mode= true;
 	}
 
 	if (iris_info.update.cm_setting) {
@@ -302,9 +329,9 @@ void iris_mcuclk_divider_change(struct mdss_dsi_ctrl_pdata *ctrl, char lowMcu)
 		(pqlt_cur_setting->dbc_setting.cabcmode == 0x0))
 	{
 	   switchenable = 1;
-	   pr_info("could switch to lower  mcu clock\n");
+	   pr_debug("could switch to lower  mcu clock\n");
 	}
-	pr_info("Sensitive: %x, dvQu: %x\n",pqlt_cur_setting->dbc_setting.dlv_sensitivity,pqlt_cur_setting->dbc_setting.cabcmode );
+	pr_debug("Sensitive: %x, dvQu: %x\n",pqlt_cur_setting->dbc_setting.dlv_sensitivity,pqlt_cur_setting->dbc_setting.cabcmode );
 	// FIXME: iris2-40p needs rework
 	/*
 	if(lowMcu && switchenable)
@@ -315,7 +342,7 @@ void iris_mcuclk_divider_change(struct mdss_dsi_ctrl_pdata *ctrl, char lowMcu)
 	iris_reg_add(IRIS_SYS_ADDR + 0x10, 0);	//reg_update
 	*/
 	mutex_unlock(&iris_cfg->cmd_mutex);
-	pr_info("iris: %s, lowMcu: %d\n",  __func__, lowMcu);
+	pr_debug("iris: %s, lowMcu: %d\n",  __func__, lowMcu);
 }
 
 static void iris_cmds_tx(struct work_struct *data)
@@ -531,6 +558,9 @@ void iris_dtg_para_set(int input_mode, int output_mode)
 			vfp_max = (te2ovs_dly_frc > vfp) ? te2ovs_dly_frc : vfp;
 		} else {
 			//dtg 1.2 mode, command in and video out
+			evs_sel = 1;
+			evs_dly = 2;
+			evs_new_dly = 1;
 			cmd_mode_en = 1;
 			cm_hw_frc_mode = 3;
 			cm_hw_rfb_mode = 3;
@@ -618,14 +648,16 @@ int iris_set_configure(struct msm_fb_data_type *mfd)
 	// no update
 	if (!iris_info.update.pq_setting && !iris_info.update.dbc_setting
 		&& !iris_info.update.lp_memc_setting && !iris_info.update.color_adjust
-		&& !iris_info.update.lce_setting &&!iris_info.update.cm_setting)
+		&& !iris_info.update.lce_setting &&!iris_info.update.cm_setting
+		&& !iris_info.update.lux_value && !iris_info.update.cct_value
+		&& !iris_info.update.reading_mode)
 		return 0;
 
 	mutex_lock(&iris_cfg->config_mutex);
 	// PQ setting, MB3
 	if (iris_info.update.pq_setting) {
 		iris_reg_add(IRIS_PQ_SETTING_ADDR, *((u32 *)&pqlt_cur_setting->pq_setting));
-		pr_info("%s, %d: configValue = %d.\n", __func__, __LINE__, *((u32 *)&pqlt_cur_setting->pq_setting));
+		pr_debug("%s, %d: configValue = %d.\n", __func__, __LINE__, *((u32 *)&pqlt_cur_setting->pq_setting));
 		iris_info.update.pq_setting = false;
 	}
 
@@ -654,6 +686,27 @@ int iris_set_configure(struct msm_fb_data_type *mfd)
 	if (iris_info.update.cm_setting) {
 		iris_reg_add(IRIS_CM_SETTING_ADDR, *((u32 *)&pqlt_cur_setting->cm_setting));
 		iris_info.update.cm_setting = false;
+	}
+
+    // Lux value
+	if (iris_info.update.lux_value) {
+		iris_reg_add(IRIS_LUX_VALUE_ADDR, *((u32 *)&pqlt_cur_setting->lux_value));
+		pr_info("%s, %d: configValue = %d.\n", __func__, __LINE__, *((u32 *)&pqlt_cur_setting->lux_value));
+		iris_info.update.lux_value= false;
+	}
+
+    // cct value
+	if (iris_info.update.cct_value) {
+		iris_reg_add(IRIS_CCT_VALUE_ADDR, *((u32 *)&pqlt_cur_setting->cct_value));
+		pr_info("%s, %d: configValue = %d.\n", __func__, __LINE__, *((u32 *)&pqlt_cur_setting->cct_value));
+		iris_info.update.cct_value= false;
+	}
+
+    // reading mode
+	if (iris_info.update.reading_mode) {
+		iris_reg_add(IRIS_READING_MODE_ADDR, *((u32 *)&pqlt_cur_setting->reading_mode));
+		pr_info("%s, %d: configValue = %d.\n", __func__, __LINE__, *((u32 *)&pqlt_cur_setting->reading_mode));
+		iris_info.update.reading_mode= false;
 	}
 
 	mutex_unlock(&iris_cfg->config_mutex);
@@ -742,7 +795,7 @@ static bool iris_is_videoin_videout(void)
 static bool iris_is_scale_enable(void)
 {
 	if (iris_info.input_timing.hres == iris_info.output_timing.hres  &&
-		iris_info.output_timing.vres == iris_info.output_timing.vres)
+		iris_info.input_timing.vres == iris_info.output_timing.vres)
 		return false;
 	else
 		return true;
@@ -824,9 +877,12 @@ bool iris_is_cm_setting_disable(void)
 	struct iris_setting_info * psetting_info = &iris_info.setting_info;
 	struct iris_setting_disable_info *pdisable_info = & psetting_info->disable_info;
 	struct iris_cm_setting * cm_setting = &psetting_info->quality_cur.cm_setting;
+	struct iris_reading_mode* reading_mode = &psetting_info->quality_cur.reading_mode;
 
 	if (pdisable_info->cm_c6axes_disable_val ==  cm_setting->cm6axes &&
-		pdisable_info->cm_c3d_disable_val == cm_setting->cm3d)
+		pdisable_info->cm_c3d_disable_val == cm_setting->cm3d &&
+		pdisable_info->color_temp_disable_val == cm_setting->color_temp_en &&
+		pdisable_info->reading_mode_disable_val== reading_mode->readingmode)
 		return true;
 
 	return false;
@@ -1332,7 +1388,7 @@ static void iris_calc_true_cut(struct msm_fb_data_type *mfd) {
 		}
 	}
 }
-#if 0
+
 int iris_calc_meta(struct msm_fb_data_type *mfd)
 {
 	struct iris_config *iris_cfg = &mfd->iris_conf;
@@ -1389,7 +1445,7 @@ int iris_calc_meta(struct msm_fb_data_type *mfd)
 
 	return ret;
 }
-#endif
+
 
 static int iris_set_repeat(struct iris_config *iris_cfg)
 {
@@ -1826,7 +1882,10 @@ void iris_send_meta_cmd(struct mdss_mdp_ctl *ctl)
 
 	memset(&cmdreq, 0, sizeof(cmdreq));
 	cmdreq.cmds_cnt = 1;
-	cmdreq.flags = CMD_REQ_HS_MODE | CMD_REQ_COMMIT | CMD_CLK_CTRL;
+	if(iris_cfg->current_mode != IRIS_BYPASS_MODE)
+		cmdreq.flags = CMD_REQ_HS_MODE | CMD_REQ_COMMIT | CMD_CLK_CTRL;
+	else
+		cmdreq.flags = CMD_REQ_LP_MODE | CMD_REQ_COMMIT | CMD_CLK_CTRL;
 	cmdreq.rlen = 0;
 	cmdreq.cb = NULL;
 

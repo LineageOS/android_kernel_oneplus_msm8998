@@ -278,6 +278,13 @@ int iris_debugfs_init(struct msm_fb_data_type *mfd)
 	debugfs_create_u32("debug_dtg_v12", 0644, iris_cfg->dbg_root,
 		(u32 *)&iris_debug_dtg_v12);
 
+	debugfs_create_u32("debug_power_opt_disable", 0644, iris_cfg->dbg_root,
+		(u32 *)&iris_debug_power_opt_disable);
+
+	/*0: disable firmware debug; 1: disable fw download; 2: reload firmware when panel on */
+	debugfs_create_u32("debug_firmware", 0644, iris_cfg->dbg_root,
+		(u32 *)&iris_debug_firmware);
+
 	debugfs_create_u32("dsi_mode_in_rfb", 0644, iris_cfg->dbg_root,
 		(u32 *)&iris_cfg->avail_mode.dsi_mode_in_rfb);
 

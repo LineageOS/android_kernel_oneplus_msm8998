@@ -211,7 +211,7 @@ void iris_dms_config(struct mdss_dsi_ctrl_pdata *ctrl)
 	};
 	struct dsi_panel_cmds panel_cmds;
 
-	pr_info("%s:, rx_mode=%d\n", __func__, iris_info.work_mode.rx_mode);
+	pr_debug("%s:, rx_mode=%d\n", __func__, iris_info.work_mode.rx_mode);
 	//confirm pwil work mode, video or cmd.
 	if (MIPI_VIDEO_MODE == iris_info.work_mode.rx_mode)
 		dms_pwil_conf[20] = 0x18;
@@ -232,7 +232,7 @@ void iris_dms_config(struct mdss_dsi_ctrl_pdata *ctrl)
 	panel_cmds.link_state = DSI_HS_MODE;
 	mdss_dsi_panel_cmds_send(ctrl, &panel_cmds);
 
-	pr_info("%s:-\n", __func__);
+	pr_debug("%s:-\n", __func__);
 }
 
 void iris_mipi_tx_cmds_build(struct msm_fb_data_type *mfd, struct dsi_panel_cmds *pcmds)
@@ -242,7 +242,7 @@ void iris_mipi_tx_cmds_build(struct msm_fb_data_type *mfd, struct dsi_panel_cmds
 	u32 i = 0, j = 0;
 	u32 cmd_cnt = pcmds->cmd_cnt;
 
-	pr_info("%s, cmd_cnt=%d\n", __func__, cmd_cnt);
+	pr_debug("%s, cmd_cnt=%d\n", __func__, cmd_cnt);
 	while (i < cmd_cnt) {
 		memset(&header, 0, sizeof(header));
 		memset(&payload, 0, sizeof(payload));
@@ -305,7 +305,7 @@ void iris_mipitx_cmd_to_video_proc(struct msm_fb_data_type *mfd)
 	uint32_t dport_ctrl0, dsi_tx_ctrl, pwil_ctrl;
 
 	if (iris_cfg->tx_switch_state != IRIS_TX_SWITCH_NONE)
-		pr_info("%s, dsi mode switch state = %d\n",
+		pr_debug("%s, dsi mode switch state = %d\n",
 					__func__, iris_cfg->tx_switch_state);
 
 	switch (iris_cfg->tx_switch_state) {
@@ -370,7 +370,7 @@ void iris_mipitx_video_to_cmd_proc(struct msm_fb_data_type *mfd)
 	uint32_t dport_ctrl0, dsi_tx_ctrl, pwil_ctrl;
 
 	if (iris_cfg->tx_switch_state != IRIS_TX_SWITCH_NONE)
-		pr_info("%s, dsi mode switch state = %d\n",
+		pr_debug("%s, dsi mode switch state = %d\n",
 					__func__, iris_cfg->tx_switch_state);
 
 	switch (iris_cfg->tx_switch_state) {
@@ -473,7 +473,7 @@ u8 iris_mipitx_interface_switch(struct msm_fb_data_type *mfd, bool debug)
 
 void iris_dsimode_update(char mode)
 {
-	pr_info("%s, mode=%d\n", __func__, mode);
+	pr_debug("%s, mode=%d\n", __func__, mode);
 	iris_info.work_mode.rx_mode = (DSI_VIDEO_MODE == mode) ? MIPI_VIDEO_MODE : MIPI_CMD_MODE;
 }
 
@@ -866,7 +866,7 @@ int iris_mode_switch_video(struct msm_fb_data_type *mfd)
 	}
 
 	if(pre_current_mode != iris_cfg->current_mode)
-		pr_info("%s, %d: mode from %d to %d\n", __func__, __LINE__, pre_current_mode, iris_cfg->current_mode);
+		pr_debug("%s, %d: mode from %d to %d\n", __func__, __LINE__, pre_current_mode, iris_cfg->current_mode);
 
 	return 0;
 }
@@ -884,6 +884,11 @@ int iris_mode_frc_prepare(struct msm_fb_data_type *mfd)
 	cmdreq.rlen = 0;
 	cmdreq.cb = NULL;
 	cmdreq.cmds_cnt = 1;
+
+	if (iris_cfg->ready != true) {
+		pr_debug("iris is not ready!\n");
+		return ret;
+	}
 
 	switch (eiris_frc_prepare_state)
 	{
@@ -1285,7 +1290,7 @@ static int iris_mode_bypass2pt(void)
 		(pwork_mode->rx_mode == pwork_mode->tx_mode)) {
 		bypass_enable = 0x7f;
 	}
-	pr_info("bypass_enable: %x, rx_mode: %d, tx_mode: %d\n", bypass_enable, pwork_mode->rx_mode, pwork_mode->tx_mode);
+	pr_debug("bypass_enable: %x, rx_mode: %d, tx_mode: %d\n", bypass_enable, pwork_mode->rx_mode, pwork_mode->tx_mode);
 	iris_mode_pt_bypass_switch(desc_list);
 	return true;
 }
@@ -1304,7 +1309,7 @@ static int iris_mode_pt2bypass(void)
 		(pwork_mode->rx_mode == pwork_mode->tx_mode)) {
 		bypass_enable = 0xdf;
 	}
-	pr_info("bypass_enable: %x, rx_mode: %d, tx_mode: %d\n", bypass_enable, pwork_mode->rx_mode, pwork_mode->tx_mode);
+	pr_debug("bypass_enable: %x, rx_mode: %d, tx_mode: %d\n", bypass_enable, pwork_mode->rx_mode, pwork_mode->tx_mode);
 	iris_mode_pt_bypass_switch(desc_list);
 	return true;
 }
@@ -1330,6 +1335,21 @@ static int iris_mode_bypass_switch(int val)
 	return ret;
 }
 
+
+int iris_normal_state_wait(void)
+{
+	int rc = true;
+
+	if (iris_info.power_status.work_state_wait) {
+		rc = false;
+		pr_debug("wait normal state.\n");
+		if (iris_info.power_status.work_state_wait > 0)
+			iris_info.power_status.work_state_wait--;
+	}
+
+	return rc;
+}
+
 int iris_mode_switch_cmd(struct msm_fb_data_type *mfd)
 {
 	struct mdss_overlay_private *mdp5_data = mfd_to_mdp5_data(mfd);
@@ -1345,8 +1365,12 @@ int iris_mode_switch_cmd(struct msm_fb_data_type *mfd)
 		g_dsi_ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata, panel_data);
 	}
 
+	if (false == iris_normal_state_wait())
+		return false;
+
 	if(iris_cfg->sf_mode_change_start)
 	{
+		iris_cfg->sf_mode_change_start = false;
 		switch(iris_cfg->sf_notify_mode) {
 			case IRIS_MODE_FRC_PREPARE:
 				eiris_frc_prepare_state = IRIS_FRC_PRE_TX_SWITCH;
@@ -1378,6 +1402,10 @@ int iris_mode_switch_cmd(struct msm_fb_data_type *mfd)
 				break;
 			case IRIS_MODE_PT2BYPASS:
 				iris_abypass_switch_state_init(IRIS_MODE_PT2BYPASS);
+				if (!iris_debug_power_opt_disable) {
+					/* delay one frame to wait clock on, for power opitimization */
+					return 0;
+				}
 				break;
 			case IRIS_MODE_BYPASS2PT:
 				iris_abypass_switch_state_init(IRIS_MODE_BYPASS2PT);
@@ -1385,8 +1413,6 @@ int iris_mode_switch_cmd(struct msm_fb_data_type *mfd)
 			default:
 				break;
 		}
-
-		iris_cfg->sf_mode_change_start = false;
 	}
 
 	switch(iris_cfg->sf_notify_mode) {
@@ -1494,7 +1520,7 @@ int iris_mode_switch_cmd(struct msm_fb_data_type *mfd)
 	}
 
 	if(pre_current_mode != iris_cfg->current_mode)
-		pr_info("%s, %d: mode from %d to %d\n", __func__, __LINE__, pre_current_mode, iris_cfg->current_mode);
+		pr_debug("%s, %d: mode from %d to %d\n", __func__, __LINE__, pre_current_mode, iris_cfg->current_mode);
 
 	return 0;
 
