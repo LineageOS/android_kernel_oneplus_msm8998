@@ -324,6 +324,32 @@
 	oem,use_external_fg;
 };
 
+ &i2c_5 {
+	synaptics@20 {
+		status = "disabled";
+	};
+	synaptics-rmi-ts@20 {
+		compatible = "synaptics,s3320";
+		reg = <0x20>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <125 0x2008>;
+		vcc_i2c_1v8-supply = <&pmcobalt_l6>;
+		vdd_2v8-supply = <&pmcobalt_l28>;
+		synaptics,tx-rx-num = <16 28>;
+		synaptics,vdd-voltage = <1808000 1808000>;
+		synaptics,avdd-voltage = <3008000 3008000>;
+		synaptics,vdd-current = <40000>;
+		synaptics,avdd-current = <20000>;
+		synaptics,display-coords = <1080 1920>;
+		synaptics,reset-gpio = <&tlmm 89 0x00>;
+		synaptics,irq-gpio = <&tlmm 125 0x2008>;
+		oem,support_hw_poweroff;
+		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend";
+		pinctrl-0 = <&ts_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+	};
+};
+
 &i2c_7 {
         bq27541-battery@55 {
                 status = "ok";
