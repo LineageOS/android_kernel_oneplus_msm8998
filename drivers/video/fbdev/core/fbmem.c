@@ -32,6 +32,7 @@
 #include <linux/device.h>
 #include <linux/efi.h>
 #include <linux/fb.h>
+#include <linux/sched.h>
 
 #include <asm/fb.h>
 
@@ -1079,7 +1080,11 @@ fb_blank(struct fb_info *info, int blank)
 		if (!early_ret)
 			fb_notifier_call_chain(FB_R_EARLY_EVENT_BLANK, &event);
 	}
-
+    //Wujialong 20160314 enable sched_boost when wakeup and disable sched_boost when screen on
+    if(blank==FB_BLANK_UNBLANK)
+    {
+        sched_set_boost(0);
+    }
  	return ret;
 }
 EXPORT_SYMBOL(fb_blank);
