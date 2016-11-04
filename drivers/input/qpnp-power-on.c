@@ -999,6 +999,44 @@ err_exit:
 	return IRQ_HANDLED;
 }
 
+/*20151106,wujialong add for power dump capture*/
+static int qpnp_config_reset(struct qpnp_pon *pon, struct qpnp_pon_config *cfg);
+
+static unsigned int pwr_dump_enabled = 0;
+static int param_set_pwr_dump_enabled(const char *val, struct kernel_param *kp)
+{
+	unsigned long enable;
+        struct qpnp_pon *pon = sys_reset_dev;
+        struct qpnp_pon_config *cfg = NULL;
+        int rc;
+
+	if (!val || kstrtoul(val, 0, &enable) || enable > 1)
+		return -EINVAL;
+
+	cfg = qpnp_get_cfg(pon, 0); //0 means pwr key
+	if (!cfg)
+		return -EINVAL;
+
+        pr_info("pwr_dump_enabled = %d and request enable = %d\n", pwr_dump_enabled, (unsigned int)enable);
+        if(pwr_dump_enabled !=enable){
+            cfg->s1_timer = 1352;//reduce this time
+            cfg->s2_type = 1;//change s2 type to warm reset
+            rc = qpnp_config_reset(pon, cfg);
+	    //if (rc)
+                //dev_err(&pon->spmi->dev,"Unable to config pon reset\n");
+
+            if(enable)//if we need enable this feature, we should diable wakeup capability
+                disable_irq_wake(cfg->state_irq);
+            else
+                enable_irq_wake(cfg->state_irq);
+            pwr_dump_enabled = enable;
+        }
+	return 0;
+}
+
+module_param_call(pwr_dump_enabled, param_set_pwr_dump_enabled, param_get_uint, &pwr_dump_enabled, 0644);
+/*20151106,wujialong add for power dump capture*/
+
 static int
 qpnp_config_pull(struct qpnp_pon *pon, struct qpnp_pon_config *cfg)
 {
