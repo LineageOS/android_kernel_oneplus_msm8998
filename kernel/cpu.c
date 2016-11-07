@@ -27,6 +27,7 @@
 #include <trace/events/sched.h>
 
 #include "smpboot.h"
+#include <linux/sched.h>
 
 #ifdef CONFIG_SMP
 /* Serializes the updates to cpu_online_mask, cpu_present_mask */
@@ -571,6 +572,7 @@ int disable_nonboot_cpus(void)
 	cpumask_clear(frozen_cpus);
 
 	pr_info("Disabling non-boot CPUs ...\n");
+	sched_set_boost(0);//Wujialong 20160314 disable sched_boost when going to sleep
 	for_each_online_cpu(cpu) {
 		if (cpu == first_cpu)
 			continue;
