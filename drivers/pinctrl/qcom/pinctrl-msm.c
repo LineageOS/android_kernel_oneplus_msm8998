@@ -505,6 +505,10 @@ static void msm_gpio_dbg_show(struct seq_file *s, struct gpio_chip *chip)
 	unsigned i;
 
 	for (i = 0; i < chip->ngpio; i++, gpio++) {
+#ifdef VENDOR_EDIT
+		if(gpio == 0 || gpio == 1 || gpio == 2 || gpio == 3 || gpio == 81 || gpio == 82 || gpio == 83 || gpio == 84)
+			continue;
+#endif
 		msm_gpio_dbg_show_one(s, NULL, chip, i, gpio);
 		seq_puts(s, "\n");
 	}
