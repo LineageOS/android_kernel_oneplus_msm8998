@@ -220,6 +220,32 @@ struct smb2 {
 	bool bad_part;
 };
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20161109 Charging porting */
+static int smbchg_cutoff_volt_with_charger = 3240;
+module_param_named(
+	cutoff_volt_with_charger, smbchg_cutoff_volt_with_charger, int, S_IRUSR | S_IWUSR
+);
+
+#define OF_PROP_READ(node, dt_property, prop, retval, optional)		\
+do {									\
+	if (retval)							\
+		break;							\
+	if (optional)							\
+		prop = -EINVAL;						\
+									\
+	retval = of_property_read_u32(node,		\
+					dt_property,	\
+					&prop);				\
+									\
+	if ((retval == -EINVAL) && optional)				\
+		retval = 0;						\
+	else if (retval)						\
+		pr_err("Error reading " #dt_property	\
+				" property rc = %d\n", rc);		\
+} while (0)
+#endif
+
 static int __debug_mask;
 module_param_named(
 	debug_mask, __debug_mask, int, S_IRUSR | S_IWUSR
@@ -244,92 +270,98 @@ static int smb2_parse_dt(struct smb2 *chip)
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161014 Add charging standard */
 	/* read ibatmax setting for different temp regions */
-	rc = of_property_read_u32(node, "ibatmax-little-cold-ma",
-			&chg->ibatmax[BATT_TEMP_LITTLE_COLD]);
-	rc = of_property_read_u32(node, "ibatmax-cool-ma",
-			&chg->ibatmax[BATT_TEMP_COOL]);
-	rc = of_property_read_u32(node, "ibatmax-little-cool-ma",
-			&chg->ibatmax[BATT_TEMP_LITTLE_COOL]);
-	rc = of_property_read_u32(node, "ibatmax-pre-normal-ma",
-			&chg->ibatmax[BATT_TEMP_PRE_NORMAL]);
-	rc = of_property_read_u32(node, "ibatmax-normal-ma",
-			&chg->ibatmax[BATT_TEMP_NORMAL]);
-	rc = of_property_read_u32(node, "ibatmax-warm-ma",
-			&chg->ibatmax[BATT_TEMP_WARM]);
+	OF_PROP_READ(node, "ibatmax-little-cold-ma",
+			chg->ibatmax[BATT_TEMP_LITTLE_COLD], rc, 1);
+	OF_PROP_READ(node, "ibatmax-cool-ma",
+			chg->ibatmax[BATT_TEMP_COOL], rc, 1);
+	OF_PROP_READ(node, "ibatmax-little-cool-ma",
+			chg->ibatmax[BATT_TEMP_LITTLE_COOL], rc, 1);
+	OF_PROP_READ(node, "ibatmax-pre-normal-ma",
+			chg->ibatmax[BATT_TEMP_PRE_NORMAL], rc, 1);
+	OF_PROP_READ(node, "ibatmax-normal-ma",
+			chg->ibatmax[BATT_TEMP_NORMAL], rc, 1);
+	OF_PROP_READ(node, "ibatmax-warm-ma",
+			chg->ibatmax[BATT_TEMP_WARM], rc, 1);
+
 	/* read vbatmax setting for different temp regions */
-	rc = of_property_read_u32(node, "vbatmax-little-cold-mv",
-			&chg->vbatmax[BATT_TEMP_LITTLE_COLD]);
-	rc = of_property_read_u32(node, "vbatmax-cool-mv",
-			&chg->vbatmax[BATT_TEMP_COOL]);
-	rc = of_property_read_u32(node, "vbatmax-little-cool-mv",
-			&chg->vbatmax[BATT_TEMP_LITTLE_COOL]);
-	rc = of_property_read_u32(node, "vbatmax-pre-normal-mv",
-			&chg->vbatmax[BATT_TEMP_PRE_NORMAL]);
-	rc = of_property_read_u32(node, "vbatmax-normal-mv",
-			&chg->vbatmax[BATT_TEMP_NORMAL]);
-	rc = of_property_read_u32(node, "vbatmax-warm-mv",
-			&chg->vbatmax[BATT_TEMP_WARM]);
+	OF_PROP_READ(node, "vbatmax-little-cold-mv",
+			chg->vbatmax[BATT_TEMP_LITTLE_COLD], rc, 1);
+	OF_PROP_READ(node, "vbatmax-cool-mv",
+			chg->vbatmax[BATT_TEMP_COOL], rc, 1);
+	OF_PROP_READ(node, "vbatmax-little-cool-mv",
+			chg->vbatmax[BATT_TEMP_LITTLE_COOL], rc, 1);
+	OF_PROP_READ(node, "vbatmax-pre-normal-mv",
+			chg->vbatmax[BATT_TEMP_PRE_NORMAL], rc, 1);
+	OF_PROP_READ(node, "vbatmax-normal-mv",
+			chg->vbatmax[BATT_TEMP_NORMAL], rc, 1);
+	OF_PROP_READ(node, "vbatmax-warm-mv",
+			chg->vbatmax[BATT_TEMP_WARM], rc, 1);
+
 	/* read vbatdet setting for different temp regions */
-	rc = of_property_read_u32(node, "vbatdet-little-cold-mv",
-			&chg->vbatdet[BATT_TEMP_LITTLE_COLD]);
-	rc = of_property_read_u32(node, "vbatdet-cool-mv",
-			&chg->vbatdet[BATT_TEMP_COOL]);
-	rc = of_property_read_u32(node, "vbatdet-little-cool-mv",
-			&chg->vbatdet[BATT_TEMP_LITTLE_COOL]);
-	rc = of_property_read_u32(node, "vbatdet-pre-normal-mv",
-			&chg->vbatdet[BATT_TEMP_PRE_NORMAL]);
-	rc = of_property_read_u32(node, "vbatdet-normal-mv",
-			&chg->vbatdet[BATT_TEMP_NORMAL]);
-	rc = of_property_read_u32(node, "vbatdet-warm-mv",
-			&chg->vbatdet[BATT_TEMP_WARM]);
-	/* read temp region setting*/
-	rc = of_property_read_u32(node, "cold-bat-decidegc",
-			&chg->BATT_TEMP_T0);
+	OF_PROP_READ(node, "vbatdet-little-cold-mv",
+			chg->vbatdet[BATT_TEMP_LITTLE_COLD], rc, 1);
+	OF_PROP_READ(node, "vbatdet-cool-mv",
+			chg->vbatdet[BATT_TEMP_COOL], rc, 1);
+	OF_PROP_READ(node, "vbatdet-little-cool-mv",
+			chg->vbatdet[BATT_TEMP_LITTLE_COOL], rc, 1);
+	OF_PROP_READ(node, "vbatdet-pre-normal-mv",
+			chg->vbatdet[BATT_TEMP_PRE_NORMAL], rc, 1);
+	OF_PROP_READ(node, "vbatdet-normal-mv",
+			chg->vbatdet[BATT_TEMP_NORMAL], rc, 1);
+	OF_PROP_READ(node, "vbatdet-warm-mv",
+			chg->vbatdet[BATT_TEMP_WARM], rc, 1);
+
+	/* read temp region settings */
+	OF_PROP_READ(node, "cold-bat-decidegc",
+			chg->BATT_TEMP_T0, rc, 1);
 	chg->BATT_TEMP_T0 = 0 - chg->BATT_TEMP_T0;
-	rc = of_property_read_u32(node, "little-cold-bat-decidegc",
-			&chg->BATT_TEMP_T1);
-	rc = of_property_read_u32(node, "cool-bat-decidegc",
-			&chg->BATT_TEMP_T2);
-	rc = of_property_read_u32(node, "little-cool-bat-decidegc",
-			&chg->BATT_TEMP_T3);
-	rc = of_property_read_u32(node, "pre-normal-bat-decidegc",
-			&chg->BATT_TEMP_T4);
-	rc = of_property_read_u32(node, "warm-bat-decidegc",
-			&chg->BATT_TEMP_T5);
-	rc = of_property_read_u32(node, "hot-bat-decidegc",
-			&chg->BATT_TEMP_T6);
-	if (rc < 0)
-		pr_err("read temp region setting failed!!!!\n");
-	else {
-		pr_info("T0=%d, T1=%d, T2=%d, T3=%d, T4=%d, T5=%d, T6=%d\n",
-			chg->BATT_TEMP_T0, chg->BATT_TEMP_T1, chg->BATT_TEMP_T2,
-			chg->BATT_TEMP_T3, chg->BATT_TEMP_T4, chg->BATT_TEMP_T5,
-			chg->BATT_TEMP_T6);
-		pr_info("BATT_TEMP_LITTLE_COLD=%d, %d, %d\n",
-			chg->ibatmax[BATT_TEMP_LITTLE_COLD],
-			chg->vbatmax[BATT_TEMP_LITTLE_COLD],
-			chg->vbatdet[BATT_TEMP_LITTLE_COLD]);
-		pr_info("BATT_TEMP_COOL=%d, %d, %d\n",
-			chg->ibatmax[BATT_TEMP_COOL],
-			chg->vbatmax[BATT_TEMP_COOL],
-			chg->vbatdet[BATT_TEMP_COOL]);
-		pr_info("BATT_TEMP_LITTLE_COOL=%d, %d, %d\n",
-			chg->ibatmax[BATT_TEMP_LITTLE_COOL],
-			chg->vbatmax[BATT_TEMP_LITTLE_COOL],
-			chg->vbatdet[BATT_TEMP_LITTLE_COOL]);
-		pr_info("BATT_TEMP_PRE_NORMAL=%d, %d, %d\n",
-			chg->ibatmax[BATT_TEMP_PRE_NORMAL],
-			chg->vbatmax[BATT_TEMP_PRE_NORMAL],
-			chg->vbatdet[BATT_TEMP_PRE_NORMAL]);
-		pr_info("BATT_TEMP_NORMAL=%d, %d, %d\n",
-			chg->ibatmax[BATT_TEMP_NORMAL],
-			chg->vbatmax[BATT_TEMP_NORMAL],
-			chg->vbatdet[BATT_TEMP_NORMAL]);
-		pr_info("BATT_TEMP_WARM=%d, %d, %d\n",
-			chg->ibatmax[BATT_TEMP_WARM],
-			chg->vbatmax[BATT_TEMP_WARM],
-			chg->vbatdet[BATT_TEMP_WARM]);
-		}
+	OF_PROP_READ(node, "little-cold-bat-decidegc",
+			chg->BATT_TEMP_T1, rc, 1);
+	OF_PROP_READ(node, "cool-bat-decidegc",
+			chg->BATT_TEMP_T2, rc, 1);
+	OF_PROP_READ(node, "little-cool-bat-decidegc",
+			chg->BATT_TEMP_T3, rc, 1);
+	OF_PROP_READ(node, "pre-normal-bat-decidegc",
+			chg->BATT_TEMP_T4, rc, 1);
+	OF_PROP_READ(node, "warm-bat-decidegc",
+			chg->BATT_TEMP_T5, rc, 1);
+	OF_PROP_READ(node, "hot-bat-decidegc",
+			chg->BATT_TEMP_T6, rc, 1);
+
+	/* read other settings */
+	OF_PROP_READ(node, "qcom,cutoff-voltage-with-charger",
+				smbchg_cutoff_volt_with_charger, rc, 1);
+
+	pr_info("T0=%d, T1=%d, T2=%d, T3=%d, T4=%d, T5=%d, T6=%d\n",
+		chg->BATT_TEMP_T0, chg->BATT_TEMP_T1, chg->BATT_TEMP_T2,
+		chg->BATT_TEMP_T3, chg->BATT_TEMP_T4, chg->BATT_TEMP_T5,
+		chg->BATT_TEMP_T6);
+	pr_info("BATT_TEMP_LITTLE_COLD=%d, %d, %d\n",
+		chg->ibatmax[BATT_TEMP_LITTLE_COLD],
+		chg->vbatmax[BATT_TEMP_LITTLE_COLD],
+		chg->vbatdet[BATT_TEMP_LITTLE_COLD]);
+	pr_info("BATT_TEMP_COOL=%d, %d, %d\n",
+		chg->ibatmax[BATT_TEMP_COOL],
+		chg->vbatmax[BATT_TEMP_COOL],
+		chg->vbatdet[BATT_TEMP_COOL]);
+	pr_info("BATT_TEMP_LITTLE_COOL=%d, %d, %d\n",
+		chg->ibatmax[BATT_TEMP_LITTLE_COOL],
+		chg->vbatmax[BATT_TEMP_LITTLE_COOL],
+		chg->vbatdet[BATT_TEMP_LITTLE_COOL]);
+	pr_info("BATT_TEMP_PRE_NORMAL=%d, %d, %d\n",
+		chg->ibatmax[BATT_TEMP_PRE_NORMAL],
+		chg->vbatmax[BATT_TEMP_PRE_NORMAL],
+		chg->vbatdet[BATT_TEMP_PRE_NORMAL]);
+	pr_info("BATT_TEMP_NORMAL=%d, %d, %d\n",
+		chg->ibatmax[BATT_TEMP_NORMAL],
+		chg->vbatmax[BATT_TEMP_NORMAL],
+		chg->vbatdet[BATT_TEMP_NORMAL]);
+	pr_info("BATT_TEMP_WARM=%d, %d, %d\n",
+		chg->ibatmax[BATT_TEMP_WARM],
+		chg->vbatmax[BATT_TEMP_WARM],
+		chg->vbatdet[BATT_TEMP_WARM]);
+	pr_info("cutoff_volt_with_charger=%d\n",
+		smbchg_cutoff_volt_with_charger);
 
 	/* disable step_chg */
 	chg->step_chg_enabled = false;
@@ -699,7 +731,7 @@ static enum power_supply_property smb2_batt_props[] = {
 	POWER_SUPPLY_PROP_CHG_PROTECT_STATUS,
 	POWER_SUPPLY_PROP_FASTCHG_STATUS,
 	POWER_SUPPLY_PROP_FASTCHG_STARTING,
-	POWER_SUPPLY_PROP_TEMP,
+	POWER_SUPPLY_CUTOFF_VOLT_WITH_CHARGER,
 #endif
 	POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL,
 	POWER_SUPPLY_PROP_CHARGER_TEMP,
@@ -756,8 +788,11 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_FASTCHG_STATUS:
 		val->intval = get_prop_fastchg_status(chg);
 		break;
+	case POWER_SUPPLY_CUTOFF_VOLT_WITH_CHARGER:
+		val->intval = smbchg_cutoff_volt_with_charger;
+		break;
 	case POWER_SUPPLY_PROP_FASTCHG_STARTING:
-		val->intval = op_get_fast_chg_ing(chg);
+		val->intval = op_get_fastchg_ing(chg);
 		break;
 #endif
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
@@ -826,7 +861,6 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 			update_dash_unplug_status();
 		break;
 	case POWER_SUPPLY_PROP_SWITCH_DASH:
-		pr_info("POWER_SUPPLY_PROP_SWITCH_DASH\n");
 		rc = check_allow_switch_dash(chg, val);
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_NOW:

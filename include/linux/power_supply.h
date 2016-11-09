@@ -258,6 +258,10 @@ enum power_supply_type {
 	POWER_SUPPLY_TYPE_TYPEC,	/*Type-C */
 	POWER_SUPPLY_TYPE_UFP,		/* Type-C UFP */
 	POWER_SUPPLY_TYPE_DFP,		/* TYpe-C DFP */
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20161109 Charging porting */
+	POWER_SUPPLY_TYPE_DASH,
+#endif
 };
 
 /* Indicates USB Type-C CC connection status */

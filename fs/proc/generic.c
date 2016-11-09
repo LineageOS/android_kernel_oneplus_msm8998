@@ -631,11 +631,25 @@ void *proc_get_parent_data(const struct inode *inode)
 }
 EXPORT_SYMBOL_GPL(proc_get_parent_data);
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20161109 Charging porting */
+void proc_remove(struct proc_dir_entry *de)
+{
+	int rc;
+
+	if (de) {
+		rc = remove_proc_subtree(de->name, de->parent);
+		if(rc < 0)
+			pr_err("proc_remove %s fail\n",de->name);
+	}
+}
+#else
 void proc_remove(struct proc_dir_entry *de)
 {
 	if (de)
 		remove_proc_subtree(de->name, de->parent);
 }
+#endif
 EXPORT_SYMBOL(proc_remove);
 
 void *PDE_DATA(const struct inode *inode)
