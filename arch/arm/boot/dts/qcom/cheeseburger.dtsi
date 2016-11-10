@@ -310,7 +310,7 @@
 	vbatdet-pre-normal-mv = <4220>;
 	vbatdet-normal-mv = <4220>;
 	vbatdet-warm-mv = <4000>;
-	/* vbatdet setting for different temp regions */
+	/* temp region settings */
 	cold-bat-decidegc = <30>;
 	little-cold-bat-decidegc = <0>;
 	cool-bat-decidegc = <50>;
@@ -318,6 +318,8 @@
 	pre-normal-bat-decidegc = <160>;
 	warm-bat-decidegc = <450>;
 	hot-bat-decidegc = <530>;
+	/* other settings */
+	qcom,cutoff-voltage-with-charger=<3250>;
 };
 
 &pmicobalt_fg {

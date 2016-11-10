@@ -383,12 +383,12 @@ struct bq27541_device_info *bq27541_di;
 #define CAPACITY_CALIBRATE_TIME_60_PERCENT     45 /* 45s */
 static int bq27541_average_current(struct bq27541_device_info *di);
 
-#ifdef READY
 extern int get_charging_status(void);
 extern int fuelgauge_battery_temp_region_get(void);
+extern bool get_oem_charge_done_status(void);
+#ifdef READY
 extern int load_soc(void);
 extern void backup_soc_ex(int soc);
-extern bool get_oem_charge_done_status(void);
 extern void clean_backup_soc_ex(void);
 #endif /* david@bsp mark temp */
 
@@ -497,19 +497,10 @@ static int fg_soc_calibrate(struct  bq27541_device_info *di, int soc)
 		goto out;
 	}
 
-#ifdef READY
 	ret.intval = get_charging_status();
-#else
-	ret.intval = POWER_SUPPLY_STATUS_DISCHARGING;
-#endif /* david@bsp mark temp */
 	di->batt_vol_pre = bq27541_battery_voltage(di);
-#ifdef READY
 	chg_done = get_oem_charge_done_status();
 	temp_region = fuelgauge_battery_temp_region_get();
-#else
-	chg_done = false;
-	temp_region = BATT_TEMP_NORMAL;
-#endif /* david@bsp mark temp */
 	if ((temp_region == BATT_TEMP_LITTLE_COOL
 			|| temp_region == BATT_TEMP_COOL
 			|| temp_region == BATT_TEMP_NORMAL

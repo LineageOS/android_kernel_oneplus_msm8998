@@ -1550,8 +1550,16 @@ void free_irq(unsigned int irq, void *dev_id)
 {
 	struct irq_desc *desc = irq_to_desc(irq);
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20161109 Charging porting */
+	if (!desc || WARN_ON(irq_settings_is_per_cpu_devid(desc))) {
+		pr_err("free irq fail\n");
+		return;
+	}
+#else
 	if (!desc || WARN_ON(irq_settings_is_per_cpu_devid(desc)))
 		return;
+#endif
 
 #ifdef CONFIG_SMP
 	if (WARN_ON(desc->affinity_notify))

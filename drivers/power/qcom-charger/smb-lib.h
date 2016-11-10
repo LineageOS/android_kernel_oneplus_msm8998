@@ -19,6 +19,7 @@
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161014 Add charging standard */
 #include "oem_external_fg.h"
+#include <linux/wakelock.h>
 #endif
 #include "storm-watch.h"
 
@@ -160,6 +161,7 @@ struct smb_charger {
 /* david.liu@bsp, 20160926 Add dash charging */
 	struct delayed_work	check_switch_dash_work;
 	struct delayed_work heartbeat_work;
+	struct wake_lock	chg_wake_lock;
 #endif
 	struct delayed_work	clear_hdc_work;
 
@@ -317,7 +319,7 @@ int smblib_set_prop_batt_temp(struct smb_charger *chg,
 				  const union power_supply_propval *val);
 int smblib_set_prop_chg_protect_status(struct smb_charger *chg,
 				  const union power_supply_propval *val);
-bool op_get_fast_chg_ing(struct smb_charger *chg);
+bool op_get_fastchg_ing(struct smb_charger *chg);
 bool get_prop_fastchg_status(struct smb_charger *chg);
 #endif
 int smblib_get_prop_dc_present(struct smb_charger *chg,

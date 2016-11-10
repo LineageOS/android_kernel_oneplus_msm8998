@@ -1106,7 +1106,7 @@ static int fg_psy_get_property(struct power_supply *psy,
 		if (chip->use_external_fg && external_fg
 				&& external_fg->get_average_current)
 			pval->intval = external_fg->get_battery_temperature();
-		else if (get_extern_fg_regist_done() == false)
+		else if (!get_extern_fg_regist_done())
 			pval->intval = DEFALUT_BATT_TEMP;
 		else
 			pval->intval = -400;

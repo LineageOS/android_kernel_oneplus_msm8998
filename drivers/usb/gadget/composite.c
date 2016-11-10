@@ -2315,7 +2315,11 @@ void composite_suspend(struct usb_gadget *gadget)
 	cdev->suspended = 1;
 	spin_unlock_irqrestore(&cdev->lock, flags);
 
+#ifndef VENDOR_EDIT
+/* david.liu@bsp, 20161109 Charging porting */
+	/* Fix PC USB BUS IDLE cause no charging current issue */
 	usb_gadget_vbus_draw(gadget, 2);
+#endif
 }
 
 void composite_resume(struct usb_gadget *gadget)
