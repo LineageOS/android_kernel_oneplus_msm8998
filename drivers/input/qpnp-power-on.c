@@ -2033,7 +2033,6 @@ static ssize_t pwron_reason_show(struct kobject *kobj, struct kobj_attribute *at
 				cold_boot ? "cold" : "warm");
 	        ret += strlen(pbuf);
 	        pbuf += strlen(pbuf);
-		
 		}
 
 		for_each_set_bit(index, (unsigned long *)&pon_sts, ARRAY_SIZE(qpnp_pon_reason)){
@@ -2085,8 +2084,8 @@ static ssize_t pwroff_reason_show(struct kobject *kobj, struct kobj_attribute *a
 	    rc = regmap_bulk_read(g_pon[i]->regmap, QPNP_POFF_REASON1(g_pon[i]),
 	        temp_buf, 2);
         if (rc){
-            sprintf(pbuf, "PMIC@SID%d: Unable to read POFF_REASON regs rc:%d\n", 
-				to_spmi_device(g_pon[i]->pdev->dev.parent)->usid, 
+            sprintf(pbuf, "PMIC@SID%d: Unable to read POFF_REASON regs rc:%d\n",
+				to_spmi_device(g_pon[i]->pdev->dev.parent)->usid,
 				rc);
             ret += strlen(pbuf);
             pbuf += strlen(pbuf);
@@ -2096,14 +2095,14 @@ static ssize_t pwroff_reason_show(struct kobject *kobj, struct kobj_attribute *a
         poff_sts = temp_buf[0] | (temp_buf[1] << 8);
 	    index = ffs(poff_sts) - 1;
         if (index >= ARRAY_SIZE(qpnp_poff_reason) || index < 0) {
-	        sprintf(pbuf, "PMIC@SID%d POFF_REASON regs :[0x%x] and Power-off reason: Unknown\n", 
+	        sprintf(pbuf, "PMIC@SID%d POFF_REASON regs :[0x%x] and Power-off reason: Unknown\n",
 				to_spmi_device(g_pon[i]->pdev->dev.parent)->usid,
 				poff_sts);
             ret += strlen(pbuf);
             pbuf += strlen(pbuf);
 	        continue;
 	    }else{
-	        sprintf(pbuf, "PMIC@SID%d POFF_REASON regs :[0x%x] and Power-off reason: ", 
+	        sprintf(pbuf, "PMIC@SID%d POFF_REASON regs :[0x%x] and Power-off reason: ",
 				to_spmi_device(g_pon[i]->pdev->dev.parent)->usid,
 				poff_sts);
 	        ret += strlen(pbuf);
