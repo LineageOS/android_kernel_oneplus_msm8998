@@ -186,3 +186,8 @@ obj-$(CONFIG_ESOC)              += esoc/
 #ruanbanmao@nfc add for 15801 nfc 2015/10/16
 obj-$(CONFIG_NFC)		+= nfc/
 #endif
+
+#ifdef VENDOR_EDIT
+#hefaxi@filesystems, 2015/12/07, add for force dump function
+obj-y 	+= oem_debug/
+#endif

@@ -217,4 +217,8 @@ source "drivers/sensors/Kconfig"
 source "drivers/nfc/Kconfig"
 #endif
 
+#ifdef VENDOR_EDIT
+#hefaxi@filesystems, 2015/12/07, add for force dump function
+source "drivers/oem_debug/Kconfig"
+#endif
 endmenu

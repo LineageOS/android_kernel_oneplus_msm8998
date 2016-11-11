@@ -29,6 +29,10 @@
 #define NETLINK_CRYPTO		21	/* Crypto layer */
 #define NETLINK_SOCKEV		22	/* Socket Administrative Events */
 #define NETLINK_INET_DIAG	NETLINK_SOCK_DIAG
+#ifdef VENDOR_EDIT
+//Anderson@, 2016/08/18, Support enable debug by key
+#define NETLINK_ADB         23
+#endif
 
 #define MAX_LINKS 32		
 
