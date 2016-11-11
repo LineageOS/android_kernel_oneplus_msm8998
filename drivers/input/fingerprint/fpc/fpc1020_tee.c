@@ -44,8 +44,6 @@
 #include <linux/regulator/consumer.h>
 #include <soc/qcom/scm.h>
 
-#include <linux/wakelock.h>
-
 #ifdef CONFIG_FB
 #include <linux/fb.h>
 #include <linux/notifier.h>
@@ -69,7 +67,7 @@ module_param(ignor_home_for_ESD, uint, S_IRUGO | S_IWUSR);
 
 struct fpc1020_data {
 	struct device *dev;
-	struct wake_lock ttw_wl;
+	struct wakeup_source ttw_wl;
 	int irq_gpio;
 	int rst_gpio;
 	int irq_num;
@@ -541,7 +539,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *handle)
 	if (fpc1020->screen_state)
 		return IRQ_HANDLED;
 
-	wake_lock_timeout(&fpc1020->ttw_wl, msecs_to_jiffies(FPC_TTW_HOLD_TIME));
+	__pm_wakeup_event(&fpc1020->ttw_wl, FPC_TTW_HOLD_TIME);
 
 	/* Report button input to trigger CPU boost */
 	input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
@@ -660,7 +658,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 	//disable_irq_wake( gpio_to_irq( fpc1020->irq_gpio ) );
 
 	enable_irq_wake( gpio_to_irq( fpc1020->irq_gpio ) );
-	wake_lock_init(&fpc1020->ttw_wl, WAKE_LOCK_SUSPEND, "fpc_ttw_wl");
+	wakeup_source_init(&fpc1020->ttw_wl, "fpc_ttw_wl");
 	device_init_wakeup(fpc1020->dev, 1);
 
 	rc = sysfs_create_group(&dev->kobj, &attribute_group);
