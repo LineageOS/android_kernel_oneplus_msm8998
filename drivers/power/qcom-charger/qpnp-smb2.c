@@ -1244,6 +1244,16 @@ static int smb2_init_hw(struct smb2 *chip)
 		return rc;
 	}
 
+#ifdef VENDOR_EDIT
+	//xianglin modify otg current load to 1.5A
+	rc = smblib_masked_write(chg, OTG_CURRENT_LIMIT_CFG_REG, OTG_CURRENT_LIMIT_MASK, 0x5);
+	if (rc < 0) {
+		dev_err(chg->dev,
+			"Couldn't configure VBUS for SW control rc=%d\n", rc);
+		return rc;
+	}
+#endif
+
 	/* configure power role for dual-role */
 	rc = smblib_masked_write(chg, TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
 				 TYPEC_POWER_ROLE_CMD_MASK, 0);
