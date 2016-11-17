@@ -101,6 +101,11 @@
 	};
 };
 
+&pmcobalt_rtc {
+  compatible = "qcom,qpnp-rtc";
+  qcom,qpnp-rtc-alarm-pwrup = <1>;
+};
+
 &pmicobalt_gpios {
 	/* button-backlight */
 	gpio@c400 {
