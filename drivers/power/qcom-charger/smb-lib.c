@@ -1396,6 +1396,14 @@ int smblib_get_prop_usb_online(struct smb_charger *chg,
 	int rc = 0;
 	u8 stat;
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20161117 Fix dash in power off charging mode */
+	if (chg->dash_on) {
+		val->intval = true;
+		return rc;
+	}
+#endif
+
 	if (get_client_vote(chg->usb_suspend_votable, USER_VOTER)) {
 		val->intval = false;
 		return rc;
@@ -2722,11 +2730,44 @@ static void switch_fast_chg(struct smb_charger *chg)
 	}
 }
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20161117 Fix dash in power off charging mode */
+static void op_re_kick_allowed_voltage(struct smb_charger  *chg)
+{
+	const struct apsd_result *apsd_result;
+
+	if (!is_usb_present(chg) && !is_dc_present(chg))
+		return;
+
+	apsd_result = smblib_get_apsd_result(chg);
+	if (apsd_result->bit != OCP_CHARGER_BIT)
+		return;
+
+	pr_info("re-kick allowed voltage\n");
+	smblib_set_usb_pd_allowed_voltage(chg, MICRO_9V, MICRO_9V);
+	msleep(500);
+	smblib_set_usb_pd_allowed_voltage(chg, MICRO_5V, MICRO_5V);
+}
+
+static void op_re_kick_work(struct work_struct *work)
+{
+	struct smb_charger *chg = container_of(work,
+			struct smb_charger,
+			re_kick_work.work);
+
+    if (chg->vbus_present) {
+		op_re_kick_allowed_voltage(chg);
+		schedule_delayed_work(&chg->check_switch_dash_work,
+				msecs_to_jiffies(500));
+	}
+}
+#endif
+
 static void op_check_allow_switch_dash_work(struct work_struct *work)
 {
 	struct delayed_work *dwork = to_delayed_work(work);
-		struct smb_charger *chg = container_of(dwork,
-				struct smb_charger, check_switch_dash_work);
+	struct smb_charger *chg = container_of(dwork,
+			struct smb_charger, check_switch_dash_work);
 	const struct apsd_result *apsd_result;
 	bool charger_present;
 
@@ -3853,6 +3894,7 @@ int smblib_init(struct smb_charger *chg)
 	INIT_DELAYED_WORK(&chg->step_soc_req_work, step_soc_req_work);
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
+	INIT_DELAYED_WORK(&chg->re_kick_work, op_re_kick_work);
 	INIT_DELAYED_WORK(&chg->check_switch_dash_work,
 			op_check_allow_switch_dash_work);
 	INIT_DELAYED_WORK(&chg->heartbeat_work,
