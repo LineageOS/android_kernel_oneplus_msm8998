@@ -38,13 +38,6 @@
 #include "mdss_mdp_wfd.h"
 #include "mdss_dsi_clk.h"
 
-#if defined(CONFIG_IRIS2P_FULL_SUPPORT)
-#include "mdss_dsi_iris2p.h"
-#include "mdss_dsi_iris2p_lightup.h"
-#include "mdss_dsi_iris2p_ioctl.h"
-#include "mdss_dsi_iris2p_mode_switch.h"
-//#include "iris2_io.h"
-#endif
 #define VSYNC_PERIOD 16
 #define BORDERFILL_NDX	0x0BF000BF
 #define CHECK_BOUNDS(offset, size, max_size) \
@@ -1973,13 +1966,6 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 	int ret = 0;
 	int sd_in_pipe = 0;
 	struct mdss_mdp_commit_cb commit_cb;
-#if defined(CONFIG_IRIS2_FULL_SUPPORT) || defined(CONFIG_IRIS2P_FULL_SUPPORT)
-	struct mdss_panel_data *pdata = NULL;
-	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
-	pdata = ctl->panel_data;
-	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
-                           panel_data);
-#endif
 
 	if (!ctl)
 		return -ENODEV;
@@ -2021,25 +2007,6 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 					pipe->num, pipe->flags);
 		}
 	}
-#if defined(CONFIG_IRIS2_FULL_SUPPORT) || defined(CONFIG_IRIS2P_FULL_SUPPORT)
-	// iris
-#if 0
-	list_for_each_entry(pipe, &mdp5_data->pipes_used, list) {
-		if (pipe->type == MDSS_MDP_PIPE_TYPE_VIG) {
-			used_vp++;
-			iris_vp = pipe;
-		}
-		if (pipe->type == MDSS_MDP_PIPE_TYPE_RGB) {
-			used_gp++;
-			iris_gp = pipe;
-		}
-	}
-#endif
-	if (mfd->panel_info->type == MIPI_VIDEO_PANEL && mfd->panel_info->is_prim_panel ) {
-		 iris_mode_switch_video(mfd);
-	}
-	// iris
-#endif
 	/*
 	 * start secure display session if there is secure display session and
 	 * sd_enabled is not true.
@@ -2058,23 +2025,6 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON);
 
-#if defined(CONFIG_IRIS2_FULL_SUPPORT) || defined(CONFIG_IRIS2P_FULL_SUPPORT)
-	// iris
-	if (mfd->panel_info->type == MIPI_VIDEO_PANEL && mfd->panel_info->is_prim_panel) {
-#if defined(CONFIG_IRIS2P_FULL_SUPPORT)
-		iris_mipitx_interface_switch(ctl->mfd, 1);
-		iris_abypass_switch_proc(ctrl_pdata);
-#endif
-		iris_copy_meta(mfd);
-		//iris_frc_repeat(mfd);
-		//iris_calc_nrv(ctl);
-		iris_set_configure(mfd);
-		//if (iris_calc_meta(mfd))
-		//	iris_send_meta_video(ctl);
-                iris_send_meta_video(ctl);
-	}
-	// iris
-#endif
 	mdss_mdp_check_ctl_reset_status(ctl);
 	__vsync_set_vsync_handler(mfd);
 	__validate_and_set_roi(mfd, data);
@@ -4936,21 +4886,6 @@ static int mdss_mdp_overlay_ioctl_handler(struct msm_fb_data_type *mfd,
 		}
 		ret = mdss_mdp_set_cfg(mfd, &cfg);
 		break;
-#if  defined(CONFIG_IRIS2P_FULL_SUPPORT)
-	case MSMFB_IRIS_SET_META:
-		ret = iris_set_meta(mfd, argp);
-		break;
-	case MSMFB_IRIS_OPERATE_CONF:
-		ret = msmfb_iris_operate_conf(mfd, argp);
-		break;
-	case MSMFB_IRIS_OPERATE_MODE:
-		ret = iris_operate_mode(mfd, argp);
-		break;
-	case MSMFB_IRIS_OPERATE_TOOL:
-		ret = msmfb_iris_operate_tool(mfd, argp);
-		break;
-#endif
-
 	default:
 		break;
 	}
@@ -5962,17 +5897,7 @@ int mdss_mdp_overlay_init(struct msm_fb_data_type *mfd)
 
 	if (mdss_mdp_pp_overlay_init(mfd))
 		pr_warn("Failed to initialize pp overlay data.\n");
-#if defined(CONFIG_IRIS2_LIGHTUP_ONLY) || defined(CONFIG_IRIS2_FULL_SUPPORT) || defined(CONFIG_IRIS2P_FULL_SUPPORT)
-	//if (iris2_get_id() == 0x1)
-#if defined(CONFIG_IRIS2P_FULL_SUPPORT)
-	{
-#endif
-		mdss_dsi_iris_init(mfd);
-#if defined(CONFIG_IRIS2P_FULL_SUPPORT)
-		iris2p_debugfs_init(mfd);
-	}
-#endif
-#endif
+
 	return rc;
 init_fail:
 	kfree(mdp5_data);
@@ -6109,21 +6034,3 @@ static int mdss_mdp_set_cfg(struct msm_fb_data_type *mfd,
 	}
 	return ret;
 }
-#if defined(CONFIG_IRIS2_FULL_SUPPORT) || defined(CONFIG_IRIS2P_FULL_SUPPORT)
-void mdss_mdp_lock(struct msm_fb_data_type *mfd, int locked)
-{
-	struct mdss_overlay_private *mdp5_data = mfd_to_mdp5_data(mfd);
-	static int ov_lock_st;
-	static int list_lock_st;
-
-	if (locked) {
-		ov_lock_st = mutex_trylock(&mdp5_data->ov_lock);
-		list_lock_st = mutex_trylock(&mdp5_data->list_lock);//(&mfd->lock);
-	} else {
-		if (ov_lock_st == 1)
-			mutex_unlock(&mdp5_data->ov_lock);
-		if (list_lock_st == 1)
-			mutex_unlock(&mdp5_data->list_lock);//(&mfd->lock);
-	}
-}
-#endif

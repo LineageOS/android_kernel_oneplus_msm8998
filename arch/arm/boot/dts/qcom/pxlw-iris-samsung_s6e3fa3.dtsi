@@ -84,4 +84,4 @@
 		qcom,iris-delta-period-min = <50>;
 		qcom,iris-delta-period-max = <58>;
 		qcom,iris-reset-sequence = <0 3>,<1 2>;
-
+		qcom,iris-enabled;

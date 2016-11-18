@@ -22,12 +22,6 @@
 #include "mdss_mdp_trace.h"
 #include "mdss_dsi_clk.h"
 
-#if defined(CONFIG_IRIS2P_FULL_SUPPORT)
-#include "mdss_dsi_iris2p.h"
-#include "mdss_i2c_iris.h"
-#include "mdss_dsi_iris2p_lightup.h"
-#include "mdss_dsi_iris2p_mode_switch.h"
-#endif
 #define MAX_RECOVERY_TRIALS 10
 #define MAX_SESSIONS 2
 
@@ -2737,14 +2731,6 @@ static int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 	struct mdss_mdp_cmd_ctx *ctx, *sctx = NULL;
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
 
-#if defined(CONFIG_IRIS2_FULL_SUPPORT) || defined(CONFIG_IRIS2P_FULL_SUPPORT)
-	static int first_boot = 1;
-	struct mdss_panel_data *pdata;
-	struct mdss_dsi_ctrl_pdata *ctrl_pdata;
-	pdata = ctl->panel_data;
-	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
-                               panel_data);
-#endif
 	ctx = (struct mdss_mdp_cmd_ctx *) ctl->intf_ctx[MASTER_CTX];
 	if (!ctx) {
 		pr_err("invalid ctx\n");
@@ -2798,32 +2784,6 @@ static int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 		atomic_inc(&sctx->koff_cnt);
 
 	trace_mdp_cmd_kickoff(ctl->num, atomic_read(&ctx->koff_cnt));
-#if defined(CONFIG_IRIS2_FULL_SUPPORT) || defined(CONFIG_IRIS2P_FULL_SUPPORT)
-	if (first_boot) {
-		first_boot = 0;
-		//FIX ME, if bootloader is ready
-		//if (!ctl->mfd->iris_conf.ready)
-		//	iris_fw_download_cont_splash(ctrl_pdata, 0);
-	}
-
-	if (ctl->mfd->panel_info->is_prim_panel) {
-		//iris
-#if defined(CONFIG_IRIS2P_FULL_SUPPORT)
-		iris_mipitx_interface_switch(ctl->mfd, 1);
-		iris_abypass_switch_proc(ctrl_pdata);
-#endif
-		iris_copy_meta(ctl->mfd);
-		if (iris_power_clock_gate_on(ctl->mfd)) {
-			iris_mode_switch_cmd(ctl->mfd);
-			iris_frc_repeat(ctl->mfd);
-			iris_calc_nrv(ctl);
-			iris_calc_meta(ctl->mfd);
-			iris_set_configure(ctl->mfd);
-			iris_passthrough_cmd_process();
-			iris_low_power_mode_notify(ctl->mfd);
-		}//iris
-	}
-#endif
 	/*
 	 * Call state machine with kickoff event, we just do it for
 	 * current CTL, but internally state machine will check and
@@ -2836,22 +2796,6 @@ static int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 		mctl = mdss_mdp_get_main_ctl(ctl);
 	mdss_mdp_cmd_dsc_reconfig(mctl);
 
-#if defined(CONFIG_IRIS2_FULL_SUPPORT) || defined(CONFIG_IRIS2P_FULL_SUPPORT)
-	if ( ctl->mfd->panel_info->is_prim_panel)
-#if defined(CONFIG_IRIS2P_FULL_SUPPORT)
-	{
-		if (get_iris_i2c_flag()) {
-			//ATRACE_BEGIN("i2c");
-			iris_i2c_send_meta(ctl);
-			//ATRACE_END("i2c");
-		} else {
-			iris_send_meta_cmd(ctl);
-		}
-#elif defined(CONFIG_IRIS2_FULL_SUPPORT)
-		iris_send_meta_cmd(ctl);
-#endif
-	}
-#endif
 	mdss_mdp_cmd_set_partial_roi(ctl);
 
 	/*
