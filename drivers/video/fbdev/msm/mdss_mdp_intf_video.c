@@ -25,9 +25,6 @@
 #include "mdss_panel.h"
 #include "mdss_debug.h"
 #include "mdss_mdp_trace.h"
-#if defined(CONFIG_IRIS2_FULL_SUPPORT) || defined(CONFIG_IRIS2P_FULL_SUPPORT)
-#include "mdss_dsi.h"
-#endif
 
 /* wait for at least 2 vsyncs for lowest refresh rate (24hz) */
 #define VSYNC_TIMEOUT_US 100000
@@ -646,23 +643,6 @@ static inline void video_vsync_irq_disable(struct mdss_mdp_ctl *ctl)
 				ctl->intf_num);
 	mutex_unlock(&ctx->vsync_mtx);
 }
-#if defined(CONFIG_IRIS2P_FULL_SUPPORT)
-u32 mdss_mdp_video_vsync_count(struct mdss_mdp_ctl *ctl)
-{
-	struct mdss_mdp_video_ctx *ctx;
-	u32 cnt = 0;
-
-	if (!ctl || !ctl->priv_data)
-		goto exit;
-
-	ctx = ctl->priv_data;
-	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON);
-	cnt = mdp_video_read(ctx, MDSS_MDP_REG_INTF_FRAME_COUNT);
-	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF);
-exit:
-	return cnt;
-}
-#endif // CONFIG_IRIS2_FULL_SUPPORT
 
 static int mdss_mdp_video_add_vsync_handler(struct mdss_mdp_ctl *ctl,
 		struct mdss_mdp_vsync_handler *handle)
@@ -2288,33 +2268,3 @@ void *mdss_mdp_get_intf_base_addr(struct mdss_data_type *mdata,
 	ctx = ((struct mdss_mdp_video_ctx *) mdata->video_intf) + interface_id;
 	return (void *)(ctx->base);
 }
-#if defined(CONFIG_IRIS2_FULL_SUPPORT) || defined(CONFIG_IRIS2P_FULL_SUPPORT)
-void mdss_mdp_time_engine_ctrl(struct mdss_mdp_ctl *ctl, bool enable)
-{
-#if 0
-	struct mdss_mdp_ctl *sctl;
-	struct mdss_mdp_video_ctx *ctx;
-
-	ctx = (struct mdss_mdp_video_ctx *) ctl->priv_data;
-
-	if (enable) {
-		mdss_mdp_irq_enable(MDSS_MDP_IRQ_INTF_UNDER_RUN, ctl->intf_num);
-		sctl = mdss_mdp_get_split_ctl(ctl);
-		if (sctl)
-			mdss_mdp_irq_enable(MDSS_MDP_IRQ_INTF_UNDER_RUN,
-				sctl->intf_num);
-		mdp_video_write(ctx, MDSS_MDP_REG_INTF_TIMING_ENGINE_EN, 1);
-	} else {
-		mdp_video_write(ctx, MDSS_MDP_REG_INTF_TIMING_ENGINE_EN, 0);
-		/* wait for at least one VSYNC for proper TG OFF */
-		msleep(100);
-		mdss_mdp_irq_disable(MDSS_MDP_IRQ_INTF_UNDER_RUN, ctl->intf_num);
-
-		sctl = mdss_mdp_get_split_ctl(ctl);
-		if (sctl)
-			mdss_mdp_irq_disable(MDSS_MDP_IRQ_INTF_UNDER_RUN,
-				sctl->intf_num);
-	}
-#endif
-}
-#endif

@@ -406,9 +406,12 @@
 	qcom,platform-reset-gpio = <&tlmm 94 0>;
 	qcom,platform-te-gpio = <&tlmm 11 0>;
   qcom,platform-vci-gpio = <&tlmm 21 0>;
-  qcom,isp-1v1-en-gpio = <&tlmm 95 0>;
+  qcom,px-1v1-en-gpio = <&tlmm 95 0>;
   qcom,px-bp-gpio = <&tlmm 24 0>;
   qcom,px-ext-clk = "BBCLK2";
+  qcom,panel-mode-gpio = <>;
+  lab-supply = <>;
+  ibb-supply = <>;
 	clocks = <&clock_mmss clk_mmss_mdss_byte0_clk>,
 		<&clock_mmss clk_mmss_mdss_pclk0_clk>,
 		<&clock_mmss clk_mmss_mdss_esc0_clk>,

@@ -38,15 +38,7 @@ mdss-dsi-objs += mdss_dsi_phy.o
 mdss-dsi-objs += mdss_dsi_phy_v3.o
 mdss-dsi-objs += mdss_dsi_clk.o
 #ifdef VENDOR_EDIT
-ifeq ($(CONFIG_IRIS2P_FULL_SUPPORT),y)
-	mdss-dsi-objs += mdss_dsi_iris2p_def.o mdss_dsi_iris2p.o mdss_dsi_iris2p_lightup.o
-	mdss-dsi-objs += mdss_dsi_iris2p_ioctl.o mdss_dsi_iris2p_mode_switch.o mdss_dsi_iris2p_dbg.o
-	mdss-dsi-objs += mdss_i2c_iris.o
-endif
-ifeq ($(CONFIG_IRIS2_FULL_SUPPORT),y)
-	mdss-dsi-objs += mdss_dsi_iris2_def.o   mdss_dsi_iris2_lightup.o  mdss_dsi_iris2_dbg.o  mdss_dsi_iris2_ioctl.o
-	mdss-dsi-objs += mdss_dsi_iris2_mode_switch.o mdss_dsi_iris2.o
-endif
+mdss-dsi-objs += mdss_dsi_iris2p_lightup.o
 #endif VENDOR_EDIT
 
 obj-$(CONFIG_FB_MSM_MDSS) += mdss-dsi.o

@@ -1893,11 +1893,6 @@ void mdss_mdp_enable_hw_irq(struct mdss_data_type *mdata);
 void mdss_mdp_disable_hw_irq(struct mdss_data_type *mdata);
 
 void mdss_mdp_set_supported_formats(struct mdss_data_type *mdata);
-#if defined(CONFIG_IRIS2_FULL_SUPPORT) || defined(CONFIG_IRIS2P_FULL_SUPPORT)
-void mdss_mdp_lock(struct msm_fb_data_type *mfd, int locked);
-void mdss_mdp_time_engine_ctrl(struct mdss_mdp_ctl *ctl, bool enable);
-u32 mdss_mdp_video_vsync_count(struct mdss_mdp_ctl *ctl);
-#endif
 
 #ifdef CONFIG_FB_MSM_MDP_NONE
 struct mdss_data_type *mdss_mdp_get_mdata(void)

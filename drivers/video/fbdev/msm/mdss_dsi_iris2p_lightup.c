@@ -27,13 +27,14 @@
 #include "mdss_fb.h"
 #include "mdss_dsi.h"
 #include "mdss_dsi_iris2p_lightup_priv.h"
-#include "mdss_dsi_iris2p_extern.h"
-#include "mdss_dsi_iris2p_mode_switch.h"
+//#include "mdss_dsi_iris2p_extern.h"
+//#include "mdss_dsi_iris2p_mode_switch.h"
 #include "mdss_dsi_iris2p.h"
 
+struct iris_info_t iris_info;
 static u8 iris_power_mode;
 static u8 iris_signal_mode;
-static u16 iris_mipirx_status;
+//static u16 iris_mipirx_status;
 static u8 cmd_send_flag = 0;
 char iris_read_cmd_buf[16];
 
@@ -47,9 +48,9 @@ static char grcp_header[GRCP_HEADER] = {
 };
 static struct iris_grcp_cmd init_cmd[INIT_CMD_NUM];
 static struct iris_grcp_cmd grcp_cmd;
-static struct msm_fb_data_type *gp_mfd;
+//static struct msm_fb_data_type *gp_mfd;
 static struct mdss_dsi_ctrl_pdata *g_ctrl;
-static u8 *fw_buf = NULL;
+//static u8 *fw_buf = NULL;
 
 
 
@@ -707,12 +708,12 @@ void iris_off_cmds_parse(struct device_node *np, struct mdss_dsi_ctrl_pdata *ctr
 
 void iris_tx_switch_cmd_parse(struct device_node *np, struct iris_info_t *piris_info)
 {
-	struct iris_tx_switch_cmd *ptx_switch_cmd = &(piris_info->tx_switch_cmd);
+	//struct iris_tx_switch_cmd *ptx_switch_cmd = &(piris_info->tx_switch_cmd);
 
-	iris_dsi_parse_dcs_cmds(np, &(ptx_switch_cmd->mipitx_vid2cmd_cmds),
-			"qcom,video-to-cmd-mode-switch-commands", "qcom,video-to-cmd-mode-switch-commands-state");
-	iris_dsi_parse_dcs_cmds(np, &(ptx_switch_cmd->mipitx_cmd2vid_cmds),
-			"qcom,cmd-to-video-mode-switch-commands", "qcom,cmd-to-video-mode-switch-commands-state");
+	//iris_dsi_parse_dcs_cmds(np, &(ptx_switch_cmd->mipitx_vid2cmd_cmds),
+	//		"qcom,video-to-cmd-mode-switch-commands", "qcom,video-to-cmd-mode-switch-commands-state");
+	//iris_dsi_parse_dcs_cmds(np, &(ptx_switch_cmd->mipitx_cmd2vid_cmds),
+	//		"qcom,cmd-to-video-mode-switch-commands", "qcom,cmd-to-video-mode-switch-commands-state");
 
 }
 
@@ -920,6 +921,7 @@ void iris_init_cmd_setup(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
 	u32 cnt = 0, grcp_len = 0;
 	struct mdss_panel_info *panel_info = &(ctrl_pdata->panel_data.panel_info);
+	spin_lock_init(&ctrl_pdata->iris_lock);
 
 	if (DISPLAY_1 == panel_info->pdest) {
 		memset(init_cmd, 0, sizeof(init_cmd));
@@ -1002,6 +1004,7 @@ void iris_init_cmd_send(struct mdss_dsi_ctrl_pdata *ctrl, int state)
 	DUMP_PACKET(init_cmd[1].cmd, init_cmd[1].cmd_len);
 }
 
+#if 0
 void iris_timing_info_send(struct mdss_dsi_ctrl_pdata *ctrl, int state)
 {
 	char iris_workmode[] = {
@@ -1260,7 +1263,6 @@ void iris_dtg_set(struct mdss_dsi_ctrl_pdata *ctrl, int state)
 
 	DUMP_PACKET(grcp_cmd.cmd, grcp_cmd.cmd_len);
 }
-
 void iris_mipitx_tx_nop(struct mdss_dsi_ctrl_pdata *ctrl, int state)
 {
 	u32 grcp_len = 0;
@@ -1650,7 +1652,7 @@ int iris2p_firmware_download(struct mdss_dsi_ctrl_pdata *ctrl,
 	}
     return result;
 }
-
+#endif
 void iris_dport_disable(struct mdss_dsi_ctrl_pdata *ctrl)
 {
 	char dport_disable[] = {
@@ -1772,7 +1774,7 @@ void iris_low_power_mode_enter(struct mdss_dsi_ctrl_pdata *ctrl)
 
 void iris_init(struct mdss_dsi_ctrl_pdata *ctrl)
 {
-	u32 column, page;
+	//u32 column, page;
 
 	if (ctrl->ndx != DSI_CTRL_LEFT)
 		return;
@@ -1784,17 +1786,17 @@ void iris_init(struct mdss_dsi_ctrl_pdata *ctrl)
 	iris_sys_efuse_rewrite(ctrl);
 	iris_power_mode_check(ctrl, 0x01, DSI_LP_MODE);
 #endif
-    cmd_send_flag = 1;
+    //cmd_send_flag = 1;
 	iris_mipirx_mode_set(ctrl, PWIL_CMD, DSI_LP_MODE);
 	/* init sys/mipirx/mipitx */
 	iris_init_cmd_send(ctrl, DSI_LP_MODE);
 
-	//iris_one_wired_cmd_init(ctrl);
-	//iris_one_wired_cmd_send(ctrl, BYPASS_MODE_CHANGE);
-	//msleep(100);
-	//iris_low_power_mode_enter(ctrl);
-	//return;
-
+	iris_one_wired_cmd_init(ctrl);
+	iris_one_wired_cmd_send(ctrl, BYPASS_MODE_CHANGE);
+	msleep(100);
+	iris_low_power_mode_enter(ctrl);
+	return;
+#if 0
 	/* send work mode and timing info */
 #ifdef NEW_WORKFLOW
 	iris_timing_info_grcp_send(ctrl, DSI_LP_MODE);
@@ -1818,8 +1820,9 @@ void iris_init(struct mdss_dsi_ctrl_pdata *ctrl)
 		iris_mipi_mem_addr_set(ctrl, column, page, DSI_LP_MODE);
 	}
 	cmd_send_flag = 0;
+#endif
 }
-
+#if 0
 void iris_lightup(struct mdss_dsi_ctrl_pdata *ctrl)
 {
 	u32 column, page, cmd = ENABLE_DPORT;
@@ -1866,15 +1869,15 @@ void iris_lightup(struct mdss_dsi_ctrl_pdata *ctrl)
 	}
 	cmd_send_flag = 0;
 }
-
+#endif
 void iris_lightoff(struct mdss_dsi_ctrl_pdata *ctrl)
 {
 	if (ctrl->ndx != DSI_CTRL_LEFT)
 		return;
 
-	gp_mfd->iris_conf.ready = false;
+	//gp_mfd->iris_conf.ready = false;
 
-	iris_mode_switch_reset(ctrl);
+	//iris_mode_switch_reset(ctrl);
 
 	/*disable dport*/
 	iris_dport_disable(ctrl);
@@ -1883,7 +1886,7 @@ void iris_lightoff(struct mdss_dsi_ctrl_pdata *ctrl)
 	iris_mipirx_mode_set(ctrl, BYPASS_CMD, DSI_HS_MODE);
 
 }
-
+#if 0
 void iris_panel_cmd_passthrough(struct mdss_dsi_ctrl_pdata *ctrl, struct dcs_cmd_req *cmdreq)
 {
 	u32 grcp_len = 0, cnt;
@@ -1956,8 +1959,7 @@ void iris_panel_cmd_passthrough(struct mdss_dsi_ctrl_pdata *ctrl, struct dcs_cmd
 	iris_info.update.cmd_setting = true;
 
 }
-
-
+#endif
 
 int iris_one_wired_cmd_init(struct mdss_dsi_ctrl_pdata *ctrl)
 {
@@ -2035,7 +2037,7 @@ void iris_one_wired_cmd_send(struct mdss_dsi_ctrl_pdata *ctrl, int cmd)
  	/*end*/
 	udelay(start_end_delay);
 }
-
+#if 0
 void iris_all_clock_gate_on(struct msm_fb_data_type *mfd)
 {
 	struct iris_config *iris_cfg = &mfd->iris_conf;
@@ -2501,17 +2503,17 @@ void iris_abypass_switch_proc(struct mdss_dsi_ctrl_pdata *ctrl)
 }
 void iris_fw_download_cont_splash(struct mdss_dsi_ctrl_pdata *ctrl, bool video_freeze)
 {
-	struct mdss_mdp_ctl *ctl = mfd_to_ctl(gp_mfd);
+	//struct mdss_mdp_ctl *ctl = mfd_to_ctl(gp_mfd);
 
 
 	pr_debug("off video\n");
 	if (iris_info.work_mode.rx_mode) {
 		if (video_freeze) {
-			mdss_mdp_lock(gp_mfd, 1);
+			//mdss_mdp_lock(gp_mfd, 1);
 			msleep(100);
 		}
 	} else {
-		mdss_mdp_time_engine_ctrl(ctl, 0);
+		//mdss_mdp_time_engine_ctrl(ctl, 0);
 
 		/* reset dsi */
 		mdss_dsi_ctrl_setup(ctrl);
@@ -2536,10 +2538,10 @@ void iris_fw_download_cont_splash(struct mdss_dsi_ctrl_pdata *ctrl, bool video_f
 	msleep(50);
 	if (iris_info.work_mode.rx_mode) {
 		if (video_freeze) {
-			mdss_mdp_lock(gp_mfd, 0);
+			//mdss_mdp_lock(gp_mfd, 0);
 		}
 	} else {
-		mdss_mdp_time_engine_ctrl(ctl, 1);
+		//mdss_mdp_time_engine_ctrl(ctl, 1);
 
 		/* restore to video mode */
 		iris_mipirx_mode_set(ctrl, PWIL_VIDEO, DSI_HS_MODE);
@@ -2659,7 +2661,7 @@ int iris2p_debugfs_init(struct msm_fb_data_type *mfd)
 
 	return 0;
 }
-
+#endif
 static void iris_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 			struct dsi_panel_cmds *pcmds)
 {
@@ -2685,7 +2687,6 @@ static void iris_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 
 	cmdreq.rlen = 0;
 	cmdreq.cb = NULL;
-
 	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
 }
 
