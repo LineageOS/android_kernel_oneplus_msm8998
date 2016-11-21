@@ -1593,8 +1593,13 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 	if ((pdata->panel_info.type == MIPI_CMD_PANEL) &&
 		mipi->vsync_enable && mipi->hw_vsync_mode) {
 		mdss_dsi_set_tear_on(ctrl_pdata);
+		//#ifdef VENDOR_EDIT
 		if (mdss_dsi_is_te_based_esd(ctrl_pdata))
-			enable_irq(gpio_to_irq(ctrl_pdata->disp_te_gpio));
+		    schedule_delayed_work(&ctrl_pdata->techeck_work, msecs_to_jiffies(3000));
+		//#else
+		//if (mdss_dsi_is_te_based_esd(ctrl_pdata))
+		//	enable_irq(gpio_to_irq(ctrl_pdata->disp_te_gpio));
+		//#endif
 	}
 
 	ctrl_pdata->ctrl_state |= CTRL_STATE_PANEL_INIT;
@@ -1663,8 +1668,12 @@ static int mdss_dsi_blank(struct mdss_panel_data *pdata, int power_state)
 	if ((pdata->panel_info.type == MIPI_CMD_PANEL) &&
 		mipi->vsync_enable && mipi->hw_vsync_mode) {
 		if (mdss_dsi_is_te_based_esd(ctrl_pdata)) {
-				disable_irq(gpio_to_irq(
-					ctrl_pdata->disp_te_gpio));
+		//#ifdef VENDOR_EDIT
+                cancel_delayed_work_sync(&ctrl_pdata->techeck_work);
+		//#else
+		//		disable_irq(gpio_to_irq(
+		//			ctrl_pdata->disp_te_gpio));
+		//#endif
 				atomic_dec(&ctrl_pdata->te_irq_ready);
 		}
 		mdss_dsi_set_tear_off(ctrl_pdata);
@@ -3097,7 +3106,34 @@ static int mdss_dsi_ctrl_validate_config(struct mdss_dsi_ctrl_pdata *ctrl)
 error:
 	return rc;
 }
-
+//#ifdef VENDOR_EDIT
+static void techeck_work_func(struct work_struct *work )
+{
+	int ret = 0;
+	int irq = 0;
+    struct mdss_dsi_ctrl_pdata *pdata = NULL;
+	pdata = container_of(to_delayed_work(work),
+		struct mdss_dsi_ctrl_pdata, techeck_work);
+    if (gpio_is_valid(pdata->disp_te_gpio)){
+      irq = gpio_to_irq(pdata->disp_te_gpio);
+    }else{
+        return;
+    }
+	pdata->te_comp.done = 0;
+	enable_irq(irq);
+    ret = wait_for_completion_killable_timeout(&pdata->te_comp,
+						msecs_to_jiffies(300));
+	if (!atomic_read(&pdata->te_irq_ready)){
+		atomic_inc(&pdata->te_irq_ready);
+	}
+	if (ret == 0){
+	    disable_irq(irq);
+		return;
+	}
+	disable_irq(irq);
+	schedule_delayed_work(&pdata->techeck_work, msecs_to_jiffies(3000));
+}
+//#endif
 static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 {
 	int rc = 0;
@@ -3219,7 +3255,12 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 		pr_err("%s: Failed to set dsi splash config\n", __func__);
 		return rc;
 	}
-
+//#ifdef VENDOR_EDIT
+	if (mdss_dsi_is_te_based_esd(ctrl_pdata)) {
+	    init_completion(&ctrl_pdata->te_comp);
+		INIT_DELAYED_WORK(&ctrl_pdata->techeck_work, techeck_work_func);
+	}
+//#endif
 	if (mdss_dsi_is_te_based_esd(ctrl_pdata)) {
 		rc = devm_request_irq(&pdev->dev,
 			gpio_to_irq(ctrl_pdata->disp_te_gpio),

@@ -563,6 +563,8 @@ struct mdss_dsi_ctrl_pdata {
 	struct dsi_err_container err_cont;
 //#ifdef VENDOR_EDIT
 	int disp_vci_en_gpio;
+	struct delayed_work techeck_work;
+	struct completion te_comp;
 //#endif
 //#ifdef VENDOR_EDIT
 	const char *px_clk_src_name;
