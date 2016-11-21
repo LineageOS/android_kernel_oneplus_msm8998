@@ -21,7 +21,7 @@
 / {
 	model = "Qualcomm Technologies, Inc. MSM COBALT v1 MTP";
 	compatible = "qcom,msmcobalt-mtp", "qcom,msmcobalt", "qcom,mtp";
-	qcom,board-id = <8 0 16859 10>;
+	qcom,board-id = <8 0 16859 11>;
 };
 
 &qusb_phy0 {
