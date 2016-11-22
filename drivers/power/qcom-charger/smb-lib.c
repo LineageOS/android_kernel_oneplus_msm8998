@@ -1396,18 +1396,18 @@ int smblib_get_prop_usb_online(struct smb_charger *chg,
 	int rc = 0;
 	u8 stat;
 
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20161117 Fix dash in power off charging mode */
-	if (chg->dash_on) {
-		val->intval = true;
-		return rc;
-	}
-#endif
-
 	if (get_client_vote(chg->usb_suspend_votable, USER_VOTER)) {
 		val->intval = false;
 		return rc;
 	}
+
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20161122 Fix power off charging loop */
+	if (chg->vbus_present) {
+		val->intval = true;
+		return rc;
+	}
+#endif
 
 	rc = smblib_read(chg, POWER_PATH_STATUS_REG, &stat);
 	if (rc < 0) {
