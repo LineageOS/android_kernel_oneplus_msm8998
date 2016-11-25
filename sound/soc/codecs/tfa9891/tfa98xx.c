@@ -2828,18 +2828,18 @@ static struct snd_soc_dai_driver tfa98xx_dai[] = {
 			.rates = TFA98XX_RATES,
 			.formats = TFA98XX_FORMATS,
 		},
-		.capture = {
+		/*.capture = {
 			 .stream_name = "Capture",
 			 .channels_min = 1,
 			 .channels_max = 2,
 			 .rates = TFA98XX_RATES,
 			 .formats = TFA98XX_FORMATS,
-		 },
+		 },*/
 		.ops = &tfa98xx_dai_ops,
-		.symmetric_rates = 1,
+		.symmetric_rates = 0,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
-		.symmetric_channels = 1,
-		.symmetric_samplebits = 1,
+		.symmetric_channels = 0,
+		.symmetric_samplebits = 0,
 #endif
 	},
 };
