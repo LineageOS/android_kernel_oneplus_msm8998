@@ -438,6 +438,13 @@
 	status = "disabled";
 };
 
+&mdss_hdmi_tx {
+	status = "disabled";
+};
+
+&mdss_hdmi_pll {
+	status = "disabled";
+};
 
 /* Audio */
 &soc {
