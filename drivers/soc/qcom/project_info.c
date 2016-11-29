@@ -425,7 +425,8 @@ int __init init_project_info(void)
 		    snprintf(mainboard_version, sizeof(mainboard_version), "%d",project_info_desc->hw_version);
 		    break;
 	}
-	push_component_info(MAINBOARD,mainboard_version, mainboard_manufacture);
+	strcat(project_info_desc->project_name,mainboard_version);
+	push_component_info(MAINBOARD,project_info_desc->project_name, mainboard_manufacture);
 
     if(project_info_desc->hw_version <= 12)
     {
