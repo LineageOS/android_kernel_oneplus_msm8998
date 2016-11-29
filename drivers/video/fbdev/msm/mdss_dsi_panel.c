@@ -27,9 +27,8 @@
 #include "mdss_dba_utils.h"
 //#ifdef VENDOR_EDIT
 #include <linux/clk.h>
-//#endif
-//#ifdef VENDOR_EDIT
 #include "mdss_dsi_iris2p_lightup.h"
+#include <linux/project_info.h>
 //#endif
 #define DT_CMD_HDR 6
 #define DEFAULT_MDP_TRANSFER_TIME 14000
@@ -2689,7 +2688,12 @@ int mdss_dsi_panel_init(struct device_node *node,
 	int rc = 0;
 	static const char *panel_name;
 	struct mdss_panel_info *pinfo;
-
+//#ifdef VENDOR_EDIT
+	static const char *panel_manufacture;
+	static const char *panel_version;
+	static const char *backlight_manufacture;
+	static const char *backlight_version;
+//#endif
 	if (!node || !ctrl_pdata) {
 		pr_err("%s: Invalid arguments\n", __func__);
 		return -ENODEV;
@@ -2707,6 +2711,23 @@ int mdss_dsi_panel_init(struct device_node *node,
 		pr_info("%s: Panel Name = %s\n", __func__, panel_name);
 		strlcpy(&pinfo->panel_name[0], panel_name, MDSS_MAX_PANEL_LEN);
 	}
+//#ifdef VENDOR_EDIT
+	panel_manufacture = of_get_property(node, "qcom,mdss-dsi-panel-manufacture", NULL);
+    if (!panel_manufacture)
+		pr_info("%s:%d, panel manufacture not specified\n", __func__, __LINE__);
+	panel_version = of_get_property(node, "qcom,mdss-dsi-panel-version", NULL);
+	if (!panel_version)
+		pr_info("%s:%d, panel version not specified\n", __func__, __LINE__);
+	push_component_info(LCD, (char *)panel_version, (char *)panel_manufacture);
+
+	backlight_manufacture = of_get_property(node, "qcom,mdss-dsi-backlight-manufacture", NULL);
+	if (!backlight_manufacture)
+		pr_info("%s:%d, backlight manufacture not specified\n", __func__, __LINE__);
+	backlight_version = of_get_property(node, "qcom,mdss-dsi-backlight-version", NULL);
+	if (!backlight_version)
+		pr_info("%s:%d, backlight version not specified\n", __func__, __LINE__);
+	push_component_info(BACKLIGHT, (char *)backlight_version, (char *)backlight_manufacture);
+//#endif
 	rc = mdss_panel_parse_dt(node, ctrl_pdata);
 	if (rc) {
 		pr_err("%s:%d panel dt parse failed\n", __func__, __LINE__);
