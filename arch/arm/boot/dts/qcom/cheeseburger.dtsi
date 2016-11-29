@@ -533,7 +533,7 @@
 	};
 
 	qcom,eeprom@2 {
-		status = "disabled";
+		status = "ok";
 	};
 
 };
