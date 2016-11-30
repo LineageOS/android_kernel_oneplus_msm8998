@@ -11,7 +11,7 @@
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 #include <linux/slab.h>
-//#include <linux/project_info.h> /* david@bsp mark temp */
+#include <linux/project_info.h>
 #include <linux/miscdevice.h>
 #include <linux/uaccess.h>
 #include <linux/power_supply.h>
@@ -26,7 +26,7 @@
 #define	FW_CHECK_FAIL		0
 #define	FW_CHECK_SUCCESS	1
 
-#define SHOW_FW_VERSION_DELAY_MS 7000
+#define SHOW_FW_VERSION_DELAY_MS 12000
 
 struct fastchg_device_info {
 	struct i2c_client		*client;
@@ -603,9 +603,8 @@ static void update_fireware_version_func(struct work_struct *work)
 
 	sprintf(di->fw_id, "0x%x", dashchg_firmware_data[di->dashchg_fw_ver_count - 4]);
 	sprintf(di->manu_name, "%s","ONEPLUS");
-	//push_component_info(FAST_CHARGE,di->fw_id,di->manu_name); /* david@bsp mark temp */
+	push_component_info(FAST_CHARGE,di->fw_id,di->manu_name);
 }
-
 void di_watchdog(unsigned long data)
 {
 	struct fastchg_device_info *di = (struct fastchg_device_info *)data;
