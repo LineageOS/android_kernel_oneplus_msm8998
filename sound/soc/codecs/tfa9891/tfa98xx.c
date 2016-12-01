@@ -104,6 +104,10 @@ static int tfa98xx_get_fssel(unsigned int rate);
 
 static int get_profile_from_list(char *buf, int id);
 static int get_profile_id_for_sr(int id, unsigned int rate); 
+#ifdef VENDOR_EDIT
+/*wangdongdong@MultiMediaService,2016/11/30,add for speaker impedence detection*/
+static int tfa98xx_speaker_recalibration(Tfa98xx_handle_t handle,unsigned int *speakerImpedance);
+#endif
 
 struct tfa98xx_rate {
 	unsigned int rate;
@@ -622,6 +626,10 @@ static ssize_t tfa98xx_dbgfs_r_read(struct file *file,
 	char *str;
 	uint16_t status;
 	int ret, calibrate_done;
+#ifdef VENDOR_EDIT
+/*wangdongdong@MultiMediaService,2016/11/30,add for speaker impedence detection*/
+	unsigned int speakerImpedance1 = 0;
+#endif
 
 	mutex_lock(&tfa98xx->dsp_lock);
 	ret = tfa98xx_open(tfa98xx->handle);
@@ -654,8 +662,16 @@ static ssize_t tfa98xx_dbgfs_r_read(struct file *file,
 	switch (calibrate_done) {
 	case 1:
 		/* calibration complete ! */
+#ifndef VENDOR_EDIT
+/*wangdongdong@MultiMediaService,2016/11/30,add for speaker impedence detection*/
 		tfa_dsp_get_calibration_impedance(tfa98xx->handle);
 		ret = print_calibration(tfa98xx->handle, str, PAGE_SIZE);
+#else
+        tfa98xx_speaker_recalibration(tfa98xx->handle,&speakerImpedance1);
+        pr_err("tfa speaker calibration impedance = %d\n",speakerImpedance1);
+		ret = print_calibration_modify(tfa98xx->handle, str, PAGE_SIZE);
+#endif
+
 		break;
 	case 0:
 	case -1:
@@ -990,6 +1006,37 @@ static void tfa98xx_debug_remove(struct tfa98xx *tfa98xx)
 {
 	if (tfa98xx->dbg_dir)
 		debugfs_remove_recursive(tfa98xx->dbg_dir);
+}
+#endif
+#ifdef VENDOR_EDIT
+/*wangdongdong@MultiMediaService,2016/11/30,add for speaker impedence detection*/
+static int tfa98xx_speaker_recalibration(Tfa98xx_handle_t handle,unsigned int *speakerImpedance)
+{
+	int err, error = Tfa98xx_Error_Ok;
+ //   struct tfa98xx *tfa98xx = container_of(&handle, struct tfa98xx, handle);
+
+
+
+	/* Do not open/close tfa98xx: not required by tfa_clibrate */
+	error = tfa_calibrate(handle);
+	/* powerdown CF */
+//	error = tfa98xx_powerdown(handle, 1 );
+	msleep_interruptible(25);
+	error = tfaRunSpeakerBoost(handle, 1, 0); /* No force coldstart (with profile 0) */
+	if(error) {
+		pr_err("Calibration failed (error = %d)\n", error);
+		*speakerImpedance = 0;
+	} else {
+		pr_err("Calibration sucessful! \n");
+		*speakerImpedance = handles_local[handle].mohm[0];
+		pr_err("Calibration  (*speakerImpedance= %d)\n", *speakerImpedance);
+		if (TFA_GET_BF(handle, PWDN) != 0) {
+			   err = tfa98xx_powerdown(handle, 0);  //leave power off state
+		   }
+		tfaRunUnmute(handle);	/* unmute */
+	}
+
+	return error;
 }
 #endif
 
@@ -1428,6 +1475,7 @@ static int tfa98xx_create_controls(struct tfa98xx *tfa98xx)
 	if (!name)
 		return -ENOMEM;
 	scnprintf(name, MAX_CONTROL_NAME, "%s Profile", tfa98xx->fw.name);
+    printk("tfa98xx_create_controls:name  = %s\n",name);
 	tfa98xx_controls[mix_index].name = name;
 	tfa98xx_controls[mix_index].iface = SNDRV_CTL_ELEM_IFACE_MIXER;
 	tfa98xx_controls[mix_index].info = tfa98xx_info_profile;
