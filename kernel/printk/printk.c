@@ -44,6 +44,7 @@
 #include <linux/poll.h>
 #include <linux/irq_work.h>
 #include <linux/utsname.h>
+#include <linux/rtc.h>
 #include <linux/ctype.h>
 #include <linux/uio.h>
 
@@ -1041,6 +1042,14 @@ static inline void boot_delay_msec(int level)
 static bool printk_time = IS_ENABLED(CONFIG_PRINTK_TIME);
 module_param_named(time, printk_time, bool, S_IRUGO | S_IWUSR);
 
+#ifdef VENDOR_EDIT
+static bool print_wall_time = 1;
+#else
+static bool print_wall_time = 0;
+#endif
+module_param_named(print_wall_time, print_wall_time, bool, S_IRUGO | S_IWUSR);
+
+#ifndef VENDOR_EDIT
 static size_t print_time(u64 ts, char *buf)
 {
 	unsigned long rem_nsec;
@@ -1053,9 +1062,13 @@ static size_t print_time(u64 ts, char *buf)
 	if (!buf)
 		return snprintf(NULL, 0, "[%5lu.000000] ", (unsigned long)ts);
 
-	return sprintf(buf, "[%5lu.%06lu] ",
-		       (unsigned long)ts, rem_nsec / 1000);
+
+	return sprintf(buf, "[%5lu.%06lu]@%d ",
+			(unsigned long)ts, rem_nsec / 1000,raw_smp_processor_id() );
+
+
 }
+#endif
 
 static size_t print_prefix(const struct printk_log *msg, bool syslog, char *buf)
 {
@@ -1075,8 +1088,9 @@ static size_t print_prefix(const struct printk_log *msg, bool syslog, char *buf)
 				len++;
 		}
 	}
-
+#ifndef VENDOR_EDIT
 	len += print_time(msg->ts_nsec, buf ? buf + len : NULL);
+#endif
 	return len;
 }
 
@@ -1638,8 +1652,10 @@ static size_t cont_print_text(char *text, size_t size)
 	size_t len;
 
 	if (cont.cons == 0 && (console_prev & LOG_NEWLINE)) {
+#ifndef VENDOR_EDIT
 		textlen += print_time(cont.ts_nsec, text);
 		size -= textlen;
+#endif
 	}
 
 	len = cont.len - cont.cons;
@@ -1660,11 +1676,19 @@ static size_t cont_print_text(char *text, size_t size)
 	return textlen;
 }
 
+#ifdef VENDOR_EDIT
+void getnstimeofday64(struct timespec64 *ts);
+#endif
+
 asmlinkage int vprintk_emit(int facility, int level,
 			    const char *dict, size_t dictlen,
 			    const char *fmt, va_list args)
 {
 	static int recursion_bug;
+#ifdef VENDOR_EDIT
+	static char texttmp[LOG_LINE_MAX];
+	static bool last_new_line = true;
+#endif
 	static char textbuf[LOG_LINE_MAX];
 	char *text = textbuf;
 	size_t text_len = 0;
@@ -1675,6 +1699,12 @@ asmlinkage int vprintk_emit(int facility, int level,
 	bool in_sched = false;
 	/* cpu currently holding logbuf_lock in this function */
 	static unsigned int logbuf_cpu = UINT_MAX;
+#ifdef VENDOR_EDIT
+	u64 ts_sec = local_clock();
+	unsigned long rem_nsec;
+
+	rem_nsec = do_div(ts_sec, 1000000000);
+#endif
 
 	if (level == LOGLEVEL_SCHED) {
 		level = LOGLEVEL_DEFAULT;
@@ -1757,6 +1787,46 @@ asmlinkage int vprintk_emit(int facility, int level,
 			text = (char *)end_of_header;
 		}
 	}
+
+#ifdef VENDOR_EDIT
+	if (last_new_line) {
+		if (print_wall_time && ts_sec >= 20) {
+		    struct timespec64 tspec;
+		    struct rtc_time tm;
+			extern struct timezone sys_tz;
+
+			__getnstimeofday64(&tspec);
+			/*utc + timezone add by huoyinghui@160425*/
+			tspec.tv_sec -= sys_tz.tz_minuteswest * 60;
+			rtc_time_to_tm(tspec.tv_sec, &tm);
+
+			text_len = scnprintf(texttmp, sizeof(texttmp), "[%02d%02d%02d_%02d:%02d:%02d.%06ld]@%d %s",
+						tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,tm.tm_hour, tm.tm_min, tm.tm_sec,
+						tspec.tv_nsec / 1000, this_cpu, text);
+		}
+		else {
+
+			text_len = scnprintf(texttmp, sizeof(texttmp), "[%5lu.%06lu]@%d %s",
+						(unsigned long)ts_sec, rem_nsec / 1000, this_cpu, text);
+		}
+
+		text = texttmp;
+
+		/* mark and strip a trailing newline */
+		if (text_len && text[text_len-1] == '\n') {
+			text_len--;
+			lflags |= LOG_NEWLINE;
+		}
+	}
+
+	if (lflags & LOG_NEWLINE) {
+		last_new_line = true;
+	}
+	else {
+		last_new_line = false;
+	}
+
+#endif
 
 #ifdef CONFIG_EARLY_PRINTK_DIRECT
 	printascii(text);
