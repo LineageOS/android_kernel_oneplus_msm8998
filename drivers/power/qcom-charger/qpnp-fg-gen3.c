@@ -329,7 +329,6 @@ module_param_named(
 	sram_update_period_ms, fg_sram_update_period_ms, int, S_IRUSR | S_IWUSR
 );
 
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 static struct external_battery_gauge *external_fg = NULL;
@@ -352,14 +351,13 @@ void external_battery_gauge_unregister(struct external_battery_gauge *batt_gauge
 }
 EXPORT_SYMBOL(external_battery_gauge_unregister);
 #endif
-=======
+
 static bool fg_sram_dump;
 module_param_named(
 	sram_dump, fg_sram_dump, bool, S_IRUSR | S_IWUSR
 );
 
 static int fg_restart;
->>>>>>> origin/qc8998
 
 /* All getters HERE */
 
@@ -506,10 +504,6 @@ static int fg_get_sram_prop(struct fg_chip *chip, enum fg_sram_param_id id,
 	return 0;
 }
 
-<<<<<<< HEAD
-#ifndef VENDOR_EDIT
-/* david.liu@bsp, 20160926 Add dash charging */
-=======
 #define CC_SOC_30BIT	GENMASK(29, 0)
 static int fg_get_cc_soc(struct fg_chip *chip, int *val)
 {
@@ -539,7 +533,8 @@ static int fg_get_cc_soc_sw(struct fg_chip *chip, int *val)
 	return 0;
 }
 
->>>>>>> origin/qc8998
+#ifndef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
 #define BATT_TEMP_NUMR		1
 #define BATT_TEMP_DENR		1
 static int fg_get_battery_temp(struct fg_chip *chip, int *val)
@@ -2251,7 +2246,6 @@ static int fg_psy_get_property(struct power_supply *psy,
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_CAPACITY:
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 		if (chip->use_external_fg && external_fg
@@ -2262,14 +2256,11 @@ static int fg_psy_get_property(struct power_supply *psy,
 		else
 			pval->intval = 50;
 #else
-		rc = fg_get_prop_capacity(chip, &pval->intval);
-#endif
-=======
 		if (chip->fg_restarting)
 			pval->intval = chip->last_soc;
 		else
 			rc = fg_get_prop_capacity(chip, &pval->intval);
->>>>>>> origin/qc8998
+#endif
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		rc = fg_get_battery_voltage(chip, &pval->intval);

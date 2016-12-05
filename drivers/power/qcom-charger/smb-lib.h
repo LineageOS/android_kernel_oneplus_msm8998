@@ -30,23 +30,11 @@ enum print_reason {
 	PR_PARALLEL	= BIT(3),
 };
 
-<<<<<<< HEAD
-#define DEFAULT_VOTER	"DEFAULT_VOTER"
-#define USER_VOTER	"USER_VOTER"
-#define PD_VOTER	"PD_VOTER"
-#define PL_VOTER	"PL_VOTER"
-#define USBIN_ICL_VOTER	"USBIN_ICL_VOTER"
-#define CHG_STATE_VOTER	"CHG_STATE_VOTER"
-#define TYPEC_SRC_VOTER	"TYPEC_SRC_VOTER"
-#define TAPER_END_VOTER	"TAPER_END_VOTER"
-#define FCC_MAX_RESULT	"FCC_MAX_RESULT"
-#define THERMAL_DAEMON	"THERMAL_DAEMON"
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161014 Add charging standard */
 #define BATT_TYPE_FCC_VOTER "BATT_TYPE_FCC_VOTER"
 #define TEMP_REGION_MAX               9
 #endif
-=======
 #define DEFAULT_VOTER			"DEFAULT_VOTER"
 #define USER_VOTER			"USER_VOTER"
 #define PD_VOTER			"PD_VOTER"
@@ -70,7 +58,6 @@ enum print_reason {
 #define LEGACY_CABLE_VOTER		"LEGACY_CABLE_VOTER"
 #define PD_INACTIVE_VOTER		"PD_INACTIVE_VOTER"
 #define BOOST_BACK_VOTER		"BOOST_BACK_VOTER"
->>>>>>> origin/qc8998
 
 enum smb_mode {
 	PARALLEL_MASTER = 0,
@@ -244,6 +231,7 @@ struct smb_charger {
 	bool				use_fake_chgvol;
 	bool				use_fake_temp;
 	bool				use_fake_protect_sts;
+	bool				vbus_present;
 	bool				hvdcp_present;
 	bool				dash_present;
 	bool				usb_enum_status;
