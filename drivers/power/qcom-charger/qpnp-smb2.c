@@ -977,17 +977,14 @@ static int smb2_batt_prop_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_INPUT_SUSPEND:
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
 	case POWER_SUPPLY_PROP_CAPACITY:
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161014 Add charging standard */
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
 	case POWER_SUPPLY_PROP_TEMP:
 	case POWER_SUPPLY_PROP_CHG_PROTECT_STATUS:
 #endif
-=======
 	case POWER_SUPPLY_PROP_PARALLEL_DISABLE:
 	case POWER_SUPPLY_PROP_PARALLEL_PERCENT:
->>>>>>> origin/qc8998
 		return 1;
 	default:
 		break;
@@ -2029,15 +2026,12 @@ static int smb2_probe(struct platform_device *pdev)
 		goto cleanup;
 	}
 
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161117 Fix dash in power off charging mode */
 	schedule_delayed_work(&chg->re_kick_work,
 		msecs_to_jiffies(5000));
 #endif
-=======
 	smb2_create_debugfs(chip);
->>>>>>> origin/qc8998
 
 	pr_info("QPNP SMB2 probed successfully\n");
 	return rc;

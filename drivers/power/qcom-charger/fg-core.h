@@ -315,18 +315,15 @@ struct fg_chip {
 	bool			profile_available;
 	bool			profile_loaded;
 	bool			battery_missing;
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 	bool			use_external_fg;
 #endif
-=======
 	bool			fg_restarting;
 	bool			charge_full;
 	bool			recharge_soc_adjusted;
 	bool			ki_coeff_dischg_en;
 	bool			esr_fcc_ctrl_en;
->>>>>>> origin/qc8998
 	struct completion	soc_update;
 	struct completion	soc_ready;
 	struct delayed_work	profile_load_work;
