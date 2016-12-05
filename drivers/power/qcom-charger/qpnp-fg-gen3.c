@@ -533,8 +533,6 @@ static int fg_get_cc_soc_sw(struct fg_chip *chip, int *val)
 	return 0;
 }
 
-#ifndef VENDOR_EDIT
-/* david.liu@bsp, 20160926 Add dash charging */
 #define BATT_TEMP_NUMR		1
 #define BATT_TEMP_DENR		1
 static int fg_get_battery_temp(struct fg_chip *chip, int *val)
@@ -558,7 +556,6 @@ static int fg_get_battery_temp(struct fg_chip *chip, int *val)
 	*val = temp;
 	return 0;
 }
-#endif
 
 #define BATT_ESR_NUMR		244141
 #define BATT_ESR_DENR		1000
@@ -607,8 +604,6 @@ static int fg_get_battery_resistance(struct fg_chip *chip, int *val)
 	return 0;
 }
 
-#ifndef VENDOR_EDIT
-/* david.liu@bsp, 20160926 Add dash charging */
 #define BATT_CURRENT_NUMR	488281
 #define BATT_CURRENT_DENR	1000
 static int fg_get_battery_current(struct fg_chip *chip, int *val)
@@ -635,7 +630,6 @@ static int fg_get_battery_current(struct fg_chip *chip, int *val)
 	*val = div_s64((s64)temp * BATT_CURRENT_NUMR, BATT_CURRENT_DENR);
 	return 0;
 }
-#endif
 
 #define BATT_VOLTAGE_NUMR	122070
 #define BATT_VOLTAGE_DENR	1000
@@ -662,8 +656,6 @@ static int fg_get_battery_voltage(struct fg_chip *chip, int *val)
 	return 0;
 }
 
-#ifndef VENDOR_EDIT
-/* david.liu@bsp, 20160926 Add dash charging */
 #define MAX_TRIES_SOC		5
 static int fg_get_msoc_raw(struct fg_chip *chip, int *val)
 {
@@ -771,7 +763,6 @@ static int fg_get_prop_capacity(struct fg_chip *chip, int *val)
 	*val = DIV_ROUND_CLOSEST(msoc * FULL_CAPACITY, FULL_SOC_RAW);
 	return 0;
 }
-#endif
 
 #define DEFAULT_BATT_TYPE	"Unknown Battery"
 #define MISSING_BATT_TYPE	"Missing Battery"
