@@ -2261,38 +2261,12 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 			mutex_unlock(ctl->shared_lock);
 		return ret;
 	}
-<<<<<<< HEAD
-	mutex_lock(&mdp5_data->list_lock);
-
-	/*
-	 * check if there is a secure display session
-	 */
-	list_for_each_entry(pipe, &mdp5_data->pipes_used, list) {
-		if (pipe->flags & MDP_SECURE_DISPLAY_OVERLAY_SESSION) {
-			sd_in_pipe = 1;
-			pr_debug("Secure pipe: %u : %08X\n",
-					pipe->num, pipe->flags);
-		}
-	}
-	/*
-	 * start secure display session if there is secure display session and
-	 * sd_enabled is not true.
-	 */
-	if (!mdp5_data->sd_enabled && sd_in_pipe) {
-		if (!mdss_get_sd_client_cnt())
-			ret = mdss_mdp_secure_display_ctrl(1);
-		if (!ret) {
-			mdp5_data->sd_enabled = 1;
-			mdss_update_sd_client(mdp5_data->mdata, true);
-		}
-=======
 
 	mutex_lock(&mdp5_data->list_lock);
 	ret = __overlay_secure_ctrl(mfd);
 	if (IS_ERR_VALUE(ret)) {
 		pr_err("secure operation failed %d\n", ret);
 		goto commit_fail;
->>>>>>> origin/qc8998
 	}
 
 	if (!ctl->shared_lock)

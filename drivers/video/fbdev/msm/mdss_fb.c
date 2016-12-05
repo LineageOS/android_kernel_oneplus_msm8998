@@ -618,17 +618,12 @@ static ssize_t mdss_fb_force_panel_dead(struct device *dev,
 		return len;
 	}
 
-<<<<<<< HEAD
-	if (sscanf(buf, "%d", &pdata->panel_info.panel_force_dead) != 1)
-		pr_err("sccanf buf error!\n");
 //#ifdef VENDOR_EDIT
 	mdss_fb_report_panel_dead(mfd);
 //#endif
-=======
 	if (kstrtouint(buf, 0, &pdata->panel_info.panel_force_dead))
 		pr_err("kstrtouint buf error!\n");
 
->>>>>>> origin/qc8998
 	return len;
 }
 

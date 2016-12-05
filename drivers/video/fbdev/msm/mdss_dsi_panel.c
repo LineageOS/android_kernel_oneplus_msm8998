@@ -25,16 +25,13 @@
 
 #include "mdss_dsi.h"
 #include "mdss_dba_utils.h"
-<<<<<<< HEAD
 //#ifdef VENDOR_EDIT
 #include <linux/clk.h>
 #include "mdss_dsi_iris2p_lightup.h"
 #include <linux/project_info.h>
 //#endif
-=======
 #include "mdss_debug.h"
 
->>>>>>> origin/qc8998
 #define DT_CMD_HDR 6
 #define DEFAULT_MDP_TRANSFER_TIME 14000
 
