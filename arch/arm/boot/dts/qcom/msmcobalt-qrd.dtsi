@@ -260,7 +260,11 @@
 
 &labibb {
 	status = "ok";
-	qpnp,qpnp-labibb-mode = "lcd";
+	qcom,qpnp-labibb-mode = "lcd";
+};
+
+&pmicobalt_wled {
+	qcom,led-strings-list = [01 02];
 };
 
 &dsi_dual_nt35597_video {

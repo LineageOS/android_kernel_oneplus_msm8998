@@ -421,7 +421,16 @@ static void dwc3_free_trb_pool(struct dwc3_ep *dep)
 	if (dep->endpoint.ep_type == EP_TYPE_GSI)
 		return;
 
-	if (dep->trb_pool && dep->trb_pool_dma) {
+	/*
+	 * Clean up ep ring to avoid getting xferInProgress due to stale trbs
+	 * with HWO bit set from previous composition when update transfer cmd
+	 * is issued.
+	 */
+	if (dep->number > 1 && dep->trb_pool && dep->trb_pool_dma) {
+		memset(&dep->trb_pool[0], 0,
+			sizeof(struct dwc3_trb) * dep->num_trbs);
+		dbg_event(dep->number, "Clr_TRB", 0);
+
 		dma_free_coherent(dwc->dev,
 			sizeof(struct dwc3_trb) * DWC3_TRB_NUM, dep->trb_pool,
 			dep->trb_pool_dma);
@@ -723,17 +732,6 @@ static int __dwc3_gadget_ep_disable(struct dwc3_ep *dep)
 			(dep->number & 1) ? "in" : "out");
 	}
 
-	/*
-	 * Clean up ep ring of non-control endpoint to avoid getting xferInProgress
-	 * due to stale trbs with HWO bit set from previous composition when update
-	 * transfer cmd is issued.
-	 */
-	if (dep->number > 1 && dep->trb_pool) {
-		memset(&dep->trb_pool[0], 0,
-			sizeof(struct dwc3_trb) * dep->num_trbs);
-		dbg_event(dep->number, "Clr_TRB", 0);
-	}
-
 	return 0;
 }
 
@@ -804,8 +802,8 @@ static int dwc3_gadget_ep_disable(struct usb_ep *ep)
 	dwc = dep->dwc;
 
 	if (!(dep->flags & DWC3_EP_ENABLED)) {
-		dev_WARN_ONCE(dwc->dev, true, "%s is already disabled\n",
-				dep->name);
+		dev_dbg(dwc->dev, "%s is already disabled\n", dep->name);
+		dbg_event(dep->number, "ALRDY DISABLED", dep->flags);
 		return 0;
 	}
 
@@ -2132,23 +2130,10 @@ static int dwc3_gadget_stop(struct usb_gadget *g)
 	struct dwc3		*dwc = gadget_to_dwc(g);
 	unsigned long		flags;
 
-	pm_runtime_get_sync(dwc->dev);
-	dbg_event(0xFF, "Stop gsync",
-		atomic_read(&dwc->dev->power.usage_count));
-	dwc3_gadget_disable_irq(dwc);
 
 	spin_lock_irqsave(&dwc->lock, flags);
-
-	__dwc3_gadget_ep_disable(dwc->eps[0]);
-	__dwc3_gadget_ep_disable(dwc->eps[1]);
-
 	dwc->gadget_driver	= NULL;
-
 	spin_unlock_irqrestore(&dwc->lock, flags);
-
-	pm_runtime_mark_last_busy(dwc->dev);
-	pm_runtime_put_autosuspend(dwc->dev);
-	dbg_event(0xFF, "Auto_susgsync", 0);
 
 	return 0;
 }
@@ -2816,10 +2801,14 @@ static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 	dwc3_notify_event(dwc, DWC3_CONTROLLER_NOTIFY_OTG_EVENT);
 
 	dwc3_usb3_phy_suspend(dwc, false);
+<<<<<<< HEAD
 #ifndef VENDOR_EDIT
 /* david.liu@bsp, 20161109 Charging porting */
 	usb_gadget_vbus_draw(&dwc->gadget, 0);
 #endif
+=======
+	usb_gadget_vbus_draw(&dwc->gadget, 100);
+>>>>>>> origin/qc8998
 
 	dwc3_reset_gadget(dwc);
 	dbg_event(0xFF, "BUS RST", 0);

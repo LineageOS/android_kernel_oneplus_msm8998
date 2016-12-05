@@ -313,7 +313,7 @@ extern int tg_nop(struct task_group *tg, void *data);
 
 extern void free_fair_sched_group(struct task_group *tg);
 extern int alloc_fair_sched_group(struct task_group *tg, struct task_group *parent);
-extern void unregister_fair_sched_group(struct task_group *tg, int cpu);
+extern void unregister_fair_sched_group(struct task_group *tg);
 extern void init_tg_cfs_entry(struct task_group *tg, struct cfs_rq *cfs_rq,
 			struct sched_entity *se, int cpu,
 			struct sched_entity *parent);
@@ -351,13 +351,23 @@ struct cfs_bandwidth { };
 
 #ifdef CONFIG_SCHED_HMP
 
+#define NUM_TRACKED_WINDOWS 2
+#define NUM_LOAD_INDICES 1000
+
 struct hmp_sched_stats {
 	int nr_big_tasks;
 	u64 cumulative_runnable_avg;
 	u64 pred_demands_sum;
 };
 
+struct load_subtractions {
+	u64 window_start;
+	u64 subs;
+	u64 new_subs;
+};
+
 struct sched_cluster {
+	raw_spinlock_t load_lock;
 	struct list_head list;
 	struct cpumask cpus;
 	int id;
@@ -742,6 +752,13 @@ struct rq {
 	u64 prev_runnable_sum;
 	u64 nt_curr_runnable_sum;
 	u64 nt_prev_runnable_sum;
+	struct load_subtractions load_subs[NUM_TRACKED_WINDOWS];
+	DECLARE_BITMAP_ARRAY(top_tasks_bitmap,
+			NUM_TRACKED_WINDOWS, NUM_LOAD_INDICES);
+	u8 *top_tasks[NUM_TRACKED_WINDOWS];
+	u8 curr_table;
+	int prev_top;
+	int curr_top;
 #endif
 
 #ifdef CONFIG_IRQ_TIME_ACCOUNTING
@@ -1017,6 +1034,10 @@ static inline void sched_ttwu_pending(void) { }
 #define WINDOW_STATS_AVG		3
 #define WINDOW_STATS_INVALID_POLICY	4
 
+#define FREQ_REPORT_MAX_CPU_LOAD_TOP_TASK	0
+#define FREQ_REPORT_CPU_LOAD			1
+#define FREQ_REPORT_TOP_TASK			2
+
 #define MAJOR_TASK_PCT 85
 #define SCHED_UPMIGRATE_MIN_NICE 15
 #define EXITING_TASK_MARKER	0xdeaddead
@@ -1040,8 +1061,6 @@ extern unsigned int max_load_scale_factor;
 extern unsigned int max_possible_capacity;
 extern unsigned int min_max_possible_capacity;
 extern unsigned int max_power_cost;
-extern unsigned int sched_upmigrate;
-extern unsigned int sched_downmigrate;
 extern unsigned int sched_init_task_load_windows;
 extern unsigned int up_down_migrate_scale_factor;
 extern unsigned int sysctl_sched_restrict_cluster_spill;
@@ -1056,8 +1075,9 @@ extern unsigned int  __read_mostly sched_spill_load;
 extern unsigned int  __read_mostly sched_upmigrate;
 extern unsigned int  __read_mostly sched_downmigrate;
 extern unsigned int  __read_mostly sysctl_sched_spill_nr_run;
+extern unsigned int  __read_mostly sched_load_granule;
 
-extern void init_new_task_load(struct task_struct *p);
+extern void init_new_task_load(struct task_struct *p, bool idle_task);
 extern u64 sched_ktime_clock(void);
 extern int got_boost_kick(void);
 extern int register_cpu_cycle_counter_cb(struct cpu_cycle_counter_cb *cb);
@@ -1084,17 +1104,22 @@ extern void sched_account_irqstart(int cpu, struct task_struct *curr,
 				   u64 wallclock);
 extern unsigned int cpu_temp(int cpu);
 extern unsigned int nr_eligible_big_tasks(int cpu);
-extern void update_up_down_migrate(void);
 extern int update_preferred_cluster(struct related_thread_group *grp,
 			struct task_struct *p, u32 old_load);
 extern void set_preferred_cluster(struct related_thread_group *grp);
 extern void add_new_task_to_grp(struct task_struct *new);
+extern unsigned int update_freq_aggregate_threshold(unsigned int threshold);
 
-enum sched_boost_type {
+enum sched_boost_policy {
 	SCHED_BOOST_NONE,
 	SCHED_BOOST_ON_BIG,
 	SCHED_BOOST_ON_ALL,
 };
+
+#define NO_BOOST 0
+#define FULL_THROTTLE_BOOST 1
+#define CONSERVATIVE_BOOST 2
+#define RESTRAINED_BOOST 3
 
 static inline struct sched_cluster *cpu_cluster(int cpu)
 {
@@ -1365,14 +1390,11 @@ extern void set_hmp_defaults(void);
 extern int power_delta_exceeded(unsigned int cpu_cost, unsigned int base_cost);
 extern unsigned int power_cost(int cpu, u64 demand);
 extern void reset_all_window_stats(u64 window_start, unsigned int window_size);
-extern void boost_kick(int cpu);
 extern int sched_boost(void);
 extern int task_load_will_fit(struct task_struct *p, u64 task_load, int cpu,
-					enum sched_boost_type boost_type);
-extern enum sched_boost_type sched_boost_type(void);
+					enum sched_boost_policy boost_policy);
+extern enum sched_boost_policy sched_boost_policy(void);
 extern int task_will_fit(struct task_struct *p, int cpu);
-extern int group_will_fit(struct sched_cluster *cluster,
-		 struct related_thread_group *grp, u64 demand);
 extern u64 cpu_load(int cpu);
 extern u64 cpu_load_sync(int cpu, int sync);
 extern int preferred_cluster(struct sched_cluster *cluster,
@@ -1385,6 +1407,7 @@ extern void inc_rq_hmp_stats(struct rq *rq,
 				struct task_struct *p, int change_cra);
 extern void dec_rq_hmp_stats(struct rq *rq,
 				struct task_struct *p, int change_cra);
+extern void reset_hmp_stats(struct hmp_sched_stats *stats, int reset_cra);
 extern int is_big_task(struct task_struct *p);
 extern int upmigrate_discouraged(struct task_struct *p);
 extern struct sched_cluster *rq_cluster(struct rq *rq);
@@ -1399,8 +1422,31 @@ extern u64 cpu_upmigrate_discourage_read_u64(struct cgroup_subsys_state *css,
 					struct cftype *cft);
 extern int cpu_upmigrate_discourage_write_u64(struct cgroup_subsys_state *css,
 				struct cftype *cft, u64 upmigrate_discourage);
-extern void sched_hmp_parse_dt(void);
-extern void init_sched_hmp_boost_policy(void);
+extern void sched_boost_parse_dt(void);
+extern void clear_top_tasks_bitmap(unsigned long *bitmap);
+
+#if defined(CONFIG_SCHED_TUNE) && defined(CONFIG_CGROUP_SCHEDTUNE)
+extern bool task_sched_boost(struct task_struct *p);
+extern int sync_cgroup_colocation(struct task_struct *p, bool insert);
+extern bool same_schedtune(struct task_struct *tsk1, struct task_struct *tsk2);
+extern void update_cgroup_boost_settings(void);
+extern void restore_cgroup_boost_settings(void);
+
+#else
+static inline bool
+same_schedtune(struct task_struct *tsk1, struct task_struct *tsk2)
+{
+	return true;
+}
+
+static inline bool task_sched_boost(struct task_struct *p)
+{
+	return true;
+}
+
+static inline void update_cgroup_boost_settings(void) { }
+static inline void restore_cgroup_boost_settings(void) { }
+#endif
 
 #else	/* CONFIG_SCHED_HMP */
 
@@ -1503,7 +1549,9 @@ static inline struct sched_cluster *rq_cluster(struct rq *rq)
 	return NULL;
 }
 
-static inline void init_new_task_load(struct task_struct *p) { }
+static inline void init_new_task_load(struct task_struct *p, bool idle_task)
+{
+}
 
 static inline u64 scale_load_to_cpu(u64 load, int cpu)
 {
@@ -1570,8 +1618,6 @@ static inline int update_preferred_cluster(struct related_thread_group *grp,
 static inline void add_new_task_to_grp(struct task_struct *new) {}
 
 #define sched_enable_hmp 0
-#define sched_freq_legacy_mode 1
-#define sched_migration_fixup	0
 #define PRED_DEMAND_DELTA (0)
 
 static inline void
@@ -1591,8 +1637,7 @@ static inline void post_big_task_count_change(void) { }
 static inline void set_hmp_defaults(void) { }
 
 static inline void clear_reserved(int cpu) { }
-static inline void sched_hmp_parse_dt(void) {}
-static inline  void init_sched_hmp_boost_policy(void) {}
+static inline void sched_boost_parse_dt(void) {}
 
 #define trace_sched_cpu_load(...)
 #define trace_sched_cpu_load_lb(...)

@@ -843,7 +843,7 @@ static hda_nid_t path_power_update(struct hda_codec *codec,
 				   bool allow_powerdown)
 {
 	hda_nid_t nid, changed = 0;
-	int i, state;
+	int i, state, power;
 
 	for (i = 0; i < path->depth; i++) {
 		nid = path->path[i];
@@ -855,7 +855,9 @@ static hda_nid_t path_power_update(struct hda_codec *codec,
 			state = AC_PWRST_D0;
 		else
 			state = AC_PWRST_D3;
-		if (!snd_hda_check_power_state(codec, nid, state)) {
+		power = snd_hda_codec_read(codec, nid, 0,
+					   AC_VERB_GET_POWER_STATE, 0);
+		if (power != (state | (state << 4))) {
 			snd_hda_codec_write(codec, nid, 0,
 					    AC_VERB_SET_POWER_STATE, state);
 			changed = nid;
@@ -3992,6 +3994,8 @@ static hda_nid_t set_path_power(struct hda_codec *codec, hda_nid_t nid,
 
 	for (n = 0; n < spec->paths.used; n++) {
 		path = snd_array_elem(&spec->paths, n);
+		if (!path->depth)
+			continue;
 		if (path->path[0] == nid ||
 		    path->path[path->depth - 1] == nid) {
 			bool pin_old = path->pin_enabled;

@@ -54,6 +54,7 @@ struct panel_id {
 #define DP_PANEL		12	/* LVDS */
 
 #define DSC_PPS_LEN		128
+#define INTF_EVENT_STR(x)	#x
 
 static inline const char *mdss_panel2str(u32 panel)
 {
@@ -134,6 +135,25 @@ enum {
 	SIM_MODE = 1,
 	SIM_SW_TE_MODE,
 	SIM_HW_TE_MODE,
+};
+
+
+/*
+ * enum partial_update_mode - Different modes for partial update feature
+ *
+ * @PU_NOT_SUPPORTED:	Feature is not supported on target.
+ * @PU_SINGLE_ROI:	Default mode, only one ROI is triggered to the
+ *                              panel(one on each DSI in case of split dsi)
+ * @PU_DUAL_ROI:	Support for sending two roi's that are clubbed
+ *                              together as one big single ROI. This is only
+ *                              supported on certain panels that have this
+ *                              capability in their DDIC.
+ *
+ */
+enum {
+	PU_NOT_SUPPORTED = 0,
+	PU_SINGLE_ROI,
+	PU_DUAL_ROI,
 };
 
 struct mdss_rect {
@@ -269,6 +289,78 @@ enum mdss_intf_events {
 	MDSS_EVENT_DISABLE_PANEL,
 	MDSS_EVENT_MAX,
 };
+
+/**
+ * mdss_panel_intf_event_to_string() - converts interface event enum to string
+ * @event: interface event to be converted to string representation
+ */
+static inline char *mdss_panel_intf_event_to_string(int event)
+{
+	switch (event) {
+	case MDSS_EVENT_RESET:
+		return INTF_EVENT_STR(MDSS_EVENT_RESET);
+	case MDSS_EVENT_LINK_READY:
+		return INTF_EVENT_STR(MDSS_EVENT_LINK_READY);
+	case MDSS_EVENT_UNBLANK:
+		return INTF_EVENT_STR(MDSS_EVENT_UNBLANK);
+	case MDSS_EVENT_PANEL_ON:
+		return INTF_EVENT_STR(MDSS_EVENT_PANEL_ON);
+	case MDSS_EVENT_POST_PANEL_ON:
+		return INTF_EVENT_STR(MDSS_EVENT_POST_PANEL_ON);
+	case MDSS_EVENT_BLANK:
+		return INTF_EVENT_STR(MDSS_EVENT_BLANK);
+	case MDSS_EVENT_PANEL_OFF:
+		return INTF_EVENT_STR(MDSS_EVENT_PANEL_OFF);
+	case MDSS_EVENT_CLOSE:
+		return INTF_EVENT_STR(MDSS_EVENT_CLOSE);
+	case MDSS_EVENT_SUSPEND:
+		return INTF_EVENT_STR(MDSS_EVENT_SUSPEND);
+	case MDSS_EVENT_RESUME:
+		return INTF_EVENT_STR(MDSS_EVENT_RESUME);
+	case MDSS_EVENT_CHECK_PARAMS:
+		return INTF_EVENT_STR(MDSS_EVENT_CHECK_PARAMS);
+	case MDSS_EVENT_CONT_SPLASH_BEGIN:
+		return INTF_EVENT_STR(MDSS_EVENT_CONT_SPLASH_BEGIN);
+	case MDSS_EVENT_CONT_SPLASH_FINISH:
+		return INTF_EVENT_STR(MDSS_EVENT_CONT_SPLASH_FINISH);
+	case MDSS_EVENT_PANEL_UPDATE_FPS:
+		return INTF_EVENT_STR(MDSS_EVENT_PANEL_UPDATE_FPS);
+	case MDSS_EVENT_FB_REGISTERED:
+		return INTF_EVENT_STR(MDSS_EVENT_FB_REGISTERED);
+	case MDSS_EVENT_PANEL_CLK_CTRL:
+		return INTF_EVENT_STR(MDSS_EVENT_PANEL_CLK_CTRL);
+	case MDSS_EVENT_DSI_CMDLIST_KOFF:
+		return INTF_EVENT_STR(MDSS_EVENT_DSI_CMDLIST_KOFF);
+	case MDSS_EVENT_ENABLE_PARTIAL_ROI:
+		return INTF_EVENT_STR(MDSS_EVENT_ENABLE_PARTIAL_ROI);
+	case MDSS_EVENT_DSC_PPS_SEND:
+		return INTF_EVENT_STR(MDSS_EVENT_DSC_PPS_SEND);
+	case MDSS_EVENT_DSI_STREAM_SIZE:
+		return INTF_EVENT_STR(MDSS_EVENT_DSI_STREAM_SIZE);
+	case MDSS_EVENT_DSI_UPDATE_PANEL_DATA:
+		return INTF_EVENT_STR(MDSS_EVENT_DSI_UPDATE_PANEL_DATA);
+	case MDSS_EVENT_REGISTER_RECOVERY_HANDLER:
+		return INTF_EVENT_STR(MDSS_EVENT_REGISTER_RECOVERY_HANDLER);
+	case MDSS_EVENT_REGISTER_MDP_CALLBACK:
+		return INTF_EVENT_STR(MDSS_EVENT_REGISTER_MDP_CALLBACK);
+	case MDSS_EVENT_DSI_PANEL_STATUS:
+		return INTF_EVENT_STR(MDSS_EVENT_DSI_PANEL_STATUS);
+	case MDSS_EVENT_DSI_DYNAMIC_SWITCH:
+		return INTF_EVENT_STR(MDSS_EVENT_DSI_DYNAMIC_SWITCH);
+	case MDSS_EVENT_DSI_RECONFIG_CMD:
+		return INTF_EVENT_STR(MDSS_EVENT_DSI_RECONFIG_CMD);
+	case MDSS_EVENT_DSI_RESET_WRITE_PTR:
+		return INTF_EVENT_STR(MDSS_EVENT_DSI_RESET_WRITE_PTR);
+	case MDSS_EVENT_PANEL_TIMING_SWITCH:
+		return INTF_EVENT_STR(MDSS_EVENT_PANEL_TIMING_SWITCH);
+	case MDSS_EVENT_DEEP_COLOR:
+		return INTF_EVENT_STR(MDSS_EVENT_DEEP_COLOR);
+	case MDSS_EVENT_DISABLE_PANEL:
+		return INTF_EVENT_STR(MDSS_EVENT_DISABLE_PANEL);
+	default:
+		return "unknown";
+	}
+}
 
 struct lcd_panel_info {
 	u32 h_back_porch;
@@ -591,6 +683,50 @@ struct mdss_panel_roi_alignment {
 	u32 min_height;
 };
 
+
+/*
+ * Nomeclature used to represent partial ROI in case of
+ * dual roi when the panel supports it. Region marked (XXX) is
+ * the extended roi to align with the second roi since LM output
+ * has to be rectangle.
+ *
+ * For single ROI, only the first ROI will be used in the struct.
+ * DSI driver will merge it based on the partial_update_roi_merge
+ * property.
+ *
+ * -------------------------------
+ * |   DSI0       |    DSI1      |
+ * -------------------------------
+ * |              |              |
+ * |              |              |
+ * |     =========|=======----+  |
+ * |     |        |      |XXXX|  |
+ * |     |   First| Roi  |XXXX|  |
+ * |     |        |      |XXXX|  |
+ * |     =========|=======----+  |
+ * |              |              |
+ * |              |              |
+ * |              |              |
+ * |     +----=================  |
+ * |     |XXXX|   |           |  |
+ * |     |XXXX| Second Roi    |  |
+ * |     |XXXX|   |           |  |
+ * |     +----====|============  |
+ * |              |              |
+ * |              |              |
+ * |              |              |
+ * |              |              |
+ * |              |              |
+ * ------------------------------
+ *
+ */
+
+struct mdss_dsi_dual_pu_roi {
+	struct mdss_rect first_roi;
+	struct mdss_rect second_roi;
+	bool enabled;
+};
+
 struct mdss_panel_info {
 	u32 xres;
 	u32 yres;
@@ -616,6 +752,7 @@ struct mdss_panel_info {
 	u32 vic; /* video identification code */
 	u32 deep_color;
 	struct mdss_rect roi;
+	struct mdss_dsi_dual_pu_roi dual_roi;
 	int pwm_pmic_gpio;
 	int pwm_lpg_chan;
 	int pwm_period;
@@ -635,6 +772,10 @@ struct mdss_panel_info {
 	u32 saved_fporch;
 	/* current fps, once is programmed in hw */
 	int current_fps;
+	u32 mdp_koff_thshold_low;
+	u32 mdp_koff_thshold_high;
+	bool mdp_koff_thshold;
+	u32 mdp_koff_delay;
 
 	int panel_max_fps;
 	int panel_max_vtotal;
@@ -646,8 +787,8 @@ struct mdss_panel_info {
 
 	u32 cont_splash_enabled;
 	bool esd_rdy;
-	bool partial_update_supported; /* value from dts if pu is supported */
-	bool partial_update_enabled; /* is pu currently allowed */
+	u32 partial_update_supported; /* value from dts if pu is supported */
+	u32 partial_update_enabled; /* is pu currently allowed */
 	u32 dcs_cmd_by_left;
 	u32 partial_update_roi_merge;
 	struct ion_handle *splash_ihdl;
@@ -802,6 +943,7 @@ struct mdss_panel_data {
 
 struct mdss_panel_debugfs_info {
 	struct dentry *root;
+	struct dentry *parent;
 	struct mdss_panel_info panel_info;
 	u32 override_flag;
 	struct mdss_panel_debugfs_info *next;
@@ -919,6 +1061,27 @@ static inline bool is_lm_configs_dsc_compatible(struct mdss_panel_info *pinfo,
 	if ((width % pinfo->dsc.slice_width) ||
 		(height % pinfo->dsc.slice_height))
 		return false;
+	return true;
+}
+
+static inline bool is_valid_pu_dual_roi(struct mdss_panel_info *pinfo,
+		struct mdss_rect *first_roi, struct mdss_rect *second_roi)
+{
+	if ((first_roi->x != second_roi->x) || (first_roi->w != second_roi->w)
+		|| (first_roi->y > second_roi->y)
+		|| ((first_roi->y + first_roi->h) > second_roi->y)
+		|| (is_dsc_compression(pinfo) &&
+			!is_lm_configs_dsc_compatible(pinfo,
+				first_roi->w, first_roi->h) &&
+			!is_lm_configs_dsc_compatible(pinfo,
+				second_roi->w, second_roi->h))) {
+		pr_err("Invalid multiple PU ROIs, roi0:{%d,%d,%d,%d}, roi1{%d,%d,%d,%d}\n",
+				first_roi->x, first_roi->y, first_roi->w,
+				first_roi->h, second_roi->x, second_roi->y,
+				second_roi->w, second_roi->h);
+		return false;
+	}
+
 	return true;
 }
 

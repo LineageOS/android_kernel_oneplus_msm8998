@@ -17,6 +17,11 @@
 #include <sound/soc.h>
 #include <sound/wcd-dsp-mgr.h>
 
+enum cdc_ssr_event {
+	WCD_CDC_DOWN_EVENT,
+	WCD_CDC_UP_EVENT,
+};
+
 struct wcd_dsp_cdc_cb {
 	/* Callback to enable codec clock */
 	int (*cdc_clk_en)(struct snd_soc_codec *, bool);
@@ -100,11 +105,15 @@ struct wcd_dsp_cntl {
 	/* SSR related */
 	struct wdsp_ssr_entry ssr_entry;
 	struct mutex ssr_mutex;
+
+	/* Misc device related */
+	char miscdev_name[256];
+	struct miscdevice miscdev;
 };
 
 void wcd_dsp_cntl_init(struct snd_soc_codec *codec,
 		       struct wcd_dsp_params *params,
 		       struct wcd_dsp_cntl **cntl);
 void wcd_dsp_cntl_deinit(struct wcd_dsp_cntl **cntl);
-
+int wcd_dsp_ssr_event(struct wcd_dsp_cntl *cntl, enum cdc_ssr_event event);
 #endif /* end __WCD_DSP_CONTROL_H__ */

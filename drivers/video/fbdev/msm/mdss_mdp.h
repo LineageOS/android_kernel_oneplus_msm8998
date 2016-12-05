@@ -92,6 +92,8 @@
  */
 #define ENABLE_PIXEL_EXT_ONLY 0x80000000
 
+/* Pipe flag to indicate this pipe contains secure camera buffer */
+#define MDP_SECURE_CAMERA_OVERLAY_SESSION 0x100000000
 /**
  * Destination Scaler control flags setting
  *
@@ -109,6 +111,9 @@
  *                   QSEED3 parameters needs to be updated.
  * @DS_ENHANCER_UPDATE: Setting this bit indicates current Desitnation Scaler
  *                      QSEED3 Detial enhancer parameters need to be updated.
+ * @DS_VALIDATE: Indicate destination data structure parameters are validated
+ *               and can be used for programming the HW and perform a flush.
+ * @DS_DIRTY_UPDATE: Mark for dirty update for Power resume usecase.
  */
 #define DS_ENABLE           BIT(0)
 #define DS_DUAL_MODE        BIT(1)
@@ -116,11 +121,18 @@
 #define DS_RIGHT            BIT(3)
 #define DS_SCALE_UPDATE     BIT(4)
 #define DS_ENHANCER_UPDATE  BIT(5)
+#define DS_VALIDATE         BIT(6)
+#define DS_DIRTY_UPDATE     BIT(7)
 
 /**
  * Destination Scaler DUAL mode overfetch pixel count
  */
 #define MDSS_MDP_DS_OVERFETCH_SIZE 5
+
+#define QOS_LUT_NRT_READ	0x0
+#define QOS_LUT_CWB_READ	0xe4000000
+#define PANIC_LUT_NRT_READ	0x0
+#define ROBUST_LUT_NRT_READ	0xFFFF
 
 /* hw cursor can only be setup in highest mixer stage */
 #define HW_CURSOR_STAGE(mdata) \
@@ -225,9 +237,13 @@ enum mdss_mdp_csc_type {
 	MDSS_MDP_CSC_YUV2RGB_601L,
 	MDSS_MDP_CSC_YUV2RGB_601FR,
 	MDSS_MDP_CSC_YUV2RGB_709L,
+	MDSS_MDP_CSC_YUV2RGB_2020L,
+	MDSS_MDP_CSC_YUV2RGB_2020FR,
 	MDSS_MDP_CSC_RGB2YUV_601L,
 	MDSS_MDP_CSC_RGB2YUV_601FR,
 	MDSS_MDP_CSC_RGB2YUV_709L,
+	MDSS_MDP_CSC_RGB2YUV_2020L,
+	MDSS_MDP_CSC_RGB2YUV_2020FR,
 	MDSS_MDP_CSC_YUV2YUV,
 	MDSS_MDP_CSC_RGB2RGB,
 	MDSS_MDP_MAX_CSC
@@ -365,6 +381,8 @@ struct mdss_mdp_destination_scaler {
 	char __iomem *lut_base;
 	u16 src_width;
 	u16 src_height;
+	u16 last_mixer_width;
+	u16 last_mixer_height;
 	u32 flags;
 	struct mdp_scale_data_v2 scaler;
 };
@@ -399,7 +417,7 @@ struct mdss_mdp_ctl_intfs_ops {
 
 	/* to update lineptr, [1..yres] - enable, 0 - disable */
 	int (*update_lineptr)(struct mdss_mdp_ctl *ctl, bool enable);
-	int (*avr_ctrl_fnc)(struct mdss_mdp_ctl *);
+	int (*avr_ctrl_fnc)(struct mdss_mdp_ctl *, bool enable);
 };
 
 struct mdss_mdp_cwb {
@@ -407,7 +425,7 @@ struct mdss_mdp_cwb {
 	struct list_head data_queue;
 	int valid;
 	u32 wb_idx;
-	struct mdp_output_layer *layer;
+	struct mdp_output_layer layer;
 	void *priv_data;
 	struct msm_sync_pt_data cwb_sync_pt_data;
 	struct blocking_notifier_head notifier_head;
@@ -546,6 +564,8 @@ struct mdss_mdp_mixer {
 	bool valid_roi;
 	bool roi_changed;
 	struct mdss_rect roi;
+	bool dsc_enabled;
+	bool dsc_merge_enabled;
 
 	u8 cursor_enabled;
 	u16 cursor_hotx;
@@ -611,7 +631,7 @@ struct mdss_mdp_img_data {
 	dma_addr_t addr;
 	unsigned long len;
 	u32 offset;
-	u32 flags;
+	u64 flags;
 	u32 dir;
 	u32 domain;
 	bool mapped;
@@ -795,7 +815,7 @@ struct mdss_mdp_pipe {
 	struct file *file;
 	bool is_handed_off;
 
-	u32 flags;
+	u64 flags;
 	u32 bwc_mode;
 
 	/* valid only when pipe's output is crossing both layer mixers */
@@ -810,6 +830,9 @@ struct mdss_mdp_pipe {
 	struct mdss_rect dst;
 	struct mdss_mdp_format_params *src_fmt;
 	struct mdss_mdp_plane_sizes src_planes;
+
+	/* flag to re-store roi in case of pu dual-roi validation error */
+	bool restore_roi;
 
 	/* compression ratio from the source format */
 	struct mult_factor comp_ratio;
@@ -900,6 +923,7 @@ struct mdss_overlay_private {
 	u32 splash_mem_addr;
 	u32 splash_mem_size;
 	u32 sd_enabled;
+	u32 sc_enabled;
 
 	struct sw_sync_timeline *vsync_timeline;
 	struct mdss_mdp_vsync_handler vsync_retire_handler;
@@ -1273,6 +1297,15 @@ static inline void mdss_update_sd_client(struct mdss_data_type *mdata,
 		atomic_add_unless(&mdss_res->sd_client_count, -1, 0);
 }
 
+static inline void mdss_update_sc_client(struct mdss_data_type *mdata,
+							bool status)
+{
+	if (status)
+		atomic_inc(&mdata->sc_client_count);
+	else
+		atomic_add_unless(&mdss_res->sc_client_count, -1, 0);
+}
+
 static inline int mdss_mdp_get_wb_ctl_support(struct mdss_data_type *mdata,
 							bool rotator_session)
 {
@@ -1396,6 +1429,10 @@ static inline uint8_t pp_vig_csc_pipe_val(struct mdss_mdp_pipe *pipe)
 		return MDSS_MDP_CSC_YUV2RGB_601L;
 	case MDP_CSC_ITU_R_601_FR:
 		return MDSS_MDP_CSC_YUV2RGB_601FR;
+	case MDP_CSC_ITU_R_2020:
+		return MDSS_MDP_CSC_YUV2RGB_2020L;
+	case MDP_CSC_ITU_R_2020_FR:
+		return MDSS_MDP_CSC_YUV2RGB_2020FR;
 	case MDP_CSC_ITU_R_709:
 	default:
 		return  MDSS_MDP_CSC_YUV2RGB_709L;
@@ -1486,11 +1523,16 @@ static inline bool mdss_mdp_is_map_needed(struct mdss_data_type *mdata,
 						struct mdss_mdp_img_data *data)
 {
 	u32 is_secure_ui = data->flags & MDP_SECURE_DISPLAY_OVERLAY_SESSION;
+	u64 is_secure_camera = data->flags & MDP_SECURE_CAMERA_OVERLAY_SESSION;
 
      /*
       * For ULT Targets we need SMMU Map, to issue map call for secure Display.
       */
 	if (is_secure_ui && !mdss_has_quirk(mdata, MDSS_QUIRK_NEED_SECURE_MAP))
+		return false;
+
+	if (is_secure_camera && test_bit(MDSS_CAPS_SEC_DETACH_SMMU,
+				mdata->mdss_caps_map))
 		return false;
 
 	return true;
@@ -1549,7 +1591,7 @@ unsigned long mdss_mdp_get_clk_rate(u32 clk_idx, bool locked);
 int mdss_mdp_vsync_clk_enable(int enable, bool locked);
 void mdss_mdp_clk_ctrl(int enable);
 struct mdss_data_type *mdss_mdp_get_mdata(void);
-int mdss_mdp_secure_display_ctrl(unsigned int enable);
+int mdss_mdp_secure_session_ctrl(unsigned int enable, u64 flags);
 
 int mdss_mdp_overlay_init(struct msm_fb_data_type *mfd);
 int mdss_mdp_dfps_update_params(struct msm_fb_data_type *mfd,
@@ -1583,7 +1625,7 @@ int mdss_mdp_overlay_start(struct msm_fb_data_type *mfd);
 void mdss_mdp_overlay_set_chroma_sample(
 	struct mdss_mdp_pipe *pipe);
 int mdp_pipe_tune_perf(struct mdss_mdp_pipe *pipe,
-	u32 flags);
+	u64 flags);
 int mdss_mdp_overlay_setup_scaling(struct mdss_mdp_pipe *pipe);
 struct mdss_mdp_pipe *mdss_mdp_pipe_assign(struct mdss_data_type *mdata,
 	struct mdss_mdp_mixer *mixer, u32 ndx,
@@ -1701,6 +1743,7 @@ void mdss_mdp_pp_term(struct device *dev);
 int mdss_mdp_pp_overlay_init(struct msm_fb_data_type *mfd);
 
 int mdss_mdp_pp_resume(struct msm_fb_data_type *mfd);
+void mdss_mdp_pp_dest_scaler_resume(struct mdss_mdp_ctl *ctl);
 
 int mdss_mdp_pp_setup(struct mdss_mdp_ctl *ctl);
 int mdss_mdp_pp_setup_locked(struct mdss_mdp_ctl *ctl);
@@ -1815,7 +1858,7 @@ struct mult_factor *mdss_mdp_get_comp_factor(u32 format,
 int mdss_mdp_data_map(struct mdss_mdp_data *data, bool rotator, int dir);
 void mdss_mdp_data_free(struct mdss_mdp_data *data, bool rotator, int dir);
 int mdss_mdp_data_get_and_validate_size(struct mdss_mdp_data *data,
-	struct msmfb_data *planes, int num_planes, u32 flags,
+	struct msmfb_data *planes, int num_planes, u64 flags,
 	struct device *dev, bool rotator, int dir,
 	struct mdp_layer_buffer *buffer);
 u32 mdss_get_panel_framerate(struct msm_fb_data_type *mfd);
@@ -1826,7 +1869,7 @@ void mdss_mdp_intersect_rect(struct mdss_rect *res_rect,
 	const struct mdss_rect *sci_rect);
 void mdss_mdp_crop_rect(struct mdss_rect *src_rect,
 	struct mdss_rect *dst_rect,
-	const struct mdss_rect *sci_rect);
+	const struct mdss_rect *sci_rect, bool normalize);
 void rect_copy_mdss_to_mdp(struct mdp_rect *user, struct mdss_rect *kernel);
 void rect_copy_mdp_to_mdss(struct mdp_rect *user, struct mdss_rect *kernel);
 bool mdss_rect_overlap_check(struct mdss_rect *rect1, struct mdss_rect *rect2);

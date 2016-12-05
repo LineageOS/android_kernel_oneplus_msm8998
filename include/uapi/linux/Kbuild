@@ -23,6 +23,7 @@ header-y += netfilter_ipv6/
 header-y += usb/
 header-y += wimax/
 header-y += mfd/
+header-y += nfc/
 
 genhdr-y += version.h
 
@@ -381,6 +382,7 @@ header-y += prctl.h
 header-y += psci.h
 header-y += ptp_clock.h
 header-y += ptrace.h
+header-y += qbt1000.h
 header-y += qcedev.h
 header-y += qcota.h
 header-y += qnx4_fs.h

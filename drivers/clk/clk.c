@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2010-2011 Canonical Ltd <jeremy.kerr@canonical.com>
  * Copyright (C) 2011-2012 Linaro Ltd <mturquette@linaro.org>
+ * Copyright (c) 2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -23,6 +24,7 @@
 #include <linux/init.h>
 #include <linux/sched.h>
 #include <linux/clkdev.h>
+#include <linux/regulator/consumer.h>
 
 #include "clk.h"
 
@@ -40,6 +42,13 @@ static int enable_refcnt;
 static HLIST_HEAD(clk_root_list);
 static HLIST_HEAD(clk_orphan_list);
 static LIST_HEAD(clk_notifier_list);
+
+struct clk_handoff_vdd {
+	struct list_head list;
+	struct clk_vdd_class *vdd_class;
+};
+
+static LIST_HEAD(clk_handoff_vdd_list);
 
 /***    private data structures    ***/
 
@@ -75,6 +84,9 @@ struct clk_core {
 	struct hlist_node	debug_node;
 #endif
 	struct kref		ref;
+	struct clk_vdd_class	*vdd_class;
+	unsigned long		*rate_max;
+	int			num_rate_max;
 };
 
 #define CREATE_TRACE_POINTS
@@ -243,9 +255,12 @@ static int __init clk_ignore_unused_setup(char *__unused)
 }
 __setup("clk_ignore_unused", clk_ignore_unused_setup);
 
+static int clk_unvote_vdd_level(struct clk_vdd_class *vdd_class, int level);
+
 static int clk_disable_unused(void)
 {
 	struct clk_core *core;
+	struct clk_handoff_vdd *v, *v_temp;
 
 	if (clk_ignore_unused) {
 		pr_warn("clk: Not disabling unused clocks\n");
@@ -265,6 +280,13 @@ static int clk_disable_unused(void)
 
 	hlist_for_each_entry(core, &clk_orphan_list, child_node)
 		clk_unprepare_unused_subtree(core);
+
+	list_for_each_entry_safe(v, v_temp, &clk_handoff_vdd_list, list) {
+		clk_unvote_vdd_level(v->vdd_class,
+					v->vdd_class->num_levels - 1);
+		list_del(&v->list);
+		kfree(v);
+	};
 
 	clk_prepare_unlock();
 
@@ -547,6 +569,26 @@ void clk_hw_set_rate_range(struct clk_hw *hw, unsigned long min_rate,
 EXPORT_SYMBOL_GPL(clk_hw_set_rate_range);
 
 /*
+ * Aggregate the rate of all child nodes which are enabled and exclude the
+ * child node which requests for clk_aggregate_rate.
+ */
+unsigned long clk_aggregate_rate(struct clk_hw *hw,
+					const struct clk_core *parent)
+{
+	struct clk_core *child;
+	unsigned long aggre_rate = 0;
+
+	hlist_for_each_entry(child, &parent->children, child_node) {
+		if (child->enable_count &&
+				strcmp(child->name, hw->init->name))
+			aggre_rate = max(child->rate, aggre_rate);
+	}
+
+	return aggre_rate;
+}
+EXPORT_SYMBOL_GPL(clk_aggregate_rate);
+
+/*
  * Helper for finding best parent to provide a given frequency. This can be used
  * directly as a determine_rate callback (e.g. for a mux), or from a more
  * complex clock that may combine a mux with other operations.
@@ -564,6 +606,212 @@ int __clk_mux_determine_rate_closest(struct clk_hw *hw,
 	return clk_mux_determine_rate_flags(hw, req, CLK_MUX_ROUND_CLOSEST);
 }
 EXPORT_SYMBOL_GPL(__clk_mux_determine_rate_closest);
+
+/*
+ *  Find the voltage level required for a given clock rate.
+ */
+static int clk_find_vdd_level(struct clk_core *clk, unsigned long rate)
+{
+	int level;
+
+	for (level = 0; level < clk->num_rate_max; level++)
+		if (rate <= clk->rate_max[level])
+			break;
+
+	if (level == clk->num_rate_max) {
+		pr_err("Rate %lu for %s is greater than highest Fmax\n", rate,
+				clk->name);
+		return -EINVAL;
+	}
+
+	return level;
+}
+
+/*
+ * Update voltage level given the current votes.
+ */
+static int clk_update_vdd(struct clk_vdd_class *vdd_class)
+{
+	int level, rc = 0, i, ignore;
+	struct regulator **r = vdd_class->regulator;
+	int *uv = vdd_class->vdd_uv;
+	int n_reg = vdd_class->num_regulators;
+	int cur_lvl = vdd_class->cur_level;
+	int max_lvl = vdd_class->num_levels - 1;
+	int cur_base = cur_lvl * n_reg;
+	int new_base;
+
+	/* aggregate votes */
+	for (level = max_lvl; level > 0; level--)
+		if (vdd_class->level_votes[level])
+			break;
+
+	if (level == cur_lvl)
+		return 0;
+
+	max_lvl = max_lvl * n_reg;
+	new_base = level * n_reg;
+
+	for (i = 0; i < vdd_class->num_regulators; i++) {
+		pr_debug("Set Voltage level Min %d, Max %d\n", uv[new_base + i],
+				uv[max_lvl + i]);
+		rc = regulator_set_voltage(r[i], uv[new_base + i],
+				uv[max_lvl + i]);
+		if (rc)
+			goto set_voltage_fail;
+
+		if (cur_lvl == 0 || cur_lvl == vdd_class->num_levels)
+			rc = regulator_enable(r[i]);
+		else if (level == 0)
+			rc = regulator_disable(r[i]);
+		if (rc)
+			goto enable_disable_fail;
+	}
+
+	if (vdd_class->set_vdd && !vdd_class->num_regulators)
+		rc = vdd_class->set_vdd(vdd_class, level);
+
+	if (!rc)
+		vdd_class->cur_level = level;
+
+	return rc;
+
+enable_disable_fail:
+	regulator_set_voltage(r[i], uv[cur_base + i], uv[max_lvl + i]);
+
+set_voltage_fail:
+	for (i--; i >= 0; i--) {
+		regulator_set_voltage(r[i], uv[cur_base + i], uv[max_lvl + i]);
+		if (cur_lvl == 0 || cur_lvl == vdd_class->num_levels)
+			regulator_disable(r[i]);
+		else if (level == 0)
+			ignore = regulator_enable(r[i]);
+	}
+
+	return rc;
+}
+
+/*
+ *  Vote for a voltage level.
+ */
+static int clk_vote_vdd_level(struct clk_vdd_class *vdd_class, int level)
+{
+	int rc = 0;
+
+	if (level >= vdd_class->num_levels)
+		return -EINVAL;
+
+	mutex_lock(&vdd_class->lock);
+
+	vdd_class->level_votes[level]++;
+
+	rc = clk_update_vdd(vdd_class);
+	if (rc)
+		vdd_class->level_votes[level]--;
+
+	mutex_unlock(&vdd_class->lock);
+
+	return rc;
+}
+
+/*
+ * Remove vote for a voltage level.
+ */
+static int clk_unvote_vdd_level(struct clk_vdd_class *vdd_class, int level)
+{
+	int rc = 0;
+
+	if (level >= vdd_class->num_levels)
+		return -EINVAL;
+
+	mutex_lock(&vdd_class->lock);
+
+	if (WARN(!vdd_class->level_votes[level],
+				"Reference counts are incorrect for %s level %d\n",
+				vdd_class->class_name, level))
+		goto out;
+
+	vdd_class->level_votes[level]--;
+
+	rc = clk_update_vdd(vdd_class);
+	if (rc)
+		vdd_class->level_votes[level]++;
+
+out:
+	mutex_unlock(&vdd_class->lock);
+	return rc;
+}
+
+/*
+ * Vote for a voltage level corresponding to a clock's rate.
+ */
+static int clk_vote_rate_vdd(struct clk_core *core, unsigned long rate)
+{
+	int level;
+
+	if (!core->vdd_class)
+		return 0;
+
+	level = clk_find_vdd_level(core, rate);
+	if (level < 0)
+		return level;
+
+	return clk_vote_vdd_level(core->vdd_class, level);
+}
+
+/*
+ * Remove vote for a voltage level corresponding to a clock's rate.
+ */
+static void clk_unvote_rate_vdd(struct clk_core *core, unsigned long rate)
+{
+	int level;
+
+	if (!core->vdd_class)
+		return;
+
+	level = clk_find_vdd_level(core, rate);
+	if (level < 0)
+		return;
+
+	clk_unvote_vdd_level(core->vdd_class, level);
+}
+
+static bool clk_is_rate_level_valid(struct clk_core *core, unsigned long rate)
+{
+	int level;
+
+	if (!core->vdd_class)
+		return true;
+
+	level = clk_find_vdd_level(core, rate);
+
+	return level >= 0;
+}
+
+static int clk_vdd_class_init(struct clk_vdd_class *vdd)
+{
+	struct clk_handoff_vdd *v;
+
+	list_for_each_entry(v, &clk_handoff_vdd_list, list) {
+		if (v->vdd_class == vdd)
+			return 0;
+	}
+
+	pr_debug("voting for vdd_class %s\n", vdd->class_name);
+
+	if (clk_vote_vdd_level(vdd, vdd->num_levels - 1))
+		pr_err("failed to vote for %s\n", vdd->class_name);
+
+	v = kmalloc(sizeof(*v), GFP_KERNEL);
+	if (!v)
+		return -ENOMEM;
+
+	v->vdd_class = vdd;
+
+	list_add_tail(&v->list, &clk_handoff_vdd_list);
+
+	return 0;
+}
 
 /***        clk api        ***/
 
@@ -588,6 +836,9 @@ static void clk_core_unprepare(struct clk_core *core)
 		core->ops->unprepare(core->hw);
 
 	trace_clk_unprepare_complete(core);
+
+	clk_unvote_rate_vdd(core, core->rate);
+
 	clk_core_unprepare(core->parent);
 }
 
@@ -629,12 +880,19 @@ static int clk_core_prepare(struct clk_core *core)
 
 		trace_clk_prepare(core);
 
+		ret = clk_vote_rate_vdd(core, core->rate);
+		if (ret) {
+			clk_core_unprepare(core->parent);
+			return ret;
+		}
+
 		if (core->ops->prepare)
 			ret = core->ops->prepare(core->hw);
 
 		trace_clk_prepare_complete(core);
 
 		if (ret) {
+			clk_unvote_rate_vdd(core, core->rate);
 			clk_core_unprepare(core->parent);
 			return ret;
 		}
@@ -1381,6 +1639,9 @@ static struct clk_core *clk_calc_new_rates(struct clk_core *core,
 		top = clk_calc_new_rates(parent, best_parent_rate);
 
 out:
+	if (!clk_is_rate_level_valid(core, rate))
+		return NULL;
+
 	clk_calc_subtree(core, new_rate, parent, p_index);
 
 	return top;
@@ -1429,7 +1690,7 @@ static struct clk_core *clk_propagate_rate_change(struct clk_core *core,
  * walk down a subtree and set the new rates notifying the rate
  * change on the way
  */
-static void clk_change_rate(struct clk_core *core)
+static int clk_change_rate(struct clk_core *core)
 {
 	struct clk_core *child;
 	struct hlist_node *tmp;
@@ -1437,6 +1698,7 @@ static void clk_change_rate(struct clk_core *core)
 	unsigned long best_parent_rate = 0;
 	bool skip_set_rate = false;
 	struct clk_core *old_parent;
+	int rc = 0;
 
 	old_rate = core->rate;
 
@@ -1464,10 +1726,25 @@ static void clk_change_rate(struct clk_core *core)
 
 	trace_clk_set_rate(core, core->new_rate);
 
-	if (!skip_set_rate && core->ops->set_rate)
-		core->ops->set_rate(core->hw, core->new_rate, best_parent_rate);
+	/* Enforce vdd requirements for new frequency. */
+	if (core->prepare_count) {
+		rc = clk_vote_rate_vdd(core, core->new_rate);
+		if (rc)
+			goto out;
+	}
+
+	if (!skip_set_rate && core->ops->set_rate) {
+		rc = core->ops->set_rate(core->hw, core->new_rate,
+						best_parent_rate);
+		if (rc)
+			goto err_set_rate;
+	}
 
 	trace_clk_set_rate_complete(core, core->new_rate);
+
+	/* Release vdd requirements for old frequency. */
+	if (core->prepare_count)
+		clk_unvote_rate_vdd(core, old_rate);
 
 	core->rate = clk_recalc(core, best_parent_rate);
 
@@ -1491,6 +1768,16 @@ static void clk_change_rate(struct clk_core *core)
 	/* handle the new child who might not be in core->children yet */
 	if (core->new_child)
 		clk_change_rate(core->new_child);
+
+	return rc;
+
+err_set_rate:
+	if (core->prepare_count)
+		clk_unvote_rate_vdd(core, core->new_rate);
+out:
+	trace_clk_set_rate_complete(core, core->new_rate);
+
+	return rc;
 }
 
 static int clk_core_set_rate_nolock(struct clk_core *core,
@@ -1525,7 +1812,13 @@ static int clk_core_set_rate_nolock(struct clk_core *core,
 	}
 
 	/* change the rates */
-	clk_change_rate(top);
+	ret = clk_change_rate(top);
+	if (ret) {
+		pr_err("%s: failed to set %s rate\n", __func__,
+				top->name);
+		clk_propagate_rate_change(top, ABORT_RATE_CHANGE);
+		return ret;
+	}
 
 	core->req_rate = req_rate;
 
@@ -1974,6 +2267,7 @@ EXPORT_SYMBOL_GPL(clk_set_flags);
 
 static struct dentry *rootdir;
 static int inited = 0;
+static u32 debug_suspend;
 static DEFINE_MUTEX(clk_debug_lock);
 static HLIST_HEAD(clk_debug_list);
 
@@ -2116,6 +2410,309 @@ static const struct file_operations clk_dump_fops = {
 	.release	= single_release,
 };
 
+static int clock_debug_rate_set(void *data, u64 val)
+{
+	struct clk_core *core = data;
+	int ret;
+
+	ret = clk_set_rate(core->hw->clk, val);
+	if (ret)
+		pr_err("clk_set_rate(%lu) failed (%d)\n",
+				(unsigned long)val, ret);
+
+	return ret;
+}
+
+static int clock_debug_rate_get(void *data, u64 *val)
+{
+	struct clk_core *core = data;
+
+	*val = core->hw->core->rate;
+
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(clock_rate_fops, clock_debug_rate_get,
+			clock_debug_rate_set, "%llu\n");
+
+static ssize_t clock_parent_read(struct file *filp, char __user *ubuf,
+		size_t cnt, loff_t *ppos)
+{
+	char name[256] = {0};
+	struct clk_core *core = filp->private_data;
+	struct clk_core *p = core->hw->core->parent;
+
+	snprintf(name, sizeof(name), "%s\n", p ? p->name : "None\n");
+
+	return simple_read_from_buffer(ubuf, cnt, ppos, name, strlen(name));
+}
+
+static const struct file_operations clock_parent_fops = {
+	.open	= simple_open,
+	.read	= clock_parent_read,
+};
+
+static int clock_debug_enable_set(void *data, u64 val)
+{
+	struct clk_core *core = data;
+	int rc = 0;
+
+	if (val)
+		rc = clk_prepare_enable(core->hw->clk);
+	else
+		clk_disable_unprepare(core->hw->clk);
+
+	return rc;
+}
+
+static int clock_debug_enable_get(void *data, u64 *val)
+{
+	struct clk_core *core = data;
+	int enabled = 0;
+
+	enabled = core->enable_count;
+
+	*val = enabled;
+
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(clock_enable_fops, clock_debug_enable_get,
+			clock_debug_enable_set, "%lld\n");
+
+#define clock_debug_output(m, c, fmt, ...)		\
+do {							\
+	if (m)						\
+		seq_printf(m, fmt, ##__VA_ARGS__);	\
+	else if (c)					\
+		pr_cont(fmt, ##__VA_ARGS__);		\
+	else						\
+		pr_info(fmt, ##__VA_ARGS__);		\
+} while (0)
+
+int clock_debug_print_clock(struct clk_core *c, struct seq_file *s)
+{
+	char *start = "";
+	struct clk *clk;
+
+	if (!c || !c->prepare_count)
+		return 0;
+
+	clk = c->hw->clk;
+
+	clock_debug_output(s, 0, "\t");
+
+	do {
+		if (clk->core->vdd_class)
+			clock_debug_output(s, 1, "%s%s:%u:%u [%ld, %d]", start,
+					clk->core->name,
+					clk->core->prepare_count,
+					clk->core->enable_count,
+					clk->core->rate,
+				clk_find_vdd_level(clk->core, clk->core->rate));
+		else
+			clock_debug_output(s, 1, "%s%s:%u:%u [%ld]", start,
+					clk->core->name,
+					clk->core->prepare_count,
+					clk->core->enable_count,
+					clk->core->rate);
+		start = " -> ";
+	} while ((clk = clk_get_parent(clk)));
+
+	clock_debug_output(s, 1, "\n");
+
+	return 1;
+}
+
+/*
+ * clock_debug_print_enabled_clocks() - Print names of enabled clocks
+ */
+static void clock_debug_print_enabled_clocks(struct seq_file *s)
+{
+	struct clk_core *core;
+	int cnt = 0;
+
+	clock_debug_output(s, 0, "Enabled clocks:\n");
+
+	mutex_lock(&clk_debug_lock);
+
+	hlist_for_each_entry(core, &clk_debug_list, debug_node)
+		cnt += clock_debug_print_clock(core, s);
+
+	mutex_unlock(&clk_debug_lock);
+
+	if (cnt)
+		clock_debug_output(s, 0, "Enabled clock count: %d\n", cnt);
+	else
+		clock_debug_output(s, 0, "No clocks enabled.\n");
+}
+
+static int enabled_clocks_show(struct seq_file *s, void *unused)
+{
+	clock_debug_print_enabled_clocks(s);
+
+	return 0;
+}
+
+static int enabled_clocks_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, enabled_clocks_show, inode->i_private);
+}
+
+static const struct file_operations clk_enabled_list_fops = {
+	.open		= enabled_clocks_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= seq_release,
+};
+
+static void clk_debug_print_hw(struct clk_core *clk, struct seq_file *f)
+{
+	if (IS_ERR_OR_NULL(clk))
+		return;
+
+	clk_debug_print_hw(clk->parent, f);
+
+	clock_debug_output(f, false, "%s\n", clk->name);
+
+	if (!clk->ops->list_registers)
+		return;
+
+	clk->ops->list_registers(f, clk->hw);
+}
+
+static int print_hw_show(struct seq_file *m, void *unused)
+{
+	struct clk_core *c = m->private;
+
+	clk_debug_print_hw(c, m);
+
+	return 0;
+}
+
+static int print_hw_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, print_hw_show, inode->i_private);
+}
+
+static const struct file_operations clock_print_hw_fops = {
+	.open		= print_hw_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= seq_release,
+};
+
+static int list_rates_show(struct seq_file *s, void *unused)
+{
+	struct clk_core *core = s->private;
+	int level = 0, i = 0;
+	unsigned long rate, rate_max = 0;
+
+	/* Find max frequency supported within voltage constraints. */
+	if (!core->vdd_class) {
+		rate_max = ULONG_MAX;
+	} else {
+		for (level = 0; level < core->num_rate_max; level++)
+			if (core->rate_max[level])
+				rate_max = core->rate_max[level];
+	}
+
+	/*
+	 * List supported frequencies <= rate_max. Higher frequencies may
+	 * appear in the frequency table, but are not valid and should not
+	 * be listed.
+	 */
+	while (!IS_ERR_VALUE(rate =
+			core->ops->list_rate(core->hw, i++, rate_max))) {
+		if (rate <= 0)
+			break;
+		if (rate <= rate_max)
+			seq_printf(s, "%lu\n", rate);
+	}
+
+	return 0;
+}
+
+static int list_rates_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, list_rates_show, inode->i_private);
+}
+
+static const struct file_operations list_rates_fops = {
+	.open		= list_rates_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= seq_release,
+};
+
+static void clock_print_rate_max_by_level(struct seq_file *s, int level)
+{
+	struct clk_core *core = s->private;
+	struct clk_vdd_class *vdd_class = core->vdd_class;
+	int off, i, vdd_level, nregs = vdd_class->num_regulators;
+
+	vdd_level = clk_find_vdd_level(core, core->rate);
+
+	seq_printf(s, "%2s%10lu", vdd_level == level ? "[" : "",
+		core->rate_max[level]);
+
+	for (i = 0; i < nregs; i++) {
+		off = nregs*level + i;
+		if (vdd_class->vdd_uv)
+			seq_printf(s, "%10u", vdd_class->vdd_uv[off]);
+	}
+
+	if (vdd_level == level)
+		seq_puts(s, "]");
+
+	seq_puts(s, "\n");
+}
+
+static int rate_max_show(struct seq_file *s, void *unused)
+{
+	struct clk_core *core = s->private;
+	struct clk_vdd_class *vdd_class = core->vdd_class;
+	int level = 0, i, nregs = vdd_class->num_regulators;
+	char reg_name[10];
+
+	int vdd_level = clk_find_vdd_level(core, core->rate);
+
+	if (vdd_level < 0) {
+		seq_printf(s, "could not find_vdd_level for %s, %ld\n",
+			core->name, core->rate);
+		return 0;
+	}
+
+	seq_printf(s, "%12s", "");
+	for (i = 0; i < nregs; i++) {
+		snprintf(reg_name, ARRAY_SIZE(reg_name), "reg %d", i);
+		seq_printf(s, "%10s", reg_name);
+	}
+
+	seq_printf(s, "\n%12s", "freq");
+	for (i = 0; i < nregs; i++)
+		seq_printf(s, "%10s", "uV");
+
+	seq_puts(s, "\n");
+
+	for (level = 0; level < core->num_rate_max; level++)
+		clock_print_rate_max_by_level(s, level);
+
+	return 0;
+}
+
+static int rate_max_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, rate_max_show, inode->i_private);
+}
+
+static const struct file_operations rate_max_fops = {
+	.open		= rate_max_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= seq_release,
+};
+
 static int clk_debug_create_one(struct clk_core *core, struct dentry *pdentry)
 {
 	struct dentry *d;
@@ -2132,9 +2729,19 @@ static int clk_debug_create_one(struct clk_core *core, struct dentry *pdentry)
 
 	core->dentry = d;
 
-	d = debugfs_create_u32("clk_rate", S_IRUGO, core->dentry,
-			(u32 *)&core->rate);
+	d = debugfs_create_file("clk_rate", S_IRUGO, core->dentry, core,
+			&clock_rate_fops);
 	if (!d)
+		goto err_out;
+
+	if (core->ops->list_rate) {
+		if (!debugfs_create_file("clk_list_rates",
+				S_IRUGO, core->dentry, core, &list_rates_fops))
+			goto err_out;
+	}
+
+	if (core->vdd_class && !debugfs_create_file("clk_rate_max",
+				S_IRUGO, core->dentry, core, &rate_max_fops))
 		goto err_out;
 
 	d = debugfs_create_u32("clk_accuracy", S_IRUGO, core->dentry,
@@ -2157,13 +2764,23 @@ static int clk_debug_create_one(struct clk_core *core, struct dentry *pdentry)
 	if (!d)
 		goto err_out;
 
-	d = debugfs_create_u32("clk_enable_count", S_IRUGO, core->dentry,
-			(u32 *)&core->enable_count);
+	d = debugfs_create_file("clk_enable_count", S_IRUGO, core->dentry,
+			core, &clock_enable_fops);
 	if (!d)
 		goto err_out;
 
 	d = debugfs_create_u32("clk_notifier_count", S_IRUGO, core->dentry,
 			(u32 *)&core->notifier_count);
+	if (!d)
+		goto err_out;
+
+	d = debugfs_create_file("clk_parent", S_IRUGO, core->dentry, core,
+			&clock_parent_fops);
+	if (!d)
+		goto err_out;
+
+	d = debugfs_create_file("clk_print_regs", S_IRUGO, core->dentry,
+			core, &clock_print_hw_fops);
 	if (!d)
 		goto err_out;
 
@@ -2238,6 +2855,19 @@ struct dentry *clk_debugfs_add_file(struct clk_hw *hw, char *name, umode_t mode,
 }
 EXPORT_SYMBOL_GPL(clk_debugfs_add_file);
 
+/*
+ * Print the names of all enabled clocks and their parents if
+ * debug_suspend is set from debugfs.
+ */
+void clock_debug_print_enabled(void)
+{
+	if (likely(!debug_suspend))
+		return;
+
+	clock_debug_print_enabled_clocks(NULL);
+}
+EXPORT_SYMBOL_GPL(clock_debug_print_enabled);
+
 /**
  * clk_debug_init - lazily populate the debugfs clk directory
  *
@@ -2274,6 +2904,17 @@ static int __init clk_debug_init(void)
 
 	d = debugfs_create_file("clk_orphan_dump", S_IRUGO, rootdir,
 				&orphan_list, &clk_dump_fops);
+	if (!d)
+		return -ENOMEM;
+
+	d = debugfs_create_file("clk_enabled_list", S_IRUGO, rootdir,
+				&clk_debug_list, &clk_enabled_list_fops);
+	if (!d)
+		return -ENOMEM;
+
+
+	d = debugfs_create_u32("debug_suspend", S_IRUGO | S_IWUSR,
+						rootdir, &debug_suspend);
 	if (!d)
 		return -ENOMEM;
 
@@ -2559,7 +3200,18 @@ struct clk *clk_register(struct device *dev, struct clk_hw *hw)
 	core->num_parents = hw->init->num_parents;
 	core->min_rate = 0;
 	core->max_rate = ULONG_MAX;
+	core->vdd_class = hw->init->vdd_class;
+	core->rate_max = hw->init->rate_max;
+	core->num_rate_max = hw->init->num_rate_max;
 	hw->core = core;
+
+	if (core->vdd_class) {
+		ret = clk_vdd_class_init(core->vdd_class);
+		if (ret) {
+			pr_err("Failed to initialize vdd class\n");
+			goto fail_parent_names;
+		}
+	}
 
 	/* allocate local copy in case parent_names is __initdata */
 	core->parent_names = kcalloc(core->num_parents, sizeof(char *),

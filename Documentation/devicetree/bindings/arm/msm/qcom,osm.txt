@@ -18,13 +18,15 @@ Properties:
 	Definition: Addresses and sizes for the memory of the OSM controller,
 		    cluster PLL management, and APCS common register regions.
 		    Optionally, the address of the efuse registers used to
-		    determine the pwrcl or perfcl speed-bins.
+		    determine the pwrcl or perfcl speed-bins and/or the ACD
+		    register space to initialize prior to enabling OSM.
+
 - reg-names
 	Usage:      required
 	Value type: <stringlist>
 	Definition: Address names. Must be "osm", "pwrcl_pll", "perfcl_pll",
-		    "apcs_common" and "debug". Optionally, "pwrcl_efuse" or
-		    "perfcl_efuse".
+		    "apcs_common", and "debug". Optionally, "pwrcl_efuse",
+		    "perfcl_efuse", "pwrcl_acd", or "perfcl_acd".
 		    Must be specified in the same order as the corresponding
 		    addresses are specified in the reg property.
 
@@ -216,6 +218,45 @@ Properties:
 		    override values to write to the OSM controller for each
 		    of the two clusters. Each tuple must contain three elements.
 
+- qcom,acdtd-val
+	Usage:      required if pwrcl_acd or perfcl_acd registers are specified
+	Value type: <prop-encoded-array>
+	Definition: Array which defines the values to program to the ACD
+		    Tunable-Length Delay register for the power and performance
+		    clusters.
+
+- qcom,acdcr-val
+	Usage:      required if pwrcl_acd or perfcl_acd registers are specified
+	Value type: <prop-encoded-array>
+	Definition: Array which defines the values for the ACD control register
+		    for the power and performance clusters.
+
+- qcom,acdsscr-val
+	Usage:      required if pwrcl_acd or perfcl_acd registers are specified
+	Value type: <prop-encoded-array>
+	Definition: Array which defines the values for the ACD Soft Start Control
+		    register for the power and performance clusters.
+
+- qcom,acdextint0-val
+	Usage:      required if pwrcl_acd or perfcl_acd registers are specified
+	Value type: <prop-encoded-array>
+	Definition: Array which defines the initial values for the ACD
+		    external interface configuration register for the power
+		    and performance clusters.
+
+- qcom,acdextint1-val
+	Usage:      required if pwrcl_acd or perfcl_acd registers are specified
+	Value type: <prop-encoded-array>
+	Definition: Array which defines the final values for the ACD
+		    external interface configuration register for the power
+		    and performance clusters.
+
+- qcom,acdautoxfer-val
+	Usage:      required if pwrcl_acd or perfcl_acd registers are specified
+	Value type: <prop-encoded-array>
+	Definition: Array which defines the values for the ACD auto transfer
+		    control register for the power and performance clusters.
+
 - qcom,pwrcl-apcs-mem-acc-cfg
 	Usage:      required if qcom,osm-no-tz is specified
 	Value type: <prop-encoded-array>
@@ -247,6 +288,16 @@ Properties:
 		    Each tuple is of length 3 corresponding to the mem-acc
 		    values per performance mode with a total of 4 tuples
 		    corresponding to each supported performance mode.
+
+- qcom,perfcl-apcs-mem-acc-threshold-voltage
+	Usage:      optional
+	Value type: <u32>
+	Definition: Specifies the highest MEM ACC threshold voltage in
+		    microvolts for the Performance cluster.  This voltage is
+		    used to determine which MEM ACC setting is used for the
+		    highest frequencies.  If specified, the voltage must match
+		    the MEM ACC threshold voltage specified for the
+		    corresponding CPRh device.
 
 - qcom,red-fsm-en
 	Usage:      optional

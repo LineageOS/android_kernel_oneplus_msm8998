@@ -60,6 +60,30 @@ struct mdp_csc_cfg mdp_csc_8bit_convert[MDSS_MDP_MAX_CSC] = {
 		{ 0x10, 0xeb, 0x10, 0xf0, 0x10, 0xf0,},
 		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
 	},
+	[MDSS_MDP_CSC_YUV2RGB_2020L] = {
+		0,
+		{
+			0x0256, 0x0000, 0x035e,
+			0x0256, 0xffa0, 0xfeb2,
+			0x0256, 0x044c, 0x0000,
+		},
+		{ 0xfff0, 0xff80, 0xff80,},
+		{ 0x0, 0x0, 0x0,},
+		{ 0x10, 0xeb, 0x10, 0xf0, 0x10, 0xf0,},
+		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
+	},
+	[MDSS_MDP_CSC_YUV2RGB_2020FR] = {
+		0,
+		{
+			0x0200, 0x0000, 0x02f3,
+			0x0200, 0xffac, 0xfedb,
+			0x0200, 0x03c3, 0x0000,
+		},
+		{ 0x0000, 0xff80, 0xff80,},
+		{ 0x0, 0x0, 0x0,},
+		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
+		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
+	},
 	[MDSS_MDP_CSC_RGB2YUV_601L] = {
 		0,
 		{
@@ -95,6 +119,30 @@ struct mdp_csc_cfg mdp_csc_8bit_convert[MDSS_MDP_MAX_CSC] = {
 		{ 0x0010, 0x0080, 0x0080,},
 		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
 		{ 0x0010, 0x00eb, 0x0010, 0x00f0, 0x0010, 0x00f0,},
+	},
+	[MDSS_MDP_CSC_RGB2YUV_2020L] = {
+		0,
+		{
+			0x0073, 0x0129, 0x001a,
+			0xffc1, 0xff5e, 0x00e0,
+			0x00e0, 0xff32, 0xffee
+		},
+		{ 0x0, 0x0, 0x0,},
+		{ 0x0010, 0x0080, 0x0080,},
+		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
+		{ 0x0010, 0x00eb, 0x0010, 0x00f0, 0x0010, 0x00f0,},
+	},
+	[MDSS_MDP_CSC_RGB2YUV_2020FR] = {
+		0,
+		{
+			0x0086, 0x015b, 0x001e,
+			0xffb9, 0xff47, 0x0100,
+			0x0100, 0xff15, 0xffeb
+		},
+		{ 0x0, 0x0, 0x0,},
+		{ 0x0, 0x0080, 0x0080,},
+		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
+		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
 	},
 	[MDSS_MDP_CSC_YUV2YUV] = {
 		0,
@@ -159,6 +207,30 @@ struct mdp_csc_cfg mdp_csc_10bit_convert[MDSS_MDP_MAX_CSC] = {
 		{ 0x40, 0x3ac, 0x40, 0x3c0, 0x40, 0x3c0,},
 		{ 0x0, 0x3ff, 0x0, 0x3ff, 0x0, 0x3ff,},
 	},
+	[MDSS_MDP_CSC_YUV2RGB_2020L] = {
+		0,
+		{
+			0x0256, 0x0000, 0x035e,
+			0x0256, 0xffa0, 0xfeb2,
+			0x0256, 0x044c, 0x0000,
+		},
+		{ 0xffc0, 0xfe00, 0xfe00,},
+		{ 0x0, 0x0, 0x0,},
+		{ 0x40, 0x3ac, 0x40, 0x3c0, 0x40, 0x3c0,},
+		{ 0x0, 0x3ff, 0x0, 0x3ff, 0x0, 0x3ff,},
+	},
+	[MDSS_MDP_CSC_YUV2RGB_2020FR] = {
+		0,
+		{
+			0x0200, 0x0000, 0x02f3,
+			0x0200, 0xffac, 0xfedb,
+			0x0200, 0x03c3, 0x0000,
+		},
+		{ 0x0000, 0xfe00, 0xfe00,},
+		{ 0x0, 0x0, 0x0,},
+		{ 0x0, 0x3ff, 0x0, 0x3ff, 0x0, 0x3ff,},
+		{ 0x0, 0x3ff, 0x0, 0x3ff, 0x0, 0x3ff,},
+	},
 	[MDSS_MDP_CSC_RGB2YUV_601L] = {
 		0,
 		{
@@ -194,6 +266,30 @@ struct mdp_csc_cfg mdp_csc_10bit_convert[MDSS_MDP_MAX_CSC] = {
 		{ 0x0040, 0x0200, 0x0200,},
 		{ 0x0, 0x3ff, 0x0, 0x3ff, 0x0, 0x3ff,},
 		{ 0x0040, 0x03ac, 0x0040, 0x03c0, 0x0040, 0x03c0,},
+	},
+	[MDSS_MDP_CSC_RGB2YUV_2020L] = {
+		0,
+		{
+			0x0073, 0x0129, 0x001a,
+			0xffc1, 0xff5e, 0x00e0,
+			0x00e0, 0xff32, 0xffee
+		},
+		{ 0x0, 0x0, 0x0,},
+		{ 0x0040, 0x0200, 0x0200,},
+		{ 0x0, 0x3ff, 0x0, 0x3ff, 0x0, 0x3ff,},
+		{ 0x0040, 0x03ac, 0x0040, 0x03c0, 0x0040, 0x03c0,},
+	},
+	[MDSS_MDP_CSC_RGB2YUV_2020FR] = {
+		0,
+		{
+			0x0086, 0x015b, 0x001e,
+			0xffb9, 0xff47, 0x0100,
+			0x0100, 0xff15, 0xffeb
+		},
+		{ 0x0, 0x0, 0x0,},
+		{ 0x0, 0x0200, 0x0200,},
+		{ 0x0, 0x3ff, 0x0, 0x3ff, 0x0, 0x3ff,},
+		{ 0x0, 0x3ff, 0x0, 0x3ff, 0x0, 0x3ff,},
 	},
 	[MDSS_MDP_CSC_YUV2YUV] = {
 		0,
@@ -2480,6 +2576,28 @@ static int pp_dest_scaler_setup(struct mdss_mdp_mixer *mixer)
 	if (!test_bit(MDSS_CAPS_DEST_SCALER, mdata->mdss_caps_map) || !ds)
 		return 0;
 
+	/*
+	 * Non-validated DS data will be related to PM event. It is required
+	 * to send out last setup to match the mixer and panel configuration.
+	 */
+	if (!(ds->flags & DS_VALIDATE)) {
+		pr_debug("Apply old DS[%d] for non validate data\n", ds->num);
+		if (ds->flags & DS_ENABLE)
+			ds->flags |= (DS_SCALE_UPDATE | DS_ENHANCER_UPDATE);
+		ds->flags |= DS_VALIDATE;
+	}
+
+	/*
+	 * If mark for dirty update, force update to scaler and detail
+	 * enhancer.
+	 */
+	if (ds->flags & DS_DIRTY_UPDATE) {
+		pr_debug("Scale dirty update requested\n");
+		ds->flags |= (DS_SCALE_UPDATE | DS_ENHANCER_UPDATE |
+				DS_VALIDATE);
+		ds->flags &= ~DS_DIRTY_UPDATE;
+	}
+
 	ds_offset = ds->ds_base;
 	op_mode = readl_relaxed(MDSS_MDP_REG_DEST_SCALER_OP_MODE +
 			ds_offset);
@@ -2519,10 +2637,35 @@ static int pp_dest_scaler_setup(struct mdss_mdp_mixer *mixer)
 	}
 
 	/* Destinations scaler shared the flush with DSPP in control */
-	if (ds->flags & DS_ENABLE)
+	if (ds->flags & (DS_ENABLE | DS_VALIDATE)) {
+		pr_debug("FLUSH[%d]: flags:%X, op_mode:%x\n",
+				ds->num, ds->flags, op_mode);
 		ctl->flush_bits |= BIT(13 + ds->num);
+	}
 
+	ds->flags &= ~DS_VALIDATE;
 	return 0;
+}
+
+void mdss_mdp_pp_dest_scaler_resume(struct mdss_mdp_ctl *ctl)
+{
+	if (!ctl || !ctl->mdata) {
+		pr_err("Invalid ctl\n");
+		return;
+	}
+
+	if (!test_bit(MDSS_CAPS_DEST_SCALER, ctl->mdata->mdss_caps_map))
+		return;
+
+	if (ctl->mixer_left && ctl->mixer_left->ds) {
+		ctl->mixer_left->ds->flags |= DS_DIRTY_UPDATE;
+		pr_debug("DS left mark dirty\n");
+	}
+
+	if (ctl->mixer_right && ctl->mixer_right->ds) {
+		ctl->mixer_right->ds->flags |= DS_DIRTY_UPDATE;
+		pr_debug("DS right mark dirty\n");
+	}
 }
 
 int mdss_mdp_pp_setup(struct mdss_mdp_ctl *ctl)
@@ -2763,7 +2906,7 @@ int mdss_mdp_pp_resume(struct msm_fb_data_type *mfd)
 			mfd->index);
 		return 0;
 	} else if (ret || !ad) {
-		pr_err("Failed to get ad info: ret = %d, ad = 0x%p.\n",
+		pr_err("Failed to get ad info: ret = %d, ad = 0x%pK\n",
 			ret, ad);
 		return ret;
 	}
@@ -3107,7 +3250,7 @@ static int pp_ad_calc_bl(struct msm_fb_data_type *mfd, int bl_in, int *bl_out,
 			mfd->index);
 		return 0;
 	} else if (ret || !ad) {
-		pr_err("Failed to get ad info: ret = %d, ad = 0x%p.\n",
+		pr_err("Failed to get ad info: ret = %d, ad = 0x%pK\n",
 			ret, ad);
 		return ret;
 	}
@@ -5611,7 +5754,7 @@ static int pp_ad_invalidate_input(struct msm_fb_data_type *mfd)
 			mfd->index);
 		return 0;
 	} else if (ret || !ad) {
-		pr_err("Failed to get ad info: ret = %d, ad = 0x%p.\n",
+		pr_err("Failed to get ad info: ret = %d, ad = 0x%pK\n",
 			ret, ad);
 		return ret;
 	}
@@ -5646,7 +5789,7 @@ int mdss_mdp_ad_config(struct msm_fb_data_type *mfd,
 			mfd->index);
 		return ret;
 	} else if (ret || !ad) {
-		pr_err("Failed to get ad info: ret = %d, ad = 0x%p.\n",
+		pr_err("Failed to get ad info: ret = %d, ad = 0x%pK\n",
 			ret, ad);
 		return ret;
 	}
@@ -5786,7 +5929,7 @@ int mdss_mdp_ad_input(struct msm_fb_data_type *mfd,
 			mfd->index);
 		return ret;
 	} else if (ret || !ad) {
-		pr_err("Failed to get ad info: ret = %d, ad = 0x%p.\n",
+		pr_err("Failed to get ad info: ret = %d, ad = 0x%pK\n",
 			ret, ad);
 		return ret;
 	}
@@ -6155,7 +6298,7 @@ static int mdss_mdp_ad_ipc_reset(struct msm_fb_data_type *mfd)
 			mfd->index);
 		return 0;
 	} else if (ret || !ad) {
-		pr_err("Failed to get ad info: ret = %d, ad = 0x%p.\n",
+		pr_err("Failed to get ad info: ret = %d, ad = 0x%pK\n",
 			ret, ad);
 		return ret;
 	}
@@ -6196,7 +6339,7 @@ static int mdss_mdp_ad_setup(struct msm_fb_data_type *mfd)
 			mfd->index);
 		return 0;
 	} else if (ret || !ad) {
-		pr_err("Failed to get ad info: ret = %d, ad = 0x%p.\n",
+		pr_err("Failed to get ad info: ret = %d, ad = 0x%pK\n",
 			ret, ad);
 		return ret;
 	}

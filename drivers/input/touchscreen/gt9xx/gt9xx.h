@@ -53,13 +53,19 @@ struct goodix_ts_platform_data {
 	u32 panel_miny;
 	u32 panel_maxx;
 	u32 panel_maxy;
-	bool no_force_update;
+	bool force_update;
 	bool i2c_pull_up;
 	bool enable_power_off;
 	size_t config_data_len[GOODIX_MAX_CFG_GROUP];
 	u8 *config_data[GOODIX_MAX_CFG_GROUP];
 	u32 button_map[MAX_BUTTONS];
 	u8 num_button;
+	bool have_touch_key;
+	bool driver_send_cfg;
+	bool change_x2y;
+	bool with_pen;
+	bool slide_wakeup;
+	bool dbl_clk_wakeup;
 };
 struct goodix_ts_data {
 	spinlock_t irq_lock;
@@ -69,11 +75,13 @@ struct goodix_ts_data {
 	struct hrtimer timer;
 	struct workqueue_struct *goodix_wq;
 	struct work_struct	work;
+	char fw_name[GTP_FW_NAME_MAXSIZE];
 	struct delayed_work goodix_update_work;
 	s32 irq_is_disabled;
 	s32 use_irq;
 	u16 abs_x_max;
 	u16 abs_y_max;
+	u16 addr;
 	u8  max_touch_num;
 	u8  int_trigger_type;
 	u8  green_wake_mode;
@@ -88,6 +96,8 @@ struct goodix_ts_data {
 	u8  fw_error;
 	bool power_on;
 	struct mutex lock;
+	bool fw_loading;
+	bool force_update;
 	struct regulator *avdd;
 	struct regulator *vdd;
 	struct regulator *vcc_i2c;
@@ -104,17 +114,7 @@ extern u16 total_len;
 
 /***************************PART1:ON/OFF define*******************************/
 #define GTP_CUSTOM_CFG			0
-#define GTP_CHANGE_X2Y			0
-#define GTP_DRIVER_SEND_CFG		1
-#define GTP_HAVE_TOUCH_KEY		1
-
 #define GTP_ESD_PROTECT			0
-#define GTP_WITH_PEN			0
-
-/* This cannot work when enable-power-off is on */
-#define GTP_SLIDE_WAKEUP		0
-/* double-click wakeup, function together with GTP_SLIDE_WAKEUP */
-#define GTP_DBL_CLK_WAKEUP		0
 
 #define GTP_IRQ_TAB            {\
 				IRQ_TYPE_EDGE_RISING,\
@@ -172,6 +172,8 @@ extern u16 total_len;
 /* HIGH: 0x28/0x29, LOW: 0xBA/0xBB */
 #define GTP_I2C_ADDRESS_HIGH	0x14
 #define GTP_I2C_ADDRESS_LOW	0x5D
+#define GTP_VALID_ADDR_START	0x8040
+#define GTP_VALID_ADDR_END	0x8177
 
 /* GTP CM_HEAD RW flags */
 #define GTP_RW_READ			0
@@ -210,11 +212,9 @@ s32 init_wr_node(struct i2c_client *client);
 void uninit_wr_node(void);
 #endif
 
-#ifdef CONFIG_GT9XX_TOUCHPANEL_UPDATE
-extern u8 gup_init_update_proc(struct goodix_ts_data *ts);
+u8 gup_init_update_proc(struct goodix_ts_data *ts);
 s32 gup_enter_update_mode(struct i2c_client *client);
 void gup_leave_update_mode(struct i2c_client *client);
 s32 gup_update_proc(void *dir);
 extern struct i2c_client  *i2c_connect_client;
-#endif
 #endif /* _GOODIX_GT9XX_H_ */

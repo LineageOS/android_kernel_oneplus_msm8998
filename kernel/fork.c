@@ -1654,6 +1654,7 @@ bad_fork_cleanup_audit:
 bad_fork_cleanup_perf:
 	perf_event_free_task(p);
 bad_fork_cleanup_policy:
+	free_task_load_ptrs(p);
 #ifdef CONFIG_NUMA
 	mpol_put(p->mempolicy);
 bad_fork_cleanup_threadgroup_lock:
@@ -1684,7 +1685,7 @@ struct task_struct *fork_idle(int cpu)
 	task = copy_process(CLONE_VM, 0, 0, NULL, &init_struct_pid, 0, 0);
 	if (!IS_ERR(task)) {
 		init_idle_pids(task->pids);
-		init_idle(task, cpu);
+		init_idle(task, cpu, false);
 	}
 
 	return task;

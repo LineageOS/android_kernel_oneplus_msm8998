@@ -27,10 +27,6 @@
 #define DP_LS_FREQ_162		162000000
 #define DP_LS_FREQ_270		270000000
 #define DP_LS_FREQ_540		540000000
-#define AUDIO_FREQ_32		32000
-#define AUDIO_FREQ_44_1		44100
-#define AUDIO_FREQ_48		48000
-#define DP_AUDIO_FREQ_COUNT	3
 
 enum mdss_dp_pin_assignment {
 	PIN_ASSIGNMENT_A,
@@ -55,67 +51,11 @@ static const char *mdss_dp_pin_name(u8 pin)
 	}
 }
 
-static const uint32_t naud_value[DP_AUDIO_FREQ_COUNT][DP_AUDIO_FREQ_COUNT] = {
-	{ 10125, 16875, 33750 },
-	{ 5625, 9375, 18750 },
-	{ 3375, 5625, 11250 }
-};
-
-static const uint32_t maud_rate[DP_AUDIO_FREQ_COUNT] = { 1024, 784, 512 };
-
-static const uint32_t audio_timing_rbr[DP_AUDIO_FREQ_COUNT] = {
-	MMSS_DP_AUDIO_TIMING_RBR_32,
-	MMSS_DP_AUDIO_TIMING_RBR_44,
-	MMSS_DP_AUDIO_TIMING_RBR_48
-};
-
-static const uint32_t std_audio_freq_list[DP_AUDIO_FREQ_COUNT] = {
-	AUDIO_FREQ_32,
-	AUDIO_FREQ_44_1,
-	AUDIO_FREQ_48
-};
-
 struct mdss_hw mdss_dp_hw = {
 	.hw_ndx = MDSS_HW_EDP,
 	.ptr = NULL,
 	.irq_handler = dp_isr,
 };
-
-static int mdss_dp_get_rate_index(uint32_t rate)
-{
-	int index = 0;
-
-	switch (rate) {
-	case DP_LS_FREQ_162:
-	case AUDIO_FREQ_32:
-		index = 0;
-		break;
-	case DP_LS_FREQ_270:
-	case AUDIO_FREQ_44_1:
-		index = 1;
-		break;
-	case DP_LS_FREQ_540:
-	case AUDIO_FREQ_48:
-		index = 2;
-		break;
-	default:
-		index = 0;
-		pr_err("unsupported rate\n");
-		break;
-	}
-
-	return index;
-}
-
-static bool match_std_freq(uint32_t audio_freq, uint32_t std_freq)
-{
-	int quotient = audio_freq / std_freq;
-
-	if (quotient & (quotient - 1))
-		return false;
-	else
-		return true;
-}
 
 /* DP retrieve ctrl HW version */
 u32 mdss_dp_get_ctrl_hw_version(struct dss_io_data *ctrl_io)
@@ -313,10 +253,48 @@ void mdss_dp_timing_cfg(struct dss_io_data *ctrl_io,
 	writel_relaxed(data, ctrl_io->base + DP_ACTIVE_HOR_VER);
 }
 
-void mdss_dp_sw_mvid_nvid(struct dss_io_data *ctrl_io)
+void mdss_dp_sw_config_msa(struct dss_io_data *ctrl_io,
+				char lrate, struct dss_io_data *dp_cc_io)
 {
-	writel_relaxed(0x37, ctrl_io->base + DP_SOFTWARE_MVID);
-	writel_relaxed(0x3c, ctrl_io->base + DP_SOFTWARE_NVID);
+	u32 pixel_m, pixel_n;
+	u32 mvid, nvid;
+
+	pixel_m = readl_relaxed(dp_cc_io->base + MMSS_DP_PIXEL_M);
+	pixel_n = readl_relaxed(dp_cc_io->base + MMSS_DP_PIXEL_N);
+	pr_debug("pixel_m=0x%x, pixel_n=0x%x\n",
+					pixel_m, pixel_n);
+
+	mvid = (pixel_m & 0xFFFF) * 5;
+	nvid = (0xFFFF & (~pixel_n)) + (pixel_m & 0xFFFF);
+	if (lrate == DP_LINK_RATE_540)
+		nvid = nvid * 2;
+	pr_debug("mvid=0x%x, nvid=0x%x\n", mvid, nvid);
+	writel_relaxed(mvid, ctrl_io->base + DP_SOFTWARE_MVID);
+	writel_relaxed(nvid, ctrl_io->base + DP_SOFTWARE_NVID);
+}
+
+void mdss_dp_config_misc_settings(struct dss_io_data *ctrl_io,
+					struct mdss_panel_info *pinfo)
+{
+	u32 bpp = pinfo->bpp;
+	u32 misc_val = 0x0;
+
+	switch (bpp) {
+	case 18:
+		misc_val |= (0x0 << 5);
+		break;
+	case 30:
+		misc_val |= (0x2 << 5);
+		break;
+	case 24:
+	default:
+		misc_val |= (0x1 << 5);
+	}
+
+	misc_val |= BIT(0); /* Configure clock to synchronous mode */
+
+	pr_debug("Misc settings = 0x%x\n", misc_val);
+	writel_relaxed(misc_val, ctrl_io->base + DP_MISC1_MISC0);
 }
 
 void mdss_dp_setup_tr_unit(struct dss_io_data *ctrl_io, u8 link_rate,
@@ -326,8 +304,6 @@ void mdss_dp_setup_tr_unit(struct dss_io_data *ctrl_io, u8 link_rate,
 	u32 valid_boundary = 0x0;
 	u32 valid_boundary2 = 0x0;
 	struct dp_vc_tu_mapping_table const *tu_entry = tu_table;
-
-	writel_relaxed(0x21, ctrl_io->base + DP_MISC1_MISC0);
 
 	for (; tu_entry != tu_table + ARRAY_SIZE(tu_table); ++tu_entry) {
 		if ((tu_entry->vic == res) &&
@@ -495,6 +471,14 @@ void mdss_dp_usbpd_ext_dp_status(struct usbpd_dp_status *dp_status)
 	dp_status->hpd_irq =
 			(buf & BIT(8)) ? true : false;
 
+	pr_debug("low_pow_st = %d, adaptor_dp_en = %d, multi_func = %d\n",
+			dp_status->low_pow_st, dp_status->adaptor_dp_en,
+			dp_status->multi_func);
+	pr_debug("switch_to_usb_config = %d, exit_dp_mode = %d, hpd_high =%d\n",
+			dp_status->switch_to_usb_config,
+			dp_status->exit_dp_mode, dp_status->hpd_high);
+	pr_debug("hpd_irq = %d\n", dp_status->hpd_irq);
+
 	mdss_dp_initialize_s_port(&dp_status->c_port, port);
 }
 
@@ -506,8 +490,14 @@ u32 mdss_dp_usbpd_gen_config_pkt(struct mdss_dp_drv_pdata *dp)
 	pin_cfg = dp->alt_mode.dp_cap.dlink_pin_config;
 
 	for (pin = PIN_ASSIGNMENT_A; pin < PIN_ASSIGNMENT_MAX; pin++) {
-		if (pin_cfg & BIT(pin))
-			break;
+		if (pin_cfg & BIT(pin)) {
+			if (dp->alt_mode.dp_status.multi_func) {
+				if (pin == PIN_ASSIGNMENT_D)
+					break;
+			} else {
+				break;
+			}
+		}
 	}
 
 	if (pin == PIN_ASSIGNMENT_MAX)
@@ -856,52 +846,6 @@ void mdss_dp_audio_setup_sdps(struct dss_io_data *ctrl_io)
 	mdss_dp_audio_setup_audio_infoframe_sdp(ctrl_io);
 	mdss_dp_audio_setup_copy_management_sdp(ctrl_io);
 	mdss_dp_audio_setup_isrc_sdp(ctrl_io);
-}
-
-void mdss_dp_audio_set_sample_rate(struct dss_io_data *ctrl_io,
-		char dp_link_rate, uint32_t audio_freq)
-{
-	uint32_t link_rate;
-	uint32_t default_audio_freq = AUDIO_FREQ_32;
-	int i, multiplier = 1;
-	uint32_t maud_index, lrate_index, register_index, value;
-
-	link_rate = (uint32_t)dp_link_rate * DP_LINK_RATE_MULTIPLIER;
-
-	pr_debug("link_rate = %u, audio_freq = %u\n", link_rate, audio_freq);
-
-	for (i = 0; i < DP_AUDIO_FREQ_COUNT; i++) {
-		if (audio_freq % std_audio_freq_list[i])
-			continue;
-
-		if (match_std_freq(audio_freq, std_audio_freq_list[i])) {
-			default_audio_freq = std_audio_freq_list[i];
-			multiplier = audio_freq / default_audio_freq;
-			break;
-		}
-	}
-
-	pr_debug("default_audio_freq = %u, multiplier = %d\n",
-			default_audio_freq, multiplier);
-
-	lrate_index = mdss_dp_get_rate_index(link_rate);
-	maud_index = mdss_dp_get_rate_index(default_audio_freq);
-
-	pr_debug("lrate_index = %u, maud_index = %u, maud = %u, naud = %u\n",
-			lrate_index, maud_index,
-			maud_rate[maud_index] * multiplier,
-			naud_value[maud_index][lrate_index]);
-
-	register_index = mdss_dp_get_rate_index(default_audio_freq);
-	value = ((maud_rate[maud_index] * multiplier) << 16) |
-		naud_value[maud_index][lrate_index];
-
-	pr_debug("reg index = %d, offset = 0x%x, value = 0x%x\n",
-			(int)register_index, audio_timing_rbr[register_index],
-			value);
-
-	writel_relaxed(value, ctrl_io->base +
-			audio_timing_rbr[register_index]);
 }
 
 void mdss_dp_set_safe_to_exit_level(struct dss_io_data *ctrl_io,

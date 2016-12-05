@@ -1252,29 +1252,83 @@
 			};
 		};
 
-		blsp1_uart3_active: blsp1_uart3_active {
-			mux {
-				pins = "gpio45", "gpio46", "gpio47", "gpio48";
-				function = "blsp_uart3_a";
+		blsp1_uart3: blsp1_uart3 {
+			blsp1_uart3_tx_active: blsp1_uart3_tx_active {
+				mux {
+					pins = "gpio45";
+					function = "blsp_uart3_a";
+				};
+
+				config {
+					pins = "gpio45";
+					drive-strength = <2>;
+					bias-disable;
+				};
 			};
 
-			config {
-				pins = "gpio45", "gpio46", "gpio47", "gpio48";
-				drive-strength = <2>;
-				bias-disable;
-			};
-		};
+			blsp1_uart3_tx_sleep: blsp1_uart3_tx_sleep {
+				mux {
+					pins = "gpio45";
+					function = "gpio";
+				};
 
-		blsp1_uart3_sleep: blsp1_uart3_sleep {
-			mux {
-				pins = "gpio45", "gpio46", "gpio47", "gpio48";
-				function = "gpio";
+				config {
+					pins = "gpio45";
+					drive-strength = <2>;
+					bias-pull-up;
+				};
 			};
 
-			config {
-				pins = "gpio45", "gpio46", "gpio47", "gpio48";
-				drive-strength = <2>;
-				bias-pull-up;
+			blsp1_uart3_rxcts_active: blsp1_uart3_rxcts_active {
+				mux {
+					pins = "gpio46", "gpio47";
+					function = "blsp_uart3_a";
+				};
+
+				config {
+					pins = "gpio46", "gpio47";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+
+			blsp1_uart3_rxcts_sleep: blsp1_uart3_rxcts_sleep {
+				mux {
+					pins = "gpio46", "gpio47";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio46", "gpio47";
+					drive-strength = <2>;
+					bias-no-pull;
+				};
+			};
+
+			blsp1_uart3_rfr_active: blsp1_uart3_rfr_active {
+				mux {
+					pins = "gpio48";
+					function = "blsp_uart3_a";
+				};
+
+				config {
+					pins = "gpio48";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+
+			blsp1_uart3_rfr_sleep: blsp1_uart3_rfr_sleep {
+				mux {
+					pins = "gpio48";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio48";
+					drive-strength = <2>;
+					bias-no-pull;
+				};
 			};
 		};
 
@@ -1596,6 +1650,52 @@
 					drive-strength = <2>;
 					bias-disable;
 				};
+			};
+		};
+
+		ufs_dev_reset_assert: ufs_dev_reset_assert {
+			config {
+				pins = "ufs_reset";
+				bias-pull-down;		/* default: pull down */
+				/*
+				 * UFS_RESET driver strengths are having
+				 * different values/steps compared to typical
+				 * GPIO drive strengths.
+				 *
+				 * Following table clarifies:
+				 *
+				 * HDRV value | UFS_RESET | Typical GPIO
+				 *   (dec)    |   (mA)    |    (mA)
+				 *     0      |   0.8     |    2
+				 *     1      |   1.55    |    4
+				 *     2      |   2.35    |    6
+				 *     3      |   3.1     |    8
+				 *     4      |   3.9     |    10
+				 *     5      |   4.65    |    12
+				 *     6      |   5.4     |    14
+				 *     7      |   6.15    |    16
+				 *
+				 * POR value for UFS_RESET HDRV is 3 which means
+				 * 3.1mA and we want to use that. Hence just
+				 * specify 8mA to "drive-strength" binding and
+				 * that should result into writing 3 to HDRV
+				 * field.
+				 */
+				drive-strength = <8>;	/* default: 3.1 mA */
+				output-low; /* active low reset */
+			};
+		};
+
+		ufs_dev_reset_deassert: ufs_dev_reset_deassert {
+			config {
+				pins = "ufs_reset";
+				bias-pull-down;		/* default: pull down */
+				/*
+				 * default: 3.1 mA
+				 * check comments under ufs_dev_reset_assert
+				 */
+				drive-strength = <8>;
+				output-high; /* active low reset */
 			};
 		};
 

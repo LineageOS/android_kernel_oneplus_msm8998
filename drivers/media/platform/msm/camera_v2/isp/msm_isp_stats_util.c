@@ -852,7 +852,7 @@ int msm_isp_stats_reset(struct vfe_device *vfe_dev)
 	unsigned long flags;
 	int k;
 
-	msm_isp_get_timestamp(&timestamp);
+	msm_isp_get_timestamp(&timestamp, vfe_dev);
 
 	if (vfe_dev->is_split) {
 		for (i = 0; i < MAX_VFE; i++)
@@ -1077,7 +1077,7 @@ static int msm_isp_start_stats_stream(struct vfe_device *vfe_dev_ioctl,
 	uint32_t num_active_streams[MAX_VFE] = {0, 0};
 	struct vfe_device *vfe_dev;
 
-	msm_isp_get_timestamp(&timestamp);
+	msm_isp_get_timestamp(&timestamp, vfe_dev_ioctl);
 
 	num_stats_comp_mask =
 		vfe_dev_ioctl->hw_info->stats_hw_info->num_stats_comp_mask;
@@ -1164,7 +1164,7 @@ static int msm_isp_stop_stats_stream(struct vfe_device *vfe_dev,
 	struct msm_vfe_stats_stream *streams[MSM_ISP_STATS_MAX];
 	unsigned long flags;
 
-	msm_isp_get_timestamp(&timestamp);
+	msm_isp_get_timestamp(&timestamp, vfe_dev);
 
 	num_stats_comp_mask =
 		vfe_dev->hw_info->stats_hw_info->num_stats_comp_mask;
@@ -1263,7 +1263,7 @@ int msm_isp_update_stats_stream(struct vfe_device *vfe_dev, void *arg)
 				stream_info->framedrop_pattern = 0x0;
 			else
 				stream_info->framedrop_pattern = 0x1;
-			stream_info->framedrop_period = framedrop_period - 1;
+			stream_info->framedrop_period = framedrop_period;
 			if (stream_info->init_stats_frame_drop == 0)
 				for (k = 0; k < stream_info->num_isp; k++)
 					stream_info->vfe_dev[k]->hw_info->

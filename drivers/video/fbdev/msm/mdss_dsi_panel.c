@@ -25,11 +25,16 @@
 
 #include "mdss_dsi.h"
 #include "mdss_dba_utils.h"
+<<<<<<< HEAD
 //#ifdef VENDOR_EDIT
 #include <linux/clk.h>
 #include "mdss_dsi_iris2p_lightup.h"
 #include <linux/project_info.h>
 //#endif
+=======
+#include "mdss_debug.h"
+
+>>>>>>> origin/qc8998
 #define DT_CMD_HDR 6
 #define DEFAULT_MDP_TRANSFER_TIME 14000
 
@@ -554,28 +559,82 @@ static int mdss_dsi_roi_merge(struct mdss_dsi_ctrl_pdata *ctrl,
 static char caset[] = {0x2a, 0x00, 0x00, 0x03, 0x00};	/* DTYPE_DCS_LWRITE */
 static char paset[] = {0x2b, 0x00, 0x00, 0x05, 0x00};	/* DTYPE_DCS_LWRITE */
 
+/*
+ * Some panels can support multiple ROIs as part of the below commands
+ */
+static char caset_dual[] = {0x2a, 0x00, 0x00, 0x03, 0x00, 0x03,
+				0x00, 0x00, 0x00, 0x00};/* DTYPE_DCS_LWRITE */
+static char paset_dual[] = {0x2b, 0x00, 0x00, 0x05, 0x00, 0x03,
+				0x00, 0x00, 0x00, 0x00};/* DTYPE_DCS_LWRITE */
+
 /* pack into one frame before sent */
 static struct dsi_cmd_desc set_col_page_addr_cmd[] = {
 	{{DTYPE_DCS_LWRITE, 0, 0, 0, 1, sizeof(caset)}, caset},	/* packed */
 	{{DTYPE_DCS_LWRITE, 1, 0, 0, 1, sizeof(paset)}, paset},
 };
 
+/* pack into one frame before sent */
+static struct dsi_cmd_desc set_dual_col_page_addr_cmd[] = {	/*packed*/
+	{{DTYPE_DCS_LWRITE, 0, 0, 0, 1, sizeof(caset_dual)}, caset_dual},
+	{{DTYPE_DCS_LWRITE, 1, 0, 0, 1, sizeof(paset_dual)}, paset_dual},
+};
+
+
+static void __mdss_dsi_send_col_page_addr(struct mdss_dsi_ctrl_pdata *ctrl,
+		struct mdss_rect *roi, bool dual_roi)
+{
+	if (dual_roi) {
+		struct mdss_rect *first, *second;
+
+		first = &ctrl->panel_data.panel_info.dual_roi.first_roi;
+		second = &ctrl->panel_data.panel_info.dual_roi.second_roi;
+
+		caset_dual[1] = (((first->x) & 0xFF00) >> 8);
+		caset_dual[2] = (((first->x) & 0xFF));
+		caset_dual[3] = (((first->x - 1 + first->w) & 0xFF00) >> 8);
+		caset_dual[4] = (((first->x - 1 + first->w) & 0xFF));
+		/* skip the MPU setting byte*/
+		caset_dual[6] = (((second->x) & 0xFF00) >> 8);
+		caset_dual[7] = (((second->x) & 0xFF));
+		caset_dual[8] = (((second->x - 1 + second->w) & 0xFF00) >> 8);
+		caset_dual[9] = (((second->x - 1 + second->w) & 0xFF));
+		set_dual_col_page_addr_cmd[0].payload = caset_dual;
+
+		paset_dual[1] = (((first->y) & 0xFF00) >> 8);
+		paset_dual[2] = (((first->y) & 0xFF));
+		paset_dual[3] = (((first->y - 1 + first->h) & 0xFF00) >> 8);
+		paset_dual[4] = (((first->y - 1 + first->h) & 0xFF));
+		/* skip the MPU setting byte */
+		paset_dual[6] = (((second->y) & 0xFF00) >> 8);
+		paset_dual[7] = (((second->y) & 0xFF));
+		paset_dual[8] = (((second->y - 1 + second->h) & 0xFF00) >> 8);
+		paset_dual[9] = (((second->y - 1 + second->h) & 0xFF));
+		set_dual_col_page_addr_cmd[1].payload = paset_dual;
+	} else {
+		caset[1] = (((roi->x) & 0xFF00) >> 8);
+		caset[2] = (((roi->x) & 0xFF));
+		caset[3] = (((roi->x - 1 + roi->w) & 0xFF00) >> 8);
+		caset[4] = (((roi->x - 1 + roi->w) & 0xFF));
+		set_col_page_addr_cmd[0].payload = caset;
+
+		paset[1] = (((roi->y) & 0xFF00) >> 8);
+		paset[2] = (((roi->y) & 0xFF));
+		paset[3] = (((roi->y - 1 + roi->h) & 0xFF00) >> 8);
+		paset[4] = (((roi->y - 1 + roi->h) & 0xFF));
+		set_col_page_addr_cmd[1].payload = paset;
+	}
+	pr_debug("%s Sending 2A 2B cmnd with dual_roi=%d\n", __func__,
+			dual_roi);
+
+}
 static void mdss_dsi_send_col_page_addr(struct mdss_dsi_ctrl_pdata *ctrl,
 				struct mdss_rect *roi, int unicast)
 {
 	struct dcs_cmd_req cmdreq;
+	struct mdss_panel_info *pinfo = &ctrl->panel_data.panel_info;
+	bool dual_roi = pinfo->dual_roi.enabled;
 
-	caset[1] = (((roi->x) & 0xFF00) >> 8);
-	caset[2] = (((roi->x) & 0xFF));
-	caset[3] = (((roi->x - 1 + roi->w) & 0xFF00) >> 8);
-	caset[4] = (((roi->x - 1 + roi->w) & 0xFF));
-	set_col_page_addr_cmd[0].payload = caset;
-
-	paset[1] = (((roi->y) & 0xFF00) >> 8);
-	paset[2] = (((roi->y) & 0xFF));
-	paset[3] = (((roi->y - 1 + roi->h) & 0xFF00) >> 8);
-	paset[4] = (((roi->y - 1 + roi->h) & 0xFF));
-	set_col_page_addr_cmd[1].payload = paset;
+	__mdss_dsi_send_col_page_addr(ctrl, roi, dual_roi);
 
 	memset(&cmdreq, 0, sizeof(cmdreq));
 	cmdreq.cmds_cnt = 2;
@@ -585,7 +644,9 @@ static void mdss_dsi_send_col_page_addr(struct mdss_dsi_ctrl_pdata *ctrl,
 	cmdreq.rlen = 0;
 	cmdreq.cb = NULL;
 
-	cmdreq.cmds = set_col_page_addr_cmd;
+	/* Send default or dual roi 2A/2B cmd */
+	cmdreq.cmds = dual_roi ? set_dual_col_page_addr_cmd :
+		set_col_page_addr_cmd;
 	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
 }
 
@@ -971,6 +1032,48 @@ static int mdss_dsi_panel_low_power_config(struct mdss_panel_data *pdata,
 
 	pr_debug("%s:-\n", __func__);
 	return 0;
+}
+
+static void mdss_dsi_parse_mdp_kickoff_threshold(struct device_node *np,
+	struct mdss_panel_info *pinfo)
+{
+	int len, rc;
+	const u32 *src;
+	u32 tmp;
+	u32 max_delay_us;
+
+	pinfo->mdp_koff_thshold = false;
+	src = of_get_property(np, "qcom,mdss-mdp-kickoff-threshold", &len);
+	if (!src || (len == 0))
+		return;
+
+	rc = of_property_read_u32(np, "qcom,mdss-mdp-kickoff-delay", &tmp);
+	if (!rc)
+		pinfo->mdp_koff_delay = tmp;
+	else
+		return;
+
+	if (pinfo->mipi.frame_rate == 0) {
+		pr_err("cannot enable guard window, unexpected panel fps\n");
+		return;
+	}
+
+	pinfo->mdp_koff_thshold_low = be32_to_cpu(src[0]);
+	pinfo->mdp_koff_thshold_high = be32_to_cpu(src[1]);
+	max_delay_us = 1000000 / pinfo->mipi.frame_rate;
+
+	/* enable the feature if threshold is valid */
+	if ((pinfo->mdp_koff_thshold_low < pinfo->mdp_koff_thshold_high) &&
+	   ((pinfo->mdp_koff_delay > 0) ||
+	    (pinfo->mdp_koff_delay < max_delay_us)))
+		pinfo->mdp_koff_thshold = true;
+
+	pr_debug("panel kickoff thshold:[%d, %d] delay:%d (max:%d) enable:%d\n",
+		pinfo->mdp_koff_thshold_low,
+		pinfo->mdp_koff_thshold_high,
+		pinfo->mdp_koff_delay,
+		max_delay_us,
+		pinfo->mdp_koff_thshold);
 }
 
 static void mdss_dsi_parse_trigger(struct device_node *np, char *trigger,
@@ -1573,7 +1676,7 @@ static int mdss_dsi_parse_reset_seq(struct device_node *np,
 
 static bool mdss_dsi_cmp_panel_reg_v2(struct mdss_dsi_ctrl_pdata *ctrl)
 {
-	int i, j;
+	int i, j = 0;
 	int len = 0, *lenp;
 	int group = 0;
 
@@ -1581,6 +1684,15 @@ static bool mdss_dsi_cmp_panel_reg_v2(struct mdss_dsi_ctrl_pdata *ctrl)
 
 	for (i = 0; i < ctrl->status_cmds.cmd_cnt; i++)
 		len += lenp[i];
+
+	for (i = 0; i < len; i++) {
+		pr_debug("[%i] return:0x%x status:0x%x\n",
+			i, (unsigned int)ctrl->return_buf[i],
+			(unsigned int)ctrl->status_value[j + i]);
+		MDSS_XLOG(ctrl->ndx, ctrl->return_buf[i],
+			ctrl->status_value[j + i]);
+		j += len;
+	}
 
 	for (j = 0; j < ctrl->groups; ++j) {
 		for (i = 0; i < len; ++i) {
@@ -1902,6 +2014,41 @@ error:
 	pinfo->esd_check_enabled = false;
 }
 
+static void mdss_dsi_parse_partial_update_caps(struct device_node *np,
+		struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	struct mdss_panel_info *pinfo;
+	const char *data;
+
+	pinfo = &ctrl->panel_data.panel_info;
+
+	data = of_get_property(np, "qcom,partial-update-enabled", NULL);
+	if (data && !strcmp(data, "single_roi"))
+		pinfo->partial_update_supported =
+			PU_SINGLE_ROI;
+	else if (data && !strcmp(data, "dual_roi"))
+		pinfo->partial_update_supported =
+			PU_DUAL_ROI;
+	else if (data && !strcmp(data, "none"))
+		pinfo->partial_update_supported =
+			PU_NOT_SUPPORTED;
+	else
+		pinfo->partial_update_supported =
+			PU_NOT_SUPPORTED;
+
+	if (pinfo->mipi.mode == DSI_CMD_MODE) {
+		pinfo->partial_update_enabled = pinfo->partial_update_supported;
+		pr_info("%s: partial_update_enabled=%d\n", __func__,
+					pinfo->partial_update_enabled);
+		ctrl->set_col_page_addr = mdss_dsi_set_col_page_addr;
+		if (pinfo->partial_update_enabled) {
+			pinfo->partial_update_roi_merge =
+					of_property_read_bool(np,
+					"qcom,partial-update-roi-merge");
+		}
+	}
+}
+
 static int mdss_dsi_parse_panel_features(struct device_node *np,
 	struct mdss_dsi_ctrl_pdata *ctrl)
 {
@@ -1914,19 +2061,7 @@ static int mdss_dsi_parse_panel_features(struct device_node *np,
 
 	pinfo = &ctrl->panel_data.panel_info;
 
-	pinfo->partial_update_supported = of_property_read_bool(np,
-		"qcom,partial-update-enabled");
-	if (pinfo->mipi.mode == DSI_CMD_MODE) {
-		pinfo->partial_update_enabled = pinfo->partial_update_supported;
-		pr_info("%s: partial_update_enabled=%d\n", __func__,
-					pinfo->partial_update_enabled);
-		ctrl->set_col_page_addr = mdss_dsi_set_col_page_addr;
-		if (pinfo->partial_update_enabled) {
-			pinfo->partial_update_roi_merge =
-					of_property_read_bool(np,
-					"qcom,partial-update-roi-merge");
-		}
-	}
+	mdss_dsi_parse_partial_update_caps(np, ctrl);
 
 	pinfo->dcs_cmd_by_left = of_property_read_bool(np,
 		"qcom,dcs-cmd-by-left");
@@ -2613,6 +2748,8 @@ static int mdss_panel_parse_dt(struct device_node *np,
 
 	rc = of_property_read_u32(np, "qcom,mdss-mdp-transfer-time-us", &tmp);
 	pinfo->mdp_transfer_time_us = (!rc ? tmp : DEFAULT_MDP_TRANSFER_TIME);
+
+	mdss_dsi_parse_mdp_kickoff_threshold(np, pinfo);
 
 	pinfo->mipi.lp11_init = of_property_read_bool(np,
 					"qcom,mdss-dsi-lp11-init");

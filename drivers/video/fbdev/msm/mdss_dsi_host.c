@@ -1109,6 +1109,11 @@ static int mdss_dsi_read_status(struct mdss_dsi_ctrl_pdata *ctrl)
 	rc = 1;
 	lenp = ctrl->status_valid_params ?: ctrl->status_cmds_rlen;
 
+	if (!lenp || !ctrl->status_cmds_rlen) {
+		pr_err("invalid dsi read params!\n");
+		return 0;
+	}
+
 	for (i = 0; i < ctrl->status_cmds.cmd_cnt; ++i) {
 		memset(&cmdreq, 0, sizeof(cmdreq));
 		cmdreq.cmds = ctrl->status_cmds.cmds + i;
@@ -2807,12 +2812,6 @@ static int dsi_event_thread(void *data)
 				pr_debug("%s: Handling underflow event\n",
 							__func__);
 				__dsi_fifo_error_handler(ctrl, true);
-			} else {
-				pr_err("%s: ctrl recovery not defined\n",
-						__func__);
-				MDSS_XLOG_TOUT_HANDLER("mdp", "dsi0_ctrl",
-				"dsi0_phy", "dsi1_ctrl", "dsi1_phy", "vbif",
-				"vbif_nrt", "dbg_bus", "vbif_dbg_bus", "panic");
 			}
 			mutex_unlock(&ctrl->mutex);
 		}
