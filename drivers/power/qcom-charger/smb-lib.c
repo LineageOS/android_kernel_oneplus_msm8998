@@ -3047,11 +3047,6 @@ static void smblib_handle_typec_insertion(struct smb_charger *chg,
 		}
 	}
 
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20161014 Add charging standard */
-	pr_err("IRQ: CC %s\n",
-			attached ? "attached" : "detached");
-#endif
 	vote(chg->hvdcp_disable_votable, VBUS_CC_SHORT_VOTER, vbus_cc_short, 0);
 	vote(chg->pd_disallowed_votable_indirect, VBUS_CC_SHORT_VOTER,
 			vbus_cc_short, 0);
@@ -3288,38 +3283,17 @@ static int op_charging_en(struct smb_charger *chg, bool en)
 {
 	int rc;
 
-	smblib_dbg(chg, PR_PARALLEL, "starting parallel taper work\n");
-	if (chg->pl.slave_fcc_ua < MINIMUM_PARALLEL_FCC_UA) {
-		smblib_dbg(chg, PR_PARALLEL, "parallel taper is done\n");
-		vote(chg->pl_disable_votable, TAPER_END_VOTER, true, 0);
-		goto done;
-	}
-
-	rc = smblib_get_prop_batt_charge_type(chg, &pval);
+	pr_err("enable=%d\n", en);
+	rc = smblib_masked_write(chg, CHARGING_ENABLE_CMD_REG,
+				 CHARGING_ENABLE_CMD_BIT,
+				 en ? CHARGING_ENABLE_CMD_BIT : 0);
 	if (rc < 0) {
-		smblib_err(chg, "Couldn't get batt charge type rc=%d\n", rc);
-		goto done;
+		pr_err("Couldn't %s charging rc=%d\n",
+			en ? "enable" : "disable", rc);
+		return rc;
 	}
 
-	if (pval.intval == POWER_SUPPLY_CHARGE_TYPE_TAPER) {
-		smblib_dbg(chg, PR_PARALLEL, "master is taper charging; reducing slave FCC\n");
-		vote(chg->awake_votable, PL_TAPER_WORK_RUNNING_VOTER, true, 0);
-		/* Reduce the taper percent by 25 percent */
-		chg->pl.taper_pct = chg->pl.taper_pct
-					* TAPER_RESIDUAL_PCT / 100;
-		rerun_election(chg->fcc_votable);
-		schedule_delayed_work(&chg->pl_taper_work,
-				msecs_to_jiffies(PL_TAPER_WORK_DELAY_MS));
-		return;
-	}
-
-	/*
-	 * Master back to Fast Charge, get out of this round of taper reduction
-	 */
-	smblib_dbg(chg, PR_PARALLEL, "master is fast charging; waiting for next taper\n");
-
-done:
-	vote(chg->awake_votable, PL_TAPER_WORK_RUNNING_VOTER, false, 0);
+	return 0;
 }
 
 static bool is_usb_present(struct smb_charger *chg)
@@ -3335,21 +3309,6 @@ static bool is_usb_present(struct smb_charger *chg)
 	pr_debug("TYPE_C_STATUS_4 = 0x%02x\n", stat);
 
 	return (bool)(stat & CC_ATTACHED_BIT);
-}
-
-static bool is_dc_present(struct smb_charger *chg)
-{
-	int rc = 0;
-	u8 stat;
-
-	rc = smblib_read(chg, DC_INT_RT_STS_REG, &stat);
-	if (rc < 0) {
-		pr_err("Couldn't read DC_INT_RT_STS_REG rc=%d\n", rc);
-		return rc;
-	}
-	pr_debug("DC_INT_RT_STS_REG = 0x%02x\n", stat);
-
-	return (bool)(stat & DCIN_PLUGIN_RT_STS_BIT);
 }
 
 static bool op_get_fast_low_temp_full(struct smb_charger *chg)
@@ -3560,7 +3519,7 @@ static void op_re_kick_allowed_voltage(struct smb_charger  *chg)
 {
 	const struct apsd_result *apsd_result;
 
-	if (!is_usb_present(chg) && !is_dc_present(chg))
+	if (!is_usb_present(chg))
 		return;
 
 	apsd_result = smblib_get_apsd_result(chg);
@@ -3593,10 +3552,8 @@ static void op_check_allow_switch_dash_work(struct work_struct *work)
 	struct smb_charger *chg = container_of(dwork,
 			struct smb_charger, check_switch_dash_work);
 	const struct apsd_result *apsd_result;
-	bool charger_present;
 
-	charger_present = is_usb_present(chg) | is_dc_present(chg);
-	if (!charger_present)
+	if (!is_usb_present(chg))
 		return;
 
 	apsd_result = smblib_get_apsd_result(chg);
@@ -3623,7 +3580,7 @@ static int set_dash_charger_present(int status)
 
 	if (g_chg) {
 		pre_dash_present = g_chg->dash_present;
-		charger_present = is_usb_present(g_chg) | is_dc_present(g_chg);
+		charger_present = is_usb_present(g_chg);
 		g_chg->dash_present = status && charger_present;
 		if (g_chg->dash_present && !pre_dash_present) {
 			pr_err("set dash online\n");
@@ -3665,7 +3622,7 @@ static int get_prop_charger_voltage_now(struct smb_charger *chg)
 {
 	int vchg_uv = 0;
 
-	if(!is_usb_present(chg) && !is_dc_present(chg))
+	if(!is_usb_present(chg))
 		return 0;
 
 	if (chg->fake_chgvol)
@@ -4328,7 +4285,7 @@ static void op_heartbeat_work(struct work_struct *work)
 
 	op_check_charge_timeout(chg);
 
-	charger_present = is_usb_present(chg) | is_dc_present(chg);
+	charger_present = is_usb_present(chg);
 	if (!charger_present)
 		goto out;
 
@@ -4421,15 +4378,14 @@ enum chg_protect_status_type {
 
 int get_prop_chg_protect_status(struct smb_charger *chg)
 {
-	int temp, vbus_mv, charger_present = 0;
+	int temp, vbus_mv;
 	bool batt_present;
 	temp_region_type temp_region;
 
 	if (chg->use_fake_protect_sts)
 		return chg->fake_protect_sts;
 
-	charger_present = is_usb_present(chg) | is_dc_present(chg);
-	if (!charger_present)
+	if (!is_usb_present(chg))
 		return 0;
 
 	temp = get_prop_batt_temp(chg);
@@ -4708,8 +4664,16 @@ static int smblib_create_votables(struct smb_charger *chg)
 		return rc;
 	}
 
-	chg->pd_allowed_votable = create_votable("PD_ALLOWED", VOTE_SET_ANY,
-					NULL, NULL);
+	chg->pd_disallowed_votable_indirect
+		= create_votable("PD_DISALLOWED_INDIRECT", VOTE_SET_ANY,
+			smblib_pd_disallowed_votable_indirect_callback, chg);
+	if (IS_ERR(chg->pd_disallowed_votable_indirect)) {
+		rc = PTR_ERR(chg->pd_disallowed_votable_indirect);
+		return rc;
+	}
+
+	chg->pd_allowed_votable = create_votable("PD_ALLOWED",
+					VOTE_SET_ANY, NULL, NULL);
 	if (IS_ERR(chg->pd_allowed_votable)) {
 		rc = PTR_ERR(chg->pd_allowed_votable);
 		return rc;
@@ -4739,6 +4703,33 @@ static int smblib_create_votables(struct smb_charger *chg)
 		return rc;
 	}
 
+	chg->pl_enable_votable_indirect = create_votable("PL_ENABLE_INDIRECT",
+					VOTE_SET_ANY,
+					smblib_pl_enable_indirect_vote_callback,
+					chg);
+	if (IS_ERR(chg->pl_enable_votable_indirect)) {
+		rc = PTR_ERR(chg->pl_enable_votable_indirect);
+		return rc;
+	}
+
+	chg->hvdcp_disable_votable = create_votable("HVDCP_DISABLE",
+					VOTE_SET_ANY,
+					smblib_hvdcp_disable_vote_callback,
+					chg);
+	if (IS_ERR(chg->hvdcp_disable_votable)) {
+		rc = PTR_ERR(chg->hvdcp_disable_votable);
+		return rc;
+	}
+
+	chg->apsd_disable_votable = create_votable("APSD_DISABLE",
+					VOTE_SET_ANY,
+					smblib_apsd_disable_vote_callback,
+					chg);
+	if (IS_ERR(chg->apsd_disable_votable)) {
+		rc = PTR_ERR(chg->apsd_disable_votable);
+		return rc;
+	}
+
 	return rc;
 }
 
@@ -4758,12 +4749,20 @@ static void smblib_destroy_votables(struct smb_charger *chg)
 		destroy_votable(chg->usb_icl_votable);
 	if (chg->dc_icl_votable)
 		destroy_votable(chg->dc_icl_votable);
+	if (chg->pd_disallowed_votable_indirect)
+		destroy_votable(chg->pd_disallowed_votable_indirect);
 	if (chg->pd_allowed_votable)
 		destroy_votable(chg->pd_allowed_votable);
 	if (chg->awake_votable)
 		destroy_votable(chg->awake_votable);
 	if (chg->pl_disable_votable)
 		destroy_votable(chg->pl_disable_votable);
+	if (chg->chg_disable_votable)
+		destroy_votable(chg->chg_disable_votable);
+	if (chg->pl_enable_votable_indirect)
+		destroy_votable(chg->pl_enable_votable_indirect);
+	if (chg->apsd_disable_votable)
+		destroy_votable(chg->apsd_disable_votable);
 }
 
 static void smblib_iio_deinit(struct smb_charger *chg)
