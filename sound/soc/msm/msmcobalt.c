@@ -3373,13 +3373,9 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 		pdata->codec_root = entry;
 		tavil_codec_info_create_codec_entry(pdata->codec_root, codec);
 	} else {
-<<<<<<< HEAD
 #ifndef VENDOR_EDIT
 /*wangdongdong@MultiMediaService,2016/10/09,remove wsa device to avoid null pointer*/
-		if (rtd_aux && rtd_aux->component)
-=======
 		if (rtd->card->num_aux_devs && rtd_aux && rtd_aux->component)
->>>>>>> origin/qc8998
 			if (!strcmp(rtd_aux->component->name, WSA8810_NAME_1) ||
 			    !strcmp(rtd_aux->component->name, WSA8810_NAME_2)) {
 				tasha_set_spkr_mode(rtd->codec, SPKR_MODE_1);
