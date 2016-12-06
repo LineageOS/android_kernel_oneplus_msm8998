@@ -1011,6 +1011,7 @@ static void mdss_dsi_debugfs_cleanup(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 		struct mdss_dsi_debugfs_info *dfs = ctrl->debugfs_info;
 		if (dfs && dfs->root)
 			debugfs_remove_recursive(dfs->root);
+		kfree(dfs);
 		pdata = pdata->next;
 	} while (pdata);
 	pr_debug("%s: Cleaned up mdss_dsi_debugfs_info\n", __func__);
@@ -3009,6 +3010,12 @@ static int mdss_dsi_cont_splash_config(struct mdss_panel_info *pinfo,
 			mdss_dsi_panel_pwm_enable(ctrl_pdata);
 		ctrl_pdata->ctrl_state |= (CTRL_STATE_PANEL_INIT |
 			CTRL_STATE_MDP_ACTIVE | CTRL_STATE_DSI_ACTIVE);
+
+		/*
+		 * MDP client removes this extra vote during splash reconfigure
+		 * for command mode panel from interface. DSI removes the vote
+		 * during suspend-resume for video mode panel.
+		 */
 		if (ctrl_pdata->panel_data.panel_info.type == MIPI_CMD_PANEL)
 			clk_handle = ctrl_pdata->mdp_clk_handle;
 		else

@@ -20,11 +20,18 @@
 #include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
+#include <linux/delay.h>
+#include <linux/qpnp/qpnp-revid.h>
 
 #define FG_ADC_RR_EN_CTL			0x46
 #define FG_ADC_RR_SKIN_TEMP_LSB			0x50
 #define FG_ADC_RR_SKIN_TEMP_MSB			0x51
 #define FG_ADC_RR_RR_ADC_CTL			0x52
+#define FG_ADC_RR_ADC_CTL_CONTINUOUS_SEL_MASK	0x8
+#define FG_ADC_RR_ADC_CTL_CONTINUOUS_SEL		BIT(3)
+#define FG_ADC_RR_ADC_LOG			0x53
+#define FG_ADC_RR_ADC_LOG_CLR_CTRL_MASK		0xFE
+#define FG_ADC_RR_ADC_LOG_CLR_CTRL		BIT(0)
 
 #define FG_ADC_RR_FAKE_BATT_LOW_LSB		0x58
 #define FG_ADC_RR_FAKE_BATT_LOW_MSB		0x59
@@ -67,6 +74,8 @@
 
 #define FG_ADC_RR_USB_IN_V_CTRL			0x90
 #define FG_ADC_RR_USB_IN_V_TRIGGER		0x91
+#define FG_ADC_RR_USB_IN_V_EVERY_CYCLE_MASK	0x80
+#define FG_ADC_RR_USB_IN_V_EVERY_CYCLE		BIT(7)
 #define FG_ADC_RR_USB_IN_V_STS			0x92
 #define FG_ADC_RR_USB_IN_V_LSB			0x94
 #define FG_ADC_RR_USB_IN_V_MSB			0x95
@@ -150,16 +159,22 @@
 
 #define FG_ADC_RR_TEMP_FS_VOLTAGE_NUM		5000000
 #define FG_ADC_RR_TEMP_FS_VOLTAGE_DEN		3
-#define FG_ADC_RR_DIE_TEMP_OFFSET		600000
+#define FG_ADC_RR_DIE_TEMP_OFFSET		601400
 #define FG_ADC_RR_DIE_TEMP_SLOPE		2
 #define FG_ADC_RR_DIE_TEMP_OFFSET_MILLI_DEGC	25000
 
-#define FG_ADC_RR_CHG_TEMP_OFFSET		1288000
-#define FG_ADC_RR_CHG_TEMP_SLOPE		4
-#define FG_ADC_RR_CHG_TEMP_OFFSET_MILLI_DEGC	27000
+#define FAB_ID_GF				0x30
+#define FAB_ID_SMIC				0x11
+#define FG_ADC_RR_CHG_TEMP_GF_OFFSET_UV		1296794
+#define FG_ADC_RR_CHG_TEMP_GF_SLOPE_UV_PER_C	3858
+#define FG_ADC_RR_CHG_TEMP_SMIC_OFFSET_UV	1339518
+#define FG_ADC_RR_CHG_TEMP_SMIC_SLOPE_UV_PER_C	3598
+#define FG_ADC_RR_CHG_TEMP_OFFSET_MILLI_DEGC	25000
+#define FG_ADC_RR_CHG_THRESHOLD_SCALE		4
 
 #define FG_ADC_RR_VOLT_INPUT_FACTOR		8
-#define FG_ADC_RR_CURR_INPUT_FACTOR		2
+#define FG_ADC_RR_CURR_INPUT_FACTOR		2000
+#define FG_ADC_RR_CURR_USBIN_INPUT_FACTOR_MIL	1886
 #define FG_ADC_SCALE_MILLI_FACTOR		1000
 #define FG_ADC_KELVINMIL_CELSIUSMIL		273150
 
@@ -167,6 +182,9 @@
 #define FG_RR_ADC_COHERENT_CHECK_RETRY		5
 #define FG_RR_ADC_MAX_CONTINUOUS_BUFFER_LEN	16
 #define FG_RR_ADC_STS_CHANNEL_READING_MASK	0x3
+
+#define FG_RR_CONV_CONTINUOUS_TIME_MIN		80000
+#define FG_RR_CONV_CONTINUOUS_TIME_MAX		81000
 
 /*
  * The channel number is not a physical index in hardware,
@@ -201,6 +219,8 @@ struct rradc_chip {
 	struct iio_chan_spec		*iio_chans;
 	unsigned int			nchannels;
 	struct rradc_chan_prop		*chan_props;
+	struct device_node		*revid_dev_node;
+	struct pmic_revid_data		*pmic_fab_id;
 };
 
 struct rradc_channels {
@@ -220,6 +240,21 @@ struct rradc_chan_prop {
 	int (*scale)(struct rradc_chip *chip, struct rradc_chan_prop *prop,
 					u16 adc_code, int *result);
 };
+
+static int rradc_masked_write(struct rradc_chip *rr_adc, u16 offset, u8 mask,
+						u8 val)
+{
+	int rc;
+
+	rc = regmap_update_bits(rr_adc->regmap, rr_adc->base + offset,
+								mask, val);
+	if (rc) {
+		pr_err("spmi write failed: addr=%03X, rc=%d\n", offset, rc);
+		return rc;
+	}
+
+	return rc;
+}
 
 static int rradc_read(struct rradc_chip *rr_adc, u16 offset, u8 *data, int len)
 {
@@ -315,12 +350,20 @@ static int rradc_post_process_curr(struct rradc_chip *chip,
 			struct rradc_chan_prop *prop, u16 adc_code,
 			int *result_ua)
 {
-	int64_t ua = 0;
+	int64_t ua = 0, scale = 0;
 
-	/* 0.5 V/A; 2.5V ADC full scale */
-	ua = ((int64_t)adc_code * FG_ADC_RR_CURR_INPUT_FACTOR);
+	if (!prop)
+		return -EINVAL;
+
+	if (prop->channel == RR_ADC_USBIN_I)
+		scale = FG_ADC_RR_CURR_USBIN_INPUT_FACTOR_MIL;
+	else
+		scale = FG_ADC_RR_CURR_INPUT_FACTOR;
+
+	/* scale * V/A; 2.5V ADC full scale */
+	ua = ((int64_t)adc_code * scale);
 	ua *= (FG_ADC_RR_FS_VOLTAGE_MV * FG_ADC_SCALE_MILLI_FACTOR);
-	ua = div64_s64(ua, FG_MAX_ADC_READINGS);
+	ua = div64_s64(ua, (FG_MAX_ADC_READINGS * 1000));
 	*result_ua = ua;
 
 	return 0;
@@ -347,16 +390,34 @@ static int rradc_post_process_chg_temp_hot(struct rradc_chip *chip,
 			struct rradc_chan_prop *prop, u16 adc_code,
 			int *result_millidegc)
 {
-	int64_t temp = 0;
+	int64_t uv = 0, offset = 0, slope = 0;
 
-	temp = (int64_t) adc_code * 4;
-	temp = temp * FG_ADC_RR_TEMP_FS_VOLTAGE_NUM;
-	temp = div64_s64(temp, (FG_ADC_RR_TEMP_FS_VOLTAGE_DEN *
+	if (chip->revid_dev_node) {
+		switch (chip->pmic_fab_id->fab_id) {
+		case FAB_ID_GF:
+			offset = FG_ADC_RR_CHG_TEMP_GF_OFFSET_UV;
+			slope = FG_ADC_RR_CHG_TEMP_GF_SLOPE_UV_PER_C;
+			break;
+		case FAB_ID_SMIC:
+			offset = FG_ADC_RR_CHG_TEMP_SMIC_OFFSET_UV;
+			slope = FG_ADC_RR_CHG_TEMP_SMIC_SLOPE_UV_PER_C;
+			break;
+		default:
+			return -EINVAL;
+		}
+	} else {
+		pr_err("No temperature scaling coefficients\n");
+		return -EINVAL;
+	}
+
+	uv = (int64_t) adc_code * FG_ADC_RR_CHG_THRESHOLD_SCALE;
+	uv = uv * FG_ADC_RR_TEMP_FS_VOLTAGE_NUM;
+	uv = div64_s64(uv, (FG_ADC_RR_TEMP_FS_VOLTAGE_DEN *
 					FG_MAX_ADC_READINGS));
-	temp = FG_ADC_RR_CHG_TEMP_OFFSET - temp;
-	temp = div64_s64(temp, FG_ADC_RR_CHG_TEMP_SLOPE);
-	temp = temp + FG_ADC_RR_CHG_TEMP_OFFSET_MILLI_DEGC;
-	*result_millidegc = temp;
+	uv = offset - uv;
+	uv = div64_s64((uv * FG_ADC_SCALE_MILLI_FACTOR), slope);
+	uv = uv + FG_ADC_RR_CHG_TEMP_OFFSET_MILLI_DEGC;
+	*result_millidegc = uv;
 
 	return 0;
 }
@@ -380,15 +441,33 @@ static int rradc_post_process_chg_temp(struct rradc_chip *chip,
 			struct rradc_chan_prop *prop, u16 adc_code,
 			int *result_millidegc)
 {
-	int64_t temp = 0;
+	int64_t uv = 0, offset = 0, slope = 0;
 
-	temp = ((int64_t) adc_code * FG_ADC_RR_TEMP_FS_VOLTAGE_NUM);
-	temp = div64_s64(temp, (FG_ADC_RR_TEMP_FS_VOLTAGE_DEN *
+	if (chip->revid_dev_node) {
+		switch (chip->pmic_fab_id->fab_id) {
+		case FAB_ID_GF:
+			offset = FG_ADC_RR_CHG_TEMP_GF_OFFSET_UV;
+			slope = FG_ADC_RR_CHG_TEMP_GF_SLOPE_UV_PER_C;
+			break;
+		case FAB_ID_SMIC:
+			offset = FG_ADC_RR_CHG_TEMP_SMIC_OFFSET_UV;
+			slope = FG_ADC_RR_CHG_TEMP_SMIC_SLOPE_UV_PER_C;
+			break;
+		default:
+			return -EINVAL;
+		}
+	} else {
+		pr_err("No temperature scaling coefficients\n");
+		return -EINVAL;
+	}
+
+	uv = ((int64_t) adc_code * FG_ADC_RR_TEMP_FS_VOLTAGE_NUM);
+	uv = div64_s64(uv, (FG_ADC_RR_TEMP_FS_VOLTAGE_DEN *
 					FG_MAX_ADC_READINGS));
-	temp = FG_ADC_RR_CHG_TEMP_OFFSET - temp;
-	temp = div64_s64(temp, FG_ADC_RR_CHG_TEMP_SLOPE);
-	temp = temp + FG_ADC_RR_CHG_TEMP_OFFSET_MILLI_DEGC;
-	*result_millidegc = temp;
+	uv = offset - uv;
+	uv = div64_s64((uv * FG_ADC_SCALE_MILLI_FACTOR), slope);
+	uv += FG_ADC_RR_CHG_TEMP_OFFSET_MILLI_DEGC;
+	*result_millidegc = uv;
 
 	return 0;
 }
@@ -494,7 +573,7 @@ static const struct rradc_channels rradc_chans[] = {
 static int rradc_do_conversion(struct rradc_chip *chip,
 			struct rradc_chan_prop *prop, u16 *data)
 {
-	int rc = 0, bytes_to_read = 0;
+	int rc = 0, bytes_to_read = 0, retry = 0;
 	u8 buf[6];
 	u16 offset = 0, batt_id_5 = 0, batt_id_15 = 0, batt_id_150 = 0;
 	u16 status = 0;
@@ -505,7 +584,8 @@ static int rradc_do_conversion(struct rradc_chip *chip,
 			(prop->channel != RR_ADC_CHG_HOT_TEMP) &&
 			(prop->channel != RR_ADC_CHG_TOO_HOT_TEMP) &&
 			(prop->channel != RR_ADC_SKIN_HOT_TEMP) &&
-			(prop->channel != RR_ADC_SKIN_TOO_HOT_TEMP)) {
+			(prop->channel != RR_ADC_SKIN_TOO_HOT_TEMP) &&
+			(prop->channel != RR_ADC_USBIN_V)) {
 		/* BATT_ID STS bit does not get set initially */
 		status = rradc_chans[prop->channel].sts;
 		rc = rradc_read(chip, status, buf, 1);
@@ -516,8 +596,87 @@ static int rradc_do_conversion(struct rradc_chip *chip,
 
 		buf[0] &= FG_RR_ADC_STS_CHANNEL_READING_MASK;
 		if (buf[0] != FG_RR_ADC_STS_CHANNEL_READING_MASK) {
-			pr_warn("%s is not ready; nothing to read\n",
+			pr_debug("%s is not ready; nothing to read\n",
 				rradc_chans[prop->channel].datasheet_name);
+			rc = -ENODATA;
+			goto fail;
+		}
+	}
+
+	if (prop->channel == RR_ADC_USBIN_V) {
+		/* Force conversion every cycle */
+		rc = rradc_masked_write(chip, FG_ADC_RR_USB_IN_V_TRIGGER,
+				FG_ADC_RR_USB_IN_V_EVERY_CYCLE_MASK,
+				FG_ADC_RR_USB_IN_V_EVERY_CYCLE);
+		if (rc < 0) {
+			pr_err("Force every cycle update failed:%d\n", rc);
+			goto fail;
+		}
+
+		/* Clear channel log */
+		rc = rradc_masked_write(chip, FG_ADC_RR_ADC_LOG,
+				FG_ADC_RR_ADC_LOG_CLR_CTRL_MASK,
+				FG_ADC_RR_ADC_LOG_CLR_CTRL);
+		if (rc < 0) {
+			pr_err("log ctrl update to clear failed:%d\n", rc);
+			goto fail;
+		}
+
+		rc = rradc_masked_write(chip, FG_ADC_RR_ADC_LOG,
+			FG_ADC_RR_ADC_LOG_CLR_CTRL_MASK, 0);
+		if (rc < 0) {
+			pr_err("log ctrl update to not clear failed:%d\n", rc);
+			goto fail;
+		}
+
+		/* Switch to continuous mode */
+		rc = rradc_masked_write(chip, FG_ADC_RR_RR_ADC_CTL,
+			FG_ADC_RR_ADC_CTL_CONTINUOUS_SEL_MASK,
+			FG_ADC_RR_ADC_CTL_CONTINUOUS_SEL);
+		if (rc < 0) {
+			pr_err("Update to continuous mode failed:%d\n", rc);
+			goto fail;
+		}
+
+		status = rradc_chans[prop->channel].sts;
+		rc = rradc_read(chip, status, buf, 1);
+		if (rc < 0) {
+			pr_err("status read failed:%d\n", rc);
+			goto fail;
+		}
+
+		buf[0] &= FG_RR_ADC_STS_CHANNEL_READING_MASK;
+		while ((buf[0] != FG_RR_ADC_STS_CHANNEL_READING_MASK) &&
+								(retry < 2)) {
+			pr_debug("%s is not ready; nothing to read\n",
+				rradc_chans[prop->channel].datasheet_name);
+			usleep_range(FG_RR_CONV_CONTINUOUS_TIME_MIN,
+					FG_RR_CONV_CONTINUOUS_TIME_MAX);
+			retry++;
+			rc = rradc_read(chip, status, buf, 1);
+			if (rc < 0) {
+				pr_err("status read failed:%d\n", rc);
+				goto fail;
+			}
+		}
+
+		/* Switch to non continuous mode */
+		rc = rradc_masked_write(chip, FG_ADC_RR_RR_ADC_CTL,
+				FG_ADC_RR_ADC_CTL_CONTINUOUS_SEL_MASK, 0);
+		if (rc < 0) {
+			pr_err("Update to continuous mode failed:%d\n", rc);
+			goto fail;
+		}
+
+		/* Restore usb_in trigger */
+		rc = rradc_masked_write(chip, FG_ADC_RR_USB_IN_V_TRIGGER,
+				FG_ADC_RR_USB_IN_V_EVERY_CYCLE_MASK, 0);
+		if (rc < 0) {
+			pr_err("Restore every cycle update failed:%d\n", rc);
+			goto fail;
+		}
+
+		if (retry >= 2) {
 			rc = -ENODATA;
 			goto fail;
 		}
@@ -653,6 +812,22 @@ static int rradc_get_dt_data(struct rradc_chip *chip, struct device_node *node)
 	}
 
 	chip->base = base;
+	chip->revid_dev_node = of_parse_phandle(node, "qcom,pmic-revid", 0);
+	if (chip->revid_dev_node) {
+		chip->pmic_fab_id = get_revid_data(chip->revid_dev_node);
+		if (IS_ERR(chip->pmic_fab_id)) {
+			rc = PTR_ERR(chip->pmic_fab_id);
+			if (rc != -EPROBE_DEFER)
+				pr_err("Unable to get pmic_revid rc=%d\n", rc);
+			return rc;
+		}
+
+		if (chip->pmic_fab_id->fab_id == -EINVAL) {
+			rc = chip->pmic_fab_id->fab_id;
+			pr_debug("Unable to read fabid rc=%d\n", rc);
+		}
+	}
+
 	iio_chan = chip->iio_chans;
 
 	for (i = 0; i < RR_ADC_MAX; i++) {

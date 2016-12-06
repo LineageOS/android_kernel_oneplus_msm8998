@@ -35,8 +35,8 @@
 
 #define F(f, s, h, m, n) { (f), (s), (2 * (h) - 1), (m), (n) }
 
-static DEFINE_VDD_REGULATORS(vdd_dig, VDD_DIG_NUM, 1, vdd_corner, NULL);
-static DEFINE_VDD_REGULATORS(vdd_dig_ao, VDD_DIG_NUM, 1, vdd_corner, NULL);
+static DEFINE_VDD_REGULATORS(vdd_dig, VDD_DIG_NUM, 1, vdd_corner);
+static DEFINE_VDD_REGULATORS(vdd_dig_ao, VDD_DIG_NUM, 1, vdd_corner);
 
 enum {
 	P_CORE_BI_PLL_TEST_SE,
@@ -1173,7 +1173,7 @@ static struct clk_branch gcc_aggre2_usb3_axi_clk = {
 
 static struct clk_branch gcc_bimc_gfx_clk = {
 	.halt_reg = 0x7106c,
-	.halt_check = BRANCH_HALT_NO_CHECK_ON_DISABLE,
+	.halt_check = BRANCH_VOTED,
 	.clkr = {
 		.enable_reg = 0x7106c,
 		.enable_mask = BIT(0),
@@ -1711,7 +1711,7 @@ static struct clk_branch gcc_gp3_clk = {
 
 static struct clk_branch gcc_gpu_bimc_gfx_clk = {
 	.halt_reg = 0x71010,
-	.halt_check = BRANCH_HALT_NO_CHECK_ON_DISABLE,
+	.halt_check = BRANCH_VOTED,
 	.clkr = {
 		.enable_reg = 0x71010,
 		.enable_mask = BIT(0),
@@ -1737,7 +1737,7 @@ static struct clk_branch gcc_gpu_bimc_gfx_src_clk = {
 
 static struct clk_branch gcc_gpu_cfg_ahb_clk = {
 	.halt_reg = 0x71004,
-	.halt_check = BRANCH_HALT_NO_CHECK_ON_DISABLE,
+	.halt_check = BRANCH_VOTED,
 	.clkr = {
 		.enable_reg = 0x71004,
 		.enable_mask = BIT(0),
@@ -2201,7 +2201,7 @@ static struct clk_branch gcc_ufs_axi_hw_ctl_clk = {
 			},
 			.num_parents = 1,
 			.flags = CLK_SET_RATE_PARENT,
-			.ops = &clk_branch2_hw_ctl_ops,
+			.ops = &clk_branch2_ops,
 		},
 	},
 };
@@ -2249,7 +2249,7 @@ static struct clk_branch gcc_ufs_ice_core_hw_ctl_clk = {
 			},
 			.num_parents = 1,
 			.flags = CLK_SET_RATE_PARENT,
-			.ops = &clk_branch2_hw_ctl_ops,
+			.ops = &clk_branch2_ops,
 		},
 	},
 };
@@ -2284,7 +2284,7 @@ static struct clk_branch gcc_ufs_phy_aux_hw_ctl_clk = {
 			},
 			.num_parents = 1,
 			.flags = CLK_SET_RATE_PARENT,
-			.ops = &clk_branch2_hw_ctl_ops,
+			.ops = &clk_branch2_ops,
 		},
 	},
 };
@@ -2355,7 +2355,7 @@ static struct clk_branch gcc_ufs_unipro_core_hw_ctl_clk = {
 			},
 			.num_parents = 1,
 			.flags = CLK_SET_RATE_PARENT,
-			.ops = &clk_branch2_hw_ctl_ops,
+			.ops = &clk_branch2_ops,
 		},
 	},
 };
@@ -2516,12 +2516,38 @@ static struct clk_branch gcc_usb_phy_cfg_ahb2phy_clk = {
 
 static struct clk_branch hlos1_vote_lpass_adsp_smmu_clk = {
 	.halt_reg = 0x7d014,
-	.halt_check = BRANCH_HALT_NO_CHECK_ON_DISABLE,
+	.halt_check = BRANCH_VOTED,
 	.clkr = {
 		.enable_reg = 0x7d014,
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data){
 			.name = "hlos1_vote_lpass_adsp_smmu_clk",
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch hlos1_vote_turing_adsp_smmu_clk = {
+	.halt_reg = 0x7d048,
+	.halt_check = BRANCH_VOTED,
+	.clkr = {
+		.enable_reg = 0x7d048,
+		.enable_mask = BIT(0),
+		.hw.init = &(struct clk_init_data){
+			.name = "hlos1_vote_turing_adsp_smmu_clk",
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch hlos2_vote_turing_adsp_smmu_clk = {
+	.halt_reg = 0x7e048,
+	.halt_check = BRANCH_VOTED,
+	.clkr = {
+		.enable_reg = 0x7e048,
+		.enable_mask = BIT(0),
+		.hw.init = &(struct clk_init_data){
+			.name = "hlos2_vote_turing_adsp_smmu_clk",
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2683,6 +2709,10 @@ static struct clk_regmap *gcc_falcon_clocks[] = {
 	[GCC_UFS_ICE_CORE_HW_CTL_CLK] = &gcc_ufs_ice_core_hw_ctl_clk.clkr,
 	[GCC_UFS_PHY_AUX_HW_CTL_CLK] = &gcc_ufs_phy_aux_hw_ctl_clk.clkr,
 	[GCC_UFS_UNIPRO_CORE_HW_CTL_CLK] = &gcc_ufs_unipro_core_hw_ctl_clk.clkr,
+	[HLOS1_VOTE_TURING_ADSP_SMMU_CLK] =
+					&hlos1_vote_turing_adsp_smmu_clk.clkr,
+	[HLOS2_VOTE_TURING_ADSP_SMMU_CLK] =
+					&hlos2_vote_turing_adsp_smmu_clk.clkr,
 };
 
 static const struct qcom_reset_map gcc_falcon_resets[] = {
@@ -2709,6 +2739,8 @@ static const struct qcom_cc_desc gcc_falcon_desc = {
 	.config = &gcc_falcon_regmap_config,
 	.clks = gcc_falcon_clocks,
 	.num_clks = ARRAY_SIZE(gcc_falcon_clocks),
+	.hwclks = gcc_msmfalcon_hws,
+	.num_hwclks = ARRAY_SIZE(gcc_msmfalcon_hws),
 	.resets = gcc_falcon_resets,
 	.num_resets = ARRAY_SIZE(gcc_falcon_resets),
 };
@@ -2721,9 +2753,8 @@ MODULE_DEVICE_TABLE(of, gcc_falcon_match_table);
 
 static int gcc_falcon_probe(struct platform_device *pdev)
 {
-	int ret = 0, i;
+	int ret = 0;
 	struct regmap *regmap;
-	struct clk *clk;
 
 	regmap = qcom_cc_map(pdev, &gcc_falcon_desc);
 	if (IS_ERR(regmap))
@@ -2734,13 +2765,6 @@ static int gcc_falcon_probe(struct platform_device *pdev)
 	 * turned off by hardware during certain apps low power modes.
 	 */
 	regmap_update_bits(regmap, 0x52008, BIT(21), BIT(21));
-
-	/* register hardware clocks */
-	for (i = 0; i < ARRAY_SIZE(gcc_msmfalcon_hws); i++) {
-		clk = devm_clk_register(&pdev->dev, gcc_msmfalcon_hws[i]);
-		if (IS_ERR(clk))
-			return PTR_ERR(clk);
-	}
 
 	vdd_dig.regulator[0] = devm_regulator_get(&pdev->dev, "vdd_dig");
 	if (IS_ERR(vdd_dig.regulator[0])) {

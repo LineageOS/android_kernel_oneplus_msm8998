@@ -44,6 +44,7 @@ extern unsigned int sysctl_sched_wake_to_idle;
 #ifdef CONFIG_SCHED_HMP
 extern int sysctl_sched_freq_inc_notify;
 extern int sysctl_sched_freq_dec_notify;
+extern unsigned int sysctl_sched_freq_reporting_policy;
 extern unsigned int sysctl_sched_window_stats_policy;
 extern unsigned int sysctl_sched_ravg_hist_size;
 extern unsigned int sysctl_sched_cpu_high_irqload;
@@ -52,6 +53,8 @@ extern unsigned int sysctl_sched_spill_nr_run;
 extern unsigned int sysctl_sched_spill_load_pct;
 extern unsigned int sysctl_sched_upmigrate_pct;
 extern unsigned int sysctl_sched_downmigrate_pct;
+extern unsigned int sysctl_sched_group_upmigrate_pct;
+extern unsigned int sysctl_sched_group_downmigrate_pct;
 extern unsigned int sysctl_early_detection_duration;
 extern unsigned int sysctl_sched_boost;
 extern unsigned int sysctl_sched_small_wakee_task_load_pct;

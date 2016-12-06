@@ -63,7 +63,7 @@ static int __get_iommu_pgprot(struct dma_attrs *attrs, int prot,
 static struct gen_pool *atomic_pool;
 #define NO_KERNEL_MAPPING_DUMMY 0x2222
 #define DEFAULT_DMA_COHERENT_POOL_SIZE  SZ_256K
-static size_t atomic_pool_size = DEFAULT_DMA_COHERENT_POOL_SIZE;
+static size_t atomic_pool_size __initdata = DEFAULT_DMA_COHERENT_POOL_SIZE;
 
 static int __init early_coherent_pool(char *p)
 {
@@ -455,6 +455,7 @@ static void arm64_dma_unremap(struct device *dev, void *remapped_addr,
 {
 	struct vm_struct *area;
 
+	size = PAGE_ALIGN(size);
 	remapped_addr = (void *)((unsigned long)remapped_addr & PAGE_MASK);
 
 	area = find_vm_area(remapped_addr);
@@ -1026,7 +1027,7 @@ static int __iommu_attach_notifier(struct notifier_block *nb,
 	return 0;
 }
 
-static int register_iommu_dma_ops_notifier(struct bus_type *bus)
+static int __init register_iommu_dma_ops_notifier(struct bus_type *bus)
 {
 	struct notifier_block *nb = kzalloc(sizeof(*nb), GFP_KERNEL);
 	int ret;

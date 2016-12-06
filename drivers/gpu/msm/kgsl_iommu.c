@@ -1118,7 +1118,6 @@ static int _init_global_pt(struct kgsl_mmu *mmu, struct kgsl_pagetable *pt)
 {
 	int ret = 0;
 	struct kgsl_iommu_pt *iommu_pt = NULL;
-	int disable_htw = !MMU_FEATURE(mmu, KGSL_MMU_COHERENT_HTW);
 	unsigned int cb_num;
 	struct kgsl_iommu *iommu = _IOMMU_PRIV(mmu);
 	struct kgsl_iommu_context *ctx = &iommu->ctx[KGSL_IOMMU_CONTEXT_USER];
@@ -1127,9 +1126,6 @@ static int _init_global_pt(struct kgsl_mmu *mmu, struct kgsl_pagetable *pt)
 
 	if (IS_ERR(iommu_pt))
 		return PTR_ERR(iommu_pt);
-
-	iommu_domain_set_attr(iommu_pt->domain,
-				DOMAIN_ATTR_COHERENT_HTW_DISABLE, &disable_htw);
 
 	if (kgsl_mmu_is_perprocess(mmu)) {
 		ret = iommu_domain_set_attr(iommu_pt->domain,
@@ -1189,7 +1185,6 @@ static int _init_secure_pt(struct kgsl_mmu *mmu, struct kgsl_pagetable *pt)
 	int ret = 0;
 	struct kgsl_iommu_pt *iommu_pt = NULL;
 	struct kgsl_iommu *iommu = _IOMMU_PRIV(mmu);
-	int disable_htw = !MMU_FEATURE(mmu, KGSL_MMU_COHERENT_HTW);
 	struct kgsl_iommu_context *ctx = &iommu->ctx[KGSL_IOMMU_CONTEXT_SECURE];
 	int secure_vmid = VMID_CP_PIXEL;
 	unsigned int cb_num;
@@ -1206,9 +1201,6 @@ static int _init_secure_pt(struct kgsl_mmu *mmu, struct kgsl_pagetable *pt)
 
 	if (IS_ERR(iommu_pt))
 		return PTR_ERR(iommu_pt);
-
-	iommu_domain_set_attr(iommu_pt->domain,
-				DOMAIN_ATTR_COHERENT_HTW_DISABLE, &disable_htw);
 
 	ret = iommu_domain_set_attr(iommu_pt->domain,
 				    DOMAIN_ATTR_SECURE_VMID, &secure_vmid);
@@ -1251,7 +1243,6 @@ static int _init_per_process_pt(struct kgsl_mmu *mmu, struct kgsl_pagetable *pt)
 	struct kgsl_iommu_context *ctx = &iommu->ctx[KGSL_IOMMU_CONTEXT_USER];
 	int dynamic = 1;
 	unsigned int cb_num = ctx->cb_num;
-	int disable_htw = !MMU_FEATURE(mmu, KGSL_MMU_COHERENT_HTW);
 
 	iommu_pt = _alloc_pt(ctx->dev, mmu, pt);
 
@@ -1277,9 +1268,6 @@ static int _init_per_process_pt(struct kgsl_mmu *mmu, struct kgsl_pagetable *pt)
 		KGSL_CORE_ERR("set DOMAIN_ATTR_PROCID failed: %d\n", ret);
 		goto done;
 	}
-
-	iommu_domain_set_attr(iommu_pt->domain,
-				DOMAIN_ATTR_COHERENT_HTW_DISABLE, &disable_htw);
 
 	ret = _attach_pt(iommu_pt, ctx);
 	if (ret)
@@ -1415,17 +1403,16 @@ static int _setstate_alloc(struct kgsl_device *device,
 {
 	int ret;
 
-	ret = kgsl_sharedmem_alloc_contig(device, &iommu->setstate, NULL,
-		PAGE_SIZE);
-	if (ret)
-		return ret;
+	ret = kgsl_sharedmem_alloc_contig(device, &iommu->setstate, PAGE_SIZE);
 
-	/* Mark the setstate memory as read only */
-	iommu->setstate.flags |= KGSL_MEMFLAGS_GPUREADONLY;
+	if (!ret) {
+		/* Mark the setstate memory as read only */
+		iommu->setstate.flags |= KGSL_MEMFLAGS_GPUREADONLY;
 
-	kgsl_sharedmem_set(device, &iommu->setstate, 0, 0, PAGE_SIZE);
+		kgsl_sharedmem_set(device, &iommu->setstate, 0, 0, PAGE_SIZE);
+	}
 
-	return 0;
+	return ret;
 }
 
 static int kgsl_iommu_init(struct kgsl_mmu *mmu)
@@ -1675,7 +1662,7 @@ static int _iommu_map_guard_page(struct kgsl_pagetable *pt,
 
 		if (!kgsl_secure_guard_page_memdesc.sgt) {
 			if (kgsl_allocate_user(KGSL_MMU_DEVICE(pt->mmu),
-					&kgsl_secure_guard_page_memdesc, pt,
+					&kgsl_secure_guard_page_memdesc,
 					sgp_size, KGSL_MEMFLAGS_SECURE)) {
 				KGSL_CORE_ERR(
 					"Secure guard page alloc failed\n");
@@ -2376,23 +2363,27 @@ static int kgsl_iommu_get_gpuaddr(struct kgsl_pagetable *pagetable,
 	}
 
 	ret = _insert_gpuaddr(pagetable, addr, size);
-	if (ret == 0)
+	if (ret == 0) {
 		memdesc->gpuaddr = addr;
+		memdesc->pagetable = pagetable;
+	}
 
 out:
 	spin_unlock(&pagetable->lock);
 	return ret;
 }
 
-static void kgsl_iommu_put_gpuaddr(struct kgsl_pagetable *pagetable,
-		struct kgsl_memdesc *memdesc)
+static void kgsl_iommu_put_gpuaddr(struct kgsl_memdesc *memdesc)
 {
-	spin_lock(&pagetable->lock);
+	if (memdesc->pagetable == NULL)
+		return;
 
-	if (_remove_gpuaddr(pagetable, memdesc->gpuaddr))
+	spin_lock(&memdesc->pagetable->lock);
+
+	if (_remove_gpuaddr(memdesc->pagetable, memdesc->gpuaddr))
 		BUG();
 
-	spin_unlock(&pagetable->lock);
+	spin_unlock(&memdesc->pagetable->lock);
 }
 
 static int kgsl_iommu_svm_range(struct kgsl_pagetable *pagetable,
@@ -2492,7 +2483,6 @@ static const struct {
 	{ "qcom,global_pt", KGSL_MMU_GLOBAL_PAGETABLE },
 	{ "qcom,hyp_secure_alloc", KGSL_MMU_HYP_SECURE_ALLOC },
 	{ "qcom,force-32bit", KGSL_MMU_FORCE_32BIT },
-	{ "qcom,coherent-htw", KGSL_MMU_COHERENT_HTW },
 };
 
 static int _kgsl_iommu_probe(struct kgsl_device *device,

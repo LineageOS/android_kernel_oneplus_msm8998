@@ -834,5 +834,6 @@ config FINGERPRINT_FPC1022
 	tristate "fpc fingerprint sensor support"
 	depends on SPI_MASTER
 #add end
+source "drivers/input/misc/ots_pat9125/Kconfig"
 
 endif

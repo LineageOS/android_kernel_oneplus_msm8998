@@ -3628,7 +3628,7 @@ static void gfx_v7_0_ring_emit_vm_flush(struct amdgpu_ring *ring,
 					unsigned vm_id, uint64_t pd_addr)
 {
 	int usepfp = (ring->type == AMDGPU_RING_TYPE_GFX);
-	uint32_t seq = ring->fence_drv.sync_seq;
+	uint32_t seq = ring->fence_drv.sync_seq[ring->idx];
 	uint64_t addr = ring->fence_drv.gpu_addr;
 
 	amdgpu_ring_write(ring, PACKET3(PACKET3_WAIT_REG_MEM, 5));
@@ -5463,7 +5463,7 @@ static int gfx_v7_0_eop_irq(struct amdgpu_device *adev,
 	case 2:
 		for (i = 0; i < adev->gfx.num_compute_rings; i++) {
 			ring = &adev->gfx.compute_ring[i];
-			if ((ring->me == me_id) & (ring->pipe == pipe_id))
+			if ((ring->me == me_id) && (ring->pipe == pipe_id))
 				amdgpu_fence_process(ring);
 		}
 		break;

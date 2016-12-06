@@ -1815,6 +1815,11 @@
 			reg = <0x10 8>;
 		};
 
+		dload_type@18 {
+			compatible = "qcom,msm-imem-dload-type";
+			reg = <0x18 4>;
+		};
+
 		restart_reason@65c {
 			compatible = "qcom,msm-imem-restart_reason";
 			reg = <0x65c 4>;
@@ -1943,6 +1948,8 @@
 		clock-names = "core_clk", "iface_clk", "bus_aggr_clk", "utmi_clk",
 				"sleep_clk", "xo", "cfg_ahb_clk";
 
+		qcom,core-clk-rate = <120000000>;
+
 		resets = <&clock_gcc USB_30_BCR>;
 		reset-names = "core_reset";
 
@@ -2051,6 +2058,7 @@
 			 <&clock_gcc clk_gcc_usb_phy_cfg_ahb2phy_clk>;
 		clock-names = "core_clk", "iface_clk", "utmi_clk", "sleep_clk",
 				"xo", "cfg_ahb_clk";
+		qcom,core-clk-rate = <60000000>;
 		resets = <&clock_gcc USB_20_BCR>;
 		reset-names = "core_reset";
 

@@ -167,6 +167,8 @@ static int xhci_plat_probe(struct platform_device *pdev)
 	if (!hcd)
 		return -ENOMEM;
 
+	hcd_to_bus(hcd)->skip_resume = true;
+
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	hcd->regs = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(hcd->regs)) {
@@ -186,6 +188,9 @@ static int xhci_plat_probe(struct platform_device *pdev)
 		ret = clk_prepare_enable(clk);
 		if (ret)
 			goto put_hcd;
+	} else if (PTR_ERR(clk) == -EPROBE_DEFER) {
+		ret = -EPROBE_DEFER;
+		goto put_hcd;
 	}
 
 	if (pdev->dev.parent)
@@ -218,6 +223,8 @@ static int xhci_plat_probe(struct platform_device *pdev)
 		goto disable_clk;
 	}
 
+	hcd_to_bus(xhci->shared_hcd)->skip_resume = true;
+
 	if ((node && of_property_read_bool(node, "usb3-lpm-capable")) ||
 			(pdata && pdata->usb3_lpm_capable))
 		xhci->quirks |= XHCI_LPM_SUPPORT;
@@ -241,9 +248,13 @@ static int xhci_plat_probe(struct platform_device *pdev)
 	if (ret)
 		goto disable_usb_phy;
 
+	device_wakeup_enable(&hcd->self.root_hub->dev);
+
 	ret = usb_add_hcd(xhci->shared_hcd, irq, IRQF_SHARED | IRQF_ONESHOT);
 	if (ret)
 		goto dealloc_usb2_hcd;
+
+	device_wakeup_enable(&xhci->shared_hcd->self.root_hub->dev);
 
 	ret = device_create_file(&pdev->dev, &dev_attr_config_imod);
 	if (ret)
@@ -325,7 +336,7 @@ static int xhci_plat_runtime_suspend(struct device *dev)
 
 	dev_dbg(dev, "xhci-plat runtime suspend\n");
 
-	return xhci_suspend(xhci, true);
+	return 0;
 }
 
 static int xhci_plat_runtime_resume(struct device *dev)
@@ -339,7 +350,7 @@ static int xhci_plat_runtime_resume(struct device *dev)
 
 	dev_dbg(dev, "xhci-plat runtime resume\n");
 
-	ret = xhci_resume(xhci, false);
+	ret = 0;
 	pm_runtime_mark_last_busy(dev);
 
 	return ret;

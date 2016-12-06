@@ -16,6 +16,7 @@
 #include <dt-bindings/clock/qcom,mmcc-msmfalcon.h>
 #include <dt-bindings/clock/qcom,rpmcc.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/regulator/qcom,rpm-smd-regulator.h>
 
 / {
 	model = "Qualcomm Technologies, Inc. MSMTRITON";
@@ -40,59 +41,59 @@
 		#address-cells = <2>;
 		#size-cells = <0>;
 
-		CPU0: cpu@0 {
-			device_type = "cpu";
-			compatible = "arm,armv8";
-			reg = <0x0 0x0>;
-			enable-method = "psci";
-		};
-
-		CPU1: cpu@1 {
-			device_type = "cpu";
-			compatible = "arm,armv8";
-			reg = <0x0 0x1>;
-			enable-method = "psci";
-		};
-
-		CPU2: cpu@2 {
-			device_type = "cpu";
-			compatible = "arm,armv8";
-			reg = <0x0 0x2>;
-			enable-method = "psci";
-		};
-
-		CPU3: cpu@3 {
-			device_type = "cpu";
-			compatible = "arm,armv8";
-			reg = <0x0 0x3>;
-			enable-method = "psci";
-		};
-
-		CPU4: cpu@100 {
+		CPU0: cpu@100 {
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x100>;
 			enable-method = "psci";
 		};
 
-		CPU5: cpu@101 {
+		CPU1: cpu@101 {
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x101>;
 			enable-method = "psci";
 		};
 
-		CPU6: cpu@102 {
+		CPU2: cpu@102 {
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x102>;
 			enable-method = "psci";
 		};
 
-		CPU7: cpu@103 {
+		CPU3: cpu@103 {
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x103>;
+			enable-method = "psci";
+		};
+
+		CPU4: cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x0 0x0>;
+			enable-method = "psci";
+		};
+
+		CPU5: cpu@1 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x0 0x1>;
+			enable-method = "psci";
+		};
+
+		CPU6: cpu@2 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x0 0x2>;
+			enable-method = "psci";
+		};
+
+		CPU7: cpu@3 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x0 0x3>;
 			enable-method = "psci";
 		};
 
@@ -176,6 +177,14 @@
 			reg = <0x0 0x92a00000 0x0 0x1e00000>;
 		};
 
+		venus_fw_mem: venus_fw_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x0 0x80000000 0x0 0x20000000>;
+			reusable;
+			alignment = <0x0 0x400000>;
+			size = <0x0 0x800000>;
+		};
+
 		adsp_mem: adsp_region {
 			compatible = "shared-dma-pool";
 			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
@@ -235,6 +244,32 @@
 	qcom,sps {
 		compatible = "qcom,msm_sps_4k";
 		qcom,pipe-attr-ee;
+	};
+
+	qcom,memshare {
+		compatible = "qcom,memshare";
+
+		qcom,client_1 {
+			compatible = "qcom,memshare-peripheral";
+			qcom,peripheral-size = <0x200000>;
+			qcom,client-id = <0>;
+			qcom,allocate-boot-time;
+			label = "modem";
+		};
+
+		qcom,client_2 {
+			compatible = "qcom,memshare-peripheral";
+			qcom,peripheral-size = <0x300000>;
+			qcom,client-id = <2>;
+			label = "modem";
+		};
+
+		mem_client_3_size: qcom,client_3 {
+			compatible = "qcom,memshare-peripheral";
+			qcom,peripheral-size = <0x0>;
+			qcom,client-id = <1>;
+			label = "modem";
+		};
 	};
 
 	tsens: tsens@10ad000 {
@@ -325,15 +360,16 @@
 		};
 	};
 
-	clock_rpmcc: qcom,dummycc {
-		compatible = "qcom,dummycc";
-		clock-output-names = "rpmcc_clocks";
+	clock_rpmcc: qcom,rpmcc {
+		compatible = "qcom,rpmcc-msmfalcon", "qcom,rpmcc";
 		#clock-cells = <1>;
 	};
 
 	clock_gcc: clock-controller@100000 {
-		compatible = "qcom,dummycc";
-		clock-output-names = "gcc_clocks";
+		compatible = "qcom,gcc-msmfalcon";
+		reg = <0x100000 0x94000>;
+		vdd_dig-supply = <&pm2falcon_s3_level>;
+		vdd_dig_ao-supply = <&pm2falcon_s3_level_ao>;
 		#clock-cells = <1>;
 		#reset-cells = <1>;
 	};
@@ -495,6 +531,13 @@
 		qcom,xprt = "smem";
 	};
 
+	rpm_bus: qcom,rpm-smd {
+		compatible = "qcom,rpm-glink";
+		qcom,glink-edge = "rpm";
+		rpm-channel-name = "rpm_requests";
+		rpm-standalone;
+	};
+
 	qcom,ipc_router {
 		compatible = "qcom,ipc_router";
 		qcom,node-id = <1>;
@@ -519,4 +562,247 @@
 		qcom,xprt-version = <1>;
 		qcom,fragmented-data;
 	};
+
+	qcom,icnss@18800000 {
+		status = "disabled";
+		compatible = "qcom,icnss";
+		reg = <0x18800000 0x800000>,
+		      <0x10ac000 0x20>;
+		reg-names = "membase", "mpm_config";
+		interrupts = <0 413 0>,   /* CE0 */
+			     <0 414 0>,   /* CE1 */
+			     <0 415 0>,   /* CE2 */
+			     <0 416 0>,   /* CE3 */
+			     <0 417 0>,   /* CE4 */
+			     <0 418 0>,   /* CE5 */
+			     <0 420 0>,   /* CE6 */
+			     <0 421 0>,   /* CE7 */
+			     <0 422 0>,   /* CE8 */
+			     <0 423 0>,   /* CE9 */
+			     <0 424 0>,   /* CE10 */
+			     <0 425 0>;   /* CE11 */
+		qcom,wlan-msa-memory = <0x100000>;
+	};
+
+	qcom,lpass@15700000 {
+		compatible = "qcom,pil-tz-generic";
+		reg = <0x15700000 0x00100>;
+		interrupts = <0 162 1>;
+
+		vdd_cx-supply = <&pm2falcon_s3_level>;
+		qcom,proxy-reg-names = "vdd_cx";
+		qcom,vdd_cx-uV-uA = <RPM_SMD_REGULATOR_LEVEL_TURBO 100000>;
+
+		clocks = <&clock_rpmcc CXO_PIL_LPASS_CLK>;
+		clock-names = "xo";
+		qcom,proxy-clock-names = "xo";
+
+		qcom,pas-id = <1>;
+		qcom,proxy-timeout-ms = <10000>;
+		qcom,smem-id = <423>;
+		qcom,sysmon-id = <1>;
+		qcom,ssctl-instance-id = <0x14>;
+		qcom,firmware-name = "adsp";
+		memory-region = <&adsp_fw_mem>;
+
+		/* GPIO inputs from lpass */
+		qcom,gpio-err-fatal = <&smp2pgpio_ssr_smp2p_2_in 0 0>;
+		qcom,gpio-proxy-unvote = <&smp2pgpio_ssr_smp2p_2_in 2 0>;
+		qcom,gpio-err-ready = <&smp2pgpio_ssr_smp2p_2_in 1 0>;
+		qcom,gpio-stop-ack = <&smp2pgpio_ssr_smp2p_2_in 3 0>;
+
+		/* GPIO output to lpass */
+		qcom,gpio-force-stop = <&smp2pgpio_ssr_smp2p_2_out 0 0>;
+		status = "ok";
+	};
+
+	qcom,venus@cce0000 {
+		compatible = "qcom,pil-tz-generic";
+		reg = <0xcce0000 0x4000>;
+
+		vdd-supply = <&gdsc_venus>;
+		qcom,proxy-reg-names = "vdd";
+
+		clocks = <&clock_mmss MMSS_VIDEO_CORE_CLK>,
+			<&clock_mmss MMSS_VIDEO_AHB_CLK>,
+			<&clock_mmss MMSS_VIDEO_AXI_CLK>;
+		clock-names = "core_clk","iface_clk",
+			"bus_clk";
+		qcom,proxy-clock-names = "core_clk",
+			"iface_clk","bus_clk";
+
+		qcom,msm-bus,name = "pil-venus";
+		qcom,msm-bus,num-cases = <2>;
+		qcom,msm-bus,num-paths = <1>;
+		qcom,msm-bus,vectors-KBps =
+				<63 512 0 0>,
+				<63 512 0 304000>;
+
+		qcom,pas-id = <9>;
+		qcom,proxy-timeout-ms = <100>;
+		qcom,firmware-name = "venus";
+		memory-region = <&venus_fw_mem>;
+		status = "ok";
+	};
+
+	pil_modem: qcom,mss@4080000 {
+		compatible = "qcom,pil-q6v55-mss";
+		reg = <0x4080000 0x100>,
+		      <0x1f63000 0x008>,
+		      <0x1f65000 0x008>,
+		      <0x1f64000 0x008>,
+		      <0x4180000 0x040>,
+		      <0x00179000 0x004>;
+		reg-names = "qdsp6_base", "halt_q6", "halt_modem",
+			    "halt_nc", "rmb_base", "restart_reg";
+
+		clocks = <&clock_rpmcc RPM_XO_CLK_SRC>,
+			 <&clock_gcc GCC_MSS_CFG_AHB_CLK>,
+			 <&clock_gcc GCC_BIMC_MSS_Q6_AXI_CLK>,
+			 <&clock_gcc GCC_BOOT_ROM_AHB_CLK>,
+			 <&clock_gcc GPLL0_OUT_MSSCC>,
+			 <&clock_gcc GCC_MSS_SNOC_AXI_CLK>,
+			 <&clock_gcc GCC_MSS_MNOC_BIMC_AXI_CLK>,
+			 <&clock_rpmcc RPM_QDSS_CLK>;
+		clock-names = "xo", "iface_clk", "bus_clk",
+			      "mem_clk", "gpll0_mss_clk", "snoc_axi_clk",
+			      "mnoc_axi_clk", "qdss_clk";
+		qcom,proxy-clock-names = "xo", "qdss_clk";
+		qcom,active-clock-names = "iface_clk", "bus_clk", "mem_clk",
+					 "gpll0_mss_clk", "snoc_axi_clk",
+					 "mnoc_axi_clk";
+
+		interrupts = <0 448 1>;
+		vdd_cx-supply = <&pm2falcon_s3_level>;
+		vdd_cx-voltage = <RPM_SMD_REGULATOR_LEVEL_TURBO>;
+		vdd_mx-supply = <&pm2falcon_s5_level>;
+		vdd_mx-uV = <RPM_SMD_REGULATOR_LEVEL_TURBO>;
+		qcom,firmware-name = "modem";
+		qcom,pil-self-auth;
+		qcom,sysmon-id = <0>;
+		qcom,ssctl-instance-id = <0x12>;
+		qcom,override-acc;
+		qcom,qdsp6v62-1-5;
+		memory-region = <&modem_fw_mem>;
+		qcom,mem-protect-id = <0xF>;
+
+		/* GPIO inputs from mss */
+		qcom,gpio-err-fatal = <&smp2pgpio_ssr_smp2p_1_in 0 0>;
+		qcom,gpio-err-ready = <&smp2pgpio_ssr_smp2p_1_in 1 0>;
+		qcom,gpio-proxy-unvote = <&smp2pgpio_ssr_smp2p_1_in 2 0>;
+		qcom,gpio-stop-ack = <&smp2pgpio_ssr_smp2p_1_in 3 0>;
+		qcom,gpio-shutdown-ack = <&smp2pgpio_ssr_smp2p_1_in 7 0>;
+
+		/* GPIO output to mss */
+		qcom,gpio-force-stop = <&smp2pgpio_ssr_smp2p_1_out 0 0>;
+		status = "ok";
+	};
+
+	qcom,msm-imem@146bf000 {
+		compatible = "qcom,msm-imem";
+		reg = <0x146bf000 0x1000>;
+		ranges = <0x0 0x146bf000 0x1000>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		pil@94c {
+			compatible = "qcom,msm-imem-pil";
+			reg = <0x94c 200>;
+		};
+	};
+
+	qcom,ghd {
+		compatible = "qcom,gladiator-hang-detect";
+		qcom,threshold-arr = <0x179d141c 0x179d1420
+				      0x179d1424 0x179d1428
+				      0x179d142c 0x179d1430>;
+		qcom,config-reg = <0x179d1434>;
+	};
+
+	qcom,msm-gladiator-v2@17900000 {
+		compatible = "qcom,msm-gladiator-v2";
+		reg = <0x17900000 0xe000>;
+		reg-names = "gladiator_base";
+		interrupts = <0 22 0>;
+		clock-names = "atb_clk";
+		clocks = <&clock_rpmcc RPM_QDSS_CLK>;
+	};
+};
+
+#include "msmtriton-ion.dtsi"
+#include "msmtriton-regulator.dtsi"
+#include "msm-gdsc-falcon.dtsi"
+#include "msmfalcon-common.dtsi"
+
+&gdsc_usb30 {
+	clock-names = "core_clk";
+	clocks = <&clock_gcc GCC_USB30_MASTER_CLK>;
+	status = "ok";
+};
+
+&gdsc_ufs {
+	status = "ok";
+};
+
+&gdsc_bimc_smmu {
+	clock-names = "bus_clk";
+	clocks = <&clock_mmss MMSS_BIMC_SMMU_AXI_CLK>;
+	proxy-supply = <&gdsc_bimc_smmu>;
+	qcom,proxy-consumer-enable;
+	status = "ok";
+};
+
+&gdsc_hlos1_vote_lpass_adsp {
+	status = "ok";
+};
+
+&gdsc_venus {
+	status = "ok";
+};
+
+&gdsc_venus_core0 {
+	qcom,support-hw-trigger;
+	status = "ok";
+};
+
+&gdsc_camss_top {
+	status = "ok";
+};
+
+&gdsc_vfe0 {
+	parent-supply = <&gdsc_camss_top>;
+	status = "ok";
+};
+
+&gdsc_vfe1 {
+	parent-supply = <&gdsc_camss_top>;
+	status = "ok";
+};
+
+&gdsc_cpp {
+	parent-supply = <&gdsc_camss_top>;
+	status = "ok";
+};
+
+&gdsc_mdss {
+	clock-names = "bus_clk", "rot_clk";
+	clocks = <&clock_mmss MMSS_MDSS_AXI_CLK>,
+		 <&clock_mmss MMSS_MDSS_ROT_CLK>;
+	proxy-supply = <&gdsc_mdss>;
+	qcom,proxy-consumer-enable;
+	status = "ok";
+};
+
+&gdsc_gpu_gx {
+	clock-names = "bimc_core_clk", "core_clk", "core_root_clk";
+	clocks = <&clock_gcc GCC_GPU_BIMC_GFX_CLK>,
+		 <&clock_gfx GPUCC_GFX3D_CLK>,
+		 <&clock_gfx GFX3D_CLK_SRC>;
+	qcom,force-enable-root-clk;
+	parent-supply = <&gfx_vreg_corner>;
+	status = "ok";
+};
+
+&gdsc_gpu_cx {
+	status = "ok";
 };

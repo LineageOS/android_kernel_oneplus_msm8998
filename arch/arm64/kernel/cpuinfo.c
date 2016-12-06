@@ -23,6 +23,8 @@
 
 #include <linux/bitops.h>
 #include <linux/bug.h>
+#include <linux/compat.h>
+#include <linux/elf.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/personality.h>
@@ -107,6 +109,7 @@ static const char *const compat_hwcap2_str[] = {
 static int c_show(struct seq_file *m, void *v)
 {
 	int i, j;
+	bool compat = personality(current->personality) == PER_LINUX32;
 
 	seq_printf(m, "Processor\t: AArch64 Processor rev %d (%s)\n",
 		read_cpuid_id() & 15, ELF_PLATFORM);
@@ -120,6 +123,9 @@ static int c_show(struct seq_file *m, void *v)
 		 * "processor".  Give glibc what it expects.
 		 */
 		seq_printf(m, "processor\t: %d\n", i);
+		if (compat)
+			seq_printf(m, "model name\t: ARMv8 Processor rev %d (%s)\n",
+				   MIDR_REVISION(midr), COMPAT_ELF_PLATFORM);
 
 		seq_printf(m, "BogoMIPS\t: %lu.%02lu\n",
 			   loops_per_jiffy / (500000UL/HZ),
@@ -132,7 +138,7 @@ static int c_show(struct seq_file *m, void *v)
 		 * software which does already (at least for 32-bit).
 		 */
 		seq_puts(m, "Features\t:");
-		if (personality(current->personality) == PER_LINUX32) {
+		if (compat) {
 #ifdef CONFIG_COMPAT
 			for (j = 0; compat_hwcap_str[j]; j++)
 				if (compat_elf_hwcap & (1 << j))
@@ -214,40 +220,41 @@ static void __cpuinfo_store_cpu(struct cpuinfo_arm64 *info)
 {
 	info->reg_cntfrq = arch_timer_get_cntfrq();
 	info->reg_ctr = read_cpuid_cachetype();
-	info->reg_dczid = read_cpuid(DCZID_EL0);
+	info->reg_dczid = read_cpuid(SYS_DCZID_EL0);
 	info->reg_midr = read_cpuid_id();
 
-	info->reg_id_aa64dfr0 = read_cpuid(ID_AA64DFR0_EL1);
-	info->reg_id_aa64dfr1 = read_cpuid(ID_AA64DFR1_EL1);
-	info->reg_id_aa64isar0 = read_cpuid(ID_AA64ISAR0_EL1);
-	info->reg_id_aa64isar1 = read_cpuid(ID_AA64ISAR1_EL1);
+	info->reg_id_aa64dfr0 = read_cpuid(SYS_ID_AA64DFR0_EL1);
+	info->reg_id_aa64dfr1 = read_cpuid(SYS_ID_AA64DFR1_EL1);
+	info->reg_id_aa64isar0 = read_cpuid(SYS_ID_AA64ISAR0_EL1);
+	info->reg_id_aa64isar1 = read_cpuid(SYS_ID_AA64ISAR1_EL1);
 	/*
 	 * Explicitly mask out 16KB granule since we donot
 	 * want to support it
 	 */
-	info->reg_id_aa64mmfr0 = read_cpuid(ID_AA64MMFR0_EL1) &
+	info->reg_id_aa64mmfr0 = read_cpuid(SYS_ID_AA64MMFR0_EL1) &
 					(~MMFR0_EL1_16KGRAN_MASK);
-	info->reg_id_aa64mmfr1 = read_cpuid(ID_AA64MMFR1_EL1);
-	info->reg_id_aa64pfr0 = read_cpuid(ID_AA64PFR0_EL1);
-	info->reg_id_aa64pfr1 = read_cpuid(ID_AA64PFR1_EL1);
+	info->reg_id_aa64mmfr1 = read_cpuid(SYS_ID_AA64MMFR1_EL1);
+	info->reg_id_aa64mmfr2 = read_cpuid(SYS_ID_AA64MMFR2_EL1);
+	info->reg_id_aa64pfr0 = read_cpuid(SYS_ID_AA64PFR0_EL1);
+	info->reg_id_aa64pfr1 = read_cpuid(SYS_ID_AA64PFR1_EL1);
 
-	info->reg_id_dfr0 = read_cpuid(ID_DFR0_EL1);
-	info->reg_id_isar0 = read_cpuid(ID_ISAR0_EL1);
-	info->reg_id_isar1 = read_cpuid(ID_ISAR1_EL1);
-	info->reg_id_isar2 = read_cpuid(ID_ISAR2_EL1);
-	info->reg_id_isar3 = read_cpuid(ID_ISAR3_EL1);
-	info->reg_id_isar4 = read_cpuid(ID_ISAR4_EL1);
-	info->reg_id_isar5 = read_cpuid(ID_ISAR5_EL1);
-	info->reg_id_mmfr0 = read_cpuid(ID_MMFR0_EL1);
-	info->reg_id_mmfr1 = read_cpuid(ID_MMFR1_EL1);
-	info->reg_id_mmfr2 = read_cpuid(ID_MMFR2_EL1);
-	info->reg_id_mmfr3 = read_cpuid(ID_MMFR3_EL1);
-	info->reg_id_pfr0 = read_cpuid(ID_PFR0_EL1);
-	info->reg_id_pfr1 = read_cpuid(ID_PFR1_EL1);
+	info->reg_id_dfr0 = read_cpuid(SYS_ID_DFR0_EL1);
+	info->reg_id_isar0 = read_cpuid(SYS_ID_ISAR0_EL1);
+	info->reg_id_isar1 = read_cpuid(SYS_ID_ISAR1_EL1);
+	info->reg_id_isar2 = read_cpuid(SYS_ID_ISAR2_EL1);
+	info->reg_id_isar3 = read_cpuid(SYS_ID_ISAR3_EL1);
+	info->reg_id_isar4 = read_cpuid(SYS_ID_ISAR4_EL1);
+	info->reg_id_isar5 = read_cpuid(SYS_ID_ISAR5_EL1);
+	info->reg_id_mmfr0 = read_cpuid(SYS_ID_MMFR0_EL1);
+	info->reg_id_mmfr1 = read_cpuid(SYS_ID_MMFR1_EL1);
+	info->reg_id_mmfr2 = read_cpuid(SYS_ID_MMFR2_EL1);
+	info->reg_id_mmfr3 = read_cpuid(SYS_ID_MMFR3_EL1);
+	info->reg_id_pfr0 = read_cpuid(SYS_ID_PFR0_EL1);
+	info->reg_id_pfr1 = read_cpuid(SYS_ID_PFR1_EL1);
 
-	info->reg_mvfr0 = read_cpuid(MVFR0_EL1);
-	info->reg_mvfr1 = read_cpuid(MVFR1_EL1);
-	info->reg_mvfr2 = read_cpuid(MVFR2_EL1);
+	info->reg_mvfr0 = read_cpuid(SYS_MVFR0_EL1);
+	info->reg_mvfr1 = read_cpuid(SYS_MVFR1_EL1);
+	info->reg_mvfr2 = read_cpuid(SYS_MVFR2_EL1);
 
 	cpuinfo_detect_icache_policy(info);
 

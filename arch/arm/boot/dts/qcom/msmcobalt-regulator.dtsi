@@ -501,7 +501,7 @@
 		};
 		pmicobalt_bob_pin1: regulator-bob-pin1 {
 			compatible = "qcom,rpm-smd-regulator";
-			regulator-name = "pmcobalt_bob_pin1";
+			regulator-name = "pmicobalt_bob_pin1";
 			qcom,set = <3>;
 			regulator-min-microvolt = <3312000>;
 			regulator-max-microvolt = <3600000>;
@@ -509,7 +509,7 @@
 		};
 		pmicobalt_bob_pin2: regulator-bob-pin2 {
 			compatible = "qcom,rpm-smd-regulator";
-			regulator-name = "pmcobalt_bob_pin2";
+			regulator-name = "pmicobalt_bob_pin2";
 			qcom,set = <3>;
 			regulator-min-microvolt = <3312000>;
 			regulator-max-microvolt = <3600000>;
@@ -517,7 +517,7 @@
 		};
 		pmicobalt_bob_pin3: regulator-bob-pin3 {
 			compatible = "qcom,rpm-smd-regulator";
-			regulator-name = "pmcobalt_bob_pin3";
+			regulator-name = "pmicobalt_bob_pin3";
 			qcom,set = <3>;
 			regulator-min-microvolt = <3312000>;
 			regulator-max-microvolt = <3600000>;
@@ -535,6 +535,28 @@
 			regulator-min-microvolt = <524000>;
 			regulator-max-microvolt = <1100000>;
 			qcom,enable-time = <500>;
+		};
+	};
+
+	qcom,pmcobalt@1 {
+		pmcobalt_s10: regulator@2f00 {
+			compatible = "qcom,qpnp-regulator";
+			reg = <0x2f00 0x100>;
+			regulator-name = "pmcobalt_s10";
+			regulator-min-microvolt = <572000>;
+			regulator-max-microvolt = <1112000>;
+			qcom,enable-time = <500>;
+			regulator-always-on;
+		};
+
+		pmcobalt_s13: regulator@3800 {
+			compatible = "qcom,qpnp-regulator";
+			reg = <0x3800 0x100>;
+			regulator-name = "pmcobalt_s13";
+			regulator-min-microvolt = <572000>;
+			regulator-max-microvolt = <1112000>;
+			qcom,enable-time = <500>;
+			regulator-always-on;
 		};
 	};
 };
@@ -568,8 +590,9 @@
 		qcom,cpr-idle-cycles = <15>;
 		qcom,cpr-up-down-delay-time = <3000>;
 		qcom,cpr-step-quot-init-min = <11>;
-		qcom,cpr-step-quot-init-max = <13>;
+		qcom,cpr-step-quot-init-max = <12>;
 		qcom,cpr-count-mode = <0>;		/* All at once */
+		qcom,cpr-count-repeat = <1>;
 		qcom,cpr-down-error-step-limit = <1>;
 		qcom,cpr-up-error-step-limit = <1>;
 		qcom,cpr-corner-switch-delay-time = <209>;
@@ -590,10 +613,13 @@
 		qcom,cpr-panic-reg-name-list =
 			"PWR_CPRH_STATUS", "APCLUS0_L2_SAW4_PMIC_STS";
 
+		qcom,cpr-aging-ref-voltage = <1112000>;
+		vdd-supply = <&pmcobalt_s10>;
+
 		thread@0 {
 			qcom,cpr-thread-id = <0>;
 			qcom,cpr-consecutive-up = <0>;
-			qcom,cpr-consecutive-down = <0>;
+			qcom,cpr-consecutive-down = <2>;
 			qcom,cpr-up-threshold = <2>;
 			qcom,cpr-down-threshold = <2>;
 
@@ -712,6 +738,13 @@
 				qcom,allow-voltage-interpolation;
 				qcom,allow-quotient-interpolation;
 				qcom,cpr-scaled-open-loop-voltage-as-ceiling;
+
+				qcom,cpr-aging-max-voltage-adjustment = <15000>;
+				qcom,cpr-aging-ref-corner = <22>;
+				qcom,cpr-aging-ro-scaling-factor = <1620>;
+				qcom,allow-aging-voltage-adjustment = <0>;
+				qcom,allow-aging-open-loop-voltage-adjustment =
+					<1>;
 			};
 		};
 	};
@@ -729,9 +762,10 @@
 		qcom,cpr-loop-time = <5000000>;
 		qcom,cpr-idle-cycles = <15>;
 		qcom,cpr-up-down-delay-time = <3000>;
-		qcom,cpr-step-quot-init-min = <11>;
-		qcom,cpr-step-quot-init-max = <13>;
+		qcom,cpr-step-quot-init-min = <9>;
+		qcom,cpr-step-quot-init-max = <14>;
 		qcom,cpr-count-mode = <0>;		/* All at once */
+		qcom,cpr-count-repeat = <1>;
 		qcom,cpr-down-error-step-limit = <1>;
 		qcom,cpr-up-error-step-limit = <1>;
 		qcom,cpr-corner-switch-delay-time = <209>;
@@ -752,10 +786,13 @@
 		qcom,cpr-panic-reg-name-list =
 			"PERF_CPRH_STATUS", "APCLUS1_L2_SAW4_PMIC_STS";
 
+		qcom,cpr-aging-ref-voltage = <1112000>;
+		vdd-supply = <&pmcobalt_s13>;
+
 		thread@0 {
 			qcom,cpr-thread-id = <0>;
 			qcom,cpr-consecutive-up = <0>;
-			qcom,cpr-consecutive-down = <0>;
+			qcom,cpr-consecutive-down = <2>;
 			qcom,cpr-up-threshold = <2>;
 			qcom,cpr-down-threshold = <2>;
 
@@ -894,6 +931,13 @@
 				qcom,allow-voltage-interpolation;
 				qcom,allow-quotient-interpolation;
 				qcom,cpr-scaled-open-loop-voltage-as-ceiling;
+
+				qcom,cpr-aging-max-voltage-adjustment = <15000>;
+				qcom,cpr-aging-ref-corner = <25>;
+				qcom,cpr-aging-ro-scaling-factor = <1700>;
+				qcom,allow-aging-voltage-adjustment = <0>;
+				qcom,allow-aging-open-loop-voltage-adjustment =
+					<1>;
 			};
 		};
 	};
@@ -917,6 +961,7 @@
 		qcom,cpr-step-quot-init-min = <8>;
 		qcom,cpr-step-quot-init-max = <12>;
 		qcom,cpr-count-mode = <0>;		/* All-at-once min */
+		qcom,cpr-count-repeat = <1>;
 
 		vdd-supply = <&pm8005_s1>;
 		qcom,voltage-step = <4000>;
@@ -1056,6 +1101,8 @@
 				qcom,cpr-aging-ref-corner = <6>;
 				qcom,cpr-aging-ro-scaling-factor = <2950>;
 				qcom,allow-aging-voltage-adjustment = <0>;
+				qcom,allow-aging-open-loop-voltage-adjustment =
+					<1>;
 			};
 		};
 	};

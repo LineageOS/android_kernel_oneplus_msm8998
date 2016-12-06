@@ -768,6 +768,15 @@ config MSM_SERVICE_NOTIFIER
 	  like audio, the identifier for which is provided by the service
 	  locator.
 
+config MSM_QBT1000
+	bool "QBT1000 Ultrasonic Fingerprint Sensor"
+	help
+	  This driver provides services for configuring the fingerprint
+	  sensor hardware and for communicating with the trusted app which
+	  uses it. It enables clocks and provides commands for loading
+	  trusted apps, unloading them and marshalling buffers to the
+	  trusted fingerprint app.
+
 config MSM_RPM_RBCPR_STATS_V2_LOG
 	tristate "MSM Resource Power Manager RPBCPR Stat Driver"
 	depends on DEBUG_FS
@@ -820,5 +829,13 @@ config QCOM_SMCINVOKE
 	help
 	  Enable SMCInvoke driver which supports capability based secure
 	  communication between QSEE and HLOS.
+
+config QCOM_EARLY_RANDOM
+	bool "Initialize random pool very early"
+	help
+	  The standard random pool may not initialize until late in the boot
+	  process which means that any calls to get random numbers before then
+	  may not be truly random. Select this option to make an early call
+	  to get some random data to put in the pool. If unsure, say N.
 
 source "drivers/soc/qcom/memshare/Kconfig"

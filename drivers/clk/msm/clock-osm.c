@@ -49,6 +49,7 @@ enum clk_osm_bases {
 	OSM_BASE,
 	PLL_BASE,
 	EFUSE_BASE,
+	ACD_BASE,
 	NUM_BASES,
 };
 
@@ -80,10 +81,13 @@ enum clk_osm_trace_packet_id {
 #define MEM_ACC_SEQ_REG_VAL_START(n) (SEQ_REG(60 + (n)))
 #define SEQ_REG1_MSMCOBALT_V2 0x1048
 #define VERSION_REG 0x0
+#define VERSION_1P1 0x00010100
 
 #define OSM_TABLE_SIZE 40
 #define MAX_CLUSTER_CNT 2
-#define MAX_CONFIG 4
+#define CORE_COUNT_VAL(val) ((val & GENMASK(18, 16)) >> 16)
+#define SINGLE_CORE 1
+#define MAX_CORE_COUNT 4
 #define LLM_SW_OVERRIDE_CNT 3
 
 #define ENABLE_REG 0x1004
@@ -203,7 +207,6 @@ enum clk_osm_trace_packet_id {
 #define TRACE_CTRL_ENABLE 1
 #define TRACE_CTRL_DISABLE 0
 #define TRACE_CTRL_ENABLE_WDOG_STATUS	BIT(30)
-#define TRACE_CTRL_ENABLE_WDOG_STATUS_MASK	BIT(30)
 #define TRACE_CTRL_PACKET_TYPE_MASK BVAL(2, 1, 3)
 #define TRACE_CTRL_PACKET_TYPE_SHIFT 1
 #define TRACE_CTRL_PERIODIC_TRACE_EN_MASK BIT(3)
@@ -223,10 +226,47 @@ enum clk_osm_trace_packet_id {
 #define PERFCL_EFUSE_SHIFT	29
 #define PERFCL_EFUSE_MASK	0x7
 
+#define MSMCOBALTV1_PWRCL_BOOT_RATE	1478400000
+#define MSMCOBALTV1_PERFCL_BOOT_RATE	1536000000
+#define MSMCOBALTV2_PWRCL_BOOT_RATE	1555200000
+#define MSMCOBALTV2_PERFCL_BOOT_RATE	1728000000
+
+/* ACD registers */
+#define ACD_HW_VERSION		0x0
+#define ACDCR			0x4
+#define ACDTD			0x8
+#define ACDSSCR			0x28
+#define ACD_EXTINT_CFG		0x30
+#define ACD_DCVS_SW		0x34
+#define ACD_GFMUX_CFG		0x3c
+#define ACD_READOUT_CFG		0x48
+#define ACD_AUTOXFER_CFG	0x80
+#define ACD_AUTOXFER		0x84
+#define ACD_AUTOXFER_CTL	0x88
+#define ACD_AUTOXFER_STATUS	0x8c
+#define ACD_WRITE_CTL		0x90
+#define ACD_WRITE_STATUS	0x94
+#define ACD_READOUT		0x98
+
+#define ACD_MASTER_ONLY_REG_ADDR	0x80
+#define ACD_WRITE_CTL_UPDATE_EN		BIT(0)
+#define ACD_WRITE_CTL_SELECT_SHIFT	1
+#define ACD_GFMUX_CFG_SELECT		BIT(0)
+#define ACD_AUTOXFER_START_CLEAR	0
+#define ACD_AUTOXFER_START_SET		BIT(0)
+#define AUTO_XFER_DONE_MASK		BIT(0)
+#define ACD_DCVS_SW_DCVS_IN_PRGR_SET	BIT(0)
+#define ACD_DCVS_SW_DCVS_IN_PRGR_CLEAR	0
+#define ACD_LOCAL_TRANSFER_TIMEOUT_NS   500
+
 static void __iomem *virt_base;
 static void __iomem *debug_base;
 
 #define lmh_lite_clk_src_source_val 1
+
+#define ACD_REG_RELATIVE_ADDR(addr) (addr / 4)
+#define ACD_REG_RELATIVE_ADDR_BITMASK(addr) \
+			(1 << (ACD_REG_RELATIVE_ADDR(addr)))
 
 #define FIXDIV(div) (div ? (2 * (div) - 1) : (0))
 
@@ -312,12 +352,15 @@ struct clk_osm {
 	unsigned long pbases[NUM_BASES];
 	spinlock_t lock;
 
+	u32 version;
 	u32 cpu_reg_mask;
 	u32 num_entries;
 	u32 cluster_num;
 	u32 irq;
 	u32 apm_crossover_vc;
 	u32 apm_threshold_vc;
+	u32 mem_acc_crossover_vc;
+	u32 mem_acc_threshold_vc;
 	u32 cycle_counter_reads;
 	u32 cycle_counter_delay;
 	u32 cycle_counter_factor;
@@ -335,6 +378,14 @@ struct clk_osm {
 	u32 apm_ctrl_status;
 	u32 osm_clk_rate;
 	u32 xo_clk_rate;
+	u32 acd_td;
+	u32 acd_cr;
+	u32 acd_sscr;
+	u32 acd_extint0_cfg;
+	u32 acd_extint1_cfg;
+	u32 acd_autoxfer_ctl;
+	u32 acd_debugfs_addr;
+	bool acd_init;
 	bool secure_init;
 	bool red_fsm_en;
 	bool boost_fsm_en;
@@ -349,6 +400,7 @@ struct clk_osm {
 	struct notifier_block panic_notifier;
 	u32 trace_periodic_timer;
 	bool trace_en;
+	bool wdog_trace_en;
 };
 
 static bool msmcobalt_v1;
@@ -385,6 +437,161 @@ static inline int clk_osm_read_reg_no_log(struct clk_osm *c, u32 offset)
 static inline int clk_osm_mb(struct clk_osm *c, int base)
 {
 	return readl_relaxed_no_log((char *)c->vbases[base] + VERSION_REG);
+}
+
+static inline int clk_osm_acd_mb(struct clk_osm *c)
+{
+	return readl_relaxed_no_log((char *)c->vbases[ACD_BASE] +
+				    ACD_HW_VERSION);
+}
+
+static inline void clk_osm_acd_master_write_reg(struct clk_osm *c,
+						u32 val, u32 offset)
+{
+	writel_relaxed(val, (char *)c->vbases[ACD_BASE] + offset);
+}
+
+static int clk_osm_acd_local_read_reg(struct clk_osm *c, u32 offset)
+{
+	u32 reg = 0;
+	int timeout;
+
+	if (offset >= ACD_MASTER_ONLY_REG_ADDR) {
+		pr_err("ACD register at offset=0x%x not locally readable\n",
+		       offset);
+		return -EINVAL;
+	}
+
+	/* Set select field in read control register */
+	writel_relaxed(ACD_REG_RELATIVE_ADDR(offset),
+		       (char *)c->vbases[ACD_BASE] + ACD_READOUT_CFG);
+
+	/* Clear write control register */
+	writel_relaxed(reg, (char *)c->vbases[ACD_BASE] + ACD_WRITE_CTL);
+
+	/* Set select and update_en fields in write control register */
+	reg = (ACD_REG_RELATIVE_ADDR(ACD_READOUT_CFG)
+	       << ACD_WRITE_CTL_SELECT_SHIFT)
+		| ACD_WRITE_CTL_UPDATE_EN;
+	writel_relaxed(reg, (char *)c->vbases[ACD_BASE] + ACD_WRITE_CTL);
+
+	/* Ensure writes complete before polling */
+	clk_osm_acd_mb(c);
+
+	/* Poll write status register */
+	for (timeout = ACD_LOCAL_TRANSFER_TIMEOUT_NS; timeout > 0;
+	     timeout -= 100) {
+		reg = readl_relaxed((char *)c->vbases[ACD_BASE]
+				    + ACD_WRITE_STATUS);
+		if ((reg & (ACD_REG_RELATIVE_ADDR_BITMASK(ACD_READOUT_CFG))))
+			break;
+		ndelay(100);
+	}
+
+	if (!timeout) {
+		pr_err("local read timed out, offset=0x%x status=0x%x\n",
+		       offset, reg);
+		return -ETIMEDOUT;
+	}
+
+	reg = readl_relaxed((char *)c->vbases[ACD_BASE]
+			    + ACD_READOUT);
+	return reg;
+}
+
+static int clk_osm_acd_local_write_reg(struct clk_osm *c, u32 val, u32 offset)
+{
+	u32 reg = 0;
+	int timeout;
+
+	if (offset >= ACD_MASTER_ONLY_REG_ADDR) {
+		pr_err("ACD register at offset=0x%x not transferrable\n",
+		       offset);
+		return -EINVAL;
+	}
+
+	/* Clear write control register */
+	writel_relaxed(reg, (char *)c->vbases[ACD_BASE] + ACD_WRITE_CTL);
+
+	/* Set select and update_en fields in write control register */
+	reg = (ACD_REG_RELATIVE_ADDR(offset) << ACD_WRITE_CTL_SELECT_SHIFT)
+		| ACD_WRITE_CTL_UPDATE_EN;
+	writel_relaxed(reg, (char *)c->vbases[ACD_BASE] + ACD_WRITE_CTL);
+
+	/* Ensure writes complete before polling */
+	clk_osm_acd_mb(c);
+
+	/* Poll write status register */
+	for (timeout = ACD_LOCAL_TRANSFER_TIMEOUT_NS; timeout > 0;
+	     timeout -= 100) {
+		reg = readl_relaxed((char *)c->vbases[ACD_BASE]
+				    + ACD_WRITE_STATUS);
+		if ((reg & (ACD_REG_RELATIVE_ADDR_BITMASK(offset))))
+			break;
+		ndelay(100);
+	}
+
+	if (!timeout) {
+		pr_err("local write timed out, offset=0x%x val=0x%x status=0x%x\n",
+		       offset, val, reg);
+		return -ETIMEDOUT;
+	}
+
+	return 0;
+}
+
+static int clk_osm_acd_master_write_through_reg(struct clk_osm *c,
+						u32 val, u32 offset)
+{
+	writel_relaxed(val, (char *)c->vbases[ACD_BASE] + offset);
+
+	/* Ensure writes complete before transfer to local copy */
+	clk_osm_acd_mb(c);
+
+	return clk_osm_acd_local_write_reg(c, val, offset);
+}
+
+static int clk_osm_acd_auto_local_write_reg(struct clk_osm *c, u32 mask)
+{
+	u32 numregs, bitmask = mask;
+	u32 reg = 0;
+	int timeout;
+
+	/* count number of bits set in register mask */
+	for (numregs = 0; bitmask; numregs++)
+		bitmask &= bitmask - 1;
+
+	/* Program auto-transfter mask */
+	writel_relaxed(mask, (char *)c->vbases[ACD_BASE] + ACD_AUTOXFER_CFG);
+
+	/* Clear start field in auto-transfer register */
+	writel_relaxed(ACD_AUTOXFER_START_CLEAR,
+		       (char *)c->vbases[ACD_BASE] + ACD_AUTOXFER);
+
+	/* Set start field in auto-transfer register */
+	writel_relaxed(ACD_AUTOXFER_START_SET,
+		       (char *)c->vbases[ACD_BASE] + ACD_AUTOXFER);
+
+	/* Ensure writes complete before polling */
+	clk_osm_acd_mb(c);
+
+	/* Poll auto-transfer status register */
+	for (timeout = ACD_LOCAL_TRANSFER_TIMEOUT_NS * numregs;
+	     timeout > 0; timeout -= 100) {
+		reg = readl_relaxed((char *)c->vbases[ACD_BASE]
+				    + ACD_AUTOXFER_STATUS);
+		if (reg & AUTO_XFER_DONE_MASK)
+			break;
+		ndelay(100);
+	}
+
+	if (!timeout) {
+		pr_err("local register auto-transfer timed out, mask=0x%x registers=%d status=0x%x\n",
+		       mask, numregs, reg);
+		return -ETIMEDOUT;
+	}
+
+	return 0;
 }
 
 static inline int clk_osm_count_ns(struct clk_osm *c, u64 nsec)
@@ -439,11 +646,25 @@ static long clk_osm_round_rate(struct clk *c, unsigned long rate)
 
 static int clk_osm_search_table(struct osm_entry *table, int entries, long rate)
 {
-	int i;
+	int quad_core_index, single_core_index = 0;
+	int core_count;
 
-	for (i = 0; i < entries; i++)
-		if (rate == table[i].frequency)
-			return i;
+	for (quad_core_index = 0; quad_core_index < entries;
+	     quad_core_index++) {
+		core_count =
+			CORE_COUNT_VAL(table[quad_core_index].freq_data);
+		if (rate == table[quad_core_index].frequency &&
+		    core_count == SINGLE_CORE) {
+			single_core_index = quad_core_index;
+			continue;
+		}
+		if (rate == table[quad_core_index].frequency &&
+		    core_count == MAX_CORE_COUNT)
+			return quad_core_index;
+	}
+	if (single_core_index)
+		return single_core_index;
+
 	return -EINVAL;
 }
 
@@ -626,6 +847,8 @@ static void clk_osm_print_osm_table(struct clk_osm *c)
 	}
 	pr_debug("APM threshold corner=%d, crossover corner=%d\n",
 		 c->apm_threshold_vc, c->apm_crossover_vc);
+	pr_debug("MEM-ACC threshold corner=%d, crossover corner=%d\n",
+		 c->mem_acc_threshold_vc, c->mem_acc_crossover_vc);
 }
 
 static int clk_osm_get_lut(struct platform_device *pdev,
@@ -636,8 +859,10 @@ static int clk_osm_get_lut(struct platform_device *pdev,
 	int prop_len, total_elems, num_rows, i, j, k;
 	int rc = 0;
 	u32 *array;
+	u32 *fmax_temp;
 	u32 data;
 	bool last_entry = false;
+	unsigned long abs_fmax = 0;
 
 	if (!of_find_property(of, prop_name, &prop_len)) {
 		dev_err(&pdev->dev, "missing %s\n", prop_name);
@@ -652,9 +877,9 @@ static int clk_osm_get_lut(struct platform_device *pdev,
 
 	num_rows = total_elems / NUM_FIELDS;
 
-	clk->fmax = devm_kzalloc(&pdev->dev, num_rows * sizeof(unsigned long),
-			       GFP_KERNEL);
-	if (!clk->fmax)
+	fmax_temp = devm_kzalloc(&pdev->dev, num_rows * sizeof(unsigned long),
+				 GFP_KERNEL);
+	if (!fmax_temp)
 		return -ENOMEM;
 
 	array = devm_kzalloc(&pdev->dev, prop_len, GFP_KERNEL);
@@ -690,18 +915,33 @@ static int clk_osm_get_lut(struct platform_device *pdev,
 			 c->osm_table[j].spare_data);
 
 		data = (array[i + FREQ_DATA] & GENMASK(18, 16)) >> 16;
-		if (!last_entry) {
-			clk->fmax[k] = array[i];
+		if (!last_entry && data == MAX_CORE_COUNT) {
+			fmax_temp[k] = array[i];
 			k++;
 		}
 
 		if (i < total_elems - NUM_FIELDS)
 			i += NUM_FIELDS;
-		else
+		else {
+			abs_fmax = array[i];
 			last_entry = true;
+		}
 	}
+
+	fmax_temp[k++] = abs_fmax;
+	clk->fmax = devm_kzalloc(&pdev->dev, k * sizeof(unsigned long),
+				 GFP_KERNEL);
+	if (!clk->fmax) {
+		rc = -ENOMEM;
+		goto exit;
+	}
+
+	for (i = 0; i < k; i++)
+		clk->fmax[i] = fmax_temp[i];
+
 	clk->num_fmax = k;
 exit:
+	devm_kfree(&pdev->dev, fmax_temp);
 	devm_kfree(&pdev->dev, array);
 	return rc;
 }
@@ -805,6 +1045,74 @@ static int clk_osm_parse_dt_configs(struct platform_device *pdev)
 					   perfcl_clk.cluster_num *
 					   LLM_SW_OVERRIDE_CNT + i,
 					   &perfcl_clk.llm_sw_overr[i]);
+
+	if (pwrcl_clk.acd_init || perfcl_clk.acd_init) {
+		rc = of_property_read_u32_array(of, "qcom,acdtd-val",
+						array, MAX_CLUSTER_CNT);
+		if (rc) {
+			dev_err(&pdev->dev, "unable to find qcom,acdtd-val property, rc=%d\n",
+				rc);
+			return -EINVAL;
+		}
+
+		pwrcl_clk.acd_td = array[pwrcl_clk.cluster_num];
+		perfcl_clk.acd_td = array[perfcl_clk.cluster_num];
+
+		rc = of_property_read_u32_array(of, "qcom,acdcr-val",
+						array, MAX_CLUSTER_CNT);
+		if (rc) {
+			dev_err(&pdev->dev, "unable to find qcom,acdcr-val property, rc=%d\n",
+				rc);
+			return -EINVAL;
+		}
+
+		pwrcl_clk.acd_cr = array[pwrcl_clk.cluster_num];
+		perfcl_clk.acd_cr = array[perfcl_clk.cluster_num];
+
+		rc = of_property_read_u32_array(of, "qcom,acdsscr-val",
+						array, MAX_CLUSTER_CNT);
+		if (rc) {
+			dev_err(&pdev->dev, "unable to find qcom,acdsscr-val property, rc=%d\n",
+				rc);
+			return -EINVAL;
+		}
+
+		pwrcl_clk.acd_sscr = array[pwrcl_clk.cluster_num];
+		perfcl_clk.acd_sscr = array[perfcl_clk.cluster_num];
+
+		rc = of_property_read_u32_array(of, "qcom,acdextint0-val",
+						array, MAX_CLUSTER_CNT);
+		if (rc) {
+			dev_err(&pdev->dev, "unable to find qcom,acdextint0-val property, rc=%d\n",
+				rc);
+			return -EINVAL;
+		}
+
+		pwrcl_clk.acd_extint0_cfg = array[pwrcl_clk.cluster_num];
+		perfcl_clk.acd_extint0_cfg = array[perfcl_clk.cluster_num];
+
+		rc = of_property_read_u32_array(of, "qcom,acdextint1-val",
+						array, MAX_CLUSTER_CNT);
+		if (rc) {
+			dev_err(&pdev->dev, "unable to find qcom,acdextint1-val property, rc=%d\n",
+				rc);
+			return -EINVAL;
+		}
+
+		pwrcl_clk.acd_extint1_cfg = array[pwrcl_clk.cluster_num];
+		perfcl_clk.acd_extint1_cfg = array[perfcl_clk.cluster_num];
+
+		rc = of_property_read_u32_array(of, "qcom,acdautoxfer-val",
+						array, MAX_CLUSTER_CNT);
+		if (rc) {
+			dev_err(&pdev->dev, "unable to find qcom,acdautoxfer-val property, rc=%d\n",
+				rc);
+			return -EINVAL;
+		}
+
+		pwrcl_clk.acd_autoxfer_ctl = array[pwrcl_clk.cluster_num];
+		perfcl_clk.acd_autoxfer_ctl = array[perfcl_clk.cluster_num];
+	}
 
 	rc = of_property_read_u32(of, "qcom,xo-clk-rate",
 				  &pwrcl_clk.xo_clk_rate);
@@ -1030,6 +1338,40 @@ static int clk_osm_resources_init(struct platform_device *pdev)
 		perfcl_clk.vbases[EFUSE_BASE] = vbase;
 	}
 
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
+					   "pwrcl_acd");
+	if (res) {
+		pbase = (unsigned long)res->start;
+		vbase = devm_ioremap(&pdev->dev, res->start,
+				     resource_size(res));
+		if (!vbase) {
+			dev_err(&pdev->dev, "Unable to map in pwrcl_acd base\n");
+			return -ENOMEM;
+		}
+		pwrcl_clk.pbases[ACD_BASE] = pbase;
+		pwrcl_clk.vbases[ACD_BASE] = vbase;
+		pwrcl_clk.acd_init = true;
+	} else {
+		pwrcl_clk.acd_init = false;
+	}
+
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
+					   "perfcl_acd");
+	if (res) {
+		pbase = (unsigned long)res->start;
+		vbase = devm_ioremap(&pdev->dev, res->start,
+				     resource_size(res));
+		if (!vbase) {
+			dev_err(&pdev->dev, "Unable to map in perfcl_acd base\n");
+			return -ENOMEM;
+		}
+		perfcl_clk.pbases[ACD_BASE] = pbase;
+		perfcl_clk.vbases[ACD_BASE] = vbase;
+		perfcl_clk.acd_init = true;
+	} else {
+		perfcl_clk.acd_init = false;
+	}
+
 	vdd_pwrcl = devm_regulator_get(&pdev->dev, "vdd-pwrcl");
 	if (IS_ERR(vdd_pwrcl)) {
 		rc = PTR_ERR(vdd_pwrcl);
@@ -1185,19 +1527,26 @@ static int clk_osm_resolve_open_loop_voltages(struct clk_osm *c)
 }
 
 static int clk_osm_resolve_crossover_corners(struct clk_osm *c,
-				     struct platform_device *pdev)
+				     struct platform_device *pdev,
+				     const char *mem_acc_prop)
 {
 	struct regulator *regulator = c->vdd_reg;
-	int count, vc, i, threshold, rc = 0;
+	int count, vc, i, apm_threshold;
+	int mem_acc_threshold = 0;
+	int rc = 0;
 	u32 corner_volt;
 
 	rc = of_property_read_u32(pdev->dev.of_node,
 				  "qcom,apm-threshold-voltage",
-				  &threshold);
+				  &apm_threshold);
 	if (rc) {
 		pr_info("qcom,apm-threshold-voltage property not specified\n");
 		return rc;
 	}
+
+	if (mem_acc_prop)
+		of_property_read_u32(pdev->dev.of_node, mem_acc_prop,
+					  &mem_acc_threshold);
 
 	/* Determine crossover virtual corner */
 	count = regulator_count_voltages(regulator);
@@ -1206,16 +1555,46 @@ static int clk_osm_resolve_crossover_corners(struct clk_osm *c,
 		return count;
 	}
 
-	c->apm_crossover_vc = count - 1;
+	/*
+	 * CPRh corners (in hardware) are ordered:
+	 * 0 - n-1		- for n functional corners
+	 * APM crossover	- required for OSM
+	 * [MEM ACC crossover]	- optional
+	 *
+	 * 'count' corresponds to the total number of corners including n
+	 * functional corners, the APM crossover corner, and potentially the
+	 * MEM ACC cross over corner.
+	 */
+	if (mem_acc_threshold) {
+		c->apm_crossover_vc = count - 2;
+		c->mem_acc_crossover_vc = count - 1;
+	} else {
+		c->apm_crossover_vc = count - 1;
+	}
 
-	/* Determine threshold virtual corner */
+	/* Determine APM threshold virtual corner */
 	for (i = 0; i < OSM_TABLE_SIZE; i++) {
 		vc = c->osm_table[i].virtual_corner + 1;
 		corner_volt = regulator_list_corner_voltage(regulator, vc);
 
-		if (corner_volt >= threshold) {
+		if (corner_volt >= apm_threshold) {
 			c->apm_threshold_vc = c->osm_table[i].virtual_corner;
 			break;
+		}
+	}
+
+	/* Determine MEM ACC threshold virtual corner */
+	if (mem_acc_threshold) {
+		for (i = 0; i < OSM_TABLE_SIZE; i++) {
+			vc = c->osm_table[i].virtual_corner + 1;
+			corner_volt
+				= regulator_list_corner_voltage(regulator, vc);
+
+			if (corner_volt >= mem_acc_threshold) {
+				c->mem_acc_threshold_vc
+					= c->osm_table[i].virtual_corner;
+				break;
+			}
 		}
 	}
 
@@ -1517,6 +1896,7 @@ static void clk_osm_program_mem_acc_regs(struct clk_osm *c)
 {
 	int i, curr_level, j = 0;
 	int mem_acc_level_map[MAX_MEM_ACC_LEVELS] = {0, 0, 0};
+	int threshold_vc[4];
 
 	curr_level = c->osm_table[0].spare_data;
 	for (i = 0; i < c->num_entries; i++) {
@@ -1524,7 +1904,8 @@ static void clk_osm_program_mem_acc_regs(struct clk_osm *c)
 			break;
 
 		if (c->osm_table[i].spare_data != curr_level) {
-			mem_acc_level_map[j++] = i - 1;
+			mem_acc_level_map[j++]
+					= c->osm_table[i].virtual_corner - 1;
 			curr_level = c->osm_table[i].spare_data;
 		}
 	}
@@ -1550,14 +1931,37 @@ static void clk_osm_program_mem_acc_regs(struct clk_osm *c)
 			clk_osm_write_reg(c, c->apcs_mem_acc_cfg[i],
 					  MEM_ACC_SEQ_REG_CFG_START(i));
 	} else {
+		if (c->mem_acc_crossover_vc)
+			scm_io_write(c->pbases[OSM_BASE] + SEQ_REG(88),
+					c->mem_acc_crossover_vc);
+
+		threshold_vc[0] = mem_acc_level_map[0];
+		threshold_vc[1] = mem_acc_level_map[0] + 1;
+		threshold_vc[2] = mem_acc_level_map[1];
+		threshold_vc[3] = mem_acc_level_map[1] + 1;
+
+		/*
+		 * Use dynamic MEM ACC threshold voltage based value for the
+		 * highest MEM ACC threshold if it is specified instead of the
+		 * fixed mapping in the LUT.
+		 */
+		if (c->mem_acc_threshold_vc) {
+			threshold_vc[2] = c->mem_acc_threshold_vc - 1;
+			threshold_vc[3] = c->mem_acc_threshold_vc;
+			if (threshold_vc[1] >= threshold_vc[2])
+				threshold_vc[1] = threshold_vc[2] - 1;
+			if (threshold_vc[0] >= threshold_vc[1])
+				threshold_vc[0] = threshold_vc[1] - 1;
+		}
+
 		scm_io_write(c->pbases[OSM_BASE] + SEQ_REG(55),
-			     mem_acc_level_map[0]);
+				threshold_vc[0]);
 		scm_io_write(c->pbases[OSM_BASE] + SEQ_REG(56),
-			     mem_acc_level_map[0] + 1);
+				threshold_vc[1]);
 		scm_io_write(c->pbases[OSM_BASE] + SEQ_REG(57),
-			     mem_acc_level_map[1]);
+				threshold_vc[2]);
 		scm_io_write(c->pbases[OSM_BASE] + SEQ_REG(58),
-			     mem_acc_level_map[1] + 1);
+				threshold_vc[3]);
 		/* SEQ_REG(49) = SEQ_REG(28) init by TZ */
 	}
 
@@ -2140,6 +2544,36 @@ DEFINE_SIMPLE_ATTRIBUTE(debugfs_trace_enable_fops,
 			debugfs_set_trace_enable,
 			"%llu\n");
 
+static int debugfs_get_wdog_trace(void *data, u64 *val)
+{
+	struct clk_osm *c = data;
+
+	*val = c->wdog_trace_en;
+	return 0;
+}
+
+static int debugfs_set_wdog_trace(void *data, u64 val)
+{
+	struct clk_osm *c = data;
+	int regval;
+
+	if (c->version >= VERSION_1P1) {
+		regval = clk_osm_read_reg(c, TRACE_CTRL);
+		regval = val ? regval | TRACE_CTRL_ENABLE_WDOG_STATUS :
+			regval & ~TRACE_CTRL_ENABLE_WDOG_STATUS;
+		clk_osm_write_reg(c, regval, TRACE_CTRL);
+		c->wdog_trace_en = val ? true : false;
+	} else {
+		pr_info("wdog status registers enabled by default\n");
+	}
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(debugfs_trace_wdog_enable_fops,
+			debugfs_get_wdog_trace,
+			debugfs_set_wdog_trace,
+			"%llu\n");
+
 #define MAX_DEBUG_BUF_LEN 15
 
 static DEFINE_MUTEX(debug_buf_mutex);
@@ -2365,6 +2799,55 @@ DEFINE_SIMPLE_ATTRIBUTE(debugfs_perf_state_deviation_corrected_irq_fops,
 			debugfs_set_perf_state_deviation_corrected_irq,
 			"%llu\n");
 
+static int debugfs_get_debug_reg(void *data, u64 *val)
+{
+	struct clk_osm *c = data;
+
+	if (c->acd_debugfs_addr >= ACD_MASTER_ONLY_REG_ADDR)
+		*val = readl_relaxed((char *)c->vbases[ACD_BASE] +
+				     c->acd_debugfs_addr);
+	else
+		*val = clk_osm_acd_local_read_reg(c, c->acd_debugfs_addr);
+	return 0;
+}
+
+static int debugfs_set_debug_reg(void *data, u64 val)
+{
+	struct clk_osm *c = data;
+
+	if (c->acd_debugfs_addr >= ACD_MASTER_ONLY_REG_ADDR)
+		clk_osm_acd_master_write_reg(c, val, c->acd_debugfs_addr);
+	else
+		clk_osm_acd_master_write_through_reg(c, val,
+						     c->acd_debugfs_addr);
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(debugfs_acd_debug_reg_fops,
+			debugfs_get_debug_reg,
+			debugfs_set_debug_reg,
+			"0x%llx\n");
+
+static int debugfs_get_debug_reg_addr(void *data, u64 *val)
+{
+	struct clk_osm *c = data;
+
+	*val = c->acd_debugfs_addr;
+	return 0;
+}
+
+static int debugfs_set_debug_reg_addr(void *data, u64 val)
+{
+	struct clk_osm *c = data;
+
+	c->acd_debugfs_addr = val;
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(debugfs_acd_debug_reg_addr_fops,
+			debugfs_get_debug_reg_addr,
+			debugfs_set_debug_reg_addr,
+			"%llu\n");
+
 static void populate_debugfs_dir(struct clk_osm *c)
 {
 	struct dentry *temp;
@@ -2411,6 +2894,15 @@ static void populate_debugfs_dir(struct clk_osm *c)
 		goto exit;
 	}
 
+	temp = debugfs_create_file("wdog_trace_enable",
+			   S_IRUGO | S_IWUSR,
+			   c->debugfs, c,
+			   &debugfs_trace_wdog_enable_fops);
+	if (IS_ERR_OR_NULL(temp)) {
+		pr_err("debugfs_trace_wdog_enable_fops debugfs file creation failed\n");
+		goto exit;
+	}
+
 	temp = debugfs_create_file("trace_enable",
 			   S_IRUGO | S_IWUSR,
 			   c->debugfs, c,
@@ -2444,6 +2936,24 @@ static void populate_debugfs_dir(struct clk_osm *c)
 			   &debugfs_trace_periodic_timer_fops);
 	if (IS_ERR_OR_NULL(temp)) {
 		pr_err("debugfs_trace_periodic_timer_fops debugfs file creation failed\n");
+		goto exit;
+	}
+
+	temp = debugfs_create_file("acd_debug_reg",
+			   S_IRUGO | S_IWUSR,
+			   c->debugfs, c,
+			   &debugfs_acd_debug_reg_fops);
+	if (IS_ERR_OR_NULL(temp)) {
+		pr_err("debugfs_acd_debug_reg_fops debugfs file creation failed\n");
+		goto exit;
+	}
+
+	temp = debugfs_create_file("acd_debug_reg_addr",
+			   S_IRUGO | S_IWUSR,
+			   c->debugfs, c,
+			   &debugfs_acd_debug_reg_addr_fops);
+	if (IS_ERR_OR_NULL(temp)) {
+		pr_err("debugfs_acd_debug_reg_addr_fops debugfs file creation failed\n");
 		goto exit;
 	}
 
@@ -2489,6 +2999,81 @@ static int clk_osm_panic_callback(struct notifier_block *nfb,
 	}
 
 	return NOTIFY_OK;
+}
+
+static int clk_osm_acd_init(struct clk_osm *c)
+{
+
+	int rc = 0;
+	u32 auto_xfer_mask = 0;
+
+	if (!c->acd_init)
+		return 0;
+
+	c->acd_debugfs_addr = ACD_HW_VERSION;
+
+	/* Program ACD tunable-length delay register */
+	clk_osm_acd_master_write_reg(c, c->acd_td, ACDTD);
+	auto_xfer_mask |= ACD_REG_RELATIVE_ADDR_BITMASK(ACDTD);
+
+	/* Program ACD control register */
+	clk_osm_acd_master_write_reg(c, c->acd_cr, ACDCR);
+	auto_xfer_mask |= ACD_REG_RELATIVE_ADDR_BITMASK(ACDCR);
+
+	/* Program ACD soft start control register */
+	clk_osm_acd_master_write_reg(c, c->acd_sscr, ACDSSCR);
+	auto_xfer_mask |= ACD_REG_RELATIVE_ADDR_BITMASK(ACDSSCR);
+
+	/* Program initial ACD external interface configuration register */
+	clk_osm_acd_master_write_reg(c, c->acd_extint0_cfg, ACD_EXTINT_CFG);
+	auto_xfer_mask |= ACD_REG_RELATIVE_ADDR_BITMASK(ACD_EXTINT_CFG);
+
+	/* Program ACD auto-register transfer control register */
+	clk_osm_acd_master_write_reg(c, c->acd_autoxfer_ctl, ACD_AUTOXFER_CTL);
+
+	/* Ensure writes complete before transfers to local copy */
+	clk_osm_acd_mb(c);
+
+	/* Transfer master copies */
+	rc = clk_osm_acd_auto_local_write_reg(c, auto_xfer_mask);
+	if (rc)
+		return rc;
+
+	/* Switch CPUSS clock source to ACD clock */
+	rc = clk_osm_acd_master_write_through_reg(c, ACD_GFMUX_CFG_SELECT,
+						  ACD_GFMUX_CFG);
+	if (rc)
+		return rc;
+
+	/* Program ACD_DCVS_SW */
+	rc = clk_osm_acd_master_write_through_reg(c,
+				  ACD_DCVS_SW_DCVS_IN_PRGR_SET,
+				  ACD_DCVS_SW);
+	if (rc)
+		return rc;
+
+	rc = clk_osm_acd_master_write_through_reg(c,
+				  ACD_DCVS_SW_DCVS_IN_PRGR_CLEAR,
+				  ACD_DCVS_SW);
+	if (rc)
+		return rc;
+
+	udelay(1);
+
+	/* Program final ACD external interface configuration register */
+	rc = clk_osm_acd_master_write_through_reg(c, c->acd_extint1_cfg,
+						  ACD_EXTINT_CFG);
+	if (rc)
+		return rc;
+
+	/*
+	 * ACDCR, ACDTD, ACDSSCR, ACD_EXTINT_CFG, ACD_GFMUX_CFG
+	 * must be copied from master to local copy on PC exit.
+	 */
+	auto_xfer_mask |= ACD_REG_RELATIVE_ADDR_BITMASK(ACD_GFMUX_CFG);
+	clk_osm_acd_master_write_reg(c, auto_xfer_mask, ACD_AUTOXFER_CFG);
+
+	return 0;
 }
 
 static unsigned long init_rate = 300000000;
@@ -2590,13 +3175,14 @@ static int cpu_clock_osm_driver_probe(struct platform_device *pdev)
 		return rc;
 	}
 
-	rc = clk_osm_resolve_crossover_corners(&pwrcl_clk, pdev);
+	rc = clk_osm_resolve_crossover_corners(&pwrcl_clk, pdev, NULL);
 	if (rc)
 		dev_info(&pdev->dev, "No APM crossover corner programmed\n");
 
-	rc = clk_osm_resolve_crossover_corners(&perfcl_clk, pdev);
+	rc = clk_osm_resolve_crossover_corners(&perfcl_clk, pdev,
+				"qcom,perfcl-apcs-mem-acc-threshold-voltage");
 	if (rc)
-		dev_info(&pdev->dev, "No APM crossover corner programmed\n");
+		dev_info(&pdev->dev, "No MEM-ACC crossover corner programmed\n");
 
 	clk_osm_setup_cycle_counters(&pwrcl_clk);
 	clk_osm_setup_cycle_counters(&perfcl_clk);
@@ -2671,6 +3257,17 @@ static int cpu_clock_osm_driver_probe(struct platform_device *pdev)
 		clk_osm_setup_cluster_pll(&perfcl_clk);
 	}
 
+	rc = clk_osm_acd_init(&pwrcl_clk);
+	if (rc) {
+		pr_err("failed to initialize ACD for pwrcl, rc=%d\n", rc);
+		return rc;
+	}
+	rc = clk_osm_acd_init(&perfcl_clk);
+	if (rc) {
+		pr_err("failed to initialize ACD for perfcl, rc=%d\n", rc);
+		return rc;
+	}
+
 	spin_lock_init(&pwrcl_clk.lock);
 	spin_lock_init(&perfcl_clk.lock);
 
@@ -2689,18 +3286,6 @@ static int cpu_clock_osm_driver_probe(struct platform_device *pdev)
 		return rc;
 	}
 
-	if (msmcobalt_v2) {
-		/* Enable OSM WDOG registers */
-		clk_osm_masked_write_reg(&pwrcl_clk,
-					 TRACE_CTRL_ENABLE_WDOG_STATUS,
-					 TRACE_CTRL,
-					 TRACE_CTRL_ENABLE_WDOG_STATUS_MASK);
-		clk_osm_masked_write_reg(&perfcl_clk,
-					 TRACE_CTRL_ENABLE_WDOG_STATUS,
-					 TRACE_CTRL,
-					 TRACE_CTRL_ENABLE_WDOG_STATUS_MASK);
-	}
-
 	/*
 	 * The hmss_gpll0 clock runs at 300 MHz. Ensure it is at the correct
 	 * frequency before enabling OSM. LUT index 0 is always sourced from
@@ -2714,29 +3299,26 @@ static int cpu_clock_osm_driver_probe(struct platform_device *pdev)
 	}
 	clk_prepare_enable(&sys_apcsaux_clk_gcc.c);
 
-	/* Set 300MHz index */
+	rc = clk_set_rate(&osm_clk_src.c, osm_clk_init_rate);
+	if (rc) {
+		dev_err(&pdev->dev, "Unable to set init rate on osm_clk, rc=%d\n",
+			rc);
+		goto exit2;
+	}
+
+	/* Make sure index zero is selected */
 	rc = clk_set_rate(&pwrcl_clk.c, init_rate);
 	if (rc) {
 		dev_err(&pdev->dev, "Unable to set init rate on pwr cluster, rc=%d\n",
 			rc);
-		clk_disable_unprepare(&sys_apcsaux_clk_gcc.c);
-		return rc;
+		goto exit2;
 	}
 
 	rc = clk_set_rate(&perfcl_clk.c, init_rate);
 	if (rc) {
 		dev_err(&pdev->dev, "Unable to set init rate on perf cluster, rc=%d\n",
 			rc);
-		clk_disable_unprepare(&sys_apcsaux_clk_gcc.c);
-		return rc;
-	}
-
-	rc = clk_set_rate(&osm_clk_src.c, osm_clk_init_rate);
-	if (rc) {
-		dev_err(&pdev->dev, "Unable to set init rate on osm_clk, rc=%d\n",
-			rc);
-		clk_disable_unprepare(&sys_apcsaux_clk_gcc.c);
-		return rc;
+		goto exit2;
 	}
 
 	get_online_cpus();
@@ -2746,6 +3328,28 @@ static int cpu_clock_osm_driver_probe(struct platform_device *pdev)
 		WARN(clk_prepare_enable(logical_cpu_to_clk(cpu)),
 		     "Failed to enable clock for cpu %d\n", cpu);
 	}
+
+	/* Set final boot rate */
+	rc = clk_set_rate(&pwrcl_clk.c, msmcobalt_v1 ?
+			  MSMCOBALTV1_PWRCL_BOOT_RATE :
+			  MSMCOBALTV2_PWRCL_BOOT_RATE);
+	if (rc) {
+		dev_err(&pdev->dev, "Unable to set boot rate on pwr cluster, rc=%d\n",
+			rc);
+		goto exit2;
+	}
+
+	rc = clk_set_rate(&perfcl_clk.c, msmcobalt_v1 ?
+			  MSMCOBALTV1_PERFCL_BOOT_RATE :
+			  MSMCOBALTV2_PERFCL_BOOT_RATE);
+	if (rc) {
+		dev_err(&pdev->dev, "Unable to set boot rate on perf cluster, rc=%d\n",
+			rc);
+		goto exit2;
+	}
+
+	pwrcl_clk.version = clk_osm_read_reg(&pwrcl_clk, VERSION_REG);
+	perfcl_clk.version = clk_osm_read_reg(&perfcl_clk, VERSION_REG);
 
 	populate_opp_table(pdev);
 	populate_debugfs_dir(&pwrcl_clk);
@@ -2760,6 +3364,8 @@ static int cpu_clock_osm_driver_probe(struct platform_device *pdev)
 
 	return 0;
 
+exit2:
+	clk_disable_unprepare(&sys_apcsaux_clk_gcc.c);
 exit:
 	dev_err(&pdev->dev, "OSM driver failed to initialize, rc=%d\n",
 		rc);

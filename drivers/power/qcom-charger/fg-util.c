@@ -14,6 +14,82 @@
 
 #include "fg-core.h"
 
+void fg_circ_buf_add(struct fg_circ_buf *buf, int val)
+{
+	buf->arr[buf->head] = val;
+	buf->head = (buf->head + 1) % ARRAY_SIZE(buf->arr);
+	buf->size = min(++buf->size, (int)ARRAY_SIZE(buf->arr));
+}
+
+void fg_circ_buf_clr(struct fg_circ_buf *buf)
+{
+	memset(buf, 0, sizeof(*buf));
+}
+
+int fg_circ_buf_avg(struct fg_circ_buf *buf, int *avg)
+{
+	s64 result = 0;
+	int i;
+
+	if (buf->size == 0)
+		return -ENODATA;
+
+	for (i = 0; i < buf->size; i++)
+		result += buf->arr[i];
+
+	*avg = div_s64(result, buf->size);
+	return 0;
+}
+
+int fg_lerp(const struct fg_pt *pts, size_t tablesize, s32 input, s32 *output)
+{
+	int i;
+	s64 temp;
+
+	if (pts == NULL) {
+		pr_err("Table is NULL\n");
+		return -EINVAL;
+	}
+
+	if (tablesize < 1) {
+		pr_err("Table has no entries\n");
+		return -ENOENT;
+	}
+
+	if (tablesize == 1) {
+		*output = pts[0].y;
+		return 0;
+	}
+
+	if (pts[0].x > pts[1].x) {
+		pr_err("Table is not in acending order\n");
+		return -EINVAL;
+	}
+
+	if (input <= pts[0].x) {
+		*output = pts[0].y;
+		return 0;
+	}
+
+	if (input >= pts[tablesize - 1].x) {
+		*output = pts[tablesize - 1].y;
+		return 0;
+	}
+
+	for (i = 1; i < tablesize; i++) {
+		if (input >= pts[i].x)
+			continue;
+
+		temp = (s64)(pts[i].y - pts[i - 1].y) *
+						(s64)(input - pts[i - 1].x);
+		temp = div_s64(temp, pts[i].x - pts[i - 1].x);
+		*output = temp + pts[i - 1].y;
+		return 0;
+	}
+
+	return -EINVAL;
+}
+
 static struct fg_dbgfs dbgfs_data = {
 	.help_msg = {
 	.data =
@@ -28,6 +104,43 @@ static struct fg_dbgfs dbgfs_data = {
 	"\n",
 	},
 };
+
+static bool is_usb_present(struct fg_chip *chip)
+{
+	union power_supply_propval pval = {0, };
+
+	if (!chip->usb_psy)
+		chip->usb_psy = power_supply_get_by_name("usb");
+
+	if (chip->usb_psy)
+		power_supply_get_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_PRESENT, &pval);
+	else
+		return false;
+
+	return pval.intval != 0;
+}
+
+static bool is_dc_present(struct fg_chip *chip)
+{
+	union power_supply_propval pval = {0, };
+
+	if (!chip->dc_psy)
+		chip->dc_psy = power_supply_get_by_name("dc");
+
+	if (chip->dc_psy)
+		power_supply_get_property(chip->dc_psy,
+				POWER_SUPPLY_PROP_PRESENT, &pval);
+	else
+		return false;
+
+	return pval.intval != 0;
+}
+
+bool is_input_present(struct fg_chip *chip)
+{
+	return is_usb_present(chip) || is_dc_present(chip);
+}
 
 #define EXPONENT_SHIFT		11
 #define EXPONENT_OFFSET		-9
@@ -83,6 +196,9 @@ int fg_sram_write(struct fg_chip *chip, u16 address, u8 offset,
 	if (!chip)
 		return -ENXIO;
 
+	if (chip->battery_missing)
+		return -ENODATA;
+
 	if (!fg_sram_address_valid(address, len))
 		return -EFAULT;
 
@@ -95,6 +211,7 @@ int fg_sram_write(struct fg_chip *chip, u16 address, u8 offset,
 		 * This interrupt need to be enabled only when it is
 		 * required. It will be kept disabled other times.
 		 */
+		reinit_completion(&chip->soc_update);
 		enable_irq(chip->irqs[SOC_UPDATE_IRQ].irq);
 		atomic_access = true;
 	} else {
@@ -146,6 +263,9 @@ int fg_sram_read(struct fg_chip *chip, u16 address, u8 offset,
 
 	if (!chip)
 		return -ENXIO;
+
+	if (chip->battery_missing)
+		return -ENODATA;
 
 	if (!fg_sram_address_valid(address, len))
 		return -EFAULT;
@@ -577,6 +697,17 @@ static ssize_t fg_sram_dfs_reg_write(struct file *file, const char __user *buf,
 	/* Parse the data in the buffer.  It should be a string of numbers */
 	while ((pos < count) &&
 		sscanf(kbuf + pos, "%i%n", &data, &bytes_read) == 1) {
+		/*
+		 * We shouldn't be receiving a string of characters that
+		 * exceeds a size of 5 to keep this functionally correct.
+		 * Also, we should make sure that pos never gets overflowed
+		 * beyond the limit.
+		 */
+		if (bytes_read > 5 || bytes_read > INT_MAX - pos) {
+			cnt = 0;
+			ret = -EINVAL;
+			break;
+		}
 		pos += bytes_read;
 		values[cnt++] = data & 0xff;
 	}

@@ -64,14 +64,19 @@ PECOFF_FILE_ALIGNMENT = 0x200;
 #endif
 
 #if defined(CONFIG_DEBUG_ALIGN_RODATA)
-#define ALIGN_DEBUG_RO			. = ALIGN(1<<SECTION_SHIFT);
-#define ALIGN_DEBUG_RO_MIN(min)		ALIGN_DEBUG_RO
-#elif defined(CONFIG_DEBUG_RODATA)
-#define ALIGN_DEBUG_RO			. = ALIGN(1<<PAGE_SHIFT);
-#define ALIGN_DEBUG_RO_MIN(min)		ALIGN_DEBUG_RO
+/*
+ *  4 KB granule:   1 level 2 entry
+ * 16 KB granule: 128 level 3 entries, with contiguous bit
+ * 64 KB granule:  32 level 3 entries, with contiguous bit
+ */
+#define SEGMENT_ALIGN			SZ_2M
 #else
-#define ALIGN_DEBUG_RO
-#define ALIGN_DEBUG_RO_MIN(min)		. = ALIGN(min);
+/*
+ *  4 KB granule:  16 level 3 entries, with contiguous bit
+ * 16 KB granule:   4 level 3 entries, without contiguous bit
+ * 64 KB granule:   1 level 3 entry
+ */
+#define SEGMENT_ALIGN			SZ_64K
 #endif
 
 SECTIONS
@@ -88,15 +93,15 @@ SECTIONS
 		EXIT_CALL
 		*(.discard)
 		*(.discard.*)
+		*(.interp .dynamic)
 	}
 
-	. = PAGE_OFFSET + TEXT_OFFSET;
+	. = KIMAGE_VADDR + TEXT_OFFSET;
 
 	.head.text : {
 		_text = .;
 		HEAD_TEXT
 	}
-	ALIGN_DEBUG_RO
 	.text : {			/* Real text segment		*/
 		_stext = .;		/* Text and read-only data	*/
 			__exception_text_start = .;
@@ -114,14 +119,13 @@ SECTIONS
 		*(.got)			/* Global offset table		*/
 	}
 
-	ALIGN_DEBUG_RO
-	RO_DATA(PAGE_SIZE)
-	EXCEPTION_TABLE(8)
+	. = ALIGN(SEGMENT_ALIGN);
+	RO_DATA(PAGE_SIZE)		/* everything from this point to */
+	EXCEPTION_TABLE(8)		/* _etext will be marked RO NX   */
 	NOTES
-	ALIGN_DEBUG_RO
-	_etext = .;			/* End of text and rodata section */
 
-	ALIGN_DEBUG_RO_MIN(PAGE_SIZE)
+	. = ALIGN(SEGMENT_ALIGN);
+	_etext = .;			/* End of text and rodata section */
 	__init_begin = .;
 
 	INIT_TEXT_SECTION(8)
@@ -129,7 +133,6 @@ SECTIONS
 		ARM_EXIT_KEEP(EXIT_TEXT)
 	}
 
-	ALIGN_DEBUG_RO_MIN(16)
 	.init.data : {
 		INIT_DATA
 		INIT_SETUP(16)
@@ -144,9 +147,6 @@ SECTIONS
 
 	PERCPU_SECTION(L1_CACHE_BYTES)
 
-	. = ALIGN(PAGE_SIZE);
-	__init_end = .;
-
 	. = ALIGN(4);
 	.altinstructions : {
 		__alt_instructions = .;
@@ -156,8 +156,26 @@ SECTIONS
 	.altinstr_replacement : {
 		*(.altinstr_replacement)
 	}
+	.rela : ALIGN(8) {
+		*(.rela .rela*)
+	}
+	.dynsym : ALIGN(8) {
+		*(.dynsym)
+	}
+	.dynstr : {
+		*(.dynstr)
+	}
+	.hash : {
+		*(.hash)
+	}
 
-	. = ALIGN(PAGE_SIZE);
+	__rela_offset	= ADDR(.rela) - KIMAGE_VADDR;
+	__rela_size	= SIZEOF(.rela);
+	__dynsym_offset	= ADDR(.dynsym) - KIMAGE_VADDR;
+
+	. = ALIGN(SEGMENT_ALIGN);
+	__init_end = .;
+
 	_data = .;
 	_sdata = .;
 	RW_DATA_SECTION(L1_CACHE_BYTES, PAGE_SIZE, THREAD_SIZE)
@@ -191,4 +209,4 @@ ASSERT(__idmap_text_end - (__idmap_text_start & ~(SZ_4K - 1)) <= SZ_4K,
 /*
  * If padding is applied before .head.text, virt<->phys conversions will fail.
  */
-ASSERT(_text == (PAGE_OFFSET + TEXT_OFFSET), "HEAD is misaligned")
+ASSERT(_text == (KIMAGE_VADDR + TEXT_OFFSET), "HEAD is misaligned")

@@ -48,14 +48,14 @@ static struct smb_params v1_params = {
 		.name	= "fast charge current",
 		.reg	= FAST_CHARGE_CURRENT_CFG_REG,
 		.min_u	= 0,
-		.max_u	= 5000000,
-		.step_u	= 50000,
+		.max_u	= 6000000,
+		.step_u	= 25000,
 	},
 	.fv		= {
 		.name	= "float voltage",
 		.reg	= FLOAT_VOLTAGE_CFG_REG,
-		.min_u	= 2500000,
-		.max_u	= 5000000,
+		.min_u	= 2450000,
+		.max_u	= 4950000,
 		.step_u	= 10000,
 	},
 	.usb_icl	= {
@@ -71,6 +71,13 @@ static struct smb_params v1_params = {
 		.min_u	= 0,
 		.max_u	= 6000000,
 		.step_u	= 25000,
+	},
+	.freq_buck	= {
+		.name	= "buck switching frequency",
+		.reg	= CFG_BUCKBOOST_FREQ_SELECT_BUCK_REG,
+		.min_u	= 500,
+		.max_u	= 2000,
+		.step_u	= 100,
 	},
 };
 
@@ -390,11 +397,13 @@ static int smb138x_init_batt_psy(struct smb138x *chip)
  *****************************/
 
 static enum power_supply_property smb138x_parallel_props[] = {
+	POWER_SUPPLY_PROP_CHARGE_TYPE,
 	POWER_SUPPLY_PROP_CHARGING_ENABLED,
 	POWER_SUPPLY_PROP_PIN_ENABLED,
 	POWER_SUPPLY_PROP_INPUT_SUSPEND,
 	POWER_SUPPLY_PROP_VOLTAGE_MAX,
 	POWER_SUPPLY_PROP_CURRENT_MAX,
+	POWER_SUPPLY_PROP_CURRENT_NOW,
 	POWER_SUPPLY_PROP_CHARGER_TEMP,
 	POWER_SUPPLY_PROP_CHARGER_TEMP_MAX,
 };
@@ -409,6 +418,9 @@ static int smb138x_parallel_get_prop(struct power_supply *psy,
 	u8 temp;
 
 	switch (prop) {
+	case POWER_SUPPLY_PROP_CHARGE_TYPE:
+		rc = smblib_get_prop_batt_charge_type(chg, val);
+		break;
 	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
 		rc = smblib_read(chg, BATTERY_CHARGER_STATUS_5_REG,
 				 &temp);
@@ -430,6 +442,9 @@ static int smb138x_parallel_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		rc = smblib_get_charge_param(chg, &chg->param.fcc,
 					     &val->intval);
+		break;
+	case POWER_SUPPLY_PROP_CURRENT_NOW:
+		rc = smblib_get_prop_slave_current_now(chg, val);
 		break;
 	case POWER_SUPPLY_PROP_CHARGER_TEMP:
 		rc = smblib_get_prop_charger_temp(chg, val);
@@ -466,6 +481,10 @@ static int smb138x_parallel_set_prop(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		rc = smblib_set_charge_param(chg, &chg->param.fcc, val->intval);
+		break;
+	case POWER_SUPPLY_PROP_BUCK_FREQ:
+		rc = smblib_set_charge_param(chg, &chg->param.freq_buck,
+					     val->intval);
 		break;
 	default:
 		pr_err("parallel power supply set prop %d not supported\n",
@@ -611,9 +630,11 @@ static int smb138x_init_hw(struct smb138x *chip)
 	vote(chg->fcc_votable,
 		DEFAULT_VOTER, true, chip->dt.fcc_ua);
 	vote(chg->usb_icl_votable,
-		DEFAULT_VOTER, true, chip->dt.usb_icl_ua);
+		DCP_VOTER, true, chip->dt.usb_icl_ua);
 	vote(chg->dc_icl_votable,
 		DEFAULT_VOTER, true, chip->dt.dc_icl_ua);
+
+	chg->dcp_icl_ua = chip->dt.usb_icl_ua;
 
 	/* configure charge enable for software control; active high */
 	rc = smblib_masked_write(chg, CHGR_CFG2_REG,
@@ -1125,6 +1146,15 @@ static int smb138x_slave_probe(struct smb138x *chip)
 		return rc;
 	}
 
+	/* enable parallel current sensing */
+	rc = smblib_masked_write(chg, CFG_REG,
+				 VCHG_EN_CFG_BIT, VCHG_EN_CFG_BIT);
+	if (rc < 0) {
+		dev_err(chg->dev, "Couldn't enable parallel current sensing rc=%d\n",
+			rc);
+		return rc;
+	}
+
 	/* keep at the end of probe, ready to serve before notifying others */
 	rc = smb138x_init_parallel_psy(chip);
 	if (rc < 0) {
@@ -1159,6 +1189,7 @@ static int smb138x_probe(struct platform_device *pdev)
 
 	chip->chg.dev = &pdev->dev;
 	chip->chg.debug_mask = &__debug_mask;
+	chip->chg.name = "SMB";
 
 	chip->chg.regmap = dev_get_regmap(chip->chg.dev->parent, NULL);
 	if (!chip->chg.regmap) {

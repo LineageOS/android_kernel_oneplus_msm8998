@@ -412,8 +412,9 @@ static int ufs_qcom_hce_enable_notify(struct ufs_hba *hba,
 /**
  * Returns zero for success and non-zero in case of a failure
  */
-static int ufs_qcom_cfg_timers(struct ufs_hba *hba, u32 gear,
-			       u32 hs, u32 rate, bool update_link_startup_timer)
+static int __ufs_qcom_cfg_timers(struct ufs_hba *hba, u32 gear,
+			       u32 hs, u32 rate, bool update_link_startup_timer,
+			       bool is_pre_scale_up)
 {
 	int ret = 0;
 	struct ufs_qcom_host *host = ufshcd_get_variant(hba);
@@ -460,8 +461,12 @@ static int ufs_qcom_cfg_timers(struct ufs_hba *hba, u32 gear,
 	}
 
 	list_for_each_entry(clki, &hba->clk_list_head, list) {
-		if (!strcmp(clki->name, "core_clk"))
-			core_clk_rate = clk_get_rate(clki->clk);
+		if (!strcmp(clki->name, "core_clk")) {
+			if (is_pre_scale_up)
+				core_clk_rate = clki->max_freq;
+			else
+				core_clk_rate = clk_get_rate(clki->clk);
+		}
 	}
 
 	/* If frequency is smaller than 1MHz, set to 1MHz */
@@ -556,6 +561,13 @@ out_error:
 	ret = -EINVAL;
 out:
 	return ret;
+}
+
+static int ufs_qcom_cfg_timers(struct ufs_hba *hba, u32 gear,
+			       u32 hs, u32 rate, bool update_link_startup_timer)
+{
+	return  __ufs_qcom_cfg_timers(hba, gear, hs, rate,
+				      update_link_startup_timer, false);
 }
 
 static int ufs_qcom_link_startup_pre_change(struct ufs_hba *hba)
@@ -779,8 +791,12 @@ static int ufs_qcom_full_reset(struct ufs_hba *hba)
 		goto out;
 	}
 
-	/* Very small delay, per the documented requirement */
-	usleep_range(1, 2);
+	/*
+	 * The hardware requirement for delay between assert/deassert
+	 * is at least 3-4 sleep clock (32.7KHz) cycles, which comes to
+	 * ~125us (4/32768). To be on the safe side add 200us delay.
+	 */
+	usleep_range(200, 210);
 
 	ret = reset_control_deassert(hba->core_reset);
 	if (ret)
@@ -1498,10 +1514,14 @@ static int ufs_qcom_setup_clocks(struct ufs_hba *hba, bool on,
 
 		/* M-PHY RMMI interface clocks can be turned off */
 		ufs_qcom_phy_disable_iface_clk(host->generic_phy);
-		if (!ufs_qcom_is_link_active(hba)) {
-			if (!is_gating_context)
-				/* turn off UFS local PHY ref_clk */
-				ufs_qcom_phy_disable_ref_clk(host->generic_phy);
+		/*
+		 * If auto hibern8 is supported then the link will already
+		 * be in hibern8 state and the ref clock can be gated.
+		 */
+		if (ufshcd_is_auto_hibern8_supported(hba) ||
+		    !ufs_qcom_is_link_active(hba)) {
+			/* turn off UFS local PHY ref_clk */
+			ufs_qcom_phy_disable_ref_clk(host->generic_phy);
 			/* disable device ref_clk */
 			ufs_qcom_dev_ref_clk_ctrl(host, false);
 		}
@@ -1956,13 +1976,6 @@ static int ufs_qcom_init(struct ufs_hba *hba)
 	host->hba = hba;
 	ufshcd_set_variant(hba, host);
 
-	/*
-	 * voting/devoting device ref_clk source is time consuming hence
-	 * skip devoting it during aggressive clock gating. This clock
-	 * will still be gated off during runtime suspend.
-	 */
-	hba->no_ref_clk_gating = true;
-
 	err = ufs_qcom_ice_get_dev(host);
 	if (err == -EPROBE_DEFER) {
 		/*
@@ -2163,60 +2176,48 @@ out:
 static int ufs_qcom_clk_scale_up_pre_change(struct ufs_hba *hba)
 {
 	struct ufs_qcom_host *host = ufshcd_get_variant(hba);
+	struct ufs_pa_layer_attr *attr = &host->dev_req_params;
+	int err = 0;
 
 	if (!ufs_qcom_cap_qunipro(host))
-		return 0;
+		goto out;
 
-	return ufs_qcom_configure_lpm(hba, false);
-}
+	err = ufs_qcom_configure_lpm(hba, false);
+	if (err)
+		goto out;
 
-static int ufs_qcom_clk_scale_up_post_change(struct ufs_hba *hba)
-{
-	struct ufs_qcom_host *host = ufshcd_get_variant(hba);
-
-	if (!ufs_qcom_cap_qunipro(host))
-		return 0;
+	if (attr)
+		__ufs_qcom_cfg_timers(hba, attr->gear_rx, attr->pwr_rx,
+				      attr->hs_rate, false, true);
 
 	/* set unipro core clock cycles to 150 and clear clock divider */
-	return ufs_qcom_set_dme_vs_core_clk_ctrl_clear_div(hba, 150);
+	err = ufs_qcom_set_dme_vs_core_clk_ctrl_clear_div(hba, 150);
+out:
+	return err;
 }
 
 static int ufs_qcom_clk_scale_down_pre_change(struct ufs_hba *hba)
 {
 	struct ufs_qcom_host *host = ufshcd_get_variant(hba);
-	u32 core_clk_ctrl_reg;
-	int err = 0;
 
 	if (!ufs_qcom_cap_qunipro(host))
-		goto out;
+		return 0;
 
-	err = ufs_qcom_configure_lpm(hba, true);
-	if (err)
-		goto out;
-
-	err = ufshcd_dme_get(hba,
-			    UIC_ARG_MIB(DME_VS_CORE_CLK_CTRL),
-			    &core_clk_ctrl_reg);
-
-	/* make sure CORE_CLK_DIV_EN is cleared */
-	if (!err &&
-	    (core_clk_ctrl_reg & DME_VS_CORE_CLK_CTRL_CORE_CLK_DIV_EN_BIT)) {
-		core_clk_ctrl_reg &= ~DME_VS_CORE_CLK_CTRL_CORE_CLK_DIV_EN_BIT;
-		err = ufshcd_dme_set(hba,
-				    UIC_ARG_MIB(DME_VS_CORE_CLK_CTRL),
-				    core_clk_ctrl_reg);
-	}
-out:
-	return err;
+	return ufs_qcom_configure_lpm(hba, true);
 }
 
 static int ufs_qcom_clk_scale_down_post_change(struct ufs_hba *hba)
 {
 	struct ufs_qcom_host *host = ufshcd_get_variant(hba);
+	struct ufs_pa_layer_attr *attr = &host->dev_req_params;
 	int err = 0;
 
 	if (!ufs_qcom_cap_qunipro(host))
 		return 0;
+
+	if (attr)
+		ufs_qcom_cfg_timers(hba, attr->gear_rx, attr->pwr_rx,
+				    attr->hs_rate, false);
 
 	if (ufs_qcom_cap_svs2(host))
 		/*
@@ -2238,7 +2239,6 @@ static int ufs_qcom_clk_scale_notify(struct ufs_hba *hba,
 		bool scale_up, enum ufs_notify_change_status status)
 {
 	struct ufs_qcom_host *host = ufshcd_get_variant(hba);
-	struct ufs_pa_layer_attr *dev_req_params = &host->dev_req_params;
 	int err = 0;
 
 	switch (status) {
@@ -2249,19 +2249,9 @@ static int ufs_qcom_clk_scale_notify(struct ufs_hba *hba,
 			err = ufs_qcom_clk_scale_down_pre_change(hba);
 		break;
 	case POST_CHANGE:
-		if (scale_up)
-			err = ufs_qcom_clk_scale_up_post_change(hba);
-		else
+		if (!scale_up)
 			err = ufs_qcom_clk_scale_down_post_change(hba);
 
-		if (err || !dev_req_params)
-			goto out;
-
-		ufs_qcom_cfg_timers(hba,
-				    dev_req_params->gear_rx,
-				    dev_req_params->pwr_rx,
-				    dev_req_params->hs_rate,
-				    false);
 		ufs_qcom_update_bus_bw_vote(host);
 		break;
 	default:
@@ -2270,7 +2260,6 @@ static int ufs_qcom_clk_scale_notify(struct ufs_hba *hba,
 		break;
 	}
 
-out:
 	return err;
 }
 
@@ -2570,16 +2559,19 @@ static void ufs_qcom_print_unipro_testbus(struct ufs_hba *hba)
 	kfree(testbus);
 }
 
-static void ufs_qcom_dump_dbg_regs(struct ufs_hba *hba)
+static void ufs_qcom_dump_dbg_regs(struct ufs_hba *hba, bool no_sleep)
 {
 	struct ufs_qcom_host *host = ufshcd_get_variant(hba);
 	struct phy *phy = host->generic_phy;
 
 	ufs_qcom_dump_regs(hba, REG_UFS_SYS1CLK_1US, 16,
 			"HCI Vendor Specific Registers ");
+	ufs_qcom_print_hw_debug_reg_all(hba, NULL, ufs_qcom_dump_regs_wrapper);
+
+	if (no_sleep)
+		return;
 
 	/* sleep a bit intermittently as we are dumping too much data */
-	ufs_qcom_print_hw_debug_reg_all(hba, NULL, ufs_qcom_dump_regs_wrapper);
 	usleep_range(1000, 1100);
 	ufs_qcom_testbus_read(hba);
 	usleep_range(1000, 1100);

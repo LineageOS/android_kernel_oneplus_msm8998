@@ -52,7 +52,7 @@ struct mem_prot_info {
 struct dest_vm_and_perm_info {
 	u32 vm;
 	u32 perm;
-	u32 *ctx;
+	u64 ctx;
 	u32 ctx_size;
 };
 
@@ -209,7 +209,7 @@ populate_dest_info(int *dest_vmids, int nelements, int *dest_perms,
 	for (i = 0; i < nelements; i++) {
 		dest_info[i].vm = dest_vmids[i];
 		dest_info[i].perm = dest_perms[i];
-		dest_info[i].ctx = NULL;
+		dest_info[i].ctx = 0x0;
 		dest_info[i].ctx_size = 0;
 	}
 
@@ -260,7 +260,7 @@ int hyp_assign_table(struct sg_table *table,
 			int *dest_vmids, int *dest_perms,
 			int dest_nelems)
 {
-	int ret;
+	int ret = 0;
 	struct scm_desc desc = {0};
 	u32 *source_vm_copy;
 	size_t source_vm_copy_size;

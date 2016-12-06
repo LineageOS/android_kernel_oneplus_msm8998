@@ -792,11 +792,14 @@ static int tmc_enable(struct tmc_drvdata *drvdata, enum tmc_mode mode)
 		   drvdata->out_mode == TMC_ETR_OUT_MODE_USB) {
 		drvdata->usbch = usb_qdss_open("qdss", drvdata,
 					       usb_notifier);
-		if (IS_ERR(drvdata->usbch)) {
+		if (IS_ERR_OR_NULL(drvdata->usbch)) {
 			dev_err(drvdata->dev, "usb_qdss_open failed\n");
 			ret = PTR_ERR(drvdata->usbch);
 			pm_runtime_put(drvdata->dev);
 			mutex_unlock(&drvdata->mem_lock);
+			if (!ret)
+				ret = -ENODEV;
+
 			return ret;
 		}
 	} else if (drvdata->config_type == TMC_CONFIG_TYPE_ETB ||
@@ -1140,6 +1143,12 @@ static int tmc_read_prepare(struct tmc_drvdata *drvdata)
 	if (!drvdata->sticky_enable) {
 		dev_err(drvdata->dev, "enable tmc once before reading\n");
 		ret = -EPERM;
+		goto err;
+	}
+
+	if (drvdata->config_type == TMC_CONFIG_TYPE_ETR &&
+	    drvdata->vaddr == NULL) {
+		ret = -ENOMEM;
 		goto err;
 	}
 
@@ -1536,8 +1545,8 @@ static ssize_t mem_size_store(struct device *dev,
 
 	mutex_lock(&drvdata->mem_lock);
 	if (kstrtoul(buf, 16, &val)) {
-		return -EINVAL;
 		mutex_unlock(&drvdata->mem_lock);
+		return -EINVAL;
 	}
 
 	drvdata->mem_size = val;
@@ -1840,12 +1849,13 @@ static int tmc_probe(struct amba_device *adev, const struct amba_id *id)
 	struct device_node *np = adev->dev.of_node;
 	struct coresight_cti_data *ctidata;
 
-	if (np) {
-		pdata = of_get_coresight_platform_data(dev, np);
-		if (IS_ERR(pdata))
-			return PTR_ERR(pdata);
-		adev->dev.platform_data = pdata;
-	}
+	if (!np)
+		return -ENODEV;
+
+	pdata = of_get_coresight_platform_data(dev, np);
+	if (IS_ERR(pdata))
+		return PTR_ERR(pdata);
+	adev->dev.platform_data = pdata;
 
 	drvdata = devm_kzalloc(dev, sizeof(*drvdata), GFP_KERNEL);
 	if (!drvdata)
@@ -1889,6 +1899,10 @@ static int tmc_probe(struct amba_device *adev, const struct amba_id *id)
 	} else {
 		drvdata->size = readl_relaxed(drvdata->base + TMC_RSZ) * 4;
 	}
+
+	ret = clk_set_rate(adev->pclk, CORESIGHT_CLK_RATE_TRACE);
+	if (ret)
+		return ret;
 
 	pm_runtime_put(&adev->dev);
 

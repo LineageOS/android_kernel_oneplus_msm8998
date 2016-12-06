@@ -522,12 +522,18 @@ int adreno_perfcounter_get(struct adreno_device *adreno_dev,
 	if (empty == -1)
 		return -EBUSY;
 
-	/* enable the new counter */
-	ret = adreno_perfcounter_enable(adreno_dev, groupid, empty, countable);
-	if (ret)
-		return ret;
 	/* initialize the new counter */
 	group->regs[empty].countable = countable;
+
+	/* enable the new counter */
+	ret = adreno_perfcounter_enable(adreno_dev, groupid, empty, countable);
+	if (ret) {
+		/* Put back the perfcounter */
+		if (!(group->flags & ADRENO_PERFCOUNTER_GROUP_FIXED))
+			group->regs[empty].countable =
+				KGSL_PERFCOUNTER_NOT_USED;
+		return ret;
+	}
 
 	/* set initial kernel and user count */
 	if (flags & PERFCOUNTER_FLAG_KERNEL) {
@@ -596,28 +602,6 @@ int adreno_perfcounter_put(struct adreno_device *adreno_dev,
 	}
 
 	return -EINVAL;
-}
-
-static int _perfcounter_enable_pwr(struct adreno_device *adreno_dev,
-	unsigned int counter)
-{
-	/* PWR counters enabled by default on A3XX/A4XX so nothing to do */
-	if (adreno_is_a3xx(adreno_dev) || adreno_is_a4xx(adreno_dev))
-		return 0;
-
-	/*
-	 * On 5XX we have to emulate the PWR counters which are physically
-	 * missing. Program countable 6 on RBBM_PERFCTR_RBBM_0 as a substitute
-	 * for PWR:1. Don't emulate PWR:0 as nobody uses it and we don't want
-	 * to take away too many of the generic RBBM counters.
-	 */
-
-	if (counter == 0)
-		return -EINVAL;
-
-	kgsl_regwrite(KGSL_DEVICE(adreno_dev), A5XX_RBBM_PERFCTR_RBBM_SEL_0, 6);
-
-	return 0;
 }
 
 static void _perfcounter_enable_vbif(struct adreno_device *adreno_dev,
@@ -742,10 +726,22 @@ static int _perfcounter_enable_default(struct adreno_device *adreno_dev,
 		/* wait for the above commands submitted to complete */
 		ret = adreno_ringbuffer_waittimestamp(rb, rb->timestamp,
 				ADRENO_IDLE_TIMEOUT);
-		if (ret)
-			KGSL_DRV_ERR(device,
-			"Perfcounter %u/%u/%u start via commands failed %d\n",
-			group, counter, countable, ret);
+		if (ret) {
+			/*
+			 * If we were woken up because of cancelling rb events
+			 * either due to soft reset or adreno_stop, ignore the
+			 * error and return 0 here. The perfcounter is already
+			 * set up in software and it will be programmed in
+			 * hardware when we wake up or come up after soft reset,
+			 * by adreno_perfcounter_restore.
+			 */
+			if (ret == -EAGAIN)
+				ret = 0;
+			else
+				KGSL_DRV_ERR(device,
+				"Perfcounter %u/%u/%u start via commands failed %d\n",
+				group, counter, countable, ret);
+		}
 	} else {
 		/* Select the desired perfcounter */
 		kgsl_regwrite(device, reg->select, countable);
@@ -771,6 +767,7 @@ static int adreno_perfcounter_enable(struct adreno_device *adreno_dev,
 	unsigned int group, unsigned int counter, unsigned int countable)
 {
 	struct adreno_perfcounters *counters = ADRENO_PERFCOUNTERS(adreno_dev);
+	struct adreno_gpudev *gpudev  = ADRENO_GPU_DEVICE(adreno_dev);
 
 	if (counters == NULL)
 		return -EINVAL;
@@ -786,7 +783,9 @@ static int adreno_perfcounter_enable(struct adreno_device *adreno_dev,
 		/* alwayson counter is global, so init value is 0 */
 		break;
 	case KGSL_PERFCOUNTER_GROUP_PWR:
-		return _perfcounter_enable_pwr(adreno_dev, counter);
+		if (gpudev->enable_pwr_counters)
+			return gpudev->enable_pwr_counters(adreno_dev, counter);
+		return 0;
 	case KGSL_PERFCOUNTER_GROUP_VBIF:
 		if (countable > VBIF2_PERF_CNT_SEL_MASK)
 			return -EINVAL;

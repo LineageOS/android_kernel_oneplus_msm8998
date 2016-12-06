@@ -840,7 +840,7 @@ static uint16_t msm_ispif_get_cids_mask_from_cfg(
 	uint16_t cids_mask = 0;
 	BUG_ON(!entry);
 
-	for (i = 0; i < entry->num_cids; i++)
+	for (i = 0; i < entry->num_cids && i < MAX_CID_CH_PARAM_ENTRY; i++)
 		cids_mask |= (1 << entry->cids[i]);
 
 	return cids_mask;
@@ -970,7 +970,7 @@ static void msm_ispif_intf_cmd(struct ispif_device *ispif, uint32_t cmd_bits,
 			pr_err("%s: invalid interface type\n", __func__);
 			return;
 		}
-		if (params->entries[i].num_cids > MAX_CID_CH) {
+		if (params->entries[i].num_cids > MAX_CID_CH_PARAM_ENTRY) {
 			pr_err("%s: out of range of cid_num %d\n",
 				__func__, params->entries[i].num_cids);
 			return;
@@ -1444,7 +1444,8 @@ static inline void msm_ispif_read_irq_status(struct ispif_irq_status *out,
 	}
 
 	if (fatal_err == true) {
-		pr_err("%s: fatal error, stop ispif immediately\n", __func__);
+		pr_err_ratelimited("%s: fatal error, stop ispif immediately\n",
+				__func__);
 		for (i = 0; i < ispif->vfe_info.num_vfe; i++) {
 			msm_camera_io_w(ISPIF_STOP_INTF_IMMEDIATELY,
 				ispif->base + ISPIF_VFE_m_INTF_CMD_0(i));
@@ -1534,9 +1535,6 @@ error_ahb:
 static void msm_ispif_release(struct ispif_device *ispif)
 {
 	BUG_ON(!ispif);
-
-	msm_ispif_reset(ispif);
-	msm_ispif_reset_hw(ispif);
 
 	msm_camera_enable_irq(ispif->irq, 0);
 

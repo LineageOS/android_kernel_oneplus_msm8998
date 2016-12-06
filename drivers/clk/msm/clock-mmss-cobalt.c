@@ -245,6 +245,7 @@ static struct rcg_clk ahb_clk_src = {
 	.c = {
 		.dbg_name = "ahb_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP3(LOWER, 19200000, LOW, 40000000,
 					NOMINAL, 80800000),
 		CLK_INIT(ahb_clk_src.c),
@@ -277,6 +278,7 @@ static struct rcg_clk csi0_clk_src = {
 	.c = {
 		.dbg_name = "csi0_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP4(LOWER, 164571429, LOW, 256000000,
 					NOMINAL, 384000000, HIGH, 576000000),
 		CLK_INIT(csi0_clk_src.c),
@@ -315,6 +317,7 @@ static struct rcg_clk vfe0_clk_src = {
 	.c = {
 		.dbg_name = "vfe0_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP4(LOWER, 200000000, LOW, 384000000,
 					NOMINAL, 576000000, HIGH, 600000000),
 		CLK_INIT(vfe0_clk_src.c),
@@ -330,6 +333,7 @@ static struct rcg_clk vfe1_clk_src = {
 	.c = {
 		.dbg_name = "vfe1_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP4(LOWER, 200000000, LOW, 384000000,
 					NOMINAL, 576000000, HIGH, 600000000),
 		CLK_INIT(vfe1_clk_src.c),
@@ -358,6 +362,7 @@ static struct rcg_clk mdp_clk_src = {
 	.c = {
 		.dbg_name = "mdp_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP4(LOWER, 171430000, LOW, 275000000,
 					NOMINAL, 330000000, HIGH, 412500000),
 		CLK_INIT(mdp_clk_src.c),
@@ -382,6 +387,7 @@ static struct rcg_clk maxi_clk_src = {
 	.c = {
 		.dbg_name = "maxi_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP4(LOWER, 75000000, LOW, 171428571,
 					NOMINAL, 323200000, HIGH, 406000000),
 		CLK_INIT(maxi_clk_src.c),
@@ -399,6 +405,8 @@ static struct clk_freq_tbl ftbl_cpp_clk_src[] = {
 static struct clk_freq_tbl ftbl_cpp_clk_src_vq[] = {
 	F_MM( 100000000,    mmsscc_gpll0,    6,    0,     0),
 	F_MM( 200000000,    mmsscc_gpll0,    3,    0,     0),
+	F_MM( 384000000,  mmpll4_pll_out,    2,    0,     0),
+	F_MM( 404000000,  mmpll0_pll_out,    2,    0,     0),
 	F_MM( 480000000,  mmpll7_pll_out,    2,    0,     0),
 	F_MM( 576000000, mmpll10_pll_out,    1,    0,     0),
 	F_MM( 600000000,    mmsscc_gpll0,    1,    0,     0),
@@ -414,6 +422,7 @@ static struct rcg_clk cpp_clk_src = {
 	.c = {
 		.dbg_name = "cpp_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP4(LOWER, 100000000, LOW, 200000000,
 					NOMINAL, 576000000, HIGH, 600000000),
 		CLK_INIT(cpp_clk_src.c),
@@ -444,6 +453,7 @@ static struct rcg_clk jpeg0_clk_src = {
 	.c = {
 		.dbg_name = "jpeg0_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP3(LOWER, 75000000, LOW, 150000000,
 					NOMINAL, 480000000),
 		CLK_INIT(jpeg0_clk_src.c),
@@ -467,6 +477,7 @@ static struct rcg_clk rot_clk_src = {
 	.c = {
 		.dbg_name = "rot_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP4(LOWER, 171430000, LOW, 275000000,
 					NOMINAL, 330000000, HIGH, 412500000),
 		CLK_INIT(rot_clk_src.c),
@@ -499,6 +510,7 @@ static struct rcg_clk video_core_clk_src = {
 	.c = {
 		.dbg_name = "video_core_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP4(LOWER, 100000000, LOW, 186000000,
 					NOMINAL, 360000000, HIGH, 465000000),
 		CLK_INIT(video_core_clk_src.c),
@@ -529,6 +541,7 @@ static struct rcg_clk csiphy_clk_src = {
 	.c = {
 		.dbg_name = "csiphy_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP3(LOWER, 164570000, LOW, 256000000,
 					NOMINAL, 384000000),
 		CLK_INIT(csiphy_clk_src.c),
@@ -544,6 +557,7 @@ static struct rcg_clk csi1_clk_src = {
 	.c = {
 		.dbg_name = "csi1_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP4(LOWER, 164570000, LOW, 256000000,
 					NOMINAL, 384000000, HIGH, 576000000),
 		CLK_INIT(csi1_clk_src.c),
@@ -559,6 +573,7 @@ static struct rcg_clk csi2_clk_src = {
 	.c = {
 		.dbg_name = "csi2_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP4(LOWER, 164570000, LOW, 256000000,
 					NOMINAL, 384000000, HIGH, 576000000),
 		CLK_INIT(csi2_clk_src.c),
@@ -574,6 +589,7 @@ static struct rcg_clk csi3_clk_src = {
 	.c = {
 		.dbg_name = "csi3_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP4(LOWER, 164570000, LOW, 256000000,
 					NOMINAL, 384000000, HIGH, 576000000),
 		CLK_INIT(csi3_clk_src.c),
@@ -605,6 +621,7 @@ static struct rcg_clk fd_core_clk_src = {
 	.c = {
 		.dbg_name = "fd_core_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP3(LOWER, 100000000, LOW, 200000000,
 					NOMINAL, 576000000),
 		CLK_INIT(fd_core_clk_src.c),
@@ -753,6 +770,7 @@ static struct rcg_clk video_subcore0_clk_src = {
 	.c = {
 		.dbg_name = "video_subcore0_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP4(LOWER, 100000000, LOW, 186000000,
 					NOMINAL, 360000000, HIGH, 465000000),
 		CLK_INIT(video_subcore0_clk_src.c),
@@ -769,6 +787,7 @@ static struct rcg_clk video_subcore1_clk_src = {
 	.c = {
 		.dbg_name = "video_subcore1_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP4(LOWER, 100000000, LOW, 186000000,
 					NOMINAL, 360000000, HIGH, 465000000),
 		CLK_INIT(video_subcore1_clk_src.c),
@@ -791,6 +810,7 @@ static struct rcg_clk cci_clk_src = {
 	.c = {
 		.dbg_name = "cci_clk_src",
 		.ops = &clk_ops_rcg_mnd,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP3(LOWER, 37500000, LOW, 50000000,
 					NOMINAL, 100000000),
 		CLK_INIT(cci_clk_src.c),
@@ -816,6 +836,7 @@ static struct rcg_clk camss_gp0_clk_src = {
 	.c = {
 		.dbg_name = "camss_gp0_clk_src",
 		.ops = &clk_ops_rcg_mnd,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP3(LOWER, 50000000, LOW, 100000000,
 					NOMINAL, 200000000),
 		CLK_INIT(camss_gp0_clk_src.c),
@@ -831,6 +852,7 @@ static struct rcg_clk camss_gp1_clk_src = {
 	.c = {
 		.dbg_name = "camss_gp1_clk_src",
 		.ops = &clk_ops_rcg_mnd,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP3(LOWER, 50000000, LOW, 100000000,
 					NOMINAL, 200000000),
 		CLK_INIT(camss_gp1_clk_src.c),
@@ -860,6 +882,7 @@ static struct rcg_clk mclk0_clk_src = {
 	.c = {
 		.dbg_name = "mclk0_clk_src",
 		.ops = &clk_ops_rcg_mnd,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP3(LOWER, 33333333, LOW, 66666667,
 					NOMINAL, 68571429),
 		CLK_INIT(mclk0_clk_src.c),
@@ -875,6 +898,7 @@ static struct rcg_clk mclk1_clk_src = {
 	.c = {
 		.dbg_name = "mclk1_clk_src",
 		.ops = &clk_ops_rcg_mnd,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP3(LOWER, 33333333, LOW, 66666667,
 					NOMINAL, 68571429),
 		CLK_INIT(mclk1_clk_src.c),
@@ -890,6 +914,7 @@ static struct rcg_clk mclk2_clk_src = {
 	.c = {
 		.dbg_name = "mclk2_clk_src",
 		.ops = &clk_ops_rcg_mnd,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP3(LOWER, 33333333, LOW, 66666667,
 					NOMINAL, 68571429),
 		CLK_INIT(mclk2_clk_src.c),
@@ -905,6 +930,7 @@ static struct rcg_clk mclk3_clk_src = {
 	.c = {
 		.dbg_name = "mclk3_clk_src",
 		.ops = &clk_ops_rcg_mnd,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP3(LOWER, 33333333, LOW, 66666667,
 					NOMINAL, 68571429),
 		CLK_INIT(mclk3_clk_src.c),
@@ -926,6 +952,7 @@ static struct rcg_clk csi0phytimer_clk_src = {
 	.c = {
 		.dbg_name = "csi0phytimer_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP3(LOWER, 100000000, LOW, 200000000,
 					NOMINAL, 269333333),
 		CLK_INIT(csi0phytimer_clk_src.c),
@@ -941,6 +968,7 @@ static struct rcg_clk csi1phytimer_clk_src = {
 	.c = {
 		.dbg_name = "csi1phytimer_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP3(LOWER, 100000000, LOW, 200000000,
 					NOMINAL, 269333333),
 		CLK_INIT(csi1phytimer_clk_src.c),
@@ -956,6 +984,7 @@ static struct rcg_clk csi2phytimer_clk_src = {
 	.c = {
 		.dbg_name = "csi2phytimer_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP3(LOWER, 100000000, LOW, 200000000,
 					NOMINAL, 269333333),
 		CLK_INIT(csi2phytimer_clk_src.c),
@@ -976,6 +1005,7 @@ static struct rcg_clk dp_gtc_clk_src = {
 	.c = {
 		.dbg_name = "dp_gtc_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP2(LOWER, 40000000, LOW, 300000000),
 		CLK_INIT(dp_gtc_clk_src.c),
 	},
@@ -995,6 +1025,7 @@ static struct rcg_clk esc0_clk_src = {
 	.c = {
 		.dbg_name = "esc0_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP2(LOWER, 19200000, NOMINAL, 19200000),
 		CLK_INIT(esc0_clk_src.c),
 	},
@@ -1009,6 +1040,7 @@ static struct rcg_clk esc1_clk_src = {
 	.c = {
 		.dbg_name = "esc1_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP2(LOWER, 19200000, NOMINAL, 19200000),
 		CLK_INIT(esc1_clk_src.c),
 	},
@@ -1031,6 +1063,7 @@ static struct rcg_clk extpclk_clk_src = {
 		.dbg_name = "extpclk_clk_src",
 		.parent = &ext_extpclk_clk_src.c,
 		.ops = &clk_ops_byte,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP3(LOWER, 150000000, LOW, 300000000,
 					NOMINAL, 600000000),
 		CLK_INIT(extpclk_clk_src.c),
@@ -1051,6 +1084,7 @@ static struct rcg_clk hdmi_clk_src = {
 	.c = {
 		.dbg_name = "hdmi_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP2(LOWER, 19200000, NOMINAL, 19200000),
 		CLK_INIT(hdmi_clk_src.c),
 	},
@@ -1070,6 +1104,7 @@ static struct rcg_clk vsync_clk_src = {
 	.c = {
 		.dbg_name = "vsync_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP2(LOWER, 19200000, NOMINAL, 19200000),
 		CLK_INIT(vsync_clk_src.c),
 	},
@@ -1089,6 +1124,7 @@ static struct rcg_clk dp_aux_clk_src = {
 	.c = {
 		.dbg_name = "dp_aux_clk_src",
 		.ops = &clk_ops_rcg,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP2(LOWER, 19200000, NOMINAL, 19200000),
 		CLK_INIT(dp_aux_clk_src.c),
 	},
@@ -1112,8 +1148,8 @@ static struct rcg_clk dp_pixel_clk_src = {
 		.parent = &ext_dp_phy_pll_vco.c,
 		.ops = &clk_ops_rcg_dp,
 		.flags = CLKFLAG_NO_RATE_CACHE,
-		VDD_DIG_FMAX_MAP3(LOWER, 148380, LOW, 296740,
-					NOMINAL, 593470),
+		VDD_DIG_FMAX_MAP3(LOWER, 154000000, LOW, 337500000,
+					NOMINAL, 675000000),
 		CLK_INIT(dp_pixel_clk_src.c),
 	},
 };
@@ -1163,6 +1199,7 @@ static struct rcg_clk dp_crypto_clk_src = {
 	.c = {
 		.dbg_name = "dp_crypto_clk_src",
 		.ops = &clk_ops_rcg_mnd,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP3(LOWER, 101250, LOW, 168750,
 					NOMINAL, 337500),
 		CLK_INIT(dp_crypto_clk_src.c),
@@ -1235,6 +1272,7 @@ static struct branch_clk mmss_camss_cci_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_cci_clk",
 		.parent = &cci_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_cci_clk.c),
 	},
@@ -1258,6 +1296,7 @@ static struct branch_clk mmss_camss_cpp_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_cpp_clk",
 		.parent = &cpp_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_cpp_clk.c),
 	},
@@ -1315,6 +1354,7 @@ static struct branch_clk mmss_camss_csi0_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_csi0_clk",
 		.parent = &csi0_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_csi0_clk.c),
 	},
@@ -1374,6 +1414,7 @@ static struct branch_clk mmss_camss_csi1_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_csi1_clk",
 		.parent = &csi1_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_csi1_clk.c),
 	},
@@ -1433,6 +1474,7 @@ static struct branch_clk mmss_camss_csi2_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_csi2_clk",
 		.parent = &csi2_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_csi2_clk.c),
 	},
@@ -1492,6 +1534,7 @@ static struct branch_clk mmss_camss_csi3_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_csi3_clk",
 		.parent = &csi3_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_csi3_clk.c),
 	},
@@ -1553,6 +1596,7 @@ static struct branch_clk mmss_camss_csiphy0_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_csiphy0_clk",
 		.parent = &csiphy_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_csiphy0_clk.c),
 	},
@@ -1566,6 +1610,7 @@ static struct branch_clk mmss_camss_csiphy1_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_csiphy1_clk",
 		.parent = &csiphy_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_csiphy1_clk.c),
 	},
@@ -1579,6 +1624,7 @@ static struct branch_clk mmss_camss_csiphy2_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_csiphy2_clk",
 		.parent = &csiphy_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_csiphy2_clk.c),
 	},
@@ -1602,6 +1648,7 @@ static struct branch_clk mmss_fd_core_clk = {
 	.c = {
 		.dbg_name = "mmss_fd_core_clk",
 		.parent = &fd_core_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_fd_core_clk.c),
 	},
@@ -1626,6 +1673,7 @@ static struct branch_clk mmss_camss_gp0_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_gp0_clk",
 		.parent = &camss_gp0_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_gp0_clk.c),
 	},
@@ -1638,6 +1686,7 @@ static struct branch_clk mmss_camss_gp1_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_gp1_clk",
 		.parent = &camss_gp1_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_gp1_clk.c),
 	},
@@ -1661,6 +1710,7 @@ static struct branch_clk mmss_camss_jpeg0_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_jpeg0_clk",
 		.parent = &jpeg0_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_jpeg0_clk.c),
 	},
@@ -1699,6 +1749,7 @@ static struct branch_clk mmss_camss_mclk0_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_mclk0_clk",
 		.parent = &mclk0_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_mclk0_clk.c),
 	},
@@ -1711,6 +1762,7 @@ static struct branch_clk mmss_camss_mclk1_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_mclk1_clk",
 		.parent = &mclk1_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_mclk1_clk.c),
 	},
@@ -1723,6 +1775,7 @@ static struct branch_clk mmss_camss_mclk2_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_mclk2_clk",
 		.parent = &mclk2_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_mclk2_clk.c),
 	},
@@ -1735,6 +1788,7 @@ static struct branch_clk mmss_camss_mclk3_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_mclk3_clk",
 		.parent = &mclk3_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_mclk3_clk.c),
 	},
@@ -1758,6 +1812,7 @@ static struct branch_clk mmss_camss_csi0phytimer_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_csi0phytimer_clk",
 		.parent = &csi0phytimer_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_csi0phytimer_clk.c),
 	},
@@ -1770,6 +1825,7 @@ static struct branch_clk mmss_camss_csi1phytimer_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_csi1phytimer_clk",
 		.parent = &csi1phytimer_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_csi1phytimer_clk.c),
 	},
@@ -1782,6 +1838,7 @@ static struct branch_clk mmss_camss_csi2phytimer_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_csi2phytimer_clk",
 		.parent = &csi2phytimer_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_csi2phytimer_clk.c),
 	},
@@ -1816,6 +1873,7 @@ static struct branch_clk mmss_camss_vfe0_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_vfe0_clk",
 		.parent = &vfe0_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_vfe0_clk.c),
 	},
@@ -1851,6 +1909,7 @@ static struct branch_clk mmss_camss_vfe1_clk = {
 	.c = {
 		.dbg_name = "mmss_camss_vfe1_clk",
 		.parent = &vfe1_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_camss_vfe1_clk.c),
 	},
@@ -1919,6 +1978,7 @@ static struct branch_clk mmss_mdss_byte0_clk = {
 	.c = {
 		.dbg_name = "mmss_mdss_byte0_clk",
 		.parent = &byte0_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_mdss_byte0_clk.c),
 	},
@@ -1954,6 +2014,7 @@ static struct branch_clk mmss_mdss_byte0_intf_clk = {
 	.c = {
 		.dbg_name = "mmss_mdss_byte0_intf_clk",
 		.parent = &mmss_mdss_byte0_intf_div_clk.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_mdss_byte0_intf_clk.c),
 	},
@@ -1966,6 +2027,7 @@ static struct branch_clk mmss_mdss_byte1_clk = {
 	.c = {
 		.dbg_name = "mmss_mdss_byte1_clk",
 		.parent = &byte1_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_mdss_byte1_clk.c),
 	},
@@ -2001,6 +2063,7 @@ static struct branch_clk mmss_mdss_byte1_intf_clk = {
 	.c = {
 		.dbg_name = "mmss_mdss_byte1_intf_clk",
 		.parent = &mmss_mdss_byte1_intf_div_clk.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_mdss_byte1_intf_clk.c),
 	},
@@ -2013,6 +2076,7 @@ static struct branch_clk mmss_mdss_dp_aux_clk = {
 	.c = {
 		.dbg_name = "mmss_mdss_dp_aux_clk",
 		.parent = &dp_aux_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_mdss_dp_aux_clk.c),
 	},
@@ -2064,6 +2128,7 @@ static struct branch_clk mmss_mdss_dp_crypto_clk = {
 	.c = {
 		.dbg_name = "mmss_mdss_dp_crypto_clk",
 		.parent = &dp_crypto_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_mdss_dp_crypto_clk.c),
 	},
@@ -2076,6 +2141,7 @@ static struct branch_clk mmss_mdss_dp_gtc_clk = {
 	.c = {
 		.dbg_name = "mmss_mdss_dp_gtc_clk",
 		.parent = &dp_gtc_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_mdss_dp_gtc_clk.c),
 	},
@@ -2088,6 +2154,7 @@ static struct branch_clk mmss_mdss_esc0_clk = {
 	.c = {
 		.dbg_name = "mmss_mdss_esc0_clk",
 		.parent = &esc0_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_mdss_esc0_clk.c),
 	},
@@ -2100,6 +2167,7 @@ static struct branch_clk mmss_mdss_esc1_clk = {
 	.c = {
 		.dbg_name = "mmss_mdss_esc1_clk",
 		.parent = &esc1_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_mdss_esc1_clk.c),
 	},
@@ -2112,6 +2180,7 @@ static struct branch_clk mmss_mdss_extpclk_clk = {
 	.c = {
 		.dbg_name = "mmss_mdss_extpclk_clk",
 		.parent = &extpclk_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_mdss_extpclk_clk.c),
 	},
@@ -2124,6 +2193,7 @@ static struct branch_clk mmss_mdss_hdmi_clk = {
 	.c = {
 		.dbg_name = "mmss_mdss_hdmi_clk",
 		.parent = &hdmi_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_mdss_hdmi_clk.c),
 	},
@@ -2147,6 +2217,7 @@ static struct branch_clk mmss_mdss_mdp_clk = {
 	.c = {
 		.dbg_name = "mmss_mdss_mdp_clk",
 		.parent = &mdp_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_mdss_mdp_clk.c),
 	},
@@ -2173,6 +2244,7 @@ static struct branch_clk mmss_mdss_pclk0_clk = {
 	.c = {
 		.dbg_name = "mmss_mdss_pclk0_clk",
 		.parent = &pclk0_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_mdss_pclk0_clk.c),
 	},
@@ -2185,6 +2257,7 @@ static struct branch_clk mmss_mdss_pclk1_clk = {
 	.c = {
 		.dbg_name = "mmss_mdss_pclk1_clk",
 		.parent = &pclk1_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_mdss_pclk1_clk.c),
 	},
@@ -2197,6 +2270,7 @@ static struct branch_clk mmss_mdss_rot_clk = {
 	.c = {
 		.dbg_name = "mmss_mdss_rot_clk",
 		.parent = &rot_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_mdss_rot_clk.c),
 	},
@@ -2209,6 +2283,7 @@ static struct branch_clk mmss_mdss_vsync_clk = {
 	.c = {
 		.dbg_name = "mmss_mdss_vsync_clk",
 		.parent = &vsync_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_mdss_vsync_clk.c),
 	},
@@ -2223,6 +2298,7 @@ static struct branch_clk mmss_mnoc_ahb_clk = {
 	.c = {
 		.dbg_name = "mmss_mnoc_ahb_clk",
 		.parent = &ahb_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_mnoc_ahb_clk.c),
 	},
@@ -2258,6 +2334,7 @@ static struct branch_clk mmss_mnoc_maxi_clk = {
 	.c = {
 		.dbg_name = "mmss_mnoc_maxi_clk",
 		.parent = &maxi_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_mnoc_maxi_clk.c),
 	},
@@ -2270,6 +2347,7 @@ static struct branch_clk mmss_video_subcore0_clk = {
 	.c = {
 		.dbg_name = "mmss_video_subcore0_clk",
 		.parent = &video_subcore0_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_video_subcore0_clk.c),
 	},
@@ -2282,6 +2360,7 @@ static struct branch_clk mmss_video_subcore1_clk = {
 	.c = {
 		.dbg_name = "mmss_video_subcore1_clk",
 		.parent = &video_subcore1_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_video_subcore1_clk.c),
 	},
@@ -2316,6 +2395,7 @@ static struct branch_clk mmss_video_core_clk = {
 	.c = {
 		.dbg_name = "mmss_video_core_clk",
 		.parent = &video_core_clk_src.c,
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_branch,
 		CLK_INIT(mmss_video_core_clk.c),
 	},
@@ -2703,7 +2783,6 @@ static void msm_mmsscc_hamster_fixup(void)
 	csi2phytimer_clk_src.c.fmax[VDD_DIG_LOW_L1] = 269333333;
 
 	mdp_clk_src.c.fmax[VDD_DIG_LOW_L1] = 330000000;
-	dp_pixel_clk_src.c.fmax[VDD_DIG_LOWER] = 154000000;
 	extpclk_clk_src.c.fmax[VDD_DIG_LOW] = 312500000;
 	extpclk_clk_src.c.fmax[VDD_DIG_LOW_L1] = 375000000;
 	rot_clk_src.c.fmax[VDD_DIG_LOW_L1] = 330000000;
@@ -2736,8 +2815,6 @@ static void msm_mmsscc_v2_fixup(void)
 	csi1_clk_src.c.fmax[VDD_DIG_NOMINAL] = 480000000;
 	csi2_clk_src.c.fmax[VDD_DIG_NOMINAL] = 480000000;
 	csi3_clk_src.c.fmax[VDD_DIG_NOMINAL] = 480000000;
-
-	dp_pixel_clk_src.c.fmax[VDD_DIG_LOWER] = 148380000;
 }
 
 int msm_mmsscc_cobalt_probe(struct platform_device *pdev)
@@ -2822,6 +2899,9 @@ int msm_mmsscc_cobalt_probe(struct platform_device *pdev)
 	ext_dp_phy_pll_vco.dev = &pdev->dev;
 	ext_dp_phy_pll_vco.clk_id = "dp_vco_div";
 	ext_dp_phy_pll_vco.c.flags = CLKFLAG_NO_RATE_CACHE;
+
+	mmss_camss_jpeg0_vote_clk.c.flags = CLKFLAG_NO_RATE_CACHE;
+	mmss_camss_jpeg0_dma_vote_clk.c.flags = CLKFLAG_NO_RATE_CACHE;
 
 	is_vq = of_device_is_compatible(pdev->dev.of_node,
 					"qcom,mmsscc-hamster");
