@@ -1375,6 +1375,23 @@ static inline u32 left_lm_w_from_mfd(struct msm_fb_data_type *mfd)
 	return width;
 }
 
+static inline u32 right_lm_w_from_mfd(struct msm_fb_data_type *mfd)
+{
+	struct mdss_mdp_ctl *ctl = mfd_to_ctl(mfd);
+	struct mdss_panel_info *pinfo = mfd->panel_info;
+	int width = 0;
+
+	if (ctl && ctl->mixer_right) {
+		width =  ctl->mixer_right->width;
+		width -= (pinfo->lcdc.border_left + pinfo->lcdc.border_right);
+		pr_debug("ctl=%d mw=%d l=%d r=%d w=%d\n",
+			ctl->num, ctl->mixer_right->width,
+			pinfo->lcdc.border_left, pinfo->lcdc.border_right,
+			width);
+	}
+	return width;
+}
+
 static inline bool mdss_mdp_is_tile_format(struct mdss_mdp_format_params *fmt)
 {
 	return fmt && (fmt->fetch_mode == MDSS_MDP_FETCH_TILE);

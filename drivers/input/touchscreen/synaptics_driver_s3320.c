@@ -1409,6 +1409,10 @@ void int_touch(void)
                     }
             }
 #endif
+
+
+      points.x = 1080 -points.x;
+      points.y = 1920 -points.y;
 		if (finger_status) {
 			input_mt_slot(ts->input_dev, i);
 			input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, finger_status);
