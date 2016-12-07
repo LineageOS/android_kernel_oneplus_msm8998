@@ -714,3 +714,7 @@ CONFIG_CRYPTO_CRC32_ARM64=y
 CONFIG_XZ_DEC=y
 CONFIG_QMI_ENCDEC=y
 CONFIG_TRI_STATE_KEY=y
+#ifdef VENDOR_EDIT
+# hefaxi@2016/03/03, add for create /dev/mem used to test DDR
+CONFIG_DEVMEM=y
+#endif /* VENDOR_EDIT */
