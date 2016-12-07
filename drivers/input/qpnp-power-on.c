@@ -272,7 +272,7 @@ static const char * const qpnp_poff_reason[] = {
 	[13] = "Triggered from UVLO (Under Voltage Lock Out)",
 	[14] = "Triggered from OTST3 (Overtemp)",
 	[15] = "Triggered from STAGE3 (Stage 3 reset)",
-#ifndef VENDOR_EDIT
+
 	/* QPNP_PON_GEN2 FAULT reasons */
 	[16] = "Triggered from GP_FAULT0",
 	[17] = "Triggered from GP_FAULT1",
@@ -300,7 +300,6 @@ static const char * const qpnp_poff_reason[] = {
 	[37] = "Triggered from S3_RESET_PBS_WATCHDOG_TO",
 	[38] = "Triggered from S3_RESET_PBS_NACK",
 	[39] = "Triggered from S3_RESET_KPDPWR_ANDOR_RESIN (power key and/or reset line)",
-#endif
 };
 
 /*
@@ -2109,6 +2108,7 @@ static ssize_t pwroff_reason_show(struct kobject *kobj, struct kobj_attribute *a
     u16 poff_sts = 0;
     char *pbuf = buf;
     int ret = 0;
+	int reason_index_offset = 0;
 
     sprintf(pbuf, "qpnp_poff_reason :\n");
     ret += strlen(pbuf);
@@ -2126,20 +2126,24 @@ static ssize_t pwroff_reason_show(struct kobject *kobj, struct kobj_attribute *a
             continue;
         }
 
-        /* POFF reason */
-	    rc = regmap_bulk_read(g_pon[i]->regmap, QPNP_POFF_REASON1(g_pon[i]),
-	        temp_buf, 2);
-        if (rc){
-            sprintf(pbuf, "PMIC@SID%d: Unable to read POFF_REASON regs rc:%d\n",
-				to_spmi_device(g_pon[i]->pdev->dev.parent)->usid,
-				rc);
-            ret += strlen(pbuf);
-            pbuf += strlen(pbuf);
-            continue;
-	    }
+		/* POFF reason */
+		if (!is_pon_gen1(g_pon[i]) && g_pon[i]->subtype != PON_1REG) {
+			rc = read_gen2_pon_off_reason(g_pon[i], &poff_sts,
+							&reason_index_offset);
+			if (rc)
+				return rc;
+		} else {
+			rc = regmap_bulk_read(g_pon[i]->regmap, QPNP_POFF_REASON1(g_pon[i]),
+				temp_buf, 2);
+			if (rc) {
+				dev_err(&g_pon[i]->pdev->dev, "Unable to read POFF_REASON regs rc:%d\n",
+					rc);
+				return rc;
+			}
+			poff_sts = temp_buf[0] | (temp_buf[1] << 8);
+		}
+		index = ffs(poff_sts) - 1 + reason_index_offset;
 
-        poff_sts = temp_buf[0] | (temp_buf[1] << 8);
-	    index = ffs(poff_sts) - 1;
         if (index >= ARRAY_SIZE(qpnp_poff_reason) || index < 0) {
 	        sprintf(pbuf, "PMIC@SID%d POFF_REASON regs :[0x%x] and Power-off reason: Unknown\n",
 				to_spmi_device(g_pon[i]->pdev->dev.parent)->usid,
@@ -2365,8 +2369,7 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 	}
 	//#ifdef VENDOR_EDIT
 	// change by taokai@bsp 2016/11/9, print all poff reason
-	//index = ffs(poff_sts) - 1 + reason_index_offset;
-	for_each_set_bit(index, (unsigned long *)&poff_sts, ARRAY_SIZE(qpnp_poff_reason)){
+	index = ffs(poff_sts) - 1 + reason_index_offset;
 		if (index >= ARRAY_SIZE(qpnp_poff_reason) || index < 0) {
 			dev_info(&pon->pdev->dev,
 				"PMIC@SID%d: POFF_REASON regs :[0x%x] and Unknown Power-off reason\n",
@@ -2379,7 +2382,6 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 				to_spmi_device(pon->pdev->dev.parent)->usid,
 				poff_sts,
 				qpnp_poff_reason[index]);
-		}
 	}
 	//taokai@bsp 2016/11/9 change end
 	//#endif
