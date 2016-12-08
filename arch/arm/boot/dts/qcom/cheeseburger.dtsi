@@ -120,6 +120,7 @@
 &pmicobalt_haptics {
 	status = "okay";
 	qcom,wave-shape = "sine";
+	qcom,vmax-mv = <1500>;
 };
 
 &spmi_bus {
