@@ -12,6 +12,17 @@
 
 #include "pxlw-iris-settings.dtsi"
 
+/ {
+	reserved-memory {
+		/* #ifdef VENDOR_EDIT */
+		param_mem: param_mem@ac200000 {
+			reg = <0 0xAC200000 0 0x00100000>;
+			label = "param_mem";
+		};
+		/* #endif VENDOR_EDIT */
+	};
+};
+
 /* I/O */
 &soc {
 	gpio_keys {
