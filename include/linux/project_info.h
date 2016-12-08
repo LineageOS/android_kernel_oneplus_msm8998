@@ -2,6 +2,11 @@
 #define _PROJECT_INFO_H_ 1
 typedef		__u32		uint32;
 
+/*******SECURE_BOOTn = 0x00786078+ 0x4*n, n=[1..14]******/
+#define SECURE_BOOT_BASE		0x00786078
+#define SECURE_BOOT1			SECURE_BOOT_BASE + 0x4*1
+
+
 struct project_info{
        char project_name[8];  //eg, 16859
        uint32  hw_version;  //PCB number, T0, EVT

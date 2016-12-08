@@ -42,10 +42,14 @@ uint32 get_secureboot_fuse_status(void)
     void __iomem *oem_config_base;
     uint32 secure_oem_config = 0;
 
-    oem_config_base = ioremap(0x70378 , 10);
+    oem_config_base = ioremap(SECURE_BOOT1 , 4);
+    if(!oem_config_base){
+        pr_err("fail to ioremap SECURE_BOOT address \n");
+        return -EINVAL;
+    }
     secure_oem_config = __raw_readl(oem_config_base);
     iounmap(oem_config_base);
-    pr_err("secure_oem_config 0x%x\n", secure_oem_config);
+    pr_debug("secure_oem_config 0x%x\n", secure_oem_config);
 
     return secure_oem_config;
 }
