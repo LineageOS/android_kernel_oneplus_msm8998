@@ -28,3 +28,49 @@
   qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
 	#include "pxlw-iris-samsung_s6e3fa3.dtsi"
 };
+&soc {
+        tlmm: pinctrl@03400000 {
+                tri_state_key_mux {
+                        tri_state_key_active: tri_state_key_active {
+                                mux {
+                                        pins = "gpio42","gpio26","gpio40";
+                                        function = "gpio";
+                                };
+
+                                config {
+                                        pins = "gpio42","gpio26","gpio40";
+                                        drive-strength = <2>;
+                                        bias-disable;
+                                };
+                        };
+
+                        tri_state_key_suspend: tri_state_key_suspend {
+                                mux {
+                                        pins = "gpio42","gpio26","gpio40";
+                                        function = "gpio";
+                                };
+
+                                config {
+                                        pins = "gpio42","gpio26","gpio40";
+                                        drive-strength = <2>;
+                                        bias-disable;
+                                };
+                        };
+                };
+        };
+        /* Tri-state key */
+        tri_state_key {
+                compatible = "oneplus,tri-state-key";
+                status = "okay";
+                interrupt-parent = <&tlmm>;
+                tristate,gpio_key1 = <&tlmm 40 0x00>;
+                tristate,gpio_key2 = <&tlmm 42 0x00>;
+                tristate,gpio_key3 = <&tlmm 26 0x00>;
+
+                pinctrl-names = "pmx_tri_state_key_active", "pmx_tri_state_key_suspend";
+                pinctrl-0 = <&tri_state_key_active>;
+                pinctrl-1 = <&tri_state_key_suspend>;
+        };
+
+};
+
