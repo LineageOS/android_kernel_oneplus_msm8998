@@ -20,6 +20,12 @@
 			label = "param_mem";
 		};
 		/* #endif VENDOR_EDIT */
+		/* #ifdef VENDOR_EDIT */
+		mtp_mem: mtp_mem@ac400000 {
+			reg = <0 0xAC400000 0 0x00B00000>;
+			label = "mtp_mem";
+		};
+		/* #endif VENDOR_EDIT */
 	};
 };
 
