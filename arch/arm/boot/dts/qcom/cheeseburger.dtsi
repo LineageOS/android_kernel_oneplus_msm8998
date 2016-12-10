@@ -87,6 +87,13 @@
 		fpc,gpio_id1    = <&tlmm 41 0>;
 		fpc,gpio_1V8_EN = <&tlmm 25 0x00>;
 	};
+
+	qcom,bcl {
+		qcom,bcl-soc-hotplug-list = <&CPU6 &CPU7>;
+		qcom,ibat-monitor {
+			qcom,soc-low-threshold = <5>;
+		};
+	};
 };
 
 &pmcobalt_gpios {

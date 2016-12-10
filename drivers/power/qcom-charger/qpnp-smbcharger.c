@@ -5651,6 +5651,9 @@ smbchg_usb_is_writeable(struct power_supply *psy, enum power_supply_property psp
 static char *smbchg_usb_supplicants[] = {
 	"battery",
 	"bms",
+#ifdef VENDOR_EDIT
+	"bcl",
+#endif
 };
 
 static enum power_supply_property smbchg_usb_properties[] = {
