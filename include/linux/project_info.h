@@ -1,6 +1,7 @@
 #ifndef _PROJECT_INFO_H_
 #define _PROJECT_INFO_H_ 1
 typedef		__u32		uint32;
+typedef unsigned char uint8;
 
 /*******SECURE_BOOTn = 0x00786078+ 0x4*n, n=[1..14]******/
 #define SECURE_BOOT_BASE		0x00786078

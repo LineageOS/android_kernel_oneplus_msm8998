@@ -37,17 +37,17 @@ static DEVICE_ATTR(ddr_reserve_info, S_IRUGO, project_info_get, NULL);
 static DEVICE_ATTR(secboot_status, S_IRUGO, project_info_get, NULL);
 static DEVICE_ATTR(platform_id, S_IRUGO, project_info_get, NULL);
 
-uint32 get_secureboot_fuse_status(void)
+uint8 get_secureboot_fuse_status(void)
 {
     void __iomem *oem_config_base;
-    uint32 secure_oem_config = 0;
+    uint8 secure_oem_config = 0;
 
-    oem_config_base = ioremap(SECURE_BOOT1 , 4);
+    oem_config_base = ioremap(SECURE_BOOT1 , 1);
     if(!oem_config_base){
         pr_err("fail to ioremap SECURE_BOOT address \n");
         return -EINVAL;
     }
-    secure_oem_config = __raw_readl(oem_config_base);
+    secure_oem_config = __raw_readb(oem_config_base);
     iounmap(oem_config_base);
     pr_debug("secure_oem_config 0x%x\n", secure_oem_config);
 
