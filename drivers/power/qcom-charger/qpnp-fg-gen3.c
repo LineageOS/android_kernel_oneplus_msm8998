@@ -2293,10 +2293,6 @@ static int fg_psy_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_RESISTANCE_ID:
 		rc = fg_get_batt_id(chip, &pval->intval);
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20160926 Add dash charging */
-		pr_info("BATT_ID=%d\n", pval->intval);
-#endif
 		break;
 	case POWER_SUPPLY_PROP_BATTERY_TYPE:
 		pval->strval = fg_get_battery_type(chip);

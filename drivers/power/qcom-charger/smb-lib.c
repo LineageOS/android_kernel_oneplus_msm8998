@@ -771,6 +771,8 @@ static int smblib_fv_vote_callback(struct votable *votable, void *data,
 #define USBIN_150MA	150000
 #define USBIN_500MA	500000
 #define USBIN_900MA	900000
+#ifndef VENDOR_EDIT
+/* david.liu@bsp, 20161214 usb can't charge in power off charging */
 static int smblib_usb_icl_vote_callback(struct votable *votable, void *data,
 			int icl_ua, const char *client)
 {
@@ -843,6 +845,50 @@ out:
 
 	return rc;
 }
+#else
+static int smblib_usb_icl_vote_callback(struct votable *votable, void *data,
+			int icl_ua, const char *client)
+{
+	struct smb_charger *chg = data;
+	int rc = 0;
+	bool suspend;
+
+	if (icl_ua < 0) {
+		smblib_dbg(chg, PR_MISC, "No Voter hence suspending\n");
+		icl_ua = 0;
+	}
+
+	pr_info("set iusb_max=%d, type=%d\n", icl_ua,
+			chg->usb_psy_desc.type);
+
+	suspend = (icl_ua < USBIN_25MA);
+	if (suspend)
+		goto suspend;
+
+	if (chg->usb_psy_desc.type == POWER_SUPPLY_TYPE_USB)
+		rc = smblib_masked_write(chg, USBIN_ICL_OPTIONS_REG,
+				USB51_MODE_BIT,
+				(icl_ua > USBIN_100MA) ? USB51_MODE_BIT : 0);
+	else
+		rc = smblib_set_charge_param(chg, &chg->param.usb_icl, icl_ua);
+
+	if (rc < 0) {
+		dev_err(chg->dev,
+			"Couldn't set USB input current limit rc=%d\n", rc);
+		return rc;
+	}
+
+suspend:
+	rc = vote(chg->usb_suspend_votable, PD_VOTER, suspend, 0);
+	if (rc < 0) {
+		dev_err(chg->dev, "Couldn't %s input rc=%d\n",
+			suspend ? "suspend" : "resume", rc);
+		return rc;
+	}
+
+	return rc;
+}
+#endif
 
 #define MICRO_250MA	250000
 static int smblib_otg_cl_config(struct smb_charger *chg, int otg_cl_ua)
