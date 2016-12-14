@@ -226,9 +226,17 @@ exit:
 
 static inline int __power_off(struct vmem *v)
 {
-	int c = 0;
+//#ifndef VENDOR_EDIT
+	//int c = 0;
+//#else
+    int c = v->num_clocks;
+//#endif
 
-	for (c = 0; c < v->num_clocks; ++c) {
+//#ifndef VENDOR_EDIT
+	//for (c = 0; c < v->num_clocks; ++c) {
+//#else
+	for (c--; c >= 0; --c) {
+//#endif
 		clk_disable_unprepare(v->clocks[c].clk);
 		pr_debug("Disabled clock %s\n", v->clocks[c].name);
 	}

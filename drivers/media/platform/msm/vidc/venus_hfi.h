@@ -184,7 +184,12 @@ struct vidc_iface_q_info {
 
 #define venus_hfi_for_each_clock_reverse(__device, __cinfo) \
 	venus_hfi_for_each_thing_reverse(__device, __cinfo, clock)
-
+//#ifdef VENDOR_EDIT
+#define venus_hfi_for_each_clock_reverse_continue(__device, __rinfo, \
+ __from) \
+ venus_hfi_for_each_thing_reverse_continue(__device, __rinfo, \
+ clock, __from)
+//#endif
 /* Bus set helpers */
 #define venus_hfi_for_each_bus(__device, __binfo) \
 	venus_hfi_for_each_thing(__device, __binfo, bus)
