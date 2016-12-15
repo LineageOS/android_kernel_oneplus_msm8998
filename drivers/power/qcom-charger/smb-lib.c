@@ -3483,6 +3483,16 @@ static bool op_get_fast_chg_allow(struct smb_charger *chg)
 	return false;
 }
 
+static bool op_is_usb_switch_on(struct smb_charger *chg)
+{
+	if (fast_charger && fast_charger->is_usb_switch_on)
+		return fast_charger->is_usb_switch_on();
+	else
+		pr_err("no fast_charger register found\n");
+
+	return false;
+}
+
 static enum batt_status_type op_battery_status_get(struct smb_charger *chg)
 {
 	return chg->battery_status;
@@ -3544,7 +3554,7 @@ static void switch_fast_chg(struct smb_charger *chg)
 {
 	bool fastchg_allowed, is_allowed;
 
-	if (gpio_get_value(15)) /* usb-sw-gpio */
+	if (op_is_usb_switch_on(chg))
 		return;
 	if (!is_usb_present(chg))
 		return;
@@ -4340,8 +4350,8 @@ static void op_heartbeat_work(struct work_struct *work)
 	chg->dash_on = get_prop_fast_chg_started(chg);
 	if (chg->dash_on) {
 		switch_fast_chg(chg);
-		pr_info("fast chg started, GPIO15=%d\n",
-				gpio_get_value(15));
+		pr_info("fast chg started, usb_switch=%d\n",
+				op_is_usb_switch_on(chg));
 		/* add for disable normal charge */
 		fast_charging = op_get_fastchg_ing(chg);
 		if (fast_charging) {

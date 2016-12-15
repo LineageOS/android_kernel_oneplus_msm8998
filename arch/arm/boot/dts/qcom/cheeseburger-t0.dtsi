@@ -66,6 +66,28 @@
   qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
 };
 
+&i2c_7 {
+        bq27541-battery@55 {
+                status = "ok";
+                compatible = "ti,bq27541-battery";
+                reg = <0x55>;
+        };
+        oneplus_fastcg@26{
+                status = "ok";
+                compatible = "microchip,oneplus_fastcg";
+                reg = <0x26>;
+                microchip,mcu-en-gpio = <&tlmm 96 0x00>;
+                microchip,usb-sw-1-gpio = <&tlmm 90 0x00>;
+                microchip,usb-sw-2-gpio = <&tlmm 91 0x00>;
+                microchip,ap-clk = <&tlmm 79 0x00>;
+                microchip,ap-data = <&tlmm 80 0x00>;
+
+                pinctrl-names = "mux_fastchg_active", "mux_fastchg_suspend";
+                pinctrl-0 = <&fastchg_active &usb_sw_active &ap_clk_active &ap_data_active>;
+                pinctrl-1 = <&usb_sw_suspend &fastchg_suspend &ap_clk_suspend &ap_data_suspend>;
+        };
+};
+
 &soc {
         tlmm: pinctrl@03400000 {
                 tri_state_key_mux {

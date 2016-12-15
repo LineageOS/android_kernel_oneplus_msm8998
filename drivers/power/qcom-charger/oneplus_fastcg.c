@@ -432,6 +432,14 @@ static bool get_fastchg_firmware_already_updated(void)
 	return false;
 }
 
+static bool fastchg_is_usb_switch_on(void)
+{
+	if (fastchg_di)
+		return gpio_get_value(fastchg_di->usb_sw_1_gpio);
+
+	return false;
+}
+
 static struct external_battery_gauge fastcharge_information  = {
 	.fast_chg_started 						= bq27541_fast_chg_started,
 	.get_fast_low_temp_full					= bq27541_get_fast_low_temp_full,
@@ -441,6 +449,7 @@ static struct external_battery_gauge fastcharge_information  = {
 	.get_fast_chg_allow						= bq27541_get_fast_chg_allow,
 	.set_switch_to_noraml_false				= bq27541_set_switch_to_noraml_false,
 	.get_fastchg_firmware_already_updated	= get_fastchg_firmware_already_updated,
+	.is_usb_switch_on						= fastchg_is_usb_switch_on,
 };
 #endif
 
