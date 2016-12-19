@@ -333,6 +333,9 @@ struct qpnp_hap {
 	bool				sup_brake_pat;
 	bool				correct_lra_drive_freq;
 	bool				misc_trim_error_rc19p2_clk_reg_present;
+#ifdef VENDOR_EDIT /*wulaibin 2016-12-13 add for show vibrator resonant frequency*/
+	int                 resonant_frequency;
+#endif
 };
 
 static struct qpnp_hap *ghap;
@@ -985,6 +988,39 @@ static ssize_t qpnp_hap_wf_s7_store(struct device *dev,
 	return qpnp_hap_wf_samp_store(dev, buf, count, 7);
 }
 
+#ifdef VENDOR_EDIT /*wulaibin 2016-12-13 add for show vibrator resonant frequency*/
+static ssize_t qpnp_hap_rf_hz_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+    u8 lra_auto_res_lo = 0, lra_auto_res_hi = 0;
+    u32 temp = 0;
+	struct timed_output_dev *timed_dev = dev_get_drvdata(dev);
+	struct qpnp_hap *hap = container_of(timed_dev, struct qpnp_hap,
+					 timed_dev);
+
+	qpnp_hap_read_reg(hap, &lra_auto_res_lo,
+				QPNP_HAP_LRA_AUTO_RES_LO(hap->base));
+	qpnp_hap_read_reg(hap, &lra_auto_res_hi,
+				QPNP_HAP_LRA_AUTO_RES_HI(hap->base));
+	lra_auto_res_hi = lra_auto_res_hi >> 4;
+
+    pr_debug("bean set %s,%d,lo = ox%x,hi = ox%x\n",__func__,__LINE__,lra_auto_res_lo,lra_auto_res_hi);
+    temp |= lra_auto_res_hi;
+    temp = temp << 8;
+    temp |= lra_auto_res_lo;
+
+	hap->resonant_frequency = ((19200/96)*1000)/temp;
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", hap->resonant_frequency);
+}
+
+static ssize_t qpnp_hap_rf_hz_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	return count;
+}
+#endif /*VENDOR_EDIT*/
+
 /* sysfs show for wave form update */
 static ssize_t qpnp_hap_wf_update_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -1335,6 +1371,11 @@ static struct device_attribute qpnp_hap_attrs[] = {
 	__ATTR(min_max_test, (S_IRUGO | S_IWUSR | S_IWGRP),
 			qpnp_hap_min_max_test_data_show,
 			qpnp_hap_min_max_test_data_store),
+#ifdef VENDOR_EDIT /*wulaibin 2016-12-13 add for show vibrator resonant frequency*/
+	__ATTR(rf_hz, (S_IRUGO | S_IWUSR | S_IWGRP),
+			qpnp_hap_rf_hz_show,
+			qpnp_hap_rf_hz_store),
+#endif /*VENDOR_EDIT*/
 };
 
 static void calculate_lra_code(struct qpnp_hap *hap)
