@@ -46,6 +46,9 @@
 #include <soc/qcom/service-notifier.h>
 #include <soc/qcom/socinfo.h>
 #include <soc/qcom/ramdump.h>
+//#ifdef VENDOR_EDIT
+#include <linux/project_info.h>
+//#endif VENDOR_EDIT
 
 #include "wlan_firmware_service_v01.h"
 
@@ -4538,6 +4541,10 @@ static int icnss_probe(struct platform_device *pdev)
 	icnss_debugfs_create(priv);
 
 	penv = priv;
+
+        //#ifdef VENDOR_EDIT
+        push_component_info(WCN, "WCN3990", "QualComm");
+        //#endif VENDOR_EDIT
 
 	icnss_pr_info("Platform driver probed successfully\n");
 
