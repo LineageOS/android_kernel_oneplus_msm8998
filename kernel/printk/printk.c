@@ -1797,7 +1797,8 @@ asmlinkage int vprintk_emit(int facility, int level,
 
 			__getnstimeofday64(&tspec);
 			/*utc + timezone add by huoyinghui@160425*/
-			tspec.tv_sec -= sys_tz.tz_minuteswest * 60;
+			if (sys_tz.tz_minuteswest < 0 || (tspec.tv_sec - sys_tz.tz_minuteswest*60) >= 0)
+				tspec.tv_sec -= sys_tz.tz_minuteswest * 60;
 			rtc_time_to_tm(tspec.tv_sec, &tm);
 
 			text_len = scnprintf(texttmp, sizeof(texttmp), "[%02d%02d%02d_%02d:%02d:%02d.%06ld]@%d %s",
