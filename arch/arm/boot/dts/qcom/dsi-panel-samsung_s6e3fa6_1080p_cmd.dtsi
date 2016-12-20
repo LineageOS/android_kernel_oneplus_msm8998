@@ -51,7 +51,6 @@
 			15 01 00 00 00 00 02 35 00
 			15 01 00 00 00 00 02 53 20
 			15 01 00 00 00 00 02 55 00
-			39 01 00 00 00 00 03 51 ff 03
       05 01 00 00 00 00 02 29 00
                 ];
 		qcom,mdss-dsi-off-command = [05 01 00 00 28 00 02 28 00
@@ -68,7 +67,7 @@
 		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-lane-2-state;
 		qcom,mdss-dsi-lane-3-state;
-		qcom,mdss-dsi-panel-timings = [00 1b 06 06 0b 16 07 08 05 03 04 00];
+		qcom,mdss-dsi-panel-timings = [00 1b 06 06 0b 10 06 07 05 03 04 00];
 		qcom,mdss-dsi-te-pin-select = <1>;
 		qcom,mdss-dsi-te-v-sync-rd-ptr-irq-line = <0x2c>;
 		qcom,mdss-dsi-te-v-sync-continue-lines = <0x3c>;
@@ -80,7 +79,7 @@
 		qcom,mdss-dsi-t-clk-post = <0x07>;
 		qcom,mdss-dsi-t-clk-pre = <0x29>;
 		qcom,mdss-dsi-bl-min-level = <1>;
-		qcom,mdss-dsi-bl-max-level = <255>;
+		qcom,mdss-dsi-bl-max-level = <1023>;
 		qcom,mdss-dsi-dma-trigger = "trigger_sw";
 		qcom,mdss-dsi-mdp-trigger = "trigger_sw";
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
@@ -93,10 +92,10 @@
 		qcom,mdss-tear-check-frame-rate=<6000>;
 		//qcom,mdss-tear-check-sync-cfg-height = <1932>; /* Height + VBP + VFP + VSW */
 		//qcom,mdss-tear-check-sync-init-val= <1920>; /* Height */
-	       // qcom,mdss-tear-check-sync-threshold-start = <4>;
-	       // qcom,mdss-tear-check-sync-threshold-continue = <4>;
-	       // qcom,mdss-tear-check-start-pos= <1920>; /* Height */
-	       // qcom,mdss-tear-check-rd-ptr-trigger-intr= <1921>; /* Height + 1 */
+    // qcom,mdss-tear-check-sync-threshold-start = <4>;
+    // qcom,mdss-tear-check-sync-threshold-continue = <4>;
+    // qcom,mdss-tear-check-start-pos= <1920>; /* Height */
+    // qcom,mdss-tear-check-rd-ptr-trigger-intr= <1921>; /* Height + 1 */
 
 		qcom,mdss-dsi-high-brightness-panel;
 		qcom,mdss-dsi-panel-acl-command = [15 01 00 00 00 00 02 55 00];
