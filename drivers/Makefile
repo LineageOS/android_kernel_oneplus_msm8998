@@ -191,3 +191,9 @@ obj-$(CONFIG_NFC)		+= nfc/
 #hefaxi@filesystems, 2015/12/07, add for force dump function
 obj-y 	+= oem_debug/
 #endif
+
+#ifdef VENDOR_EDIT
+# hefaxi@filesystem,2015/05/05,support param partion read/write
+obj-y 	+= param_read_write/
+#endif
+
