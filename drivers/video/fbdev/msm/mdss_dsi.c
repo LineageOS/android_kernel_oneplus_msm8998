@@ -295,18 +295,18 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 	if (mdss_dsi_pinctrl_set_state(ctrl_pdata, false))
 		pr_debug("reset disable: pinctrl not enabled\n");
 
-//#ifdef VENDOR_EDIT
-    if (ctrl_pdata->iris_enabled){
-        mdss_dsi_px_1v1_en(pdata, 0);
-    }
-    mdss_dsi_disp_vci_en(pdata, 0);
-//#endif
 	ret = msm_dss_enable_vreg(
 		ctrl_pdata->panel_power_data.vreg_config,
 		ctrl_pdata->panel_power_data.num_vreg, 0);
 	if (ret)
 		pr_err("%s: failed to disable vregs for %s\n",
 			__func__, __mdss_dsi_pm_name(DSI_PANEL_PM));
+//#ifdef VENDOR_EDIT
+    mdss_dsi_disp_vci_en(pdata, 0);
+    if (ctrl_pdata->iris_enabled){
+        mdss_dsi_px_1v1_en(pdata, 0);
+    }
+//#endif
     //#ifdef VENDOR_EDIT
     if (ctrl_pdata->iris_enabled){
         mdss_dsi_px_clk_req(pdata, 0);
@@ -333,7 +333,6 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
         mdss_dsi_px_clk_req(pdata, 1);
         mdss_dsi_px_1v1_en(pdata, 1);
     }
-    mdss_dsi_disp_vci_en(pdata, 1);
 //#endif
 	ret = msm_dss_enable_vreg(
 		ctrl_pdata->panel_power_data.vreg_config,
@@ -343,7 +342,9 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 			__func__, __mdss_dsi_pm_name(DSI_PANEL_PM));
 		return ret;
 	}
-
+//#ifdef VENDOR_EDIT
+    mdss_dsi_disp_vci_en(pdata, 1);
+//#endif
 	/*
 	 * If continuous splash screen feature is enabled, then we need to
 	 * request all the GPIOs that have already been configured in the

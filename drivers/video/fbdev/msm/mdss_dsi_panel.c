@@ -198,7 +198,14 @@ static struct dsi_cmd_desc backlight_cmd = {
 	{DTYPE_DCS_WRITE1, 1, 0, 0, 1, sizeof(led_pwm1)},
 	led_pwm1
 };
-
+//#ifdef VENDOR_EDIT
+//samsung s6e3fa6 panel backlight
+static char led_pwm2[3] = {0x51, 0x00, 0x00};	/* DTYPE_DCS_WRITE1 */
+static struct dsi_cmd_desc backlight_cmd2 = {
+	{DTYPE_DCS_LWRITE, 1, 0, 0, 1, sizeof(led_pwm2)},
+	led_pwm2
+};
+//#endif
 static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 {
 	struct dcs_cmd_req cmdreq;
@@ -211,11 +218,28 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	}
 
 	pr_debug("%s: level=%d\n", __func__, level);
+    //#ifdef VENDOR_EDIT
+    if (ctrl->bklt_max > 255){
+        u8 ldata = level%4;
+        u8 hdata = level/4;
 
-	led_pwm1[1] = (unsigned char)level;
+        if (level && (level <=7)){
+           led_pwm2[2] = 0;
+           led_pwm2[1] = 2;
+        }
+        else{
+            led_pwm2[2] = ldata;
+            led_pwm2[1] = hdata;
+        }
+    }else //#endif VENDOR_EDIT
+	    led_pwm1[1] = (unsigned char)level;
 
 	memset(&cmdreq, 0, sizeof(cmdreq));
-	cmdreq.cmds = &backlight_cmd;
+	//#ifdef VENDOR_EDIT
+    if (ctrl->bklt_max > 255){
+        cmdreq.cmds = &backlight_cmd2;
+    }else //#endif VENDOR_EDIT
+	    cmdreq.cmds = &backlight_cmd;
 	cmdreq.cmds_cnt = 1;
 	cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL;
 	cmdreq.rlen = 0;
@@ -396,6 +420,9 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 			gpio_set_value(ctrl_pdata->lcd_mode_sel_gpio, 0);
 			gpio_free(ctrl_pdata->lcd_mode_sel_gpio);
 		}
+	//#ifdef VENDOR_EDIT
+	    usleep_range(10* 1000, 10* 1000);
+    //#endif
 	}
 
 exit:
