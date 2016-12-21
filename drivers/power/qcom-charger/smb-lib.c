@@ -1482,8 +1482,10 @@ int smblib_get_prop_batt_temp(struct smb_charger *chg,
 
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161014 Add charging standard */
-	if (chg->use_fake_temp)
-		return chg->fake_temp;
+	if (chg->use_fake_temp) {
+		val->intval = chg->fake_temp;
+		return 0;
+	}
 #endif
 
 	rc = power_supply_get_property(chg->bms_psy,
