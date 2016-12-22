@@ -719,3 +719,6 @@ CONFIG_LEDS_GPIO=y
 # hefaxi@2016/03/03, add for create /dev/mem used to test DDR
 CONFIG_DEVMEM=y
 #endif /* VENDOR_EDIT */
+CONFIG_PSTORE=y
+CONFIG_PSTORE_CONSOLE=y
+CONFIG_PSTORE_RAM=y

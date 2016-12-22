@@ -14,18 +14,18 @@
 
 / {
 	reserved-memory {
-		/* #ifdef VENDOR_EDIT */
+		ramoops_mem: ramoops_mem@ac000000 {
+			reg = <0 0xAC000000 0 0x00200000>;
+			label = "ramoops_mem";
+		};
 		param_mem: param_mem@ac200000 {
 			reg = <0 0xAC200000 0 0x00100000>;
 			label = "param_mem";
 		};
-		/* #endif VENDOR_EDIT */
-		/* #ifdef VENDOR_EDIT */
 		mtp_mem: mtp_mem@ac400000 {
 			reg = <0 0xAC400000 0 0x00B00000>;
 			label = "mtp_mem";
 		};
-		/* #endif VENDOR_EDIT */
 	};
 };
 
@@ -110,6 +110,12 @@
 		qcom,ibat-monitor {
 			qcom,soc-low-threshold = <5>;
 		};
+	};
+
+	ramoops {
+		compatible = "ramoops";
+		status = "ok";
+		memory-region = <&ramoops_mem>;
 	};
 };
 
