@@ -45,7 +45,11 @@ module_param(record_size, ulong, 0400);
 MODULE_PARM_DESC(record_size,
 		"size of each dump done on oops/panic");
 
+#ifdef VENDOR_EDIT
+static ulong ramoops_console_size = 256*1024UL;
+#else
 static ulong ramoops_console_size = MIN_MEM_SIZE;
+#endif
 module_param_named(console_size, ramoops_console_size, ulong, 0400);
 MODULE_PARM_DESC(console_size, "size of kernel console log");
 
@@ -466,6 +470,7 @@ void notrace ramoops_console_write_buf(const char *buf, size_t size)
 	persistent_ram_write(cxt->cprz, buf, size);
 }
 
+#ifndef VENDOR_EDIT
 static int ramoops_parse_dt_size(struct platform_device *pdev,
 		const char *propname, unsigned long *val)
 {
@@ -490,6 +495,7 @@ static int ramoops_parse_dt_size(struct platform_device *pdev,
 	*val = val64;
 	return 0;
 }
+#endif
 
 static int ramoops_parse_dt(struct platform_device *pdev,
 		struct ramoops_platform_data *pdata)
@@ -521,6 +527,14 @@ static int ramoops_parse_dt(struct platform_device *pdev,
 	pdata->mem_type = of_property_read_bool(of_node, "unbuffered");
 	pdata->dump_oops = !of_property_read_bool(of_node, "no-dump-oops");
 
+#ifdef VENDOR_EDIT
+	pdata->record_size = record_size;
+	pdata->console_size = ramoops_console_size;
+	pdata->ftrace_size = ramoops_ftrace_size;
+	pdata->pmsg_size = ramoops_pmsg_size;
+	pdata->dump_oops = dump_oops;
+	pdata->ecc_info.ecc_size = ecc_size = 0;
+#else
 	ret = ramoops_parse_dt_size(pdev, "record-size", &pdata->record_size);
 	if (ret < 0)
 		return ret;
@@ -547,6 +561,7 @@ static int ramoops_parse_dt(struct platform_device *pdev,
 	} else if (ret != -EINVAL) {
 		return ret;
 	}
+#endif
 
 	return 0;
 }
