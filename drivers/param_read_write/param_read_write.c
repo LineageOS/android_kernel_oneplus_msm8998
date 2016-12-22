@@ -58,7 +58,8 @@ static int write_param_partition(const char *buf, unsigned long count,
 		pr_err("%s: llseek failed.(%d)\n",__func__,ret);
 		goto out;
 	}
-	ret = filp->f_op->write(filp,(char __user *)buf,count,&filp->f_pos);
+	//ret = filp->f_op->write(filp,(char __user *)buf,count,&filp->f_pos);
+	ret = __vfs_write(filp, (char __user *)buf, count, &filp->f_pos);
 
 out:
 	set_fs(fs);
