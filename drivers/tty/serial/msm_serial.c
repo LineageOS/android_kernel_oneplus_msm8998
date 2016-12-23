@@ -1793,6 +1793,20 @@ msm_serial_early_console_setup_dm(struct earlycon_device *device,
 OF_EARLYCON_DECLARE(msm_serial_dm, "qcom,msm-uartdm",
 		    msm_serial_early_console_setup_dm);
 
+/*Anderson-Config_UARTPIN_as_GPIO+[*/
+#ifdef VENDOR_EDIT
+static bool have_console = false;
+static int __init parse_console_config(char *str)
+{
+	if(str != NULL){
+		have_console = true;
+	}
+	return 0;
+}
+early_param("console", parse_console_config);
+#endif
+/*Anderson-Config_UARTPIN_as_GPIO+]*/
+
 static struct uart_driver msm_uart_driver;
 
 static struct console msm_console = {
@@ -1836,6 +1850,12 @@ static int msm_serial_probe(struct platform_device *pdev)
 	struct uart_port *port;
 	const struct of_device_id *id;
 	int irq, line;
+	/*Anderson-Config_UARTPIN_as_GPIO+[*/
+	#ifdef VENDOR_EDIT
+	struct pinctrl *pinctrl = NULL;
+	struct pinctrl_state *set_state = NULL;
+	#endif
+	/*Anderson-Config_UARTPIN_as_GPIO+]*/
 
 	if (pdev->dev.of_node)
 		line = of_alias_get_id(pdev->dev.of_node, "serial");
@@ -1853,6 +1873,21 @@ static int msm_serial_probe(struct platform_device *pdev)
 	port = msm_get_port_from_line(line);
 	port->dev = &pdev->dev;
 	msm_port = UART_TO_MSM(port);
+
+	/*Anderson-Config_UARTPIN_as_GPIO+[*/
+	#ifdef VENDOR_EDIT
+	pinctrl = devm_pinctrl_get(port->dev);
+	if(pinctrl != NULL){
+		if(!have_console)
+		{
+			set_state = pinctrl_lookup_state(pinctrl, "uart_deactive");
+			if(set_state != NULL)
+				pinctrl_select_state(pinctrl, set_state);
+			return -EPROBE_DEFER;
+		}
+	}
+	#endif
+	/*Anderson-Config_UARTPIN_as_GPIO+]*/
 
 	id = of_match_device(msm_uartdm_table, &pdev->dev);
 	if (id)
@@ -1985,8 +2020,19 @@ static int __init msm_serial_init(void)
 	ret = platform_driver_register(&msm_platform_driver);
 	if (unlikely(ret))
 		uart_unregister_driver(&msm_uart_driver);
-
-	pr_info("msm_serial: driver initialized\n");
+	/*Anderson-Config_UARTPIN_as_GPIO*[*/
+	#ifdef VENDOR_EDIT
+	if(!have_console){
+		platform_driver_unregister(&msm_platform_driver);
+		uart_unregister_driver(&msm_uart_driver);
+		pr_info("msm_platform_driver and msm_uart_driver unregister\n");
+	}
+	else
+		pr_info("msm_serial: driver initialized\n");
+	#else
+		pr_info("msm_serial: driver initialized\n");
+	#endif
+	/*Anderson-Config_UARTPIN_as_GPIO*]*/
 
 	return ret;
 }
