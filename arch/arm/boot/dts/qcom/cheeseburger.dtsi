@@ -79,6 +79,36 @@
 				};
 			};
 		};
+        
+           oem_rf_cable_mux {
+            oem_rf_cable_active: oem_rf_cable_active {
+                mux {
+                    pins = "gpio36";
+                    function = "gpio";
+                };
+
+                config {
+                    pins = "gpio36";
+                    drive-strength = <2>;
+                    bias-pull-up;
+                };
+            };
+
+            oem_rf_cable_suspend: oem_rf_cable_suspend {
+                    mux {
+                        pins = "gpio36";
+                        function = "gpio";
+                    };
+
+                    config {
+                        pins = "gpio36";
+                        drive-strength = <2>;
+                        bias-pull-up;
+                    };
+
+            };
+        };
+           
 	};
 
 	/* Tri-state key */
@@ -94,6 +124,14 @@
 		pinctrl-0 = <&tri_state_key_active>;
 		pinctrl-1 = <&tri_state_key_suspend>;
 	};
+       oem_rf_cable {
+            compatible = "oem,rf_cable";
+            interrupt-parent = <&tlmm>;
+            rf,cable-gpio    = <&tlmm 36 0>;
+   		pinctrl-names = "oem_rf_cable_active", "oem_rf_cable_suspend";
+		pinctrl-0 = <&oem_rf_cable_active>;
+		pinctrl-1 = <&oem_rf_cable_suspend>;
+    };
 
 	/* Fingerprint */
 	fpc_fpc1020 {
@@ -361,6 +399,19 @@
 		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
 	};
 };
+&pcie0_clkreq_default {
+        mux {
+            pins = "gpio36";
+            function = "gpio";
+        };
+    
+        config {
+            pins = "gpio36";
+            drive-strength = <2>;
+            bias-pull-up;
+        };
+    };
+
 
 &mdss_dp_ctrl {
 	status = "disabled";

@@ -667,6 +667,34 @@ static struct subsys_device *find_subsys(const char *str)
 	return dev ? to_subsys(dev) : NULL;
 }
 
+#ifdef VENDOR_EDIT
+//changhua add a interface to restart modem in kernel
+static int restart_level = 0;//system original val
+int op_restart_modem(void)
+{
+    struct subsys_device *subsys = find_subsys("modem");
+	if (!subsys)
+		return -ENODEV;
+    restart_level = subsys->restart_level;
+	subsys->restart_level = RESET_SUBSYS_COUPLED;
+    #if 1
+    if (subsystem_restart("modem") == -ENODEV) {
+        pr_err("%s: SSR call failed\n", __func__);
+    }
+    #else
+    //shutdown
+    subsystem_put(subsys);
+    //boot
+    if (IS_ERR(subsystem_get("modem"))) {
+        pr_err("Peripheral Loader failed on modem.\n");
+    }
+    #endif
+    subsys->restart_level = restart_level;
+    return 0;
+}
+EXPORT_SYMBOL(op_restart_modem);
+
+#endif /* VENDOR_EDIT */
 static int subsys_start(struct subsys_device *subsys)
 {
 	int ret;

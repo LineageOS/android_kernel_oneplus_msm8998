@@ -102,5 +102,6 @@ obj-$(CONFIG_WCD_DSP_GLINK) += wcd-dsp-glink.o
 obj-$(CONFIG_QCOM_SMCINVOKE) += smcinvoke.o
 #ifdef VENDOR_EDIT
 obj-y += project_info.o
+obj-$(CONFIG_RF_CABLE_DETECT) += op_rf_cable_monitor.o
 #endif
 obj-$(CONFIG_QCOM_EARLY_RANDOM)	+= early_random.o

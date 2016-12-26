@@ -716,6 +716,8 @@ CONFIG_QMI_ENCDEC=y
 CONFIG_TRI_STATE_KEY=y
 CONFIG_LEDS_GPIO=y
 #ifdef VENDOR_EDIT
+#shankai@20161226 add for rf cable detect
+CONFIG_RF_CABLE_DETECT=y
 # hefaxi@2016/03/03, add for create /dev/mem used to test DDR
 CONFIG_DEVMEM=y
 #endif /* VENDOR_EDIT */
