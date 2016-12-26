@@ -71,6 +71,39 @@
   qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
 };
 
+/* Charging */
+&soc {
+	tlmm: pinctrl@03400000 {
+		oneplus_fastchg {
+			usb_sw_active: usb_sw_active {
+				mux {
+					pins = "gpio90", "gpio91";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio90", "gpio91";
+					drive-strength = <16>;
+					bias-pull-up;
+				};
+			};
+
+			usb_sw_suspend: usb_sw_suspend {
+				mux {
+					pins = "gpio90", "gpio91";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio90", "gpio91";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+		};
+	};
+};
+
 &i2c_7 {
         bq27541-battery@55 {
                 status = "ok";

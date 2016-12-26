@@ -80,6 +80,39 @@
 	#include "pxlw-iris-samsung_s6e3fa3.dtsi"
 };
 
+/* Charging */
+&soc {
+	tlmm: pinctrl@03400000 {
+		oneplus_fastchg {
+			usb_sw_active: usb_sw_active {
+				mux {
+					pins = "gpio15", "gpio16";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio15", "gpio16";
+					drive-strength = <16>;
+					bias-pull-up;
+				};
+			};
+
+			usb_sw_suspend: usb_sw_suspend {
+				mux {
+					pins = "gpio15", "gpio16";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio15", "gpio16";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+		};
+	};
+};
+
 &i2c_7 {
         bq27541-battery@55 {
                 status = "ok";
