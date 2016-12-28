@@ -117,6 +117,7 @@ static DEVICE_ATTR(ddr, S_IRUGO, component_info_get, NULL);
 static DEVICE_ATTR(emmc, S_IRUGO, component_info_get, NULL);
 static DEVICE_ATTR(f_camera, S_IRUGO, component_info_get, NULL);
 static DEVICE_ATTR(r_camera, S_IRUGO, component_info_get, NULL);
+static DEVICE_ATTR(second_r_camera, S_IRUGO, component_info_get, NULL);
 static DEVICE_ATTR(tp, S_IRUGO, component_info_get, NULL);
 static DEVICE_ATTR(lcd, S_IRUGO, component_info_get, NULL);
 static DEVICE_ATTR(wcn, S_IRUGO, component_info_get, NULL);
@@ -185,6 +186,7 @@ static struct attribute *component_info_sysfs_entries[] = {
 	&dev_attr_emmc.attr,
 	&dev_attr_f_camera.attr,
 	&dev_attr_r_camera.attr,
+	&dev_attr_second_r_camera.attr,
 	&dev_attr_tp.attr,
 	&dev_attr_lcd.attr,
 	&dev_attr_wcn.attr,
@@ -220,6 +222,8 @@ static ssize_t component_info_get(struct device *dev,
 		return sprintf(buf, "VER:\t%s\nMANU:\t%s\n", get_component_version(F_CAMERA), get_component_manufacture(F_CAMERA));
 	if (attr == &dev_attr_r_camera)
 		return sprintf(buf, "VER:\t%s\nMANU:\t%s\n", get_component_version(R_CAMERA), get_component_manufacture(R_CAMERA));
+	if (attr == &dev_attr_second_r_camera)
+		return sprintf(buf, "VER:\t%s\nMANU:\t%s\n", get_component_version(SECOND_R_CAMERA), get_component_manufacture(SECOND_R_CAMERA));
 	if (attr == &dev_attr_tp)
 		return sprintf(buf, "VER:\t%s\nMANU:\t%s\n", get_component_version(TP), get_component_manufacture(TP));
 	if (attr == &dev_attr_lcd)

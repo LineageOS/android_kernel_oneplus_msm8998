@@ -1027,8 +1027,11 @@ CSID_TG:
 #ifdef VENDOR_EDIT
     if (0 == slave_info->camera_id)
         CameraID = R_CAMERA;
-    else
+    else if (1 == slave_info->camera_id)
+        CameraID = SECOND_R_CAMERA;
+    else if (2 == slave_info->camera_id)
         CameraID = F_CAMERA;
+
     count = ARRAY_SIZE(match_tbl);
     for (i = 0;i < count;i++) {
         if (!strcmp(slave_info->sensor_name,match_tbl[i].sensor_name))
