@@ -103,6 +103,11 @@ menu "DOS/FAT/NT Filesystems"
 source "fs/fat/Kconfig"
 source "fs/ntfs/Kconfig"
 
+#ifdef VENDOR_EDIT
+# liochen@filesystem, 2016/12/03, Support NTFS and EXFAT in kernel
+source "fs/exfat/Kconfig"
+#endif
+
 endmenu
 endif # BLOCK
 

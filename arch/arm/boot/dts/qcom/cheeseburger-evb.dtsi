@@ -1,0 +1,138 @@
+/* Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include "dsi-panel-samsung_s6e3fa3_1080p_cmd.dtsi"
+#include "dsi-panel-samsung_s6e3fa3_1080p_video.dtsi"
+#include "dsi-panel-samsung_s6e3fa5_1080p_cmd.dtsi"
+#include "dsi-panel-samsung_s6e3fa6_1080p_cmd.dtsi"
+
+&mdss_dsi_active {
+	mux {
+		pins = "gpio94", "gpio91", "gpio95", "gpio21", "gpio24", "gpio62";
+	};
+    config {
+		pins = "gpio94", "gpio91", "gpio95", "gpio21", "gpio24", "gpio62";
+	};
+};
+
+&mdss_dsi_suspend {
+	mux {
+		pins = "gpio94", "gpio91", "gpio95", "gpio21", "gpio24", "gpio62";
+	};
+	config {
+		pins = "gpio94", "gpio91", "gpio95", "gpio21", "gpio24", "gpio62";
+	};
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_samsung_s6e3fa3_1080p_cmd>;
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+	qcom,platform-reset-gpio = <&tlmm 94 0>;
+	qcom,platform-te-gpio = <&tlmm 11 0>;
+  qcom,platform-vci-gpio = <&tlmm 21 0>;
+  qcom,px-1v1-en-gpio = <&tlmm 95 0>;
+  qcom,px-bp-gpio = <&tlmm 24 0>;
+  qcom,px-ext-clk = "BBCLK2";
+  qcom,panel-mode-gpio = <>;
+  lab-supply = <>;
+  ibb-supply = <>;
+	clocks = <&clock_mmss clk_mmss_mdss_byte0_clk>,
+		<&clock_mmss clk_mmss_mdss_pclk0_clk>,
+		<&clock_mmss clk_mmss_mdss_esc0_clk>,
+		<&clock_mmss clk_byte0_clk_src>,
+		<&clock_mmss clk_pclk0_clk_src>,
+		<&clock_mmss clk_mmss_mdss_byte0_intf_clk>,
+		<&clock_gcc clk_ln_bb_clk2>;
+	clock-names = "byte_clk", "pixel_clk", "core_clk",
+		"byte_clk_rcg", "pixel_clk_rcg",
+		"byte_intf_clk",
+		"px_ext_clk";
+};
+
+&dsi_samsung_s6e3fa3_1080p_cmd {
+  qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
+	#include "pxlw-iris-samsung_s6e3fa3.dtsi"
+};
+
+&dsi_samsung_s6e3fa3_1080p_video {
+  qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
+	#include "pxlw-iris-samsung_s6e3fa3.dtsi"
+};
+
+&dsi_samsung_s6e3fa5_1080p_cmd {
+  qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
+	#include "pxlw-iris-samsung_s6e3fa3.dtsi"
+};
+
+&dsi_samsung_s6e3fa6_1080p_cmd {
+  qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
+	#include "pxlw-iris-samsung_s6e3fa3.dtsi"
+};
+
+/* Charging */
+&soc {
+	tlmm: pinctrl@03400000 {
+		oneplus_fastchg {
+			usb_sw_active: usb_sw_active {
+				mux {
+					pins = "gpio15", "gpio16";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio15", "gpio16";
+					drive-strength = <16>;
+					bias-pull-up;
+				};
+			};
+
+			usb_sw_suspend: usb_sw_suspend {
+				mux {
+					pins = "gpio15", "gpio16";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio15", "gpio16";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+		};
+	};
+};
+
+&i2c_7 {
+        bq27541-battery@55 {
+                status = "ok";
+                compatible = "ti,bq27541-battery";
+                reg = <0x55>;
+        };
+        oneplus_fastcg@26{
+                status = "ok";
+                compatible = "microchip,oneplus_fastcg";
+                reg = <0x26>;
+                microchip,mcu-en-gpio = <&tlmm 96 0x00>;
+                microchip,usb-sw-1-gpio = <&tlmm 15 0x00>;
+                microchip,usb-sw-2-gpio = <&tlmm 16 0x00>;
+                microchip,ap-clk = <&tlmm 79 0x00>;
+                microchip,ap-data = <&tlmm 80 0x00>;
+
+                pinctrl-names = "mux_fastchg_active", "mux_fastchg_suspend";
+                pinctrl-0 = <&fastchg_active &usb_sw_active &ap_clk_active &ap_data_active>;
+                pinctrl-1 = <&usb_sw_suspend &fastchg_suspend &ap_clk_suspend &ap_data_suspend>;
+        };
+};
+
+

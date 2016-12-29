@@ -3587,6 +3587,14 @@ int ufshcd_read_device_desc(struct ufs_hba *hba, u8 *buf, u32 size)
 	return ufshcd_read_desc(hba, QUERY_DESC_IDN_DEVICE, 0, buf, size);
 }
 
+#ifdef VENDOR_EDIT
+/* liochen@BSP 2016/11/30, Add ufs info into *##*37847# */
+int ufshcd_read_geometry_desc(struct ufs_hba *hba, u8 *buf, u32 size)
+{
+       return ufshcd_read_desc(hba, QUERY_DESC_IDN_GEOMETRY, 0, buf, size);
+}
+#endif
+
 /**
  * ufshcd_read_string_desc - read string descriptor
  * @hba: pointer to adapter instance
@@ -7160,6 +7168,12 @@ static int ufshcd_probe_hba(struct ufs_hba *hba)
 			}
 			hba->clk_scaling.is_allowed = true;
 		}
+
+
+		#ifdef VENDOR_EDIT
+		/* liochen@BSP, 2016/11/30, Add ufs info into *##*37847# */
+		ufs_fill_info(hba);
+		#endif
 
 		scsi_scan_host(hba->host);
 		pm_runtime_put_sync(hba->dev);

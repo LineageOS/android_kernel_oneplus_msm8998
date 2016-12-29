@@ -3761,9 +3761,19 @@ static inline void __disable_unprepare_clks(struct venus_hfi_device *device)
 		dprintk(VIDC_ERR, "Invalid params: %pK\n", device);
 		return;
 	}
+<<<<<<< HEAD
 
 	venus_hfi_for_each_clock_reverse(device, cl) {
 		usleep_range(100, 500);
+=======
+//#ifndef VENDOR_EDIT
+	//venus_hfi_for_each_clock(device, cl) {
+	//	 usleep_range(100, 500);
+//#else
+	venus_hfi_for_each_clock_reverse(device, cl) {
+    usleep_range(100, 500);
+//#endif
+>>>>>>> origin/QC8998_DEV
 		dprintk(VIDC_DBG, "Clock: %s disable and unprepare\n",
 				cl->name);
 		clk_disable_unprepare(cl->clk);
@@ -3773,7 +3783,15 @@ static inline void __disable_unprepare_clks(struct venus_hfi_device *device)
 static inline int __prepare_enable_clks(struct venus_hfi_device *device)
 {
 	struct clock_info *cl = NULL, *cl_fail = NULL;
+<<<<<<< HEAD
 	int rc = 0, c = 0;
+=======
+	//#ifndef VENDOR_EDIT
+	//int rc = 0;
+	//#else
+	int rc = 0, c = 0;
+	//#endif
+>>>>>>> origin/QC8998_DEV
 	if (!device) {
 		dprintk(VIDC_ERR, "Invalid params: %pK\n", device);
 		return -EINVAL;
@@ -3810,8 +3828,14 @@ static inline int __prepare_enable_clks(struct venus_hfi_device *device)
 			cl_fail = cl;
 			goto fail_clk_enable;
 		}
+<<<<<<< HEAD
 
 		c++;
+=======
+		//#ifdef VENDOR_EDIT
+        c++;
+        //#endif
+>>>>>>> origin/QC8998_DEV
 		dprintk(VIDC_DBG, "Clock: %s prepared and enabled\n", cl->name);
 	}
 
@@ -3820,8 +3844,17 @@ static inline int __prepare_enable_clks(struct venus_hfi_device *device)
 	return rc;
 
 fail_clk_enable:
+<<<<<<< HEAD
+=======
+//#ifndef VENDOR_EDIT
+	//venus_hfi_for_each_clock(device, cl) {
+	//	if (cl_fail == cl)
+	//		break;
+//#else
+>>>>>>> origin/QC8998_DEV
 	venus_hfi_for_each_clock_reverse_continue(device, cl, c) {
 		usleep_range(100, 500);
+//#endif
 		dprintk(VIDC_ERR, "Clock: %s disable and unprepare\n",
 			cl->name);
 		clk_disable_unprepare(cl->clk);

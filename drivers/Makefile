@@ -181,3 +181,19 @@ obj-$(CONFIG_BIF)		+= bif/
 
 obj-$(CONFIG_SENSORS_SSC)	+= sensors/
 obj-$(CONFIG_ESOC)              += esoc/
+
+#ifdef VENDOR_EDIT
+#ruanbanmao@nfc add for 15801 nfc 2015/10/16
+obj-$(CONFIG_NFC)		+= nfc/
+#endif
+
+#ifdef VENDOR_EDIT
+#hefaxi@filesystems, 2015/12/07, add for force dump function
+obj-y 	+= oem_debug/
+#endif
+
+#ifdef VENDOR_EDIT
+# hefaxi@filesystem,2015/05/05,support param partion read/write
+obj-y 	+= param_read_write/
+#endif
+

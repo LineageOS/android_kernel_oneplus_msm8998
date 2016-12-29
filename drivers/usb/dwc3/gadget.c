@@ -2802,7 +2802,10 @@ static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 	dwc3_notify_event(dwc, DWC3_CONTROLLER_NOTIFY_OTG_EVENT);
 
 	dwc3_usb3_phy_suspend(dwc, false);
-	usb_gadget_vbus_draw(&dwc->gadget, 100);
+#ifndef VENDOR_EDIT
+/* david.liu@bsp, 20161109 Charging porting */
+	usb_gadget_vbus_draw(&dwc->gadget, 0);
+#endif
 
 	dwc3_reset_gadget(dwc);
 	dbg_event(0xFF, "BUS RST", 0);

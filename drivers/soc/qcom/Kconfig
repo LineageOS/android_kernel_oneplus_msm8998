@@ -836,4 +836,9 @@ config QCOM_EARLY_RANDOM
 	  may not be truly random. Select this option to make an early call
 	  to get some random data to put in the pool. If unsure, say N.
 
+config RF_CABLE_DETECT
+	bool "detect RF cable connection"
+	help
+	  detect RF cable connection for different RF configuration
+
 source "drivers/soc/qcom/memshare/Kconfig"

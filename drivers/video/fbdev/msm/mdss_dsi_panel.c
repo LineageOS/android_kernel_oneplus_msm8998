@@ -25,6 +25,11 @@
 
 #include "mdss_dsi.h"
 #include "mdss_dba_utils.h"
+//#ifdef VENDOR_EDIT
+#include <linux/clk.h>
+#include "mdss_dsi_iris2p_lightup.h"
+#include <linux/project_info.h>
+//#endif
 #include "mdss_debug.h"
 
 #define DT_CMD_HDR 6
@@ -185,7 +190,6 @@ static void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 
 	cmdreq.rlen = 0;
 	cmdreq.cb = NULL;
-
 	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
 }
 
@@ -194,7 +198,14 @@ static struct dsi_cmd_desc backlight_cmd = {
 	{DTYPE_DCS_WRITE1, 1, 0, 0, 1, sizeof(led_pwm1)},
 	led_pwm1
 };
-
+//#ifdef VENDOR_EDIT
+//samsung s6e3fa6 panel backlight
+static char led_pwm2[3] = {0x51, 0x00, 0x00};	/* DTYPE_DCS_WRITE1 */
+static struct dsi_cmd_desc backlight_cmd2 = {
+	{DTYPE_DCS_LWRITE, 1, 0, 0, 1, sizeof(led_pwm2)},
+	led_pwm2
+};
+//#endif
 static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 {
 	struct dcs_cmd_req cmdreq;
@@ -207,16 +218,32 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	}
 
 	pr_debug("%s: level=%d\n", __func__, level);
+    //#ifdef VENDOR_EDIT
+    if (ctrl->bklt_max > 255){
+        u8 ldata = level%4;
+        u8 hdata = level/4;
 
-	led_pwm1[1] = (unsigned char)level;
+        if (level && (level <=7)){
+           led_pwm2[2] = 0;
+           led_pwm2[1] = 2;
+        }
+        else{
+            led_pwm2[2] = ldata;
+            led_pwm2[1] = hdata;
+        }
+    }else //#endif VENDOR_EDIT
+	    led_pwm1[1] = (unsigned char)level;
 
 	memset(&cmdreq, 0, sizeof(cmdreq));
-	cmdreq.cmds = &backlight_cmd;
+	//#ifdef VENDOR_EDIT
+    if (ctrl->bklt_max > 255){
+        cmdreq.cmds = &backlight_cmd2;
+    }else //#endif VENDOR_EDIT
+	    cmdreq.cmds = &backlight_cmd;
 	cmdreq.cmds_cnt = 1;
 	cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL;
 	cmdreq.rlen = 0;
 	cmdreq.cb = NULL;
-
 	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
 }
 
@@ -393,11 +420,120 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 			gpio_set_value(ctrl_pdata->lcd_mode_sel_gpio, 0);
 			gpio_free(ctrl_pdata->lcd_mode_sel_gpio);
 		}
+	//#ifdef VENDOR_EDIT
+	    usleep_range(10* 1000, 10* 1000);
+    //#endif
 	}
 
 exit:
 	return rc;
 }
+
+//#ifdef VENDOR_EDIT
+int mdss_dsi_px_clk_req(struct mdss_panel_data *pdata, int enable)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	int rc = 0;
+
+	if (pdata == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+				panel_data);
+	if (enable) {
+        if(!IS_ERR(ctrl_pdata->px_clk_src) && (!ctrl_pdata->px_clk_enabled)){
+            clk_set_rate(ctrl_pdata->px_clk_src, 19200000);
+            rc = clk_prepare_enable(ctrl_pdata->px_clk_src);
+            if (rc){
+                pr_err("px clk_prepare_enable failed, rc=%d\n", rc);
+            }
+            ctrl_pdata->px_clk_enabled = 1;
+		}
+	} else{
+		if(!IS_ERR(ctrl_pdata->px_clk_src) && ctrl_pdata->px_clk_enabled){
+		    clk_disable_unprepare(ctrl_pdata->px_clk_src);
+		    ctrl_pdata->px_clk_enabled = 0;
+		}
+	}
+	return rc;
+}
+int mdss_dsi_disp_vci_en(struct mdss_panel_data *pdata, int enable)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	struct mdss_panel_info *pinfo = NULL;
+	int rc = 0;
+
+	if (pdata == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+				panel_data);
+
+    if (!gpio_is_valid(ctrl_pdata->disp_vci_en_gpio)) {
+		pr_debug("%s:%d, vci_en_gpio line not configured\n",
+			   __func__, __LINE__);
+		return rc;
+	}
+	pr_debug("%s: vci_en_gpio enable = %d\n", __func__, enable);
+	pinfo = &(ctrl_pdata->panel_data.panel_info);
+
+	if (enable) {
+	    rc = gpio_request(ctrl_pdata->disp_vci_en_gpio,
+					"disp_vci_en");
+		if (rc) {
+			pr_err("request vci_enable gpio failed, rc=%d\n",
+				       rc);
+			return rc;
+		}
+        rc = gpio_direction_output(ctrl_pdata->disp_vci_en_gpio, 1);
+	} else {
+	    gpio_set_value(ctrl_pdata->disp_vci_en_gpio, 0);
+	    gpio_free(ctrl_pdata->disp_vci_en_gpio);
+	}
+	return rc;
+}
+int mdss_dsi_px_1v1_en(struct mdss_panel_data *pdata, int enable)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	struct mdss_panel_info *pinfo = NULL;
+	int rc = 0;
+
+	if (pdata == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+				panel_data);
+
+    if (!gpio_is_valid(ctrl_pdata->px_1v1_en_gpio)) {
+		pr_debug("%s:%d, px_1v1_en line not configured\n",
+			   __func__, __LINE__);
+		return rc;
+	}
+	pr_debug("%s: px_1v1_en enable = %d\n", __func__, enable);
+	pinfo = &(ctrl_pdata->panel_data.panel_info);
+
+	if (enable) {
+	    rc = gpio_request(ctrl_pdata->px_1v1_en_gpio,
+					"px_1v1_en_gpio");
+		if (rc) {
+			pr_err("request px_1v1 gpio failed, rc=%d\n",
+				       rc);
+			return rc;
+		}
+        rc = gpio_direction_output(ctrl_pdata->px_1v1_en_gpio, 1);
+	} else {
+	    gpio_set_value(ctrl_pdata->px_1v1_en_gpio, 0);
+	    gpio_free(ctrl_pdata->px_1v1_en_gpio);
+	}
+	return rc;
+}
+//#endif
 
 /**
  * mdss_dsi_roi_merge() -  merge two roi into single roi
@@ -803,6 +939,11 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	pr_debug("%s: ndx=%d cmd_cnt=%d\n", __func__,
 				ctrl->ndx, on_cmds->cmd_cnt);
 
+    //#ifdef VENDOR_EDIT
+    if (ctrl->iris_enabled){
+        iris_init(ctrl);
+        iris_panel_cmds(ctrl, &ctrl->on_cmds);
+	}else//#endif VENDOR_EDIT
 	if (on_cmds->cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, on_cmds, CMD_REQ_COMMIT);
 
@@ -875,8 +1016,12 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		if (ctrl->ndx != DSI_CTRL_LEFT)
 			goto end;
 	}
-
-	if (ctrl->off_cmds.cmd_cnt)
+    //#ifdef VENDOR_EDIT
+    if (ctrl->iris_enabled){
+        iris_lightoff(ctrl);
+        iris_panel_cmds(ctrl, &ctrl->off_cmds);
+    }else//#endif VENDOR_EDIT
+    if (ctrl->off_cmds.cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, &ctrl->off_cmds, CMD_REQ_COMMIT);
 
 	if (ctrl->ds_registered && pinfo->is_pluggable) {
@@ -2675,6 +2820,13 @@ static int mdss_panel_parse_dt(struct device_node *np,
 
 	pinfo->is_dba_panel = of_property_read_bool(np,
 			"qcom,dba-panel");
+//#ifdef VENDOR_EDIT
+    ctrl_pdata->iris_enabled = of_property_read_bool(np, "qcom,iris-enabled");
+    if (ctrl_pdata->iris_enabled){
+        iris_init_params_parse(np, ctrl_pdata);
+        iris_init_cmd_setup(ctrl_pdata);
+	}
+//#endif
 
 	if (pinfo->is_dba_panel) {
 		bridge_chip_name = of_get_property(np,
@@ -2702,7 +2854,12 @@ int mdss_dsi_panel_init(struct device_node *node,
 	int rc = 0;
 	static const char *panel_name;
 	struct mdss_panel_info *pinfo;
-
+//#ifdef VENDOR_EDIT
+	static const char *panel_manufacture;
+	static const char *panel_version;
+	static const char *backlight_manufacture;
+	static const char *backlight_version;
+//#endif
 	if (!node || !ctrl_pdata) {
 		pr_err("%s: Invalid arguments\n", __func__);
 		return -ENODEV;
@@ -2720,6 +2877,23 @@ int mdss_dsi_panel_init(struct device_node *node,
 		pr_info("%s: Panel Name = %s\n", __func__, panel_name);
 		strlcpy(&pinfo->panel_name[0], panel_name, MDSS_MAX_PANEL_LEN);
 	}
+//#ifdef VENDOR_EDIT
+	panel_manufacture = of_get_property(node, "qcom,mdss-dsi-panel-manufacture", NULL);
+    if (!panel_manufacture)
+		pr_info("%s:%d, panel manufacture not specified\n", __func__, __LINE__);
+	panel_version = of_get_property(node, "qcom,mdss-dsi-panel-version", NULL);
+	if (!panel_version)
+		pr_info("%s:%d, panel version not specified\n", __func__, __LINE__);
+	push_component_info(LCD, (char *)panel_version, (char *)panel_manufacture);
+
+	backlight_manufacture = of_get_property(node, "qcom,mdss-dsi-backlight-manufacture", NULL);
+	if (!backlight_manufacture)
+		pr_info("%s:%d, backlight manufacture not specified\n", __func__, __LINE__);
+	backlight_version = of_get_property(node, "qcom,mdss-dsi-backlight-version", NULL);
+	if (!backlight_version)
+		pr_info("%s:%d, backlight version not specified\n", __func__, __LINE__);
+	push_component_info(BACKLIGHT, (char *)backlight_version, (char *)backlight_manufacture);
+//#endif
 	rc = mdss_panel_parse_dt(node, ctrl_pdata);
 	if (rc) {
 		pr_err("%s:%d panel dt parse failed\n", __func__, __LINE__);

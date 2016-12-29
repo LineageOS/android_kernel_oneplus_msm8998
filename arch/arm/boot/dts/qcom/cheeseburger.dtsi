@@ -1,0 +1,642 @@
+/* Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include "pxlw-iris-settings.dtsi"
+
+/ {
+	reserved-memory {
+		ramoops_mem: ramoops_mem@ac000000 {
+			reg = <0 0xAC000000 0 0x00200000>;
+			label = "ramoops_mem";
+		};
+		param_mem: param_mem@ac200000 {
+			reg = <0 0xAC200000 0 0x00100000>;
+			label = "param_mem";
+		};
+		mtp_mem: mtp_mem@ac400000 {
+			reg = <0 0xAC400000 0 0x00B00000>;
+			label = "mtp_mem";
+		};
+	};
+};
+
+/* I/O */
+&soc {
+	gpio_keys {
+		vol_down {
+			label = "volume_down";
+			gpios = <&pmcobalt_gpios 5 0x1>;
+			linux,input-type = <1>;
+			linux,code = <114>;
+			debounce-interval = <15>;
+		};
+		hallsensor_key {
+			label = "hallsensor_key";
+			gpios = <&tlmm 124 1>;
+			interrupt-parent = <&tlmm>;
+			interrupts = <124 0x0>;
+			linux,input-type = <5>;
+			linux,code = <0>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
+	};
+
+	tlmm: pinctrl@03400000 {
+		tri_state_key_mux {
+			tri_state_key_active: tri_state_key_active {
+				mux {
+					pins = "gpio42","gpio9","gpio40";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio42","gpio9","gpio40";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+
+			tri_state_key_suspend: tri_state_key_suspend {
+				mux {
+					pins = "gpio42","gpio9","gpio40";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio42","gpio9","gpio40";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+		};
+        
+           oem_rf_cable_mux {
+            oem_rf_cable_active: oem_rf_cable_active {
+                mux {
+                    pins = "gpio36";
+                    function = "gpio";
+                };
+
+                config {
+                    pins = "gpio36";
+                    drive-strength = <2>;
+                    bias-pull-up;
+                };
+            };
+
+            oem_rf_cable_suspend: oem_rf_cable_suspend {
+                    mux {
+                        pins = "gpio36";
+                        function = "gpio";
+                    };
+
+                    config {
+                        pins = "gpio36";
+                        drive-strength = <2>;
+                        bias-pull-up;
+                    };
+
+            };
+        };
+           
+	};
+
+	/* Tri-state key */
+	tri_state_key {
+		compatible = "oneplus,tri-state-key";
+		status = "okay";
+		interrupt-parent = <&tlmm>;
+		tristate,gpio_key1 = <&tlmm 40 0x00>;
+		tristate,gpio_key2 = <&tlmm 42 0x00>;
+		tristate,gpio_key3 = <&tlmm 9 0x00>;
+
+		pinctrl-names = "pmx_tri_state_key_active", "pmx_tri_state_key_suspend";
+		pinctrl-0 = <&tri_state_key_active>;
+		pinctrl-1 = <&tri_state_key_suspend>;
+	};
+       oem_rf_cable {
+            compatible = "oem,rf_cable";
+            interrupt-parent = <&tlmm>;
+            rf,cable-gpio    = <&tlmm 36 0>;
+   		pinctrl-names = "oem_rf_cable_active", "oem_rf_cable_suspend";
+		pinctrl-0 = <&oem_rf_cable_active>;
+		pinctrl-1 = <&oem_rf_cable_suspend>;
+    };
+
+	/* Fingerprint */
+	fpc_fpc1020 {
+		compatible = "fpc,fpc1020";
+		interrupt-parent = <&tlmm>;
+		fpc,irq-gpio    = <&tlmm 121 0>;
+		fpc,gpio_id0    = <&tlmm 39 0>;
+		fpc,gpio_id1    = <&tlmm 41 0>;
+		fpc,gpio_1V8_EN = <&tlmm 25 0x00>;
+	};
+
+	qcom,bcl {
+		qcom,bcl-soc-hotplug-list = <&CPU6 &CPU7>;
+		qcom,ibat-monitor {
+			qcom,soc-low-threshold = <5>;
+		};
+	};
+
+	ramoops {
+		compatible = "ramoops";
+		status = "ok";
+		memory-region = <&ramoops_mem>;
+	};
+};
+
+&pmcobalt_gpios {
+	/* GPIO 5 for Vol- Key */
+	gpio@c400 {
+		status = "okay";
+		qcom,mode = <0>;
+		qcom,pull = <0>;
+		qcom,vin-sel = <0>;
+		qcom,src-sel = <0>;
+		qcom,out-strength = <1>;
+	};
+};
+
+&pmcobalt_rtc {
+  compatible = "qcom,qpnp-rtc";
+  qcom,qpnp-rtc-alarm-pwrup = <1>;
+};
+
+&pmicobalt_gpios {
+	/* button-backlight */
+	gpio@c400 {
+		status = "okay";
+	};
+};
+
+&sdhc_2 {
+	status = "disabled";
+};
+
+&pmicobalt_haptics {
+	status = "okay";
+	qcom,wave-shape = "sine";
+	qcom,vmax-mv = <2400>;
+};
+
+&spmi_bus {
+	qcom,pmicobalt@2 {
+		/* button-backlight */
+		gpio-leds {
+			compatible = "gpio-leds";
+			status = "okay";
+			keypad-backlight {
+				gpios = <&pmicobalt_gpios 5 0>; //here maybe pm8998_gpios, depends on what you use.
+				label = "button-backlight";
+				linux,default-trigger = "none";
+			};
+		};
+	};
+
+	qcom,pmicobalt@3 {
+		/* RGB LED blink */
+		#address-cells = <1>;
+		#size-cells = <1>;
+	};
+};
+
+&red_led {
+	qcom,use-blink;
+	qcom,duty-pcts = [00 05 0a 0f 14 1d 28 32 3c 4b 64];
+	qcom,duty-ms = <20>;
+	qcom,start-idx = <1>;
+	qcom,idx-len = <11>;
+	qcom,lut-flags = <0x1f>;
+	qcom,ramp-step-ms = <100>;
+	qcom,pause-lo = <2000>;
+	qcom,pause-hi = <1000>;
+};
+
+&green_led {
+	qcom,use-blink;
+	qcom,duty-pcts = [00 05 0a 0f 14 1d 28 32 3c 4b 64];
+	qcom,duty-ms = <20>;
+	qcom,start-idx = <13>;
+	qcom,idx-len = <11>;
+	qcom,lut-flags = <0x1f>;
+	qcom,ramp-step-ms = <100>;
+	qcom,pause-lo = <2000>;
+	qcom,pause-hi = <1000>;
+};
+
+&blue_led {
+	qcom,use-blink;
+	qcom,duty-pcts = [00 05 0a 0f 14 1d 28 32 3c 4b 64];
+	qcom,duty-ms = <20>;
+	qcom,start-idx = <13>;
+	qcom,idx-len = <11>;
+	qcom,lut-flags = <0x1f>;
+	qcom,ramp-step-ms = <100>;
+	qcom,pause-lo = <2000>;
+	qcom,pause-hi = <1000>;
+};
+
+/* Charging */
+&soc {
+	tlmm: pinctrl@03400000 {
+		oneplus_fastchg {
+			fastchg_active: fastchg_active {
+				mux {
+					pins = "gpio96";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio96";
+					drive-strength = <16>;
+					bias-pull-up;
+				};
+			};
+
+			fastchg_suspend: fastchg_suspend {
+				mux {
+					pins = "gpio96";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio96";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+
+			ap_clk_active: ap_clk_active {
+				mux {
+					pins = "gpio79";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio79";
+					drive-strength = <16>;
+					bias-pull-up;
+				};
+			};
+
+			ap_clk_suspend: ap_clk_suspend {
+				mux {
+					pins = "gpio79";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio79";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+
+			ap_data_active: ap_data_active {
+				mux {
+					pins = "gpio80";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio80";
+					drive-strength = <16>;
+					bias-pull-up;
+				};
+			};
+
+			ap_data_suspend: ap_data_suspend {
+				mux {
+					pins = "gpio80";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio80";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+		};
+	};
+};
+
+&pmicobalt_charger {
+	qcom,fcc-max-ua = <3000000>;
+	qcom,usb-icl-ua = <1800000>;
+	qcom,fv-max-uv = <4365000>;
+	/* ibatmax setting for different temp regions */
+	ibatmax-little-cold-ma = <300>;
+	ibatmax-cool-ma = <450>;
+	ibatmax-little-cool-ma = <750>;
+	ibatmax-pre-normal-ma = <1400>;
+	ibatmax-normal-ma = <1925>; //1910
+	ibatmax-warm-ma = <750>;
+	/* vbatmax setting for different temp regions */
+	vbatmax-little-cold-mv = <3975>; //3980
+	vbatmax-cool-mv = <4365>;
+	vbatmax-little-cool-mv = <4365>;
+	vbatmax-pre-normal-mv = <4365>;
+	vbatmax-normal-mv = <4365>;
+	vbatmax-warm-mv = <4080>;
+	/* vbatdet setting for different temp regions */
+	vbatdet-little-cold-mv = <3700>;
+	vbatdet-cool-mv = <4100>;
+	vbatdet-little-cool-mv = <4220>;
+	vbatdet-pre-normal-mv = <4220>;
+	vbatdet-normal-mv = <4220>;
+	vbatdet-warm-mv = <4000>;
+	/* temp region settings */
+	cold-bat-decidegc = <30>;
+	little-cold-bat-decidegc = <0>;
+	cool-bat-decidegc = <50>;
+	little-cool-bat-decidegc = <120>;
+	pre-normal-bat-decidegc = <160>;
+	warm-bat-decidegc = <450>;
+	hot-bat-decidegc = <530>;
+	/* other settings */
+	qcom,cutoff-voltage-with-charger=<3250>;
+};
+
+&pmicobalt_fg {
+	oem,use_external_fg;
+};
+
+ &i2c_5 {
+	synaptics@20 {
+		status = "disabled";
+	};
+	synaptics-rmi-ts@20 {
+		compatible = "synaptics,s3320";
+		reg = <0x20>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <125 0x2008>;
+		vcc_i2c_1v8-supply = <&pmcobalt_l6>;
+		vdd_2v8-supply = <&pmcobalt_l28>;
+		synaptics,tx-rx-num = <16 28>;
+		synaptics,vdd-voltage = <1808000 1808000>;
+		synaptics,avdd-voltage = <3008000 3008000>;
+		synaptics,vdd-current = <40000>;
+		synaptics,avdd-current = <20000>;
+		synaptics,display-coords = <1080 1920>;
+		synaptics,reset-gpio = <&tlmm 89 0x00>;
+		synaptics,irq-gpio = <&tlmm 125 0x2008>;
+		oem,support_hw_poweroff;
+		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend";
+		pinctrl-0 = <&ts_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+	};
+};
+&pcie0_clkreq_default {
+        mux {
+            pins = "gpio36";
+            function = "gpio";
+        };
+    
+        config {
+            pins = "gpio36";
+            drive-strength = <2>;
+            bias-pull-up;
+        };
+    };
+
+
+&mdss_dp_ctrl {
+	status = "disabled";
+};
+
+&mdss_dp_pll {
+	status = "disabled";
+};
+
+&mdss_dsi {
+	hw-config = "single_dsi";
+};
+
+&mdss_dsi1 {
+	status = "disabled";
+};
+
+&labibb {
+	status = "disabled";
+};
+
+&mdss_hdmi_tx {
+	status = "disabled";
+};
+
+&mdss_hdmi_pll {
+	status = "disabled";
+};
+
+/* Audio */
+&soc {
+	i2c@c1b7000 {
+		status = "ok";
+		test_tfa9891: tfa9891@36 {
+			compatible = "nxp,tfa9891";
+			reg = <0x36>;
+			reset-gpio= <&tlmm 49 0>;
+			irq-gpio= <&tlmm 50 0>;
+			status = "ok";
+		};
+	};
+
+	sound-9335 {
+		qcom,audio-routing =
+			"AIF4 VI", "MCLK",
+			"RX_BIAS", "MCLK",
+			"MADINPUT", "MCLK",
+			"AMIC2", "MIC BIAS2",
+			"MIC BIAS2", "Headset Mic",
+			"AMIC3", "MIC BIAS2",
+			"MIC BIAS2", "ANCRight Headset Mic",
+			"AMIC4", "MIC BIAS2",
+			"MIC BIAS2", "ANCLeft Headset Mic",
+			"AMIC5", "MIC BIAS3",
+			"MIC BIAS3", "Handset Mic",
+			"AMIC6", "MIC BIAS4",
+			"MIC BIAS4", "Analog Mic6",
+			"DMIC0", "MIC BIAS1",
+			"MIC BIAS1", "Digital Mic0",
+			"DMIC1", "MIC BIAS1",
+			"MIC BIAS1", "Digital Mic1",
+			"DMIC2", "MIC BIAS4",
+			"MIC BIAS4", "Digital Mic2",
+			"DMIC3", "MIC BIAS4",
+			"MIC BIAS4", "Digital Mic3",
+			"DMIC4", "MIC BIAS3",
+			"MIC BIAS3", "Digital Mic4",
+			"DMIC5", "MIC BIAS3",
+			"MIC BIAS3", "Digital Mic5",
+			"SpkrLeft IN", "SPK1 OUT",
+			"SpkrRight IN", "SPK2 OUT";
+		qcom,us-euro-gpios = <>;
+		qcom,msm-mbhc-hphl-swh = <1>;
+		qcom,msm-mbhc-gnd-swh = <1>;
+		qcom,wsa-max-devs = <>;
+		qcom,wsa-devs = <>;
+		qcom,wsa-aux-dev-prefix = <>;
+	};
+};
+
+&i2c_9 { /* BLSP2 QUP9 for Audio Speaker */
+	qcom,master-id = <86>;
+	qcom,clk-freq-out = <100000>;
+	status = "ok";
+};
+
+&dai_mi2s3 {
+	qcom,msm-mi2s-rx-lines = <2>;
+	qcom,msm-mi2s-tx-lines = <1>;
+	qcom,msm-mi2s-slave = <0>;
+	qcom,msm-mi2s-ext-mclk = <0>;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&quat_mi2s_active  &quat_mi2s_sd0_active &quat_mi2s_sd1_active >;
+	pinctrl-1 = <&quat_mi2s_sleep  &quat_mi2s_sd0_sleep &quat_mi2s_sd1_sleep >;
+};
+
+&wcd_us_euro_gpio {
+	status = "disabled";
+};
+
+&clock_audio_lnbb {
+	status = "disabled";
+};
+
+
+/* Camera */
+&cci {
+	qcom,eeprom@1 {
+		status = "disabled";
+	};
+
+	qcom,camera@1 {
+		status = "disabled";
+	};
+
+	qcom,eeprom@2 {
+		status = "ok";
+	};
+
+};
+
+/* External Thermistors */
+&pmcobalt_vadc {
+	chan@4e {
+		label = "ufs_therm";
+		reg = <0x4e>;
+		qcom,decimation = <2>;
+		qcom,pre-div-channel-scaling = <0>;
+		qcom,calibration-type = "ratiometric";
+		qcom,scale-function = <2>;
+		qcom,hw-settle-time = <2>;
+		qcom,fast-avg-setup = <0>;
+	};
+
+	chan@4f {
+		label = "pa_therm0";
+		reg = <0x4f>;
+		qcom,decimation = <2>;
+		qcom,pre-div-channel-scaling = <0>;
+		qcom,calibration-type = "ratiometric";
+		qcom,scale-function = <2>;
+		qcom,hw-settle-time = <2>;
+		qcom,fast-avg-setup = <0>;
+	};
+
+	chan@50 {
+		label = "pa_therm1";
+		reg = <0x50>;
+		qcom,decimation = <2>;
+		qcom,pre-div-channel-scaling = <0>;
+		qcom,calibration-type = "ratiometric";
+		qcom,scale-function = <2>;
+		qcom,hw-settle-time = <2>;
+		qcom,fast-avg-setup = <0>;
+	};
+};
+
+&pmcobalt_adc_tm {
+	chan@4e {
+		label = "ufs_therm";
+		reg = <0x4e>;
+		qcom,pre-div-channel-scaling = <0>;
+		qcom,calibration-type = "ratiometric";
+		qcom,scale-function = <2>;
+		qcom,hw-settle-time = <2>;
+		qcom,btm-channel-number = <0x80>;
+		qcom,thermal-node;
+	};
+
+	chan@4f {
+		label = "pa_therm0";
+		reg = <0x4f>;
+		qcom,pre-div-channel-scaling = <0>;
+		qcom,calibration-type = "ratiometric";
+		qcom,scale-function = <2>;
+		qcom,hw-settle-time = <2>;
+		qcom,btm-channel-number = <0x88>;
+		qcom,thermal-node;
+	};
+
+	chan@50 {
+		label = "pa_therm1";
+		reg = <0x50>;
+		qcom,pre-div-channel-scaling = <0>;
+		qcom,calibration-type = "ratiometric";
+		qcom,scale-function = <2>;
+		qcom,hw-settle-time = <2>;
+		qcom,btm-channel-number = <0x90>;
+		qcom,thermal-node;
+	};
+};
+
+&rpm_bus {
+	rpm-regulator-ldoa25 {
+		pmcobalt_l25: regulator-l25 {
+			regulator-min-microvolt = <3312000>;
+		};
+
+		pmcobalt_l25_pin_ctrl: regulator-l25-pin-ctrl {
+			regulator-min-microvolt = <3312000>;
+		};
+	};
+};
+
+/*Anderson-Config_UARTPIN_as_GPIO*[*/
+&soc {
+	tlmm: pinctrl@03400000 {
+		uart_console_deactive: uart_console_deactive {
+			mux {
+				pins = "gpio4", "gpio5";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio4", "gpio5";
+				drive-strength = <2>;
+				bias-disable;
+			};
+		};
+	};
+};
+
+&uartblsp2dm1 {
+	pinctrl-names = "uart_active", "uart_deactive";
+	pinctrl-0 = <&uart_console_active>;
+	pinctrl-1 = <&uart_console_deactive>;
+};
+/*Anderson-Config_UARTPIN_as_GPIO*]**/

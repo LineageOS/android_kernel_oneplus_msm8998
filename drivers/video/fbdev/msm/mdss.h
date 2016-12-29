@@ -164,7 +164,13 @@ enum mdss_hw_quirk {
 	MDSS_QUIRK_NEED_SECURE_MAP,
 	MDSS_QUIRK_SRC_SPLIT_ALWAYS,
 	MDSS_QUIRK_MMSS_GDSC_COLLAPSE,
+<<<<<<< HEAD
 	MDSS_QUIRK_MDP_CLK_SET_RATE,
+=======
+	//#ifdef VENDOR_EDIT
+	MDSS_QUIRK_MDP_CLK_SET_RATE,
+	//#endif
+>>>>>>> origin/QC8998_DEV
 	MDSS_QUIRK_MAX,
 };
 
@@ -290,8 +296,14 @@ struct mdss_data_type {
 	bool en_svs_high;
 	u32 max_mdp_clk_rate;
 	struct mdss_util_intf *mdss_util;
+<<<<<<< HEAD
 	unsigned long mdp_clk_rate;
 
+=======
+	//#ifdef VENDOR_EDIT
+    unsigned long mdp_clk_rate;
+    //#endif
+>>>>>>> origin/QC8998_DEV
 	struct platform_device *pdev;
 	struct dss_io_data mdss_io;
 	struct dss_io_data vbif_io;

@@ -3060,53 +3060,72 @@ static int msm_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 			aux_pcm_tx_cfg[QUAT_AUX_PCM].channels;
 		break;
 
-	case MSM_BACKEND_DAI_PRI_MI2S_RX:
+#ifdef VENDOR_EDIT
+/*wangdongdong@MultiMediaService,add i2s patch*/
+        case MSM_BACKEND_DAI_PRI_MI2S_RX:
+                param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
+                               mi2s_rx_cfg[PRIM_MI2S].bit_format);
 		rate->min = rate->max = mi2s_rx_cfg[PRIM_MI2S].sample_rate;
 		channels->min = channels->max =
 			mi2s_rx_cfg[PRIM_MI2S].channels;
 		break;
 
 	case MSM_BACKEND_DAI_PRI_MI2S_TX:
+                param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
+                               mi2s_tx_cfg[PRIM_MI2S].bit_format);
 		rate->min = rate->max = mi2s_tx_cfg[PRIM_MI2S].sample_rate;
 		channels->min = channels->max =
 			mi2s_tx_cfg[PRIM_MI2S].channels;
 		break;
 
 	case MSM_BACKEND_DAI_SECONDARY_MI2S_RX:
+                param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
+                               mi2s_rx_cfg[SEC_MI2S].bit_format);
 		rate->min = rate->max = mi2s_rx_cfg[SEC_MI2S].sample_rate;
 		channels->min = channels->max =
 			mi2s_rx_cfg[SEC_MI2S].channels;
 		break;
 
 	case MSM_BACKEND_DAI_SECONDARY_MI2S_TX:
+                param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
+                               mi2s_tx_cfg[SEC_MI2S].bit_format);
 		rate->min = rate->max = mi2s_tx_cfg[SEC_MI2S].sample_rate;
 		channels->min = channels->max =
 			mi2s_tx_cfg[SEC_MI2S].channels;
 		break;
 
 	case MSM_BACKEND_DAI_TERTIARY_MI2S_RX:
+                param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
+                               mi2s_rx_cfg[TERT_MI2S].bit_format);
 		rate->min = rate->max = mi2s_rx_cfg[TERT_MI2S].sample_rate;
 		channels->min = channels->max =
 			mi2s_rx_cfg[TERT_MI2S].channels;
 		break;
 
 	case MSM_BACKEND_DAI_TERTIARY_MI2S_TX:
+                param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
+                               mi2s_tx_cfg[TERT_MI2S].bit_format);
 		rate->min = rate->max = mi2s_tx_cfg[TERT_MI2S].sample_rate;
 		channels->min = channels->max =
 			mi2s_tx_cfg[TERT_MI2S].channels;
 		break;
 
 	case MSM_BACKEND_DAI_QUATERNARY_MI2S_RX:
+                param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
+                               mi2s_rx_cfg[QUAT_MI2S].bit_format);
 		rate->min = rate->max = mi2s_rx_cfg[QUAT_MI2S].sample_rate;
 		channels->min = channels->max =
 			mi2s_rx_cfg[QUAT_MI2S].channels;
 		break;
 
 	case MSM_BACKEND_DAI_QUATERNARY_MI2S_TX:
+                param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
+                               mi2s_tx_cfg[QUAT_MI2S].bit_format);
 		rate->min = rate->max = mi2s_tx_cfg[QUAT_MI2S].sample_rate;
 		channels->min = channels->max =
 			mi2s_tx_cfg[QUAT_MI2S].channels;
 		break;
+#endif
 
 	default:
 		rate->min = rate->max = SAMPLING_RATE_48KHZ;
@@ -3460,6 +3479,8 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 		pdata->codec_root = entry;
 		tavil_codec_info_create_codec_entry(pdata->codec_root, codec);
 	} else {
+#ifndef VENDOR_EDIT
+/*wangdongdong@MultiMediaService,2016/10/09,remove wsa device to avoid null pointer*/
 		if (rtd->card->num_aux_devs && rtd_aux && rtd_aux->component)
 			if (!strcmp(rtd_aux->component->name, WSA8810_NAME_1) ||
 			    !strcmp(rtd_aux->component->name, WSA8810_NAME_2)) {
@@ -3467,6 +3488,7 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 				tasha_set_spkr_gain_offset(rtd->codec,
 							RX_GAIN_OFFSET_M1P5_DB);
 		}
+#endif
 		card = rtd->card->snd_card;
 		entry = snd_register_module_info(card->module, "codecs",
 						 card->proc_root);
@@ -5588,39 +5610,8 @@ static struct snd_soc_dai_link msm_wcn_be_dai_links[] = {
 	},
 };
 
-static struct snd_soc_dai_link ext_disp_be_dai_link[] = {
-	/* HDMI BACK END DAI Link */
-	{
-		.name = LPASS_BE_HDMI,
-		.stream_name = "HDMI Playback",
-		.cpu_dai_name = "msm-dai-q6-hdmi.8",
-		.platform_name = "msm-pcm-routing",
-		.codec_name = "msm-ext-disp-audio-codec-rx",
-		.codec_dai_name = "msm_hdmi_audio_codec_rx_dai",
-		.no_pcm = 1,
-		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_HDMI_RX,
-		.be_hw_params_fixup = msm_be_hw_params_fixup,
-		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
-	},
-	/* DISP PORT BACK END DAI Link */
-	{
-		.name = LPASS_BE_DISPLAY_PORT,
-		.stream_name = "Display Port Playback",
-		.cpu_dai_name = "msm-dai-q6-dp.24608",
-		.platform_name = "msm-pcm-routing",
-		.codec_name = "msm-ext-disp-audio-codec-rx",
-		.codec_dai_name = "msm_dp_audio_codec_rx_dai",
-		.no_pcm = 1,
-		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_DISPLAY_PORT_RX,
-		.be_hw_params_fixup = msm_be_hw_params_fixup,
-		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
-	},
-};
-
+#ifdef VENDOR_EDIT
+/*wangdongdong@MultiMediaService,add i2s patch*/
 static struct snd_soc_dai_link msm_mi2s_be_dai_links[] = {
 	{
 		.name = LPASS_BE_PRI_MI2S_RX,
@@ -5714,8 +5705,8 @@ static struct snd_soc_dai_link msm_mi2s_be_dai_links[] = {
 		.stream_name = "Quaternary MI2S Playback",
 		.cpu_dai_name = "msm-dai-q6-mi2s.3",
 		.platform_name = "msm-pcm-routing",
-		.codec_name = "msm-stub-codec.1",
-		.codec_dai_name = "msm-stub-rx",
+		.codec_name = "tfa98xx.9-0036",//tfa98xx.9-0036
+		.codec_dai_name = "tfa98xx_codec-9-36",//tfa98xx_codec-9-36
 		.no_pcm = 1,
 		.dpcm_playback = 1,
 		.be_id = MSM_BACKEND_DAI_QUATERNARY_MI2S_RX,
@@ -5736,6 +5727,41 @@ static struct snd_soc_dai_link msm_mi2s_be_dai_links[] = {
 		.be_id = MSM_BACKEND_DAI_QUATERNARY_MI2S_TX,
 		.be_hw_params_fixup = msm_be_hw_params_fixup,
 		.ops = &msm_mi2s_be_ops,
+		.ignore_suspend = 1,
+	},
+};
+
+#endif
+
+static struct snd_soc_dai_link ext_disp_be_dai_link[] = {
+	/* HDMI BACK END DAI Link */
+	{
+		.name = LPASS_BE_HDMI,
+		.stream_name = "HDMI Playback",
+		.cpu_dai_name = "msm-dai-q6-hdmi.8",
+		.platform_name = "msm-pcm-routing",
+		.codec_name = "msm-ext-disp-audio-codec-rx",
+		.codec_dai_name = "msm_hdmi_audio_codec_rx_dai",
+		.no_pcm = 1,
+		.dpcm_playback = 1,
+		.be_id = MSM_BACKEND_DAI_HDMI_RX,
+		.be_hw_params_fixup = msm_be_hw_params_fixup,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+	},
+	/* DISP PORT BACK END DAI Link */
+	{
+		.name = LPASS_BE_DISPLAY_PORT,
+		.stream_name = "Display Port Playback",
+		.cpu_dai_name = "msm-dai-q6-dp.24608",
+		.platform_name = "msm-pcm-routing",
+		.codec_name = "msm-ext-disp-audio-codec-rx",
+		.codec_dai_name = "msm_dp_audio_codec_rx_dai",
+		.no_pcm = 1,
+		.dpcm_playback = 1,
+		.be_id = MSM_BACKEND_DAI_DISPLAY_PORT_RX,
+		.be_hw_params_fixup = msm_be_hw_params_fixup,
+		.ignore_pmdown_time = 1,
 		.ignore_suspend = 1,
 	},
 };
@@ -6417,7 +6443,10 @@ static int msm_init_wsa_dev(struct platform_device *pdev,
 	char *dev_name_str = NULL;
 	int found = 0;
 	int ret = 0;
-
+#ifdef VENDOR_EDIT
+/*wangdongdong@MultiMediaService,add to avoid wsa init*/
+    return ret;
+#endif
 	/* Get maximum WSA device count for this platform */
 	ret = of_property_read_u32(pdev->dev.of_node,
 				   "qcom,wsa-max-devs", &wsa_max_devs);

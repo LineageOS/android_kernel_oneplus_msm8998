@@ -10854,8 +10854,12 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"SEC_MI2S_RX", NULL, "SEC_MI2S_RX_DL_HL"},
 	{"TERT_MI2S_RX_DL_HL", "Switch", "TERT_MI2S_DL_HL"},
 	{"TERT_MI2S_RX", NULL, "TERT_MI2S_RX_DL_HL"},
-
+#ifndef VENDOR_EDIT
+/*wangdongdong@MultiMediaService,2016/11/30,modify for engineer mode test*/
 	{"QUAT_MI2S_RX_DL_HL", "Switch", "QUAT_MI2S_DL_HL"},
+#else
+        {"QUAT_MI2S_RX_DL_HL", "Switch", "SLIM0_DL_HL"},
+#endif
 	{"QUAT_MI2S_RX", NULL, "QUAT_MI2S_RX_DL_HL"},
 	{"MI2S_UL_HL", NULL, "TERT_MI2S_TX"},
 	{"TERT_MI2S_UL_HL", NULL, "TERT_MI2S_TX"},

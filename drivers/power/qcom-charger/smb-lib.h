@@ -16,6 +16,11 @@
 #include <linux/irqreturn.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/consumer.h>
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20161014 Add charging standard */
+#include "oem_external_fg.h"
+#include <linux/wakelock.h>
+#endif
 #include "storm-watch.h"
 
 enum print_reason {
@@ -25,6 +30,11 @@ enum print_reason {
 	PR_PARALLEL	= BIT(3),
 };
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20161014 Add charging standard */
+#define BATT_TYPE_FCC_VOTER "BATT_TYPE_FCC_VOTER"
+#define TEMP_REGION_MAX               9
+#endif
 #define DEFAULT_VOTER			"DEFAULT_VOTER"
 #define USER_VOTER			"USER_VOTER"
 #define PD_VOTER			"PD_VOTER"
@@ -191,9 +201,61 @@ struct smb_charger {
 	struct delayed_work	ps_change_timeout_work;
 	struct delayed_work	pl_taper_work;
 	struct delayed_work	step_soc_req_work;
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	struct delayed_work	re_kick_work;
+	struct delayed_work	check_switch_dash_work;
+	struct delayed_work heartbeat_work;
+	struct wake_lock	chg_wake_lock;
+#endif
 	struct delayed_work	clear_hdc_work;
 
 	/* cached status */
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+	int				BATT_TEMP_T0;
+	int				BATT_TEMP_T1;
+	int				BATT_TEMP_T2;
+	int				BATT_TEMP_T3;
+	int				BATT_TEMP_T4;
+	int				BATT_TEMP_T5;
+	int				BATT_TEMP_T6;
+	int				batt_health;
+	int				ibatmax[TEMP_REGION_MAX];
+	int				vbatmax[TEMP_REGION_MAX];
+	int				vbatdet[TEMP_REGION_MAX];
+	int				fake_chgvol;
+	int				fake_temp;
+	int				fake_protect_sts;
+
+	bool				use_fake_chgvol;
+	bool				use_fake_temp;
+	bool				use_fake_protect_sts;
+	bool				vbus_present;
+	bool				hvdcp_present;
+	bool				dash_present;
+	bool				usb_enum_status;
+	bool				non_std_chg_present;
+	bool				time_out;
+	bool				disable_normal_chg_for_dash;
+	bool				dash_on;
+	bool				chg_ovp;
+	bool				is_power_changed;
+	bool				recharge_pending;
+	bool				recharge_status;
+	bool				temp_littel_cool_set_current_0_point_25c;
+	bool				oem_lcd_is_on;
+
+	temp_region_type		mBattTempRegion;
+	enum batt_status_type		battery_status;
+	short				mBattTempBoundT0;
+	short				mBattTempBoundT1;
+	short				mBattTempBoundT2;
+	short				mBattTempBoundT3;
+	short				mBattTempBoundT4;
+	short				mBattTempBoundT5;
+	short				mBattTempBoundT6;
+#endif
 	int			voltage_min_uv;
 	int			voltage_max_uv;
 	int			pd_active;
@@ -297,6 +359,24 @@ int smblib_set_prop_batt_capacity(struct smb_charger *chg,
 int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 				const union power_supply_propval *val);
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+irqreturn_t smblib_handle_aicl_done(int irq, void *data);
+void op_charge_info_init(struct smb_charger *chg);
+int update_dash_unplug_status(void);
+int get_prop_batt_status(struct smb_charger *chg);
+int get_prop_chg_protect_status(struct smb_charger *chg);
+int check_allow_switch_dash(struct smb_charger *chg,
+				const union power_supply_propval *val);
+int smblib_set_prop_chg_voltage(struct smb_charger *chg,
+				  const union power_supply_propval *val);
+int smblib_set_prop_batt_temp(struct smb_charger *chg,
+				  const union power_supply_propval *val);
+int smblib_set_prop_chg_protect_status(struct smb_charger *chg,
+				  const union power_supply_propval *val);
+bool op_get_fastchg_ing(struct smb_charger *chg);
+bool get_prop_fastchg_status(struct smb_charger *chg);
+#endif
 int smblib_get_prop_dc_present(struct smb_charger *chg,
 				union power_supply_propval *val);
 int smblib_get_prop_dc_online(struct smb_charger *chg,

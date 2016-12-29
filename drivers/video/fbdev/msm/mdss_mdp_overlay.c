@@ -5214,6 +5214,7 @@ static int mdss_mdp_overlay_ioctl_handler(struct msm_fb_data_type *mfd,
 		}
 		ret = mdss_mdp_set_cfg(mfd, &cfg);
 		break;
+<<<<<<< HEAD
 	case MSMFB_MDP_SET_PANEL_PPM:
 		ret = copy_from_user(&val, argp, sizeof(val));
 		if (ret) {
@@ -5225,6 +5226,8 @@ static int mdss_mdp_overlay_ioctl_handler(struct msm_fb_data_type *mfd,
 		ret = mdss_fb_set_panel_ppm(mfd, val);
 		break;
 
+=======
+>>>>>>> origin/QC8998_DEV
 	default:
 		break;
 	}
@@ -6129,10 +6132,6 @@ int mdss_mdp_overlay_init(struct msm_fb_data_type *mfd)
 
 	mfd->panel_orientation = mfd->panel_info->panel_orientation;
 
-	if ((mfd->panel_info->panel_orientation & MDP_FLIP_LR) &&
-	    (mfd->split_mode == MDP_DUAL_LM_DUAL_DISPLAY))
-		mdp5_data->mixer_swap = true;
-
 	rc = sysfs_create_group(&dev->kobj, &mdp_overlay_sysfs_group);
 	if (rc) {
 		pr_err("vsync sysfs group creation failed, ret=%d\n", rc);
@@ -6251,6 +6250,7 @@ int mdss_mdp_overlay_init(struct msm_fb_data_type *mfd)
 
 	if (mdss_mdp_pp_overlay_init(mfd))
 		pr_warn("Failed to initialize pp overlay data.\n");
+
 	return rc;
 init_fail:
 	kfree(mdp5_data);

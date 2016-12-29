@@ -563,7 +563,20 @@ struct mdss_dsi_ctrl_pdata {
 	struct mdss_dsi_debugfs_info *debugfs_info;
 
 	struct dsi_err_container err_cont;
-
+//#ifdef VENDOR_EDIT
+	int disp_vci_en_gpio;
+	struct delayed_work techeck_work;
+	struct completion te_comp;
+//#endif
+//#ifdef VENDOR_EDIT
+	const char *px_clk_src_name;
+	struct	clk	*px_clk_src;
+	int px_clk_enabled;
+	int px_bp_gpio;
+	int px_1v1_en_gpio;
+    spinlock_t iris_lock;
+    bool iris_enabled;
+//#endif
 	struct kobject *kobj;
 	int fb_node;
 
@@ -692,9 +705,17 @@ void mdss_dsi_dsc_config(struct mdss_dsi_ctrl_pdata *ctrl,
 	struct dsc_desc *dsc);
 void mdss_dsi_dfps_config_8996(struct mdss_dsi_ctrl_pdata *ctrl);
 void mdss_dsi_set_burst_mode(struct mdss_dsi_ctrl_pdata *ctrl);
+<<<<<<< HEAD
 void mdss_dsi_set_reg(struct mdss_dsi_ctrl_pdata *ctrl, int off,
 	u32 mask, u32 val);
 
+=======
+//#ifdef VENDOR_EDIT
+int mdss_dsi_px_clk_req(struct mdss_panel_data *pdata, int enable);
+int mdss_dsi_disp_vci_en(struct mdss_panel_data *pdata, int enable);
+int mdss_dsi_px_1v1_en(struct mdss_panel_data *pdata, int enable);
+//#endif
+>>>>>>> origin/QC8998_DEV
 static inline const char *__mdss_dsi_pm_name(enum dsi_pm_type module)
 {
 	switch (module) {
@@ -937,5 +958,4 @@ static inline enum dsi_physical_lane_id mdss_dsi_logical_to_physical_lane(
 
 	return i;
 }
-
 #endif /* MDSS_DSI_H */
