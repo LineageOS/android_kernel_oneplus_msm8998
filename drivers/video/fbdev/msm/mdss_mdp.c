@@ -1139,20 +1139,13 @@ static int mdss_mdp_clk_update(u32 clk_idx, u32 enable)
 {
 	int ret = -ENODEV;
 	struct clk *clk = mdss_mdp_get_clk(clk_idx);
-<<<<<<< HEAD
 	struct mdss_data_type *mdata = mdss_res;
-=======
-	//#ifdef VENDOR_EDIT
-    struct mdss_data_type *mdata = mdss_res;
-    //#endif
->>>>>>> origin/QC8998_DEV
 
 	if (clk) {
 		pr_debug("clk=%d en=%d\n", clk_idx, enable);
 		if (enable) {
 			if (clk_idx == MDSS_CLK_MDP_VSYNC)
 				clk_set_rate(clk, 19200000);
-<<<<<<< HEAD
 			if (mdss_has_quirk(mdata, MDSS_QUIRK_MDP_CLK_SET_RATE)
 					&& (clk_idx == MDSS_CLK_MDP_CORE)) {
 
@@ -1171,13 +1164,6 @@ static int mdss_mdp_clk_update(u32 clk_idx, u32 enable)
 				}
 			}
 
-=======
-		//#ifdef VENDOR_EDIT
-		 if (mdss_has_quirk(mdata, MDSS_QUIRK_MDP_CLK_SET_RATE)
-            && (clk_idx == MDSS_CLK_MDP_CORE))
-                clk_set_rate(clk, mdata->mdp_clk_rate);
-        //#endif
->>>>>>> origin/QC8998_DEV
 			ret = clk_prepare_enable(clk);
 		} else {
 			clk_disable_unprepare(clk);
@@ -1225,14 +1211,8 @@ void mdss_mdp_set_clk_rate(unsigned long rate, bool locked)
 		if (IS_ERR_VALUE(clk_rate)) {
 			pr_err("unable to round rate err=%ld\n", clk_rate);
 		} else if (clk_rate != clk_get_rate(clk)) {
-<<<<<<< HEAD
 
 			mdata->mdp_clk_rate = clk_rate;
-=======
-		//#ifdef VENDOR_EDIT
-		        mdata->mdp_clk_rate = clk_rate;
-		//#endif
->>>>>>> origin/QC8998_DEV
 			if (IS_ERR_VALUE(clk_set_rate(clk, clk_rate)))
 				pr_err("clk_set_rate failed\n");
 			else
@@ -2066,13 +2046,7 @@ static void mdss_mdp_hw_rev_caps_init(struct mdss_data_type *mdata)
 		mdss_set_quirk(mdata, MDSS_QUIRK_DSC_RIGHT_ONLY_PU);
 		mdss_set_quirk(mdata, MDSS_QUIRK_DSC_2SLICE_PU_THRPUT);
 		mdss_set_quirk(mdata, MDSS_QUIRK_MMSS_GDSC_COLLAPSE);
-<<<<<<< HEAD
 		mdss_set_quirk(mdata, MDSS_QUIRK_MDP_CLK_SET_RATE);
-=======
-		//#ifdef VENDOR_EDIT
-		mdss_set_quirk(mdata, MDSS_QUIRK_MDP_CLK_SET_RATE);
-	    //#endif
->>>>>>> origin/QC8998_DEV
 		mdata->has_wb_ubwc = true;
 		set_bit(MDSS_CAPS_10_BIT_SUPPORTED, mdata->mdss_caps_map);
 		set_bit(MDSS_CAPS_AVR_SUPPORTED, mdata->mdss_caps_map);

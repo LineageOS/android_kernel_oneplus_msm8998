@@ -5214,7 +5214,6 @@ static int mdss_mdp_overlay_ioctl_handler(struct msm_fb_data_type *mfd,
 		}
 		ret = mdss_mdp_set_cfg(mfd, &cfg);
 		break;
-<<<<<<< HEAD
 	case MSMFB_MDP_SET_PANEL_PPM:
 		ret = copy_from_user(&val, argp, sizeof(val));
 		if (ret) {
@@ -5226,8 +5225,6 @@ static int mdss_mdp_overlay_ioctl_handler(struct msm_fb_data_type *mfd,
 		ret = mdss_fb_set_panel_ppm(mfd, val);
 		break;
 
-=======
->>>>>>> origin/QC8998_DEV
 	default:
 		break;
 	}

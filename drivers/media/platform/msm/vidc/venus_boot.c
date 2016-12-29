@@ -137,28 +137,11 @@ static int venus_clock_prepare_enable(void)
 
 static void venus_clock_disable_unprepare(void)
 {
-<<<<<<< HEAD
 	struct msm_vidc_platform_resources *res = venus_data->resources;
 	struct clock_info *cl;
 	int i = res->clock_set.count;
 
 	for (i--; i >= 0; i--) {
-=======
-//#ifndef VENDOR_EDIT
-	//int i;
-//#endif
-	struct msm_vidc_platform_resources *res = venus_data->resources;
-	struct clock_info *cl;
-	//#ifdef VENDOR_EDIT
-    int i = res->clock_set.count;
-    //#endif
-
-//#ifndef VENDOR_EDIT
-	//for (i = 0; i < res->clock_set.count; i++) {
-//#else
-	for (i--; i >= 0; i--) {
-//#endif
->>>>>>> origin/QC8998_DEV
 		cl = &res->clock_set.clock_tbl[i];
 		clk_disable_unprepare(cl->clk);
 	}
