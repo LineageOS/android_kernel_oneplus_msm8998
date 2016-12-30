@@ -13,14 +13,14 @@
 
 /dts-v1/;
 
-#include "msmcobalt.dtsi"
-#include "msmcobalt-mtp.dtsi"
+#include "msm8998.dtsi"
+#include "msm8998-mtp.dtsi"
 #include "cheeseburger.dtsi"
 #include "cheeseburger-evb.dtsi"
 
 / {
-	model = "Qualcomm Technologies, Inc. MSM COBALT v1 MTP";
-	compatible = "qcom,msmcobalt-mtp", "qcom,msmcobalt", "qcom,mtp";
+	model = "Qualcomm Technologies, Inc. MSM 8998 v1 MTP";
+	compatible = "qcom,msm8998-mtp", "qcom,msm8998", "qcom,mtp";
 	qcom,board-id = <8 0 16859 11>;
 };
 

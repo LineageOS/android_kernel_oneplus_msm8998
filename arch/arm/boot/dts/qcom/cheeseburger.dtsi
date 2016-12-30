@@ -34,7 +34,7 @@
 	gpio_keys {
 		vol_down {
 			label = "volume_down";
-			gpios = <&pmcobalt_gpios 5 0x1>;
+			gpios = <&pm8998_gpios 5 0x1>;
 			linux,input-type = <1>;
 			linux,code = <114>;
 			debounce-interval = <15>;
@@ -157,7 +157,7 @@
 	};
 };
 
-&pmcobalt_gpios {
+&pm8998_gpios {
 	/* GPIO 5 for Vol- Key */
 	gpio@c400 {
 		status = "okay";
@@ -169,12 +169,12 @@
 	};
 };
 
-&pmcobalt_rtc {
+&pm8998_rtc {
   compatible = "qcom,qpnp-rtc";
   qcom,qpnp-rtc-alarm-pwrup = <1>;
 };
 
-&pmicobalt_gpios {
+&pmi8998_gpios {
 	/* button-backlight */
 	gpio@c400 {
 		status = "okay";
@@ -185,27 +185,27 @@
 	status = "disabled";
 };
 
-&pmicobalt_haptics {
+&pmi8998_haptics {
 	status = "okay";
 	qcom,wave-shape = "sine";
 	qcom,vmax-mv = <2400>;
 };
 
 &spmi_bus {
-	qcom,pmicobalt@2 {
+	qcom,pmi8998@2 {
 		/* button-backlight */
 		gpio-leds {
 			compatible = "gpio-leds";
 			status = "okay";
 			keypad-backlight {
-				gpios = <&pmicobalt_gpios 5 0>; //here maybe pm8998_gpios, depends on what you use.
+				gpios = <&pmi8998_gpios 5 0>; //here maybe pm8998_gpios, depends on what you use.
 				label = "button-backlight";
 				linux,default-trigger = "none";
 			};
 		};
 	};
 
-	qcom,pmicobalt@3 {
+	qcom,pmi8998@3 {
 		/* RGB LED blink */
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -333,7 +333,7 @@
 	};
 };
 
-&pmicobalt_charger {
+&pmi8998_charger {
 	qcom,fcc-max-ua = <3000000>;
 	qcom,usb-icl-ua = <1800000>;
 	qcom,fv-max-uv = <4365000>;
@@ -370,7 +370,7 @@
 	qcom,cutoff-voltage-with-charger=<3250>;
 };
 
-&pmicobalt_fg {
+&pmi8998_fg {
 	oem,use_external_fg;
 };
 
@@ -383,8 +383,8 @@
 		reg = <0x20>;
 		interrupt-parent = <&tlmm>;
 		interrupts = <125 0x2008>;
-		vcc_i2c_1v8-supply = <&pmcobalt_l6>;
-		vdd_2v8-supply = <&pmcobalt_l28>;
+		vcc_i2c_1v8-supply = <&pm8998_l6>;
+		vdd_2v8-supply = <&pm8998_l28>;
 		synaptics,tx-rx-num = <16 28>;
 		synaptics,vdd-voltage = <1808000 1808000>;
 		synaptics,avdd-voltage = <3008000 3008000>;
@@ -534,7 +534,7 @@
 };
 
 /* External Thermistors */
-&pmcobalt_vadc {
+&pm8998_vadc {
 	chan@4e {
 		label = "ufs_therm";
 		reg = <0x4e>;
@@ -569,7 +569,7 @@
 	};
 };
 
-&pmcobalt_adc_tm {
+&pm8998_adc_tm {
 	chan@4e {
 		label = "ufs_therm";
 		reg = <0x4e>;
@@ -606,11 +606,11 @@
 
 &rpm_bus {
 	rpm-regulator-ldoa25 {
-		pmcobalt_l25: regulator-l25 {
+		pm8998_l25: regulator-l25 {
 			regulator-min-microvolt = <3312000>;
 		};
 
-		pmcobalt_l25_pin_ctrl: regulator-l25-pin-ctrl {
+		pm8998_l25_pin_ctrl: regulator-l25-pin-ctrl {
 			regulator-min-microvolt = <3312000>;
 		};
 	};

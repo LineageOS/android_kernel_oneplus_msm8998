@@ -3158,11 +3158,11 @@ irqreturn_t smblib_handle_usb_typec_change(int irq, void *data)
 	}
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161014 Add charging standard */
-	pr_info("TYPE_C_STATUS_4=0x%02x\n", stat);
+	pr_info("TYPE_C_STATUS_4=0x%02x\n", stat4);
 #endif
-	smblib_dbg(chg, PR_REGISTER, "TYPE_C_STATUS_4 = 0x%02x\n", stat);
-	debounce_done = (bool)(stat & TYPEC_DEBOUNCE_DONE_STATUS_BIT);
-	sink_attached = (bool)(stat & UFP_DFP_MODE_STATUS_BIT);
+	smblib_dbg(chg, PR_REGISTER, "TYPE_C_STATUS_4 = 0x%02x\n", stat4);
+	debounce_done = (bool)(stat4 & TYPEC_DEBOUNCE_DONE_STATUS_BIT);
+	sink_attached = (bool)(stat4 & UFP_DFP_MODE_STATUS_BIT);
 
 	rc = smblib_read(chg, TYPE_C_STATUS_5_REG, &stat5);
 	if (rc < 0) {

@@ -492,18 +492,18 @@
 	led_flash0: qcom,camera-flash@0 {
 		cell-index = <0>;
 		compatible = "qcom,camera-flash";
-		qcom,flash-source = <&pmicobalt_flash0 &pmicobalt_flash1>;
-		qcom,torch-source = <&pmicobalt_torch0 &pmicobalt_torch1>;
-		qcom,switch-source = <&pmicobalt_switch0>;
+		qcom,flash-source = <&pmi8998_flash0 &pmi8998_flash1>;
+		qcom,torch-source = <&pmi8998_torch0 &pmi8998_torch1>;
+		qcom,switch-source = <&pmi8998_switch0>;
 		status = "ok";
 	};
 
 	led_flash1: qcom,camera-flash@1 {
 		cell-index = <1>;
 		compatible = "qcom,camera-flash";
-		qcom,flash-source = <&pmicobalt_flash2>;
-		qcom,torch-source = <&pmicobalt_torch2>;
-		qcom,switch-source = <&pmicobalt_switch1>;
+		qcom,flash-source = <&pmi8998_flash2>;
+		qcom,torch-source = <&pmi8998_torch2>;
+		qcom,switch-source = <&pmi8998_switch1>;
 		status = "disabled";
 	};
 };
@@ -627,7 +627,7 @@
 		qcom,saddr8 = <0xa0>;
 		qcom,mem8 = <0x0100 0x0800 2 0 1 0>;
 
-		cam_vio-supply = <&pmcobalt_lvs1>;
+		cam_vio-supply = <&pm8998_lvs1>;
 		qcom,cam-vreg-name = "cam_vio";
 		qcom,cam-vreg-min-voltage = <0>;
 		qcom,cam-vreg-max-voltage = <0>;
@@ -808,7 +808,7 @@
 		qcom,saddr23 = <0xa2>;
 		qcom,mem23 = <0x0002 0x1700 2 0 1 0>;
 
-		cam_vio-supply = <&pmcobalt_lvs1>;
+		cam_vio-supply = <&pm8998_lvs1>;
 		qcom,cam-vreg-name = "cam_vio";
 		qcom,cam-vreg-min-voltage = <0>;
 		qcom,cam-vreg-max-voltage = <0>;
@@ -989,7 +989,7 @@
 		qcom,saddr23 = <0xa2>;
 		qcom,mem23 = <0x0002 0x1700 2 0 1 0>;
 
-		cam_vio-supply = <&pmcobalt_lvs1>;
+		cam_vio-supply = <&pm8998_lvs1>;
 		qcom,cam-vreg-name = "cam_vio";
 		qcom,cam-vreg-min-voltage = <0>;
 		qcom,cam-vreg-max-voltage = <0>;
@@ -1026,10 +1026,10 @@
 		qcom,led-flash-src = <&led_flash0>;
 		qcom,actuator-src = <&actuator0>;
 		qcom,eeprom-src = <&eeprom0>;
-		cam_vio-supply = <&pmcobalt_lvs1>;
-		cam_vana-supply = <&pmicobalt_bob>;
-		cam_vaf-supply = <&pmcobalt_l22>;
-		cam_v_custom1-supply = <&pmcobalt_s3>;
+		cam_vio-supply = <&pm8998_lvs1>;
+		cam_vana-supply = <&pmi8998_bob>;
+		cam_vaf-supply = <&pm8998_l22>;
+		cam_v_custom1-supply = <&pm8998_s3>;
 		qcom,cam-vreg-name = "cam_vio", "cam_vana", "cam_vaf", "cam_vdig";
 		qcom,cam-vreg-min-voltage = <0 3312000 2864000 1352000>;
 		qcom,cam-vreg-max-voltage = <0 3600000 2864000 1352000>;
@@ -1080,10 +1080,10 @@
 		qcom,led-flash-src = <&led_flash0>;
 		qcom,actuator-src = <&actuator1>;
 		qcom,eeprom-src = <&eeprom1>;
-		cam_vio-supply = <&pmcobalt_lvs1>;
-		cam_vana-supply = <&pmicobalt_bob>;
-		cam_vaf-supply = <&pmicobalt_bob>;
-		cam_v_custom1-supply = <&pmcobalt_s3>;
+		cam_vio-supply = <&pm8998_lvs1>;
+		cam_vana-supply = <&pmi8998_bob>;
+		cam_vaf-supply = <&pmi8998_bob>;
+		cam_v_custom1-supply = <&pm8998_s3>;
 		qcom,cam-vreg-name = "cam_vio", "cam_vana", "cam_vaf", "cam_vdig";
 		qcom,cam-vreg-min-voltage = <0 3312000 3312000 1352000>;
 		qcom,cam-vreg-max-voltage = <0 3600000 3600000 1352000>;
@@ -1132,9 +1132,9 @@
 		qcom,csid-sd-index = <2>;
 		qcom,mount-angle = <90>;
 		qcom,eeprom-src = <&eeprom2>;
-		cam_vio-supply = <&pmcobalt_lvs1>;
-		cam_vana-supply = <&pmicobalt_bob>;
-		cam_vdig-supply = <&pmcobalt_s3>;
+		cam_vio-supply = <&pm8998_lvs1>;
+		cam_vana-supply = <&pmi8998_bob>;
+		cam_vdig-supply = <&pm8998_s3>;
 		qcom,cam-vreg-name = "cam_vio", "cam_vana", "cam_vdig";
 		qcom,cam-vreg-min-voltage = <0 3312000 1352000>;
 		qcom,cam-vreg-max-voltage = <0 3600000 1352000>;
@@ -1170,7 +1170,7 @@
 		qcom,clock-rates = <24000000 0>;
 	};
 };
-&pmcobalt_gpios {
+&pm8998_gpios {
 	gpio@c800 { /* GPIO 9 - CAMERA SENSOR 2 VDIG */
 		qcom,mode = <1>;		/* Output */
 		qcom,pull = <5>;		/* No Pull */
