@@ -59,13 +59,10 @@
 #include <linux/rcupdate.h>
 #include <linux/sched.h>
 #include <linux/signal.h>
-
-//ruanbanmao add
 #include <linux/clk.h>
 #include <linux/regulator/consumer.h>
-
-
-
+#include <linux/project_info.h>
+#include <linux/syscalls.h>
 
 #define DRAGON_NFC 1
 #define SIG_NFC 44
@@ -80,6 +77,7 @@ struct pn544_dev    {
     unsigned int        firm_gpio;
     unsigned int        irq_gpio;
     unsigned int        ese_pwr_gpio; /* gpio used by SPI to provide power to p61 via NFCC */
+    unsigned int        svdd_power_gpio;
     struct mutex        p61_state_mutex; /* used to make p61_current_state flag secure */
     p61_access_state_t  p61_current_state; /* stores the current P61 state */
     bool                nfc_ven_enabled; /* stores the VEN pin state powered by Nfc */
@@ -87,44 +85,18 @@ struct pn544_dev    {
     bool                irq_enabled;
     spinlock_t          irq_enabled_lock;
     long                nfc_service_pid; /*used to signal the nfc the nfc service */
-	const char *clk_src_name; /*ruanbanmao add for 15801 nfc 2015/10/16*/
-	unsigned int clk_gpio; /*ruanbanmao add for 15801 nfc 2015/10/16*/
-	struct	clk	*s_clk;
-	struct regulator *p544_regulator;
-	struct regulator *p544_regulator_s4;
+    const char          *clk_src_name;
+    unsigned int        clk_gpio;
+    struct  clk         *s_clk;
+    struct regulator    *p544_regulator;
+    struct regulator    *p544_regulator_s4;
 
 };
+/*enable nfc log cmd echo 1 > sys/module/pn544/parameters/nfc_kernel_log*/
 
-/*ruanbanmao add for debug 2015/1217*/
-/* Different driver debug lever */
-#if 0
-enum Pn544_DEBUG_LEVEL {
-    Pn544_DEBUG_OFF,
-    Pn544_FULL_DEBUG
-};
-
-static unsigned char debug_level = Pn544_FULL_DEBUG;
-//#define P61_DBG_MSG(msg...)  printk(KERN_INFO "[NXP-P61] :  " msg);
-
-#define Pn544_DBG_MSG(msg...)  \
-        switch(debug_level)      \
-        {                        \
-        case Pn544_DEBUG_OFF:      \
-        break;                 \
-        case Pn544_FULL_DEBUG:     \
-        printk(KERN_INFO "[NXP-pn544] :  " msg); \
-        break; \
-        default:                 \
-        printk(KERN_ERR "[NXP-pn544] :  Wrong debug level %d", debug_level); \
-        break; \
-        } \
-
-#define Pn544_ERR_MSG(msg...) printk(KERN_ERR "[NFC-pn544] : " msg );
-#endif
-/*ruanbanmao add for debug 2015/1217*/
+static unsigned int nfc_kernel_log = 0;
 
 #define NFC_DEBUG
-
 #ifdef NFC_DEBUG
 
 #ifdef pr_err
@@ -143,11 +115,10 @@ static unsigned char debug_level = Pn544_FULL_DEBUG;
 #undef pr_debug
 #endif
 
-
-#define pr_debug(msg...) printk(KERN_ERR "[NXP-pn544] :  " msg);
-#define pr_err(msg...) printk(KERN_ERR "[NXP-pn544] :  " msg);
-#define pr_warning(msg...) printk(KERN_ERR "[NXP-pn544] :  " msg);
-#define pr_info(msg...) printk(KERN_ERR "[NXP-pn544] :  " msg);
+#define pr_debug(msg...)      if(nfc_kernel_log) { printk( KERN_DEBUG   "[NXP-pn544] :  " msg);}
+#define pr_info(msg...)       if(nfc_kernel_log) { printk( KERN_INFO    "[NXP-pn544] :  " msg);}
+#define pr_warning(msg...)                       { printk( KERN_WARNING "[NXP-pn544] :  " msg);}
+#define pr_err(msg...)                           { printk( KERN_ERR     "[NXP-pn544] :  " msg);}
 
 #endif
 
@@ -166,7 +137,7 @@ static void pn544_disable_irq(struct pn544_dev *pn544_dev)
 static irqreturn_t pn544_dev_irq_handler(int irq, void *dev_id)
 {
     struct pn544_dev *pn544_dev = dev_id;
-    pr_debug("%s ",__func__);
+    pr_debug("%s \n",__func__);
 
 
     pn544_disable_irq(pn544_dev);
@@ -367,6 +338,66 @@ static int pn544_dev_open(struct inode *inode, struct file *filp)
 
     return 0;
 }
+#define QPAY_ESE_POWER
+/*
+ * Power management of the eSE
+ * NFC & eSE ON : NFC_EN high and eSE_pwr_req high.
+ * NFC OFF & eSE ON : NFC_EN high and eSE_pwr_req high.
+ * NFC OFF & eSE OFF : NFC_EN low and eSE_pwr_req low.
+*/
+static int nqx_ese_pwr_contrl(struct pn544_dev *pn544_dev, unsigned long int arg)
+{
+    int r = -1;
+    pr_info("%s :, arg = %ld\n", __func__, arg);
+
+    /* Let's store the NFC_EN pin state */
+    if (arg == 0) {
+        /*
+         * We want to power on the eSE and to do so we need the
+         * eSE_pwr_req pin and the NFC_EN pin to be high
+         */
+        pn544_dev->nfc_ven_enabled = gpio_get_value(pn544_dev->ven_gpio);
+        if (!pn544_dev->nfc_ven_enabled) {
+            gpio_set_value(pn544_dev->ven_gpio, 1);
+            /* hardware dependent delay */
+            usleep_range(1000, 1100);
+        }
+        if (gpio_is_valid(pn544_dev->ese_pwr_gpio)) {
+            if (gpio_get_value(pn544_dev->ese_pwr_gpio)) {
+                dev_dbg(&pn544_dev->client->dev, "ese_gpio is already high\n");
+                r = 0;
+            } else {
+                gpio_set_value(pn544_dev->ese_pwr_gpio, 1);
+                if (gpio_get_value(pn544_dev->ese_pwr_gpio)) {
+                    dev_dbg(&pn544_dev->client->dev, "ese_gpio is enabled\n");
+                    r = 0;
+                }
+            }
+        }
+    } else if (arg == 1) {
+        if (gpio_is_valid(pn544_dev->ese_pwr_gpio)) {
+            gpio_set_value(pn544_dev->ese_pwr_gpio, 0);
+            if (!gpio_get_value(pn544_dev->ese_pwr_gpio)) {
+                dev_dbg(&pn544_dev->client->dev, "ese_gpio is disabled\n");
+                r = 0;
+            }
+        }
+        if (!pn544_dev->nfc_ven_enabled) {
+            /* hardware dependent delay */
+            usleep_range(1000, 1100);
+            dev_dbg(&pn544_dev->client->dev, "disabling en_gpio\n");
+            gpio_set_value(pn544_dev->ven_gpio, 0);
+        }
+    } else if (arg == 3) {
+        if (!pn544_dev->nfc_ven_enabled)
+            r = 0;
+        else {
+            if (gpio_is_valid(pn544_dev->ese_pwr_gpio))
+                r = gpio_get_value(pn544_dev->ese_pwr_gpio);
+        }
+    }
+    return r;
+}
 
 long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
         unsigned long arg)
@@ -446,6 +477,9 @@ long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
     break;
     case P61_SET_SPI_PWR:
     {
+        #ifdef QPAY_ESE_POWER
+        nqx_ese_pwr_contrl(pn544_dev, arg);
+        #else
         p61_access_state_t current_state = P61_STATE_INVALID;
         p61_get_access_state(pn544_dev, &current_state);
         if (arg == 1) {
@@ -607,15 +641,21 @@ long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
             p61_access_unlock(pn544_dev);
             return -EBADRQC; /* Invalid request code */
         }
+
+        #endif
     }
     break;
 
     case P61_GET_PWR_STATUS:
     {
+        #ifdef QPAY_ESE_POWER
+        nqx_ese_pwr_contrl(pn544_dev, 3);
+        #else
         p61_access_state_t current_state = P61_STATE_INVALID;
         p61_get_access_state(pn544_dev, &current_state);
         pr_info("%s: P61_GET_PWR_STATUS  = %x",__func__, current_state);
         put_user(current_state, (int __user *)arg);
+        #endif
     }
     break;
 
@@ -697,30 +737,35 @@ static int pn544_parse_dt(struct device *dev,
     struct device_node *np = dev->of_node;
     int errorno = 0;
     int r =0;
-        data->irq_gpio = of_get_named_gpio(np, "nxp,pn544-irq", 0);
-        if ((!gpio_is_valid(data->irq_gpio)))
-                return -EINVAL;
+    data->irq_gpio = of_get_named_gpio(np, "nxp,pn544-irq", 0);
+    if ((!gpio_is_valid(data->irq_gpio)))
+        return -EINVAL;
 
-        data->ven_gpio = of_get_named_gpio(np, "nxp,pn544-ven", 0);
-        if ((!gpio_is_valid(data->ven_gpio)))
-                return -EINVAL;
+    data->ven_gpio = of_get_named_gpio(np, "nxp,pn544-ven", 0);
+    if ((!gpio_is_valid(data->ven_gpio)))
+         return -EINVAL;
 
-        data->firm_gpio = of_get_named_gpio(np, "nxp,pn544-fw-dwnld", 0);
-        if ((!gpio_is_valid(data->firm_gpio)))
-                return -EINVAL;
+    data->firm_gpio = of_get_named_gpio(np, "nxp,pn544-fw-dwnld", 0);
+    if ((!gpio_is_valid(data->firm_gpio)))
+         return -EINVAL;
 
-        data->ese_pwr_gpio = of_get_named_gpio(np, "nxp,pn544-ese-pwr", 0);
-        if ((!gpio_is_valid(data->ese_pwr_gpio)))
-                return -EINVAL;
-		//ruanbanmao add for 15801 nfc begin.
-        data->clk_gpio = of_get_named_gpio(np, "nxp,pn544-clk-gpio", 0);
-        if ((!gpio_is_valid(data->clk_gpio)))
-                return -EINVAL;
-        r = of_property_read_string(np, "qcom,clk-src", &data->clk_src_name);
-        //ruanbanmao add for 15801 nfc, end
+    data->ese_pwr_gpio = of_get_named_gpio(np, "nxp,pn544-ese-pwr", 0);
+    if ((!gpio_is_valid(data->ese_pwr_gpio)))
+          return -EINVAL;
 
-    pr_info("%s: %d, %d, %d, %d ,%d, %d\n", __func__,
-        data->irq_gpio, data->ven_gpio, data->firm_gpio, data->ese_pwr_gpio, data->clk_gpio, errorno);
+    data->clk_gpio = of_get_named_gpio(np, "nxp,pn544-clk-gpio", 0);
+    if ((!gpio_is_valid(data->clk_gpio)))
+         return -EINVAL;
+
+    data->svdd_power_gpio = of_get_named_gpio(np, "nxp,pn544-svdd-power", 0);
+    if ((!gpio_is_valid(data->svdd_power_gpio)))
+          return -EINVAL;
+
+    r = of_property_read_string(np, "qcom,clk-src", &data->clk_src_name);
+
+
+    pr_info("%s: %d, %d, %d, %d ,%d, %d %d\n", __func__,
+        data->irq_gpio, data->ven_gpio, data->firm_gpio, data->ese_pwr_gpio, data->clk_gpio,data->svdd_power_gpio, errorno);
 
     return errorno;
 }
@@ -736,7 +781,7 @@ static int pn544_probe(struct i2c_client *client,
     platform_data = client->dev.platform_data;
 #else
     struct device_node *node = client->dev.of_node;
-    pr_info("Enter %s !!!\n",__func__);//ruanbanmao add for debug
+    pr_info("Enter %s !!!\n",__func__);
 
     if (node) {
         platform_data = devm_kzalloc(&client->dev,
@@ -769,9 +814,8 @@ static int pn544_probe(struct i2c_client *client,
         pr_err("%s : need I2C_FUNC_I2C\n", __func__);
         return  -ENODEV;
     }
-//ruanbanmao modify for 15801,2015/10/20
-//#if !DRAGON_NFC
-#if 1
+
+
     ret = gpio_request(platform_data->irq_gpio, "nfc_int");
     if (ret)
         return  -ENODEV;
@@ -781,17 +825,19 @@ static int pn544_probe(struct i2c_client *client,
     ret = gpio_request(platform_data->ese_pwr_gpio, "nfc_ese_pwr");
     if (ret)
         goto err_ese_pwr;
-    //#ifdef VENDOR_EDIT
+
     ret = gpio_request(platform_data->clk_gpio, "nfc_clk_gpio");
     if(ret)
         goto err_clk_gpio;
-    //#endif
-    if (platform_data->firm_gpio) {
-        ret = gpio_request(platform_data->firm_gpio, "nfc_firm");
-        if (ret)
-            goto err_firm;
-    }
-#endif
+
+    ret = gpio_request(platform_data->firm_gpio, "nfc_firm");
+    if (ret)
+        goto err_firm;
+
+    ret = gpio_request(platform_data->svdd_power_gpio, "svdd_power_gpio");
+    if(ret)
+        goto err_svdd_power;
+
     pn544_dev = kzalloc(sizeof(*pn544_dev), GFP_KERNEL);
     if (pn544_dev == NULL) {
         dev_err(&client->dev,
@@ -799,16 +845,14 @@ static int pn544_probe(struct i2c_client *client,
         ret = -ENOMEM;
         goto err_exit;
     }
-    /*NFC don't contrl ldo 9 .ldo 9 contrled by modem, this will cause can,t recognise sim card*/
+    /*NFC don't contrl ldo 9 .ldo 9 contrled by modem, this will cause can't recognise sim card*/
     /*
-	//ruanbanmao add for 15801 nfc, 2015/10/20, begin
-	//#ifdef VENDOR_EDIT
     pn544_dev->p544_regulator = regulator_get( &client->dev, "nfc_voltage");
     if (IS_ERR(pn544_dev->p544_regulator))
     {
         ret = PTR_ERR(pn544_dev->p544_regulator);
         pr_err(" Error to get nfc_voltage. (error code) = %d\n", ret);
-		 goto err_get_nfc_voltage;
+         goto err_get_nfc_voltage;
     }
     else
     {
@@ -826,13 +870,13 @@ static int pn544_probe(struct i2c_client *client,
         ret = regulator_enable(pn544_dev->p544_regulator);
         pr_info("successfully set nfc_voltage\n");
     }
-	*/
+    */
     pn544_dev->p544_regulator_s4= regulator_get( &client->dev, "nfc_voltage_s4");
     if (IS_ERR(pn544_dev->p544_regulator_s4))
     {
         ret = PTR_ERR(pn544_dev->p544_regulator_s4);
         pr_err(" Error to get p544_regulator_s4. (error code) = %d\n", ret);
-       goto err_set_nfc_voltage;
+        goto err_set_nfc_voltage;
     }
     else
     {
@@ -844,14 +888,12 @@ static int pn544_probe(struct i2c_client *client,
     {
         pr_err("Error setting the regulator voltage_s4. (error code)= %d\n", ret);
         goto err_set_p544_regulator_s4;
-		 }
+    }
     else
     {
         ret = regulator_enable(pn544_dev->p544_regulator_s4);
         pr_info("successfully set regulator voltage_s4\n");
     }
-	//#endif
-    //ruanbanmao add for 15801 nfc, 2015/10/20, end
 
     pn544_dev->irq_gpio = platform_data->irq_gpio;
     pn544_dev->ven_gpio  = platform_data->ven_gpio;
@@ -861,19 +903,16 @@ static int pn544_probe(struct i2c_client *client,
     pn544_dev->nfc_ven_enabled = false;
     pn544_dev->spi_ven_enabled = false;
     pn544_dev->client   = client;
+    pn544_dev->clk_src_name = platform_data->clk_src_name;
+    pn544_dev->clk_gpio = platform_data->clk_gpio;
+    pn544_dev->svdd_power_gpio  = platform_data->svdd_power_gpio;
 
-	//ruanbanmao add for 15801 nfc, 2015/10/20, begin
-	//#ifdef VENDOR_EDIT
-    // get and set clock.
-	pn544_dev->clk_src_name = platform_data->clk_src_name;
-	pn544_dev->clk_gpio = platform_data->clk_gpio;
-
-    if (!strcmp(pn544_dev->clk_src_name, "BBCLK2")) {
-        pr_info("get BBCLK2!!!\n");
+    if (!strcmp(pn544_dev->clk_src_name, "BBCLK3")) {
+        pr_info("get %s\n",pn544_dev->clk_src_name);
         pn544_dev->s_clk = clk_get(&pn544_dev->client->dev, "ref_clk");
         if (IS_ERR(pn544_dev->s_clk)) {
-        pr_err("no pclk defined\n");
-		goto err_set_p544_regulator_s4;
+            pr_err("no pclk defined\n");
+            goto err_set_p544_regulator_s4;
         }
     }
     clk_set_rate(pn544_dev->s_clk, 19200000);
@@ -881,47 +920,39 @@ static int pn544_probe(struct i2c_client *client,
     pr_info("clk_prepare_enable. ret = %d\n", ret);
     if (ret) {
         pr_err("Can't enable s_clk\n");
-		   // return err;
     }
-	//#endif
-	//ruanbanmao add for 15801 nfc, 2015/10/20, end
-
     ret = gpio_direction_input(pn544_dev->irq_gpio);
     if (ret < 0) {
         pr_err("%s :not able to set irq_gpio as input\n", __func__);
-        //ruanbanmao modify for 15801 nfc.
         goto err_gpio_set;
     }
     ret = gpio_direction_output(pn544_dev->ven_gpio, 0);
     if (ret < 0) {
         pr_err("%s : not able to set ven_gpio as output\n", __func__);
-        //ruanbanmao modify for 15801 nfc.
         goto err_gpio_set;
     }
     ret = gpio_direction_output(pn544_dev->ese_pwr_gpio, 0);
     if (ret < 0) {
         pr_err("%s : not able to set ese_pwr gpio as output\n", __func__);
-        //ruanbanmao modify for 15801 nfc.
         goto err_gpio_set;
     }
-    if (platform_data->firm_gpio) {
-        ret = gpio_direction_output(pn544_dev->firm_gpio, 0);
-        if (ret < 0) {
-            pr_err("%s : not able to set firm_gpio as output\n",
-                    __func__);
-        //ruanbanmao modify for 15801 nfc.
+
+    ret = gpio_direction_output(pn544_dev->firm_gpio, 0);
+    if (ret < 0) {
+        pr_err("%s : not able to set firm_gpio as output\n",__func__);
         goto err_gpio_set;
-        }
     }
-    //#ifdef VENDOR_EDIT
-    //ruanbanmao add for NFC clock. 2016-01-06
     ret = gpio_direction_input(pn544_dev->clk_gpio);
     if(ret <0){
-        pr_err("%s : not able to set clk_gpio as input\n",
-                    __func__);
+        pr_err("%s : not able to set clk_gpio as input\n", __func__);
         goto err_gpio_set;
     }
-    //#endif
+    ret = gpio_direction_output(pn544_dev->svdd_power_gpio, 0);
+    if (ret < 0) {
+        pr_err("%s : not able to set svdd_power_gpio as output\n", __func__);
+        goto err_gpio_set;
+    }
+
     /* init mutex and queues */
     init_waitqueue_head(&pn544_dev->read_wq);
     mutex_init(&pn544_dev->read_mutex);
@@ -953,7 +984,7 @@ static int pn544_probe(struct i2c_client *client,
     i2c_set_clientdata(client, pn544_dev);
     /*add for wake up ap side*/
     enable_irq_wake(pn544_dev->client->irq);
-    //push_component_info(NFC, "NQ220", "NXP");
+    push_component_info(NFC, "NQ330", "NXP");
     return 0;
 
     err_request_irq_failed:
@@ -961,8 +992,7 @@ static int pn544_probe(struct i2c_client *client,
     err_misc_register:
     mutex_destroy(&pn544_dev->read_mutex);
     mutex_destroy(&pn544_dev->p61_state_mutex);
-    //ruanbanmao add for 15801 nfc, 2015/10/20, begin
-	//#ifdef VENDOR_EDIT
+
     err_gpio_set:
     clk_disable(pn544_dev->s_clk);
     clk_put(pn544_dev->s_clk);
@@ -970,18 +1000,16 @@ static int pn544_probe(struct i2c_client *client,
     regulator_put(pn544_dev->p544_regulator_s4);
     err_set_nfc_voltage:
     regulator_put(pn544_dev->p544_regulator);
-	//err_get_nfc_voltage:
-    //#endif
-    ////ruanbanmao add for 15801 nfc, 2015/10/20, end
+    //err_get_nfc_voltage:
+
     kfree(pn544_dev);
     err_exit:
-    if (pn544_dev->firm_gpio)
-        gpio_free(platform_data->firm_gpio);
-    //#ifdef VENDOR_EDIT
-    err_clk_gpio:
-    gpio_free(platform_data->clk_gpio);
-    //#endif
+    gpio_free(platform_data->svdd_power_gpio);
+    err_svdd_power:
+    gpio_free(platform_data->firm_gpio);
     err_firm:
+    gpio_free(platform_data->clk_gpio);
+    err_clk_gpio:
     gpio_free(platform_data->ese_pwr_gpio);
     err_ese_pwr:
     gpio_free(platform_data->ven_gpio);
@@ -995,12 +1023,10 @@ static int pn544_remove(struct i2c_client *client)
     struct pn544_dev *pn544_dev;
 
     pn544_dev = i2c_get_clientdata(client);
-    //ruanbanmao add for p61, begin
     clk_disable(pn544_dev->s_clk);
     clk_put(pn544_dev->s_clk);
     regulator_put(pn544_dev->p544_regulator_s4);
     regulator_put(pn544_dev->p544_regulator);
-    //end
     free_irq(client->irq, pn544_dev);
     misc_deregister(&pn544_dev->pn544_device);
     mutex_destroy(&pn544_dev->read_mutex);
@@ -1061,7 +1087,7 @@ static void __exit pn544_dev_exit(void)
     i2c_del_driver(&pn544_driver);
 }
 module_exit(pn544_dev_exit);
-
+module_param(nfc_kernel_log, uint, 0644);
 MODULE_AUTHOR("Sylvain Fonteneau");
 MODULE_DESCRIPTION("NFC PN544 driver");
 MODULE_LICENSE("GPL");

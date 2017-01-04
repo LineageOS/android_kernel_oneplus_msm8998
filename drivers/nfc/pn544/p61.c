@@ -455,7 +455,7 @@ static ssize_t p61_dev_read(struct file *filp, char *buf, size_t count,
             }
         }
 #else
-    P61_ERR_MSG(" %s P61_IRQ_ENABLE not Enabled \n", __FUNCTION__);
+        P61_ERR_MSG(" %s P61_IRQ_ENABLE not Enabled \n", __FUNCTION__);
 #endif
 
 		i = 0;
@@ -476,7 +476,7 @@ static ssize_t p61_dev_read(struct file *filp, char *buf, size_t count,
 
 		if (sof != SOF)
 			goto fail;
-}
+    }
 
     total_count = 1;
     rx_buffer[0] = sof;
