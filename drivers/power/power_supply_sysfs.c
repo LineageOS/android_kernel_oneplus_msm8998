@@ -54,6 +54,11 @@ static ssize_t power_supply_show_property(struct device *dev,
 		"TYPEC", "TYPEC_UFP", "TYPEC_DFP"
 #endif
 	};
+#ifdef VENDOR_EDIT
+	static char *cc_orientation_text[] = {
+		"Unknown", "cc1", "cc2"
+	};
+#endif
 	static char *status_text[] = {
 		"Unknown", "Charging", "Discharging", "Not charging", "Full"
 	};
@@ -127,6 +132,10 @@ static ssize_t power_supply_show_property(struct device *dev,
 		return sprintf(buf, "%s\n", typec_text[value.intval]);
 	else if (off == POWER_SUPPLY_PROP_TYPEC_POWER_ROLE)
 		return sprintf(buf, "%s\n", typec_pr_text[value.intval]);
+#ifdef VENDOR_EDIT
+	else if (off == POWER_SUPPLY_PROP_OEM_TYPEC_CC_ORIENTATION)
+		return sprintf(buf, "%s\n", cc_orientation_text[value.intval]);
+#endif
 	else if (off >= POWER_SUPPLY_PROP_MODEL_NAME)
 		return sprintf(buf, "%s\n", value.strval);
 
@@ -283,6 +292,9 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(current_capability),
 	POWER_SUPPLY_ATTR(typec_mode),
 	POWER_SUPPLY_ATTR(typec_cc_orientation),
+#ifdef VENDOR_EDIT
+	POWER_SUPPLY_ATTR(oem_cc_orientation),/* xiangling */
+#endif
 	POWER_SUPPLY_ATTR(typec_power_role),
 	POWER_SUPPLY_ATTR(pd_allowed),
 	POWER_SUPPLY_ATTR(pd_active),

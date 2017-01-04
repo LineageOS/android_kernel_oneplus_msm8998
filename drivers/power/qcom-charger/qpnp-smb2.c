@@ -496,6 +496,9 @@ static enum power_supply_property smb2_usb_props[] = {
 	POWER_SUPPLY_PROP_TYPEC_MODE,
 	POWER_SUPPLY_PROP_TYPEC_POWER_ROLE,
 	POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION,
+#ifdef VENDOR_EDIT
+	POWER_SUPPLY_PROP_OEM_TYPEC_CC_ORIENTATION,
+#endif
 	POWER_SUPPLY_PROP_PD_ALLOWED,
 	POWER_SUPPLY_PROP_PD_ACTIVE,
 	POWER_SUPPLY_PROP_INPUT_CURRENT_SETTLED,
@@ -552,6 +555,9 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 		rc = smblib_get_prop_typec_power_role(chg, val);
 		break;
 	case POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION:
+#ifdef VENDOR_EDIT
+	case POWER_SUPPLY_PROP_OEM_TYPEC_CC_ORIENTATION:
+#endif
 		rc = smblib_get_prop_typec_cc_orientation(chg, val);
 		break;
 	case POWER_SUPPLY_PROP_PD_ALLOWED:
