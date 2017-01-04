@@ -197,3 +197,8 @@ obj-y 	+= oem_debug/
 obj-y 	+= param_read_write/
 #endif
 
+#porting for support oem trace
+#ifdef VENDOR_EDIT
+obj-$(CONFIG_OEM_DEBUG_SUPORT)  += oneplus/
+#endif
+#ifdef VENDOR_EDIT
