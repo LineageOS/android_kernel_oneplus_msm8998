@@ -1764,8 +1764,14 @@ int smblib_get_prop_usb_voltage_now(struct smb_charger *chg,
 
 	if (IS_ERR(chg->iio.usbin_v_chan))
 		return PTR_ERR(chg->iio.usbin_v_chan);
-
+#ifdef VENDOR_EDIT
+		/* yangfb@bsp, 20161229 Vbus switch uV to mV */
+	rc = iio_read_channel_processed(chg->iio.usbin_v_chan, &val->intval);
+	val->intval = val->intval/1000;
+	return rc;
+#else
 	return iio_read_channel_processed(chg->iio.usbin_v_chan, &val->intval);
+#endif
 }
 
 int smblib_get_prop_pd_current_max(struct smb_charger *chg,
