@@ -52,7 +52,7 @@
 #include <linux/notifier.h>
 #endif
 
-//#include <linux/project_info.h>
+#include <linux/project_info.h>
 
 static unsigned int ignor_home_for_ESD = 0;
 module_param(ignor_home_for_ESD, uint, S_IRUGO | S_IWUSR);
@@ -81,6 +81,7 @@ struct fpc1020_data {
     int EN_VDD_gpio;
     int id0_gpio;
     int id1_gpio;
+    int id2_gpio;
     struct input_dev	*input_dev;
     int screen_state;//1: on 0:off
 	#endif
@@ -124,7 +125,7 @@ static int fpc1020_pinctrl_init(struct fpc1020_data *fpc1020)
 	}
 
 	fpc1020->gpio_state_active =
-		pinctrl_lookup_state(fpc1020->ts_pinctrl, "fpc1020_enable");
+		pinctrl_lookup_state(fpc1020->ts_pinctrl, "pmx_fp_active");
 	if (IS_ERR_OR_NULL(fpc1020->gpio_state_active)) {
 		dev_err(dev, "Cannot get active pinstate\n");
 		ret = PTR_ERR(fpc1020->gpio_state_active);
@@ -132,7 +133,7 @@ static int fpc1020_pinctrl_init(struct fpc1020_data *fpc1020)
 	}
 
 	fpc1020->gpio_state_suspend =
-		pinctrl_lookup_state(fpc1020->ts_pinctrl, "fpc1020_disalbe");
+		pinctrl_lookup_state(fpc1020->ts_pinctrl, "pmx_fp_suspend");
 	if (IS_ERR_OR_NULL(fpc1020->gpio_state_suspend)) {
 		dev_err(dev, "Cannot get sleep pinstate\n");
 		ret = PTR_ERR(fpc1020->gpio_state_suspend);
@@ -339,7 +340,6 @@ static ssize_t report_home_set(struct device *dev,
 }
 static DEVICE_ATTR(report_home, S_IWUSR, NULL, report_home_set);
 
-/*
 static ssize_t update_info_set(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -353,7 +353,7 @@ static ssize_t update_info_set(struct device *dev,
 	return count;
 }
 static DEVICE_ATTR(update_info, S_IWUSR, NULL, update_info_set);
-*/
+
 static ssize_t screen_state_get(struct device* device,
 			     struct device_attribute* attribute,
 			     char* buffer)
@@ -368,7 +368,7 @@ static struct attribute *attributes[] = {
 	&dev_attr_hw_reset.attr,
 	&dev_attr_irq.attr,
 	&dev_attr_report_home.attr,
-//	&dev_attr_update_info.attr,
+	&dev_attr_update_info.attr,
 	&dev_attr_screen_state.attr,
 	NULL
 };
@@ -512,8 +512,8 @@ static int fpc1020_probe(struct platform_device *pdev)
 			"gpio_direction_input (irq) failed.\n");
 		goto exit;
 	}
-
-	/*rc = fpc1020_request_named_gpio(fpc1020, "fpc,reset-gpio",
+    /*  in tz
+	rc = fpc1020_request_named_gpio(fpc1020, "fpc,reset-gpio",
 			&fpc1020->rst_gpio);
 	if (rc)
 		goto exit;*/
@@ -535,10 +535,18 @@ static int fpc1020_probe(struct platform_device *pdev)
         gpio_direction_input(fpc1020->id1_gpio);
     }
 
+	rc = fpc1020_request_named_gpio(fpc1020, "fpc,gpio_id2",
+			&fpc1020->id2_gpio);
+	if(gpio_is_valid(fpc1020->id2_gpio))
+    {
+        dev_err(dev, "%s: gpio_is_valid(fpc1020->id2_gpio=%d)\n", __func__,fpc1020->id2_gpio);
+        gpio_direction_input(fpc1020->id2_gpio);
+    }
+    /* in xbl
 	rc = fpc1020_request_named_gpio(fpc1020, "fpc,gpio_1V8_EN",
 			&fpc1020->EN_VDD_gpio);
 	if (rc)
-		goto exit;
+		goto exit;*/
     gpio_direction_output(fpc1020->EN_VDD_gpio,1);
 
     #else
@@ -607,21 +615,27 @@ static int fpc1020_probe(struct platform_device *pdev)
 	udelay(FPC1020_RESET_HIGH2_US);
     #endif
     /**
-    *           ID0(GPIO25)   ID1(GPIO143)
-    *   O-film   0            0
-    *   DT       0            1
-    *   CT       1            0
+    *           ID0(GPIO39)   ID1(GPIO41)   ID1(GPIO63)
+    *   O-film   1            1             1
+    *   Primax   1            0             0
+    *   Goodix   1            0             1
+    *   ALL      1            1             0
     */
-//liuyan 2016/9/24 no merage now
-/*	if(!gpio_get_value(fpc1020->id0_gpio) && !gpio_get_value(fpc1020->id1_gpio))
+	if(gpio_get_value(fpc1020->id0_gpio) && gpio_get_value(fpc1020->id1_gpio)&&\
+	   gpio_get_value(fpc1020->id2_gpio))
         push_component_info(FINGERPRINTS,"fpc1245" , "FPC(OF)");
-    else if(!gpio_get_value(fpc1020->id0_gpio) && gpio_get_value(fpc1020->id1_gpio))
+    else if(gpio_get_value(fpc1020->id0_gpio) && !gpio_get_value(fpc1020->id1_gpio)&&\
+            !gpio_get_value(fpc1020->id2_gpio))
         push_component_info(FINGERPRINTS,"fpc1245" , "FPC(Primax)");
-    else if(gpio_get_value(fpc1020->id0_gpio) && !gpio_get_value(fpc1020->id1_gpio))
-        push_component_info(FINGERPRINTS,"fpc1245" , "FPC(CT)");
+    else if(gpio_get_value(fpc1020->id0_gpio) && !gpio_get_value(fpc1020->id1_gpio)&&\
+            gpio_get_value(fpc1020->id2_gpio))
+        push_component_info(FINGERPRINTS,"fpc1245" , "FPC(Goodix)");
+    else if(gpio_get_value(fpc1020->id0_gpio) && gpio_get_value(fpc1020->id1_gpio)&&\
+            !gpio_get_value(fpc1020->id2_gpio))
+        push_component_info(FINGERPRINTS,"fpc1245" , "FPC(ALL)");
     else
         push_component_info(FINGERPRINTS,"fpc1245" , "FPC");
-*/
+
 	dev_info(dev, "%s: ok\n", __func__);
 exit:
 	return rc;
