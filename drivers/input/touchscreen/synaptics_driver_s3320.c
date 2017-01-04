@@ -195,9 +195,9 @@ static unsigned int tp_debug = 1;
 static int button_map[3];
 static int tx_rx_num[2];
 static int16_t Rxdata[30][30];
-static int16_t delta_baseline[16][28];
-static int16_t baseline[8][16];
-static int16_t delta[8][16];
+static int16_t delta_baseline[30][30];
+static int16_t baseline[30][30];
+static int16_t delta[30][30];
 static int TX_NUM;
 static int RX_NUM;
 static int report_key_point_y = 0;
@@ -1410,9 +1410,6 @@ void int_touch(void)
             }
 #endif
 
-
-      points.x = 1080 -points.x;
-      points.y = 1920 -points.y;
 		if (finger_status) {
 			input_mt_slot(ts->input_dev, i);
 			input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, finger_status);
@@ -2018,6 +2015,7 @@ static ssize_t tp_baseline_show(struct device_driver *ddri, char *buf)
 			num_read_chars += sprintf(&(buf[num_read_chars]), "%5d", delta_baseline[x][y]);
 		}
 	}
+	num_read_chars += sprintf(&(buf[num_read_chars]), "\n");
 	TPD_DEBUG("\nread all is oK\n");
 	ret = i2c_smbus_write_byte_data(ts->client, F54_ANALOG_COMMAND_BASE, 0X02);
 	delay_qt_ms(60);
@@ -2080,6 +2078,7 @@ static ssize_t tp_rawdata_show(struct device_driver *ddri, char *buf)
 			num_read_chars += sprintf(&(buf[num_read_chars]), "%3d ", delta_baseline[x][y]);
 		}
 	}
+	num_read_chars += sprintf(&(buf[num_read_chars]), "\n");
 	ret = i2c_smbus_write_byte_data(ts->client,F54_ANALOG_COMMAND_BASE,0X02);
 	delay_qt_ms(60);
 	synaptics_enable_interrupt(ts, 1);
@@ -2221,6 +2220,9 @@ TEST_WITH_CBC_s3508:
 			if( (y < RX_NUM ) && (x < TX_NUM) ){
 				//printk("%4d ,",baseline_data);
 				if(((baseline_data+60) < *(baseline_data_test+count*2)) || ((baseline_data-60) > *(baseline_data_test+count*2+1))){
+					if((x == (TX_NUM-1) && (y != RX_NUM-1 || y != RX_NUM-2))||\
+						(x != (TX_NUM-1) && (y == RX_NUM-1 || y == RX_NUM-2)))//the last tx and rx last two line for touchkey,others no need take care
+						continue;
 					TPD_ERR("touchpanel failed,RX_NUM:%d,TX_NUM:%d,baseline_data is %d,TPK_array_limit[%d*2]=%d,TPK_array_limit[%d*2+1]=%d\n ",y,x,baseline_data,count,*(baseline_data_test+count*2),count,*(baseline_data_test+count*2+1));
 					if((baseline_data <= 0) && (first_check == 0)){
 						first_check = 1;
@@ -2582,7 +2584,7 @@ static int synatpitcs_fw_update(struct device *dev, bool force)
 		}
 
 	}else if(!strncmp(ts->manu_name,"s3508",5) || !strncmp(ts->manu_name,"15811",5)){
-		        TPD_ERR("enter version 15811 update mode\n");
+		        TPD_ERR("enter version 16859 update mode\n");
 			//push_component_info(TP, ts->fw_id, "s3508");
 			ret = request_firmware(&fw, ts->fw_name, dev);
 			if (ret < 0) {
@@ -2932,12 +2934,10 @@ static int tp_baseline_get(struct synaptics_ts_data *ts, bool flag)
 			delta_baseline[x][y] =  (int16_t)(((uint16_t)( value [k])) | ((uint16_t)( value [k+1] << 8)));
 			k = k + 2;
 
-			if (y >= 20){
-				if (flag)
-					delta[y-20][x] = SUBABS(delta_baseline[x][y],baseline[y-20][x]);
-				else
-					baseline[y-20][x] = delta_baseline[x][y];
-			}
+			if (flag)
+				delta[x][y] = SUBABS(delta_baseline[x][y],baseline[x][y]);
+			else
+				baseline[x][y] = delta_baseline[x][y];
 		}
 	}
         //ret = i2c_smbus_write_byte_data(ts->client, F54_ANALOG_COMMAND_BASE, 0X02);
@@ -2976,12 +2976,13 @@ static ssize_t touch_press_status_read(struct file *file, char __user *user_buf,
 	}
 	TPD_ERR("%s",__func__);
 
-	for (x = 0; x < 8; x++){
-		str_n += sprintf(&page[str_n], "\n");
-		for (y = 0; y < 16; y++){
-			str_n += sprintf(&page[str_n],"%4d",delta[x][y]);
+	for (x = 0; x < TX_NUM; x++){
+		for (y = 0; y < RX_NUM; y++){
 			if ((delta[x][y] < -30) && (delta[x][y] > -250))
+			{
+				str_n += sprintf(&page[str_n],"x%d,y%d = %4d\n", x, y, delta[x][y]);
 				press_points++;
+			}
 			if((delta[x][y] > 30) && (delta[x][y] < 200))
 				points_misspresee ++;
 		}
@@ -4057,7 +4058,7 @@ static int synaptics_ts_probe(struct i2c_client *client, const struct i2c_device
 		strcpy(ts->fw_name,"tp/fw_synaptics_15801b.img");
 		version_is_s3508 = 0;
 	}else{
-		strcpy(ts->fw_name,"tp/fw_synaptics_15811.img");
+		strcpy(ts->fw_name,"tp/fw_synaptics_16859.img");
 		version_is_s3508 = 1;
 	}
 
@@ -4079,6 +4080,7 @@ static int synaptics_ts_probe(struct i2c_client *client, const struct i2c_device
 		goto exit_createworkqueue_failed;
 	}
 
+	memset(baseline,0,sizeof(baseline));
 	get_base_report = create_singlethread_workqueue("get_base_report");
 	if( !get_base_report ){
 		ret = -ENOMEM;
