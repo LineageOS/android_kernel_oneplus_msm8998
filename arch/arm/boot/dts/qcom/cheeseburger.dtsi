@@ -383,8 +383,8 @@
 		reg = <0x20>;
 		interrupt-parent = <&tlmm>;
 		interrupts = <125 0x2008>;
-		vcc_i2c_1v8-supply = <&pmcobalt_l6>;
-		vdd_2v8-supply = <&pmcobalt_l28>;
+		vcc_i2c_1v8-supply = <&pm8998_l6>;
+		vdd_2v8-supply = <&pm8998_l28>;
 		synaptics,tx-rx-num = <17 30>;
 		synaptics,vdd-voltage = <1808000 1808000>;
 		synaptics,avdd-voltage = <3008000 3008000>;
