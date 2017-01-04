@@ -140,7 +140,7 @@
 		fpc,irq-gpio    = <&tlmm 121 0>;
 		fpc,gpio_id0    = <&tlmm 39 0>;
 		fpc,gpio_id1    = <&tlmm 41 0>;
-		fpc,gpio_1V8_EN = <&tlmm 25 0x00>;
+		fpc,gpio_id2    = <&tlmm 63 0>;
 	};
 
 	qcom,bcl {
