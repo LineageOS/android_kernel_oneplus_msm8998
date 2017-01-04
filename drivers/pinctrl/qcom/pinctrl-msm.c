@@ -800,17 +800,18 @@ static void msm_gpio_irq_handler(struct irq_desc *desc)
 			irq_pin = irq_find_mapping(gc->irqdomain, i);
 			generic_handle_irq(irq_pin);
 			handled++;
-		        //++add by lyb@bsp for printk wakeup irqs
-                        if(!!need_show_pinctrl_irq){
-                            need_show_pinctrl_irq = false;
-                            printk(KERN_ERR "hwirq %s [irq_num=%d ]triggered\n",irq_to_desc(irq_pin)->action->name,irq_pin);
-							log_wakeup_reason(irq_pin);
-							if(strstr(irq_to_desc(irq_pin)->action->name, "soc:fpc_fpc1020") != NULL) //fpc_fpc1020
-							{
-								sched_set_boost(1);//wujialong 20160314,enable sched_boost when fingerprint wakeup
-							}
-                        }
-                        //--
+			//++add by lyb@bsp for printk wakeup irqs
+			if(!!need_show_pinctrl_irq){
+				need_show_pinctrl_irq = false;
+				printk(KERN_ERR "hwirq %s [irq_num=%d ]triggered\n",irq_to_desc(irq_pin)->action->name,irq_pin);
+				log_wakeup_reason(irq_pin);
+				if(strstr(irq_to_desc(irq_pin)->action->name, "soc:fpc_fpc1020") != NULL) //fpc_fpc1020
+				{
+					/*sched_set_boost will sleep now,so we temp comment out */
+					//sched_set_boost(1);//wujialong 20160314,enable sched_boost when fingerprint wakeup
+				}
+			}
+			//--
 		}
 	}
 
