@@ -2259,7 +2259,15 @@ static int fg_psy_get_property(struct power_supply *psy,
 #endif
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
+#ifdef VENDOR_EDIT
+		if (chip->use_external_fg && external_fg
+				&& external_fg->get_battery_mvolts)
+			pval->intval = external_fg->get_battery_mvolts();
+		else
+			pval->intval = 4000000; /* 4000mV */
+#else
 		rc = fg_get_battery_voltage(chip, &pval->intval);
+#endif
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
 #ifdef VENDOR_EDIT
