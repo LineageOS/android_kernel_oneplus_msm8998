@@ -36,7 +36,7 @@
 #endif
 
 //#define MIPI_SWAP
-#define READ_CMD_ENABLE
+//#define READ_CMD_ENABLE
 //#define NEW_WORKFLOW
 //#define ONE_WIRED_CMD_VIA_RESET_GPIO
 #define ONE_WIRED_CMD_VIA_WAKEUP_GPIO
