@@ -554,8 +554,15 @@ static const struct apsd_result *smblib_update_usb_type(struct smb_charger *chg)
 		chg->usb_psy_desc.type = POWER_SUPPLY_TYPE_USB_PD;
 		return apsd_result;
 	}
-
+#ifdef VENDOR_EDIT //Yangfb@bsp add to fix fastcharge test not pass
+	if(chg->dash_on)
+		chg->usb_psy_desc.type = POWER_SUPPLY_TYPE_DASH;
+	else
+		chg->usb_psy_desc.type = apsd_result->pst;
+#else
 	chg->usb_psy_desc.type = apsd_result->pst;
+#endif
+
 	return apsd_result;
 }
 
