@@ -34,7 +34,6 @@
 #include "../pinconf.h"
 #include "pinctrl-msm.h"
 #include "../pinctrl-utils.h"
-#include <linux/sched.h>
 #include <linux/wakeup_reason.h>
 
 #define MAX_NR_GPIO 300
@@ -805,11 +804,6 @@ static void msm_gpio_irq_handler(struct irq_desc *desc)
 				need_show_pinctrl_irq = false;
 				printk(KERN_ERR "hwirq %s [irq_num=%d ]triggered\n",irq_to_desc(irq_pin)->action->name,irq_pin);
 				log_wakeup_reason(irq_pin);
-				if(strstr(irq_to_desc(irq_pin)->action->name, "soc:fpc_fpc1020") != NULL) //fpc_fpc1020
-				{
-					/*sched_set_boost will sleep now,so we temp comment out */
-					//sched_set_boost(1);//wujialong 20160314,enable sched_boost when fingerprint wakeup
-				}
 			}
 			//--
 		}
