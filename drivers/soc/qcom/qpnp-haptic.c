@@ -339,6 +339,13 @@ struct qpnp_hap {
 };
 
 static struct qpnp_hap *ghap;
+/*wulaibin  2015-11-18 add begin for optimizing the response speed of the
+vibrator*/
+#ifdef VENDOR_EDIT
+static struct workqueue_struct *vibqueue;
+#endif //VENDOR_EDIT
+/*wulaibin  2015-11-18 add end for optimizing the response speed of the
+vibrator*/
 
 /* helper to read a pmic register */
 static int qpnp_hap_read_reg(struct qpnp_hap *hap, u8 *data, u16 addr)
@@ -1611,7 +1618,15 @@ static void qpnp_hap_td_enable(struct timed_output_dev *dev, int value)
 			      ktime_set(value / 1000, (value % 1000) * 1000000),
 			      HRTIMER_MODE_REL);
 	}
+	#ifndef VENDOR_EDIT
 	mutex_unlock(&hap->lock);
+	schedule_work(&hap->work);
+	#else //#ifdef VENDOR_EDIT
+	queue_work(vibqueue,&hap->work);
+	msleep(1);
+	mutex_unlock(&hap->lock);
+	#endif //VENDOR_EDIT
+	/* shankai 2015-07-7 modify end for optimizing the response speed of the vibrator*/
 	schedule_work(&hap->work);
 }
 
@@ -1700,7 +1715,7 @@ static void qpnp_hap_worker(struct work_struct *work)
 		qpnp_hap_set(hap, hap->state);
 	}
 
-	if (hap->vcc_pon && !reg_en) {
+	if (hap->vcc_pon && !reg_en && (hap->state == 0)) {
 		rc = regulator_disable(hap->vcc_pon);
 		if (rc)
 			pr_err("%s: could not disable vcc_pon regulator\n",
@@ -2266,6 +2281,11 @@ static int qpnp_haptic_probe(struct platform_device *pdev)
 
 	mutex_init(&hap->lock);
 	mutex_init(&hap->wf_lock);
+
+        #ifdef VENDOR_EDIT
+	vibqueue = create_singlethread_workqueue("vibthread");
+	#endif //VENDOR_EDIT
+
 	INIT_WORK(&hap->work, qpnp_hap_worker);
 	INIT_DELAYED_WORK(&hap->sc_work, qpnp_handle_sc_irq);
 	init_completion(&hap->completion);
