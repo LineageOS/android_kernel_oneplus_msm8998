@@ -197,7 +197,7 @@ static int hw_reset(struct  fpc1020_data *fpc1020)
 exit:
 	return rc;
 }
-*/
+
 static int hw_reset(struct  fpc1020_data *fpc1020)
 {
     int irq_gpio;
@@ -250,7 +250,7 @@ static ssize_t hw_reset_set(struct device *dev,
 }
 static DEVICE_ATTR(hw_reset, S_IWUSR, NULL, hw_reset_set);
 
-
+*/
 /**
  * sysf node to check the interrupt status of the sensor, the interrupt
  * handler should perform sysf_notify to allow userland to poll the node.
@@ -365,7 +365,7 @@ static ssize_t screen_state_get(struct device* device,
 static DEVICE_ATTR(screen_state, S_IRUSR , screen_state_get, NULL);
 
 static struct attribute *attributes[] = {
-	&dev_attr_hw_reset.attr,
+	//&dev_attr_hw_reset.attr,
 	&dev_attr_irq.attr,
 	&dev_attr_report_home.attr,
 	&dev_attr_update_info.attr,
@@ -546,8 +546,8 @@ static int fpc1020_probe(struct platform_device *pdev)
 	rc = fpc1020_request_named_gpio(fpc1020, "fpc,gpio_1V8_EN",
 			&fpc1020->EN_VDD_gpio);
 	if (rc)
-		goto exit;*/
-    gpio_direction_output(fpc1020->EN_VDD_gpio,1);
+		goto exit;
+    gpio_direction_output(fpc1020->EN_VDD_gpio,1);*/
 
     #else
 	rc = fpc1020_pinctrl_init(fpc1020);
