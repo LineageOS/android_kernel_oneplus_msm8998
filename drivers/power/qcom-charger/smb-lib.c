@@ -33,6 +33,8 @@
 #include <linux/gpio.h>
 #include <linux/delay.h>
 
+#define SOC_INVALID                   0x7E
+#define SOC_DATA_REG_0                0x88D
 #define HEARTBEAT_INTERVAL_MS         6000
 #define CHG_TIMEOUT_COUNT             10 * 10 * 60 /* 10hr */
 #define CHG_SOFT_OVP_MV               5800
@@ -4428,6 +4430,88 @@ out:
 	schedule_delayed_work(&chg->heartbeat_work,
 			round_jiffies_relative(msecs_to_jiffies
 				(HEARTBEAT_INTERVAL_MS)));
+}
+
+static int load_data(struct smb_charger *chg)
+{
+	u8 stored_soc = 0;
+	int rc = 0, shutdown_soc = 0;
+
+	if (!chg) {
+		pr_err("chg is NULL !\n");
+		return SOC_INVALID;
+	}
+
+	rc = smblib_read(chg, SOC_DATA_REG_0, &stored_soc);
+	if (rc) {
+		pr_err("failed to read addr[0x%x], rc=%d\n", SOC_DATA_REG_0, rc);
+		return SOC_INVALID;
+	}
+
+	/* the fist time connect battery, the reg 0x88d is 0x0, we do not need load this data.*/
+	if ((stored_soc % 2) == 1)
+		shutdown_soc = (stored_soc >> 1 ); /* get data from bit1~bit7 */
+	else
+		shutdown_soc = SOC_INVALID;
+
+	pr_info("stored_soc[0x%x], shutdown_soc[%d]\n", stored_soc, shutdown_soc);
+	return shutdown_soc;
+}
+
+int load_soc(void)
+{
+	int soc = 0;
+
+	soc = load_data(g_chg);
+	if (soc == SOC_INVALID || soc < 0 || soc > 100)
+		return -1;
+	return soc;
+}
+
+static void clear_backup_soc(struct smb_charger *chg)
+{
+	int rc = 0;
+	u8 soc_temp = 0;
+
+	rc = smblib_write(chg, SOC_DATA_REG_0, soc_temp);
+	if (rc)
+		pr_err("failed to clean addr[0x%x], rc=%d\n",
+				SOC_DATA_REG_0, rc);
+}
+
+void clean_backup_soc_ex(void)
+{
+	if(g_chg)
+		clear_backup_soc(g_chg);
+}
+
+static void backup_soc(struct smb_charger *chg, int soc)
+{
+	int rc = 0;
+	u8 invalid_soc = SOC_INVALID;
+	u8 soc_temp = (soc << 1) + 1; /* store data in bit1~bit7 */
+	if (!chg || soc < 0 || soc > 100) {
+		pr_err("chg or soc invalid, store an invalid soc\n");
+		if (chg) {
+			rc = smblib_write(chg, SOC_DATA_REG_0, invalid_soc);
+			if (rc)
+				pr_err("failed to write addr[0x%x], rc=%d\n",
+						SOC_DATA_REG_0, rc);
+		}
+		return;
+	}
+
+	pr_err("backup_soc[%d]\n", soc);
+	rc = smblib_write(chg, SOC_DATA_REG_0, soc_temp);
+	if (rc)
+		pr_err("failed to write addr[0x%x], rc=%d\n",
+				SOC_DATA_REG_0, rc);
+}
+
+void backup_soc_ex(int soc)
+{
+	if (g_chg)
+		backup_soc(g_chg, soc);
 }
 
 enum chg_protect_status_type {

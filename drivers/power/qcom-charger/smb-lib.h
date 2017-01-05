@@ -33,6 +33,7 @@ enum print_reason {
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161014 Add charging standard */
 #define BATT_TYPE_FCC_VOTER "BATT_TYPE_FCC_VOTER"
+#define PSY_ICL_VOTER		"PSY_ICL_VOTER"
 #define TEMP_REGION_MAX               9
 #endif
 #define DEFAULT_VOTER			"DEFAULT_VOTER"

@@ -262,8 +262,8 @@ static void reset_mcu_and_requst_irq(struct fastchg_device_info *di)
 			IRQF_TRIGGER_RISING, "mcu_data", di);
 	if (ret < 0)
 		pr_err("request ap rx irq failed.\n");
-
-	di->irq_enabled = true;
+	else
+		di->irq_enabled = true;
 }
 
 
@@ -581,7 +581,7 @@ static void request_mcu_irq(struct fastchg_device_info *di)
 		retval = request_irq(di->irq, irq_rx_handler,
 				IRQF_TRIGGER_RISING, "mcu_data", di);
 		if (retval < 0)
-			pr_err("%s request ap rx irq failed.\n", __func__);
+			pr_err("request ap rx irq failed.\n");
 		else
 			di->irq_enabled = true;
 	}
@@ -807,6 +807,10 @@ static long  dash_dev_ioctl(struct file *filp, unsigned int cmd,
 			}
 			break;
 		case DASH_NOTIFY_BTB_TEMP_OVER:
+			mod_timer(&di->watchdog,
+					jiffies + msecs_to_jiffies(15000));
+			dash_write(di,ALLOW_DATA);
+			break;
 		case DASH_NOTIFY_BAD_CONNECTED:
 		case DASH_NOTIFY_NORMAL_TEMP_FULL:
 			if (arg == DASH_NOTIFY_NORMAL_TEMP_FULL + 1) {

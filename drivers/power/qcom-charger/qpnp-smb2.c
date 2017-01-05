@@ -944,6 +944,11 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_SWITCH_DASH:
 		rc = check_allow_switch_dash(chg, val);
 		break;
+	case POWER_SUPPLY_PROP_INPUT_CURRENT_MAX:
+		pr_info("set iusb %d mA \n", val->intval / 1000);
+		rc = vote(chg->usb_icl_votable, PSY_ICL_VOTER, true,
+			val->intval);
+		break;
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
 		rc = smblib_set_prop_chg_voltage(chg, val);
 		break;

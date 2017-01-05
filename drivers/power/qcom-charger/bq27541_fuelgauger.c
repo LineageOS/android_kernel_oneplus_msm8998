@@ -379,18 +379,17 @@ struct bq27541_device_info *bq27541_di;
 #define CAPACITY_SALTATE_COUNTER_CHARGING_TERM 30 /* 30 1min */
 #define CAPACITY_SALTATE_COUNTER               4
 #define CAPACITY_SALTATE_COUNTER_NOT_CHARGING  24 /* >=40sec */
-#define LOW_BATTERY_PROTECT_VOLTAGE            3350 * 1000
+#define LOW_BATTERY_PROTECT_VOLTAGE            3250 * 1000
 #define CAPACITY_CALIBRATE_TIME_60_PERCENT     45 /* 45s */
-static int bq27541_average_current(struct bq27541_device_info *di);
+#define LOW_BATTERY_CAPACITY_THRESHOLD         20
 
+static int bq27541_average_current(struct bq27541_device_info *di);
 extern int get_charging_status(void);
 extern int fuelgauge_battery_temp_region_get(void);
 extern bool get_oem_charge_done_status(void);
-#ifdef READY
 extern int load_soc(void);
 extern void backup_soc_ex(int soc);
 extern void clean_backup_soc_ex(void);
-#endif /* david@bsp mark temp */
 
 static int get_current_time(unsigned long *now_tm_sec)
 {
@@ -427,7 +426,6 @@ close_time:
 
 int get_prop_pre_shutdown_soc(void)
 {
-#ifdef READY
 	int soc_load;
 
 	soc_load = load_soc();
@@ -435,9 +433,6 @@ int get_prop_pre_shutdown_soc(void)
 		return 50;
 	else
 		return soc_load;
-#else
-	return 50;
-#endif /* david@bsp mark temp */
 }
 
 static int fg_soc_calibrate(struct  bq27541_device_info *di, int soc)
@@ -454,11 +449,7 @@ static int fg_soc_calibrate(struct  bq27541_device_info *di, int soc)
 		di->batt_psy = power_supply_get_by_name("battery");
 		if (di->batt_psy) {
 			first_enter = true;
-#ifdef READY
 			soc_load = load_soc();
-#else
-			soc_load = -1;
-#endif /* david@bsp mark temp */
 			pr_info("soc=%d, soc_load=%d\n", soc, soc_load);
 			if (soc_load == -1) {
 				/* get last soc error */
@@ -483,9 +474,7 @@ static int fg_soc_calibrate(struct  bq27541_device_info *di, int soc)
 			}
 			/* store the soc when boot first time */
 			get_current_time(&di->soc_pre_time);
-#ifdef READY
 			clean_backup_soc_ex();
-#endif /* david@bsp mark temp */
 		} else {
 			return soc;
 		}
@@ -575,7 +564,7 @@ static int fg_soc_calibrate(struct  bq27541_device_info *di, int soc)
 				/* avoid dead battery shutdown */
 				if (di->batt_vol_pre <= LOW_BATTERY_PROTECT_VOLTAGE
 						&& di->batt_vol_pre > 2500 * 1000
-						&& di->soc_pre <= 10) {
+						&& di->soc_pre <= LOW_BATTERY_CAPACITY_THRESHOLD) {
 					/* check again */
 					vbat_mv = bq27541_battery_voltage(di);
 					if (vbat_mv <= LOW_BATTERY_PROTECT_VOLTAGE
@@ -614,23 +603,19 @@ static int fg_soc_calibrate(struct  bq27541_device_info *di, int soc)
 			}
 		}
 	} else { /* not charging */
-		if ((abs(soc - di->soc_pre) > 0)
+		if ((soc < di->soc_pre)
 				|| (di->batt_vol_pre <= LOW_BATTERY_PROTECT_VOLTAGE
 				&& di->batt_vol_pre > 2500 * 1000)) {
-			di->saltate_counter++;
-			counter_temp = CAPACITY_SALTATE_COUNTER_FULL;
-			if (di->soc_pre == 100 && time_last >= FIVE_MINUTES
-					&& (soc - di->soc_pre) < 0) { /* t>=5min */
-				counter_temp = 0;
-			} else if (di->soc_pre > 95
-					&& time_last >= TWO_POINT_FIVE_MINUTES
-					&& (soc - di->soc_pre) < 0) { /* t>=2.5min */
-				counter_temp = 0;
-			} else if (di->soc_pre > 60
-					&& time_last >= ONE_MINUTE
-					&& (soc - di->soc_pre) < 0) { /* t>=1min */
-				counter_temp = 0;
-			} else {
+			if(di->soc_pre == 100){
+				counter_temp = FIVE_MINUTES;
+			}
+			else if (di->soc_pre > 95){
+				counter_temp = TWO_POINT_FIVE_MINUTES;
+			}
+			else if (di->soc_pre > 60){
+				counter_temp = ONE_MINUTE;
+			}
+			else {
 				if (time_last >= CAPACITY_CALIBRATE_TIME_60_PERCENT
 						&& (soc - di->soc_pre) < 0)
 					counter_temp = 0;
@@ -641,7 +626,7 @@ static int fg_soc_calibrate(struct  bq27541_device_info *di, int soc)
 			/* avoid dead battery shutdown */
 			if (di->batt_vol_pre <= LOW_BATTERY_PROTECT_VOLTAGE
 					&& di->batt_vol_pre > 2500 * 1000
-					&& di->soc_pre <= 10) {
+					&& di->soc_pre <= LOW_BATTERY_CAPACITY_THRESHOLD) {
 				/* check again */
 				vbat_mv = bq27541_battery_voltage(di);
 				if (vbat_mv <= LOW_BATTERY_PROTECT_VOLTAGE
@@ -649,12 +634,9 @@ static int fg_soc_calibrate(struct  bq27541_device_info *di, int soc)
 					counter_temp = 0;
 			}
 
-			if (di->saltate_counter < counter_temp)
+			if (time_last < counter_temp)
 				return di->soc_pre;
-			else
-				di->saltate_counter = 0;
-		} else
-			di->saltate_counter = 0;
+		}
 
 		if (soc < di->soc_pre)
 			soc_calib = di->soc_pre - 1;
@@ -1463,11 +1445,10 @@ static int bq27541_battery_resume(struct i2c_client *client)
 
 static void bq27541_shutdown(struct i2c_client *client)
 {
-#ifdef READY
 	struct bq27541_device_info *di = i2c_get_clientdata(client);
+
 	if (di->soc_pre != DEFAULT_INVALID_SOC_PRE)
 		backup_soc_ex(di->soc_pre);
-#endif /* david@bsp mark temp */
 }
 
 static const struct of_device_id bq27541_match[] = {
