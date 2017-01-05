@@ -223,14 +223,8 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
         u8 ldata = level%4;
         u8 hdata = level/4;
 
-        if (level && (level <=7)){
-           led_pwm2[2] = 0;
-           led_pwm2[1] = 2;
-        }
-        else{
-            led_pwm2[2] = ldata;
-            led_pwm2[1] = hdata;
-        }
+        led_pwm2[2] = ldata;
+        led_pwm2[1] = hdata;
     }else //#endif VENDOR_EDIT
 	    led_pwm1[1] = (unsigned char)level;
 

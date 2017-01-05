@@ -1780,6 +1780,8 @@ void iris_init(struct mdss_dsi_ctrl_pdata *ctrl)
 		return;
 #ifdef READ_CMD_ENABLE
 	iris_proxy_check_reset(ctrl);
+#else
+    msleep(10);
 #endif
 #ifdef EFUSE_REWRITE
 	iris_mipirx_mode_set(ctrl, PWIL_CMD, DSI_LP_MODE);
