@@ -2244,11 +2244,11 @@ static int fg_psy_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CAPACITY:
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
-		if (chip->use_external_fg && external_fg
+		if(!get_extern_fg_regist_done())
+			pval->intval = get_prop_pre_shutdown_soc();
+		else if (chip->use_external_fg && external_fg
 				&& external_fg->get_battery_soc)
 			pval->intval = external_fg->get_battery_soc();
-		else if(get_extern_fg_regist_done() == false)
-			pval->intval = get_prop_pre_shutdown_soc();
 		else
 			pval->intval = 50;
 #else
@@ -2276,11 +2276,11 @@ static int fg_psy_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_TEMP:
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
-		if (chip->use_external_fg && external_fg
+		if (!get_extern_fg_regist_done())
+			pval->intval = DEFALUT_BATT_TEMP;
+		else if (chip->use_external_fg && external_fg
 				&& external_fg->get_average_current)
 			pval->intval = external_fg->get_battery_temperature();
-		else if (!get_extern_fg_regist_done())
-			pval->intval = DEFALUT_BATT_TEMP;
 		else
 			pval->intval = -400;
 #else
