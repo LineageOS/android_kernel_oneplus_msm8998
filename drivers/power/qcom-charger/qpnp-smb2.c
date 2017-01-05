@@ -2062,11 +2062,6 @@ static int smb2_probe(struct platform_device *pdev)
 		goto cleanup;
 	}
 
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20161117 Fix dash in power off charging mode */
-	schedule_delayed_work(&chg->re_kick_work,
-		msecs_to_jiffies(5000));
-#endif
 	smb2_create_debugfs(chip);
 
 	pr_info("QPNP SMB2 probed successfully\n");

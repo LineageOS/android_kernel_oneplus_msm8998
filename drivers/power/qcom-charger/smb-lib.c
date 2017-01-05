@@ -2670,10 +2670,10 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 	chg->vbus_present = vbus_rising;
 	if (last_vbus_present != chg->vbus_present) {
 		if (chg->vbus_present) {
-			pr_info("release chg_wake_lock\n");
+			pr_info("acquire chg_wake_lock\n");
 			wake_lock(&chg->chg_wake_lock);
 		} else {
-			pr_info("acquire chg_wake_lock\n");
+			pr_info("release chg_wake_lock\n");
 			wake_unlock(&chg->chg_wake_lock);
 		}
 	}
@@ -2939,7 +2939,7 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 
 	pr_info("apsd result=0x%x, name=%s, psy_type=%d\n",
 		apsd_result->bit, apsd_result->name, apsd_result->pst);
-	if (apsd_result->bit == OCP_CHARGER_BIT) {
+	if (apsd_result->bit != SDP_CHARGER_BIT) {
 		schedule_delayed_work(&chg->check_switch_dash_work,
 					msecs_to_jiffies(500));
 	}
@@ -3169,19 +3169,18 @@ irqreturn_t smblib_handle_usb_typec_change(int irq, void *data)
 		smblib_err(chg, "Couldn't read TYPE_C_STATUS_4 rc=%d\n", rc);
 		return IRQ_HANDLED;
 	}
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20161014 Add charging standard */
-	pr_info("TYPE_C_STATUS_4=0x%02x\n", stat4);
-#endif
-	smblib_dbg(chg, PR_REGISTER, "TYPE_C_STATUS_4 = 0x%02x\n", stat4);
-	debounce_done = (bool)(stat4 & TYPEC_DEBOUNCE_DONE_STATUS_BIT);
-	sink_attached = (bool)(stat4 & UFP_DFP_MODE_STATUS_BIT);
 
 	rc = smblib_read(chg, TYPE_C_STATUS_5_REG, &stat5);
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't read TYPE_C_STATUS_5 rc=%d\n", rc);
 		return IRQ_HANDLED;
 	}
+
+#ifdef VENDOR_EDIT
+	/* david.liu@bsp, 20161014 Add charging standard */
+	pr_info("TYPE_C_STATUS_4=0x%02x, TYPE_C_STATUS_5=0x%02x\n",
+			stat4, stat5);
+#endif
 
 	debounce_done = (bool)(stat4 & TYPEC_DEBOUNCE_DONE_STATUS_BIT);
 	sink_attached = (bool)(stat4 & UFP_DFP_MODE_STATUS_BIT);
@@ -3591,7 +3590,7 @@ static void op_re_kick_allowed_voltage(struct smb_charger  *chg)
 		return;
 
 	apsd_result = smblib_get_apsd_result(chg);
-	if (apsd_result->bit != OCP_CHARGER_BIT)
+	if (apsd_result->bit == SDP_CHARGER_BIT)
 		return;
 
 	pr_info("re-kick allowed voltage\n");
@@ -3625,7 +3624,7 @@ static void op_check_allow_switch_dash_work(struct work_struct *work)
 		return;
 
 	apsd_result = smblib_get_apsd_result(chg);
-	if (apsd_result->bit == OCP_CHARGER_BIT)
+	if (apsd_result->bit != SDP_CHARGER_BIT)
 		switch_fast_chg(chg);
 }
 
