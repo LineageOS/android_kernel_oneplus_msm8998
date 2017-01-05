@@ -188,7 +188,7 @@
 &pmi8998_haptics {
 	status = "okay";
 	qcom,wave-shape = "sine";
-	qcom,vmax-mv = <2400>;
+	qcom,vmax-mv = <2800>;
 };
 
 &spmi_bus {
