@@ -504,10 +504,18 @@ static struct wcd_mbhc_config wcd_mbhc_cfg = {
 	.mono_stero_detection = false,
 	.swap_gnd_mic = NULL,
 	.hs_ext_micbias = true,
+	#ifndef VENDOR_EDIT
+	/*zhiguang.su@MultiMedia.AudioDrv , 2017/1/3, config headset button*/
 	.key_code[0] = KEY_MEDIA,
 	.key_code[1] = KEY_VOICECOMMAND,
 	.key_code[2] = KEY_VOLUMEUP,
 	.key_code[3] = KEY_VOLUMEDOWN,
+	#else
+	.key_code[0] = KEY_MEDIA,
+	.key_code[1] = KEY_VOLUMEUP,
+	.key_code[2] = KEY_VOLUMEDOWN,
+	.key_code[3] = 0,
+	#endif
 	.key_code[4] = 0,
 	.key_code[5] = 0,
 	.key_code[6] = 0,
@@ -3541,11 +3549,18 @@ static void *def_tasha_mbhc_cal(void)
 	btn_cfg = WCD_MBHC_CAL_BTN_DET_PTR(tasha_wcd_cal);
 	btn_high = ((void *)&btn_cfg->_v_btn_low) +
 		(sizeof(btn_cfg->_v_btn_low[0]) * btn_cfg->num_btn);
-
+#ifndef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv , 2017/1/3, config headset button*/
 	btn_high[0] = 75;
 	btn_high[1] = 150;
 	btn_high[2] = 237;
 	btn_high[3] = 500;
+#else
+	btn_high[0] = 75;
+	btn_high[1] = 213;
+	btn_high[2] = 450;
+	btn_high[3] = 470;
+#endif
 	btn_high[4] = 500;
 	btn_high[5] = 500;
 	btn_high[6] = 500;
