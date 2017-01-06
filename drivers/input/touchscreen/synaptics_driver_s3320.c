@@ -1409,7 +1409,10 @@ void int_touch(void)
                     }
             }
 #endif
-
+		if (version_is_s3508 == 0){//for 15811 panel
+			points.x = 1079 - points.x;
+			points.y = 1919 - points.y;
+		}
 		if (finger_status) {
 			input_mt_slot(ts->input_dev, i);
 			input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, finger_status);
