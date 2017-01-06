@@ -43,6 +43,11 @@
 #ifdef VENDOR_EDIT
 /* Add by yangrujin@bsp, 2015/10/26, proc file for restart level */
 #include <linux/proc_fs.h>
+/* liochen@BSP, 2016/07/26, store crash record in PARAM */
+#include <linux/param_rw.h>
+#include <linux/timer.h>
+#include <linux/timex.h>
+#include <linux/rtc.h>
 #endif /* VENDOR_EDIT */
 
 #define DISABLE_SSR 0x9889deed
@@ -165,6 +170,9 @@ struct subsys_device {
 	struct wakeup_source ssr_wlock;
 	char wlname[64];
 	struct work_struct device_restart_work;
+	#ifdef VENDOR_EDIT
+	struct work_struct crash_record_work;
+	#endif
 	struct subsys_tracking track;
 
 	void *notify;
@@ -1178,6 +1186,92 @@ static void device_restart_work_hdlr(struct work_struct *work)
 	#endif
 }
 
+#ifdef VENDOR_EDIT
+/* liochen@BSP, 2016/07/26, store crash record in PARAM */
+#define KMSG_BUFSIZE 512
+#define MAX_RECORD_COUNT 16
+#define PARAM_CRASH_RECORD_SIZE 20
+
+struct crash_index_list {
+    const char *crash_log_name;
+    const char *crash_index;
+};
+
+static struct crash_index_list crash_index[] = {
+    { "modem",     "08"},
+    { "slpi",      "09"},
+    { "adsp",      "10"},
+    { "AR6320",    "11"},
+    { 0,            0 },
+};
+
+void check_crash_restart(struct work_struct *work)
+{
+    struct subsys_device *dev = container_of(work, struct subsys_device,
+                             crash_record_work);
+    const char *name = dev->desc->name;
+    char crash_time[19];
+    char param_value[21];
+    int split = 0, times = 0;
+    int rc = 0;
+    int i = 0;
+    int crash_record_count=0;
+    int is_find_key_word=0;
+
+    struct timespec64 tspec;
+    struct rtc_time tm;
+    extern struct timezone sys_tz;
+    uint32 param_crash_record_offset=0;
+
+    for (i=0; crash_index[i].crash_index; i++) {
+        if (!strcmp(name, crash_index[i].crash_log_name)) {
+
+            /* Clean param_value buffer*/
+            memset(param_value, 0, sizeof(param_value));
+
+            /* Get crash key word ID */
+            strcat(param_value, crash_index[i].crash_index);
+
+            __getnstimeofday64(&tspec);
+            if (sys_tz.tz_minuteswest < 0 || (tspec.tv_sec - sys_tz.tz_minuteswest*60) >= 0)
+                tspec.tv_sec -= sys_tz.tz_minuteswest * 60;
+            rtc_time_to_tm(tspec.tv_sec, &tm);
+            scnprintf(crash_time, sizeof(crash_time), "%02d%02d%02d_%02d:%02d:%02d",
+                tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+            strcat(param_value, crash_time);
+
+            /* If we find crash key word in kmesg, enable store crash record flag */
+            is_find_key_word = 1;
+        }
+    }
+
+    if(is_find_key_word) {
+
+        get_param_crash_record_count(&crash_record_count);
+
+        param_crash_record_offset = offsetof(param_crash_record_t, crash_record_0);
+        param_crash_record_offset = param_crash_record_offset + (crash_record_count * PARAM_CRASH_RECORD_SIZE);
+
+        pr_err("subsystem_restart: check_crash_restart: param_value = %s\n", param_value);
+
+        /* Write crash record to PARAM */
+        split = sizeof(param_value)/4;
+        for (times = 0; times < split; times++) {
+            rc = set_param_crash_record_value(param_crash_record_offset, &param_value[times*4], 4);
+            param_crash_record_offset = param_crash_record_offset + 4;
+        }
+
+        /* Counter+1 */
+        crash_record_count = crash_record_count + 1;
+        crash_record_count = crash_record_count % MAX_RECORD_COUNT;
+        set_param_crash_record_count(&crash_record_count);
+    }
+
+}
+#endif
+
+
 int subsystem_restart_dev(struct subsys_device *dev)
 {
 	const char *name;
@@ -1191,6 +1285,11 @@ int subsystem_restart_dev(struct subsys_device *dev)
 	}
 
 	name = dev->desc->name;
+
+	#ifdef VENDOR_EDIT
+	/* liochen@BSP, 2016/07/26, store crash record in PARAM */
+	schedule_work(&dev->crash_record_work);
+	#endif
 
 	/*
 	 * If a system reboot/shutdown is underway, ignore subsystem errors.
@@ -1811,6 +1910,9 @@ struct subsys_device *subsys_register(struct subsys_desc *desc)
 
 	snprintf(subsys->wlname, sizeof(subsys->wlname), "ssr(%s)", desc->name);
 	wakeup_source_init(&subsys->ssr_wlock, subsys->wlname);
+#ifdef VENDOR_EDIT
+	INIT_WORK(&subsys->crash_record_work, check_crash_restart);
+#endif
 	INIT_WORK(&subsys->work, subsystem_restart_wq_func);
 	INIT_WORK(&subsys->device_restart_work, device_restart_work_hdlr);
 	spin_lock_init(&subsys->track.s_lock);
