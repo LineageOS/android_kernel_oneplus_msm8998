@@ -484,6 +484,7 @@ int mdss_dsi_disp_vci_en(struct mdss_panel_data *pdata, int enable)
 			return rc;
 		}
         rc = gpio_direction_output(ctrl_pdata->disp_vci_en_gpio, 1);
+        usleep_range(8000, 8000);
 	} else {
 	    gpio_set_value(ctrl_pdata->disp_vci_en_gpio, 0);
 	    gpio_free(ctrl_pdata->disp_vci_en_gpio);
@@ -901,6 +902,130 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 	}
 }
 
+//#ifdef VENDOR_EDIT
+int mdss_dsi_panel_set_acl(struct mdss_dsi_ctrl_pdata *ctrl, int mode)
+{
+	struct dsi_panel_cmds *acl_cmds;
+
+	acl_cmds = &ctrl->acl_cmds;
+	if (acl_cmds->cmd_cnt){
+        acl_cmds->cmds[ctrl->acl_ncmds].payload[ctrl->acl_npayload] = mode;
+        mdss_dsi_panel_cmds_send(ctrl, acl_cmds, CMD_REQ_COMMIT);
+        pr_err("Set ACL Mode = %d\n", mode);
+	} else{
+        pr_err("This Panel does not support ACL");
+	}
+	return 0;
+}
+int mdss_dsi_panel_get_acl_mode(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+   return ctrl->acl_mode;
+}
+//#endif
+
+//#ifdef VENDOR_EDIT
+int mdss_dsi_panel_set_hbm_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+{
+	struct dsi_panel_cmds *hbm_on_cmds,*hbm_off_cmds;
+
+	hbm_on_cmds = &ctrl->hbm_on_cmds;
+	hbm_off_cmds = &ctrl->hbm_off_cmds;
+
+	if (hbm_on_cmds->cmd_cnt){
+        if (level){
+            mdss_dsi_panel_cmds_send(ctrl, hbm_on_cmds, CMD_REQ_COMMIT);
+            pr_err("HBM Mode ON\n");
+        }
+        else{
+            mdss_dsi_panel_cmds_send(ctrl, hbm_off_cmds, CMD_REQ_COMMIT);
+            pr_err("HBM Mode OFF\n");
+        }
+	} else{
+        pr_err("This Panel does not support HBM Mode");
+	}
+	return 0;
+}
+
+int mdss_dsi_panel_get_hbm_mode(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+    return ctrl->hbm_mode;
+}
+//#endif
+//#ifdef VENDOR_EDIT
+int mdss_dsi_panel_set_srgb_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+{
+	struct dsi_panel_cmds *srgb_on_cmds,*srgb_off_cmds;
+
+	srgb_on_cmds = &ctrl->srgb_on_cmds;
+	srgb_off_cmds = &ctrl->srgb_off_cmds;
+    if (srgb_on_cmds->cmd_cnt){
+        if (level){
+            mdss_dsi_panel_cmds_send(ctrl, srgb_on_cmds, CMD_REQ_COMMIT);
+            pr_err("sRGB Mode On.\n");
+        } else{
+            mdss_dsi_panel_cmds_send(ctrl, srgb_off_cmds, CMD_REQ_COMMIT);
+            pr_err("sRGB Mode off.\n");
+        }
+    } else{
+        pr_err("This Panel does not support sRGB mode");
+    }
+	return 0;
+}
+int mdss_dsi_panel_get_srgb_mode(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+   return ctrl->SRGB_mode;
+}
+//#endif
+//#ifdef VENDOR_EDIT
+int mdss_dsi_panel_set_adobe_rgb_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+{
+	struct dsi_panel_cmds *adobe_rgb_on_cmds,*adobe_rgb_off_cmds;
+
+	adobe_rgb_on_cmds = &ctrl->Adobe_RGB_on_cmds;
+	adobe_rgb_off_cmds = &ctrl->Adobe_RGB_off_cmds;
+	if (adobe_rgb_on_cmds->cmd_cnt){
+        if (level){
+            mdss_dsi_panel_cmds_send(ctrl, adobe_rgb_on_cmds, CMD_REQ_COMMIT);
+            pr_err("Adobe RGB Mode On.\n");
+        } else{
+            mdss_dsi_panel_cmds_send(ctrl, adobe_rgb_off_cmds, CMD_REQ_COMMIT);
+            pr_err("Adobe RGB Mode off.\n");
+        }
+    } else{
+        pr_err("This Panel does not support Adobe RGB mode");
+	}
+	return 0;
+}
+int mdss_dsi_panel_get_adobe_rgb_mode(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+   return ctrl->Adobe_RGB_mode;
+}
+//#endif
+//#ifdef VENDOR_EDIT
+int mdss_dsi_panel_set_dci_p3_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+{
+	struct dsi_panel_cmds *dci_p3_on_cmds,*dci_p3_off_cmds;
+
+	dci_p3_on_cmds = &ctrl->dci_p3_on_cmds;
+	dci_p3_off_cmds = &ctrl->dci_p3_off_cmds;
+	if (dci_p3_on_cmds->cmd_cnt){
+        if (level){
+            mdss_dsi_panel_cmds_send(ctrl, dci_p3_on_cmds, CMD_REQ_COMMIT);
+            pr_err("DCI P3 Mode On.\n");
+        }else{
+            mdss_dsi_panel_cmds_send(ctrl, dci_p3_off_cmds, CMD_REQ_COMMIT);
+            pr_err("DCI P3 Mode off.\n");
+        }
+    } else{
+        pr_err("This Panel does not support DCI-P3 mode");
+	}
+	return 0;
+}
+int mdss_dsi_panel_get_dci_p3_mode(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+   return ctrl->dci_p3_mode;
+}
+//#endif
 static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl = NULL;
@@ -940,6 +1065,27 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	}else//#endif VENDOR_EDIT
 	if (on_cmds->cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, on_cmds, CMD_REQ_COMMIT);
+
+//#ifdef VENDOR_EDIT
+	if (mdss_dsi_panel_get_acl_mode(ctrl)){
+		mdss_dsi_panel_set_acl(ctrl, mdss_dsi_panel_get_acl_mode(ctrl));
+	}
+//#endif
+//#ifdef VENDOR_EDIT
+    if (mdss_dsi_panel_get_srgb_mode(ctrl)){
+        mdss_dsi_panel_set_srgb_mode(ctrl, mdss_dsi_panel_get_srgb_mode(ctrl));
+    }
+//#endif
+//#ifdef VENDOR_EDIT
+    if (mdss_dsi_panel_get_adobe_rgb_mode(ctrl)){
+        mdss_dsi_panel_set_adobe_rgb_mode(ctrl, mdss_dsi_panel_get_adobe_rgb_mode(ctrl));
+    }
+//#endif
+//#ifdef VENDOR_EDIT
+    if (mdss_dsi_panel_get_dci_p3_mode(ctrl)){
+        mdss_dsi_panel_set_dci_p3_mode(ctrl, mdss_dsi_panel_get_dci_p3_mode(ctrl));
+    }
+//#endif
 
 	if (pinfo->compression_mode == COMPRESSION_DSC)
 		mdss_dsi_panel_dsc_pps_send(ctrl, pinfo);
@@ -2820,6 +2966,47 @@ static int mdss_panel_parse_dt(struct device_node *np,
         iris_init_params_parse(np, ctrl_pdata);
         iris_init_cmd_setup(ctrl_pdata);
 	}
+//#endif
+//#ifdef VENDOR_EDIT
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->acl_cmds,
+		"qcom,mdss-dsi-panel-acl-command",
+		"qcom,mdss-dsi-acl-command-state");
+	rc = of_property_read_u32(np, "qcom,mdss-dsi-acl-ncmds", &tmp);
+	ctrl_pdata->acl_ncmds = (!rc ? tmp : 0);
+	rc = of_property_read_u32(np, "qcom,mdss-dsi-acl-npayload", &tmp);
+	ctrl_pdata->acl_npayload = (!rc ? tmp : 0);
+//#endif
+//#ifdef VENDOR_EDIT
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->hbm_on_cmds,
+		"qcom,mdss-dsi-panel-hbm-on-command",
+		"qcom,mdss-dsi-hbm-command-state");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->hbm_off_cmds,
+		"qcom,mdss-dsi-panel-hbm-off-command",
+		"qcom,mdss-dsi-hbm-command-state");
+//#endif
+//#ifdef VENDOR_EDIT
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->srgb_on_cmds,
+		"qcom,mdss-dsi-panel-srgb-on-command",
+		"qcom,mdss-dsi-srgb-command-state");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->srgb_off_cmds,
+		"qcom,mdss-dsi-panel-srgb-off-command",
+		"qcom,mdss-dsi-srgb-command-state");
+//#endif
+//#ifdef VENDOR_EDIT
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->Adobe_RGB_on_cmds,
+		"qcom,mdss-dsi-panel-Adobe-rgb-on-command",
+		"qcom,mdss-dsi-Adobe-rgb-command-state");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->Adobe_RGB_off_cmds,
+		"qcom,mdss-dsi-panel-Adobe-rgb-off-command",
+		"qcom,mdss-dsi-Adobe-rgb-command-state");
+//#endif
+//#ifdef VENDOR_EDIT
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->dci_p3_on_cmds,
+		"qcom,mdss-dsi-panel-dci-p3-on-command",
+		"qcom,mdss-dsi-dci-p3-command-state");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->dci_p3_off_cmds,
+		"qcom,mdss-dsi-panel-dci-p3-off-command",
+		"qcom,mdss-dsi-dci-p3-command-state");
 //#endif
 
 	if (pinfo->is_dba_panel) {
