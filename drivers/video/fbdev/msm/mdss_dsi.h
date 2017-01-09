@@ -564,6 +564,35 @@ struct mdss_dsi_ctrl_pdata {
 
 	struct dsi_err_container err_cont;
 //#ifdef VENDOR_EDIT
+	int acl_mode;
+	struct dsi_panel_cmds acl_cmds;
+	int acl_ncmds;
+	int acl_npayload;
+//#endif
+//#ifdef VENDOR_EDIT
+	struct dsi_panel_cmds hbm_on_cmds;
+	struct dsi_panel_cmds hbm_off_cmds;
+	int  hbm_mode;
+//#endif
+//#ifdef VENDOR_EDIT
+	int SRGB_mode;
+	//int SRGB_first_on;
+	struct dsi_panel_cmds srgb_on_cmds;
+	struct dsi_panel_cmds srgb_off_cmds;
+//#endif
+//#ifdef VENDOR_EDIT
+	int Adobe_RGB_mode;
+	//int Adobe_RGB_first_on;
+	struct dsi_panel_cmds Adobe_RGB_on_cmds;
+	struct dsi_panel_cmds Adobe_RGB_off_cmds;
+//#endif
+//#ifdef VENDOR_EDIT
+	int dci_p3_mode;
+	//int dci_p3_first_on;
+	struct dsi_panel_cmds dci_p3_on_cmds;
+	struct dsi_panel_cmds dci_p3_off_cmds;
+//#endif
+//#ifdef VENDOR_EDIT
 	int disp_vci_en_gpio;
 	struct delayed_work techeck_work;
 	struct completion te_comp;
@@ -712,6 +741,26 @@ void mdss_dsi_set_reg(struct mdss_dsi_ctrl_pdata *ctrl, int off,
 int mdss_dsi_px_clk_req(struct mdss_panel_data *pdata, int enable);
 int mdss_dsi_disp_vci_en(struct mdss_panel_data *pdata, int enable);
 int mdss_dsi_px_1v1_en(struct mdss_panel_data *pdata, int enable);
+//#endif
+//#ifdef VENDOR_EDIT
+int mdss_dsi_panel_set_acl(struct mdss_dsi_ctrl_pdata *ctrl, int mode);
+int mdss_dsi_panel_get_acl_mode(struct mdss_dsi_ctrl_pdata *ctrl);
+//#endif
+//#ifdef VENDOR_EDIT
+int mdss_dsi_panel_set_hbm_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level);
+int mdss_dsi_panel_get_hbm_mode(struct mdss_dsi_ctrl_pdata *ctrl);
+//#endif
+//#ifdef VENDOR_EDIT
+int mdss_dsi_panel_set_srgb_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level);
+int mdss_dsi_panel_get_srgb_mode(struct mdss_dsi_ctrl_pdata *ctrl);
+//#endif
+//#ifdef VENDOR_EDIT
+int mdss_dsi_panel_set_adobe_rgb_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level);
+int mdss_dsi_panel_get_adobe_rgb_mode(struct mdss_dsi_ctrl_pdata *ctrl);
+//#endif
+//#ifdef VENDOR_EDIT
+int mdss_dsi_panel_set_dci_p3_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level);
+int mdss_dsi_panel_get_dci_p3_mode(struct mdss_dsi_ctrl_pdata *ctrl);
 //#endif
 static inline const char *__mdss_dsi_pm_name(enum dsi_pm_type module)
 {

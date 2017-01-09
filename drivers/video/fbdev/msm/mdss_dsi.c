@@ -1456,9 +1456,6 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 	 * data lanes for LP11 init
 	 */
 	if (mipi->lp11_init) {
-	//#ifdef VENDOR_EDIT
-        usleep_range(5000, 5000);
-	//#endif
 		if (mdss_dsi_pinctrl_set_state(ctrl_pdata, true))
 			pr_debug("reset enable: pinctrl not enabled\n");
 		mdss_dsi_panel_reset(pdata, 1);
@@ -2702,6 +2699,52 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 					&ctrl_pdata->dba_work, HZ);
 		}
 		break;
+    //#ifdef VENDOR_EDIT
+	case MDSS_EVENT_PANEL_SET_ACL:
+		ctrl_pdata->acl_mode = (int)(unsigned long) arg;
+		mdss_dsi_panel_set_acl(ctrl_pdata, (int)(unsigned long) ctrl_pdata->acl_mode);
+		break;
+	case MDSS_EVENT_PANEL_GET_ACL:
+		rc = ctrl_pdata->acl_mode;
+		break;
+	//#endif
+    //#ifdef VENDOR_EDIT
+	case MDSS_EVENT_PANEL_SET_HBM_MODE:
+		ctrl_pdata->hbm_mode = (int)(unsigned long) arg;
+		mdss_dsi_panel_set_hbm_mode(ctrl_pdata, (int)(unsigned long) ctrl_pdata->hbm_mode);
+		break;
+	case MDSS_EVENT_PANEL_GET_HBM_MODE:
+		rc = mdss_dsi_panel_get_hbm_mode(ctrl_pdata);
+		break;
+	//#endif
+    //#ifdef VENDOR_EDIT
+	case MDSS_EVENT_PANEL_SET_SRGB_MODE:
+		ctrl_pdata->SRGB_mode= (int)(unsigned long) arg;
+		mdss_dsi_panel_set_srgb_mode(ctrl_pdata, (int)(unsigned long) ctrl_pdata->SRGB_mode);
+		break;
+	case MDSS_EVENT_PANEL_GET_SRGB_MODE:
+		rc = mdss_dsi_panel_get_srgb_mode(ctrl_pdata);
+		break;
+	//#endif
+    //#ifdef VENDOR_EDIT
+	case MDSS_EVENT_PANEL_SET_ADOBE_RGB_MODE:
+		ctrl_pdata->Adobe_RGB_mode= (int)(unsigned long) arg;
+		mdss_dsi_panel_set_adobe_rgb_mode(ctrl_pdata,(int)(unsigned long) ctrl_pdata->Adobe_RGB_mode);
+		break;
+	case MDSS_EVENT_PANEL_GET_ADOBE_RGB_MODE:
+		rc = mdss_dsi_panel_get_adobe_rgb_mode(ctrl_pdata);
+		break;
+	//#endif
+    //#ifdef VENDOR_EDIT
+	case MDSS_EVENT_PANEL_SET_DCI_P3_MODE:
+		ctrl_pdata->dci_p3_mode= (int)(unsigned long) arg;
+		mdss_dsi_panel_set_dci_p3_mode(ctrl_pdata,(int)(unsigned long) ctrl_pdata->dci_p3_mode);
+		break;
+	case MDSS_EVENT_PANEL_GET_DCI_P3_MODE:
+		rc = mdss_dsi_panel_get_dci_p3_mode(ctrl_pdata);
+		break;
+	//#endif
+
 	default:
 		pr_debug("%s: unhandled event=%d\n", __func__, event);
 		break;

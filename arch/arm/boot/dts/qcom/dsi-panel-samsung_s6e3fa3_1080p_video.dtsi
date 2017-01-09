@@ -57,6 +57,7 @@
 		15 01 00 00 00 00 02 C0 32
 		15 01 00 00 00 00 02 F7 03
 		39 01 00 00 00 00 03 F0 A5 A5
+		39 01 00 00 00 00 03 FC A5 A5
 		15 01 00 00 00 00 02 53 20
 		15 01 00 00 64 00 02 51 00
 		39 01 00 00 00 00 02 57 40
@@ -107,6 +108,7 @@
 		/*qcom,mdss-dsi-panel-inverted;*/
 		qcom,mdss-pan-physical-width-dimension = <68>;
 		qcom,mdss-pan-physical-height-dimension = <122>;
+		qcom,mdss-dsi-panel-orientation = "180";
 		qcom,mdss-dsi-high-brightness-panel;
 	};
 };
