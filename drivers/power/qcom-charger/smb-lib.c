@@ -2643,7 +2643,7 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161014 Add charging standard */
 	bool last_vbus_present;
-
+	int is_usb_supend;
 	last_vbus_present = chg->vbus_present;
 #endif
 	rc = smblib_read(chg, USBIN_BASE + INT_RT_STS_OFFSET, &stat);
@@ -2674,6 +2674,10 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 		if (chg->vbus_present) {
 			pr_info("acquire chg_wake_lock\n");
 			wake_lock(&chg->chg_wake_lock);
+			smblib_get_usb_suspend(chg,&is_usb_supend);
+			if(is_usb_supend)
+				vote(chg->usb_suspend_votable,
+						BOOST_BACK_VOTER, false, 0);
 		} else {
 			pr_info("release chg_wake_lock\n");
 			wake_unlock(&chg->chg_wake_lock);
