@@ -920,7 +920,9 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 
 	return 0;
 }
-
+#ifdef VENDOR_EDIT
+int smblib_set_prop_charge_parameter_set(struct smb_charger *chg);
+#endif
 static int smb2_batt_set_prop(struct power_supply *psy,
 		enum power_supply_property prop,
 		const union power_supply_propval *val)
@@ -957,6 +959,9 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_CHG_PROTECT_STATUS:
 		rc = smblib_set_prop_chg_protect_status(chg, val);
+		break;
+	case POWER_SUPPLY_PROP_NOTIFY_CHARGER_SET_PARAMETER:
+		rc = smblib_set_prop_charge_parameter_set(chg);
 		break;
 #endif
 	case POWER_SUPPLY_PROP_CAPACITY:
@@ -1253,10 +1258,8 @@ static int smb2_init_hw(struct smb2 *chip)
 
 	if (chip->dt.no_battery)
 		chg->fake_capacity = 50;
-
 	if (chip->dt.fcc_ua < 0)
 		smblib_get_charge_param(chg, &chg->param.fcc, &chip->dt.fcc_ua);
-
 	if (chip->dt.fv_uv < 0)
 		smblib_get_charge_param(chg, &chg->param.fv, &chip->dt.fv_uv);
 
