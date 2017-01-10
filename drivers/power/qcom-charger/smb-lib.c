@@ -3364,14 +3364,16 @@ static bool is_usb_present(struct smb_charger *chg)
 	int rc = 0;
 	u8 stat;
 
-	rc = smblib_read(chg, TYPE_C_STATUS_4_REG, &stat);
+//	rc = smblib_read(chg, TYPE_C_STATUS_4_REG, &stat);
+	rc = smblib_read(chg, USBIN_BASE + INT_RT_STS_OFFSET, &stat);
 	if (rc < 0) {
 		pr_err("Couldn't read TYPE_C_STATUS_4 rc=%d\n", rc);
 		return rc;
 	}
 	pr_debug("TYPE_C_STATUS_4 = 0x%02x\n", stat);
 
-	return (bool)(stat & CC_ATTACHED_BIT);
+//	return (bool)(stat & CC_ATTACHED_BIT);
+	return (bool)(stat & USBIN_PLUGIN_RT_STS_BIT);
 }
 
 static bool op_get_fast_low_temp_full(struct smb_charger *chg)
