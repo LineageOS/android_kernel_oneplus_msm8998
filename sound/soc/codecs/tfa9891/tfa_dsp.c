@@ -105,6 +105,20 @@ int print_calibration_modify(Tfa98xx_handle_t handle, char *str, size_t size)
 }
 #endif
 
+/*
+* set OTC
+*/
+enum Tfa98xx_Error tfa98xxSetCalibrateOnce(Tfa98xx_handle_t handle)
+{
+    enum Tfa98xx_Error err = Tfa98xx_Error_Ok;
+    //unsigned short mtp = 0;
+
+    printk("%s\n",__func__);
+    err = tfa98xx_set_mtp(handle, 1<<TFA98XX_KEY2_PROTECTED_MTP0_MTPOTC_POS, 1<<TFA98XX_KEY2_PROTECTED_MTP0_MTPOTC_POS);
+
+    return err;
+}
+
 int tfa_get_calibration_info(Tfa98xx_handle_t handle, int channel) {
 		return handles_local[handle].mohm[channel];
 }
@@ -2518,7 +2532,7 @@ enum Tfa98xx_Error tfaRunSpeakerStartup(Tfa98xx_handle_t handle, int force, int 
 			return err;
 	}
 	// DSP is running now
-	//
+	tfa98xxSetCalibrateOnce(handle);
 	// NOTE that ACS may be active
 	//  no DSP reset/sample rate may be done until configured (SBSL)
 	// For the first configuration the DSP expects at least
