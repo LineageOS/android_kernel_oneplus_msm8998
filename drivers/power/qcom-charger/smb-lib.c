@@ -3630,7 +3630,7 @@ static void op_check_allow_switch_dash_work(struct work_struct *work)
 		return;
 
 	apsd_result = smblib_get_apsd_result(chg);
-	if ((apsd_result->bit != SDP_CHARGER_BIT) && apsd_result->bit)
+	if ((apsd_result->bit != SDP_CHARGER_BIT && apsd_result->bit != CDP_CHARGER_BIT) && apsd_result->bit)
 		switch_fast_chg(chg);
 }
 
