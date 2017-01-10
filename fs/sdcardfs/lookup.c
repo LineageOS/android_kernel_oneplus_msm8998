@@ -237,9 +237,16 @@ static struct dentry *__sdcardfs_lookup(struct dentry *dentry,
 	lower_dir_dentry = lower_parent_path->dentry;
 	lower_dir_mnt = lower_parent_path->mnt;
 
+	#ifdef VENDOR_EDIT
+	/* liochen@filesystem, 2016/11/01, Add LOOKUP_CASE_INSENSITIVE flag */
+	err = vfs_path_lookup(lower_dir_dentry, lower_dir_mnt, name, LOOKUP_CASE_INSENSITIVE,
+                                &lower_path);
+	#else
 	/* Use vfs_path_lookup to check if the dentry exists or not */
 	err = vfs_path_lookup(lower_dir_dentry, lower_dir_mnt, name, 0,
 				&lower_path);
+	#endif
+
 	/* check for other cases */
 	if (err == -ENOENT) {
 		struct dentry *child;
