@@ -1552,6 +1552,10 @@ int device_offline(struct device *dev)
 
 	device_lock(dev);
 	if (device_supports_offline(dev)) {
+#ifdef VENDOR_EDIT
+		if (dev->bus->offline_clash && dev->bus->offline_clash(dev))
+			dev->offline = false;
+#endif
 		if (dev->offline) {
 			ret = 1;
 		} else {
@@ -1583,6 +1587,10 @@ int device_online(struct device *dev)
 
 	device_lock(dev);
 	if (device_supports_offline(dev)) {
+#ifdef VENDOR_EDIT
+		if (dev->bus->offline_clash && dev->bus->offline_clash(dev))
+			dev->offline = true;
+#endif
 		if (dev->offline) {
 			ret = dev->bus->online(dev);
 			if (!ret) {
