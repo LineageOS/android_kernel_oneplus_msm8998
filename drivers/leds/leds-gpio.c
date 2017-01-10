@@ -21,7 +21,9 @@
 #include <linux/property.h>
 #include <linux/slab.h>
 #include <linux/workqueue.h>
-
+#ifdef VENDOR_EDIT/*taokai 2017-01-10 add for button-backlight Voltage regulation*/
+#include <linux/regulator/consumer.h>
+#endif
 struct gpio_led_data {
 	struct led_classdev cdev;
 	struct gpio_desc *gpiod;
@@ -31,6 +33,11 @@ struct gpio_led_data {
 	u8 blinking;
 	int (*platform_gpio_blink_set)(struct gpio_desc *desc, int state,
 			unsigned long *delay_on, unsigned long *delay_off);
+	#ifdef VENDOR_EDIT/*taokai 2017-01-10 add for button-backlight Voltage regulation*/
+	struct regulator *vdd;
+	int vmin_high;
+	int vmin_low;
+	#endif
 };
 
 static void gpio_led_work(struct work_struct *work)
@@ -57,6 +64,12 @@ static void gpio_led_set(struct led_classdev *led_cdev,
 		level = 0;
 	else
 		level = 1;
+
+	#ifdef VENDOR_EDIT/*taokai 2017-01-10 add for button-backlight Voltage regulation*/
+	if(led_dat->vdd){
+		regulator_set_voltage(led_dat->vdd, level?led_dat->vmin_high:led_dat->vmin_low,INT_MAX);
+	}
+	#endif
 
 	/* Setting GPIOs with I2C/etc requires a task context, and we don't
 	 * seem to have a reliable way to know if we're already in one; so
@@ -92,7 +105,9 @@ static int create_gpio_led(const struct gpio_led *template,
 			 unsigned long *))
 {
 	int ret, state;
-
+	#ifdef VENDOR_EDIT/*taokai 2017-01-10 add for button-backlight Voltage regulation*/
+	const __be32 *min_uV, *max_uV;
+	#endif
 	led_dat->gpiod = template->gpiod;
 	if (!led_dat->gpiod) {
 		/*
@@ -126,6 +141,17 @@ static int create_gpio_led(const struct gpio_led *template,
 	led_dat->cdev.default_trigger = template->default_trigger;
 	led_dat->can_sleep = gpiod_cansleep(led_dat->gpiod);
 	led_dat->blinking = 0;
+
+	#ifdef VENDOR_EDIT/*taokai 2017-01-10 add for button-backlight Voltage regulation*/
+	led_dat->vdd = regulator_get(parent, "vdd");
+	min_uV = of_get_property(parent->of_node, "keypad-led-vbob-min", NULL);
+	max_uV = of_get_property(parent->of_node, "keypad-led-vbob-max", NULL);
+	if (!IS_ERR(led_dat->vdd)) {
+		led_dat->vmin_low = be32_to_cpu(*min_uV);;
+		led_dat->vmin_high = be32_to_cpu(*max_uV);;
+	}
+	#endif
+
 	if (blink_set) {
 		led_dat->platform_gpio_blink_set = blink_set;
 		led_dat->cdev.blink_set = gpio_blink_set;

@@ -198,6 +198,9 @@
 		gpio-leds {
 			compatible = "gpio-leds";
 			status = "okay";
+			vdd-supply = <&pmi8998_bob>;
+			keypad-led-vbob-min = <3312000>;
+			keypad-led-vbob-max = <3600000>;
 			keypad-backlight {
 				gpios = <&pmi8998_gpios 5 0>; //here maybe pm8998_gpios, depends on what you use.
 				label = "button-backlight";
