@@ -989,10 +989,7 @@ static int __configure_pipe_params(struct msm_fb_data_type *mfd,
 {
 	int ret = 0;
 	u32 left_lm_w = left_lm_w_from_mfd(mfd);
-	u32 right_lm_w = right_lm_w_from_mfd(mfd);
-	u32 total_lm_w = left_lm_w + right_lm_w;
 	u64 flags;
-	u32 layer_dst_x = 0;
 
 	struct mdss_mdp_mixer *mixer = NULL;
 	struct mdss_overlay_private *mdp5_data = mfd_to_mdp5_data(mfd);
@@ -1118,21 +1115,15 @@ static int __configure_pipe_params(struct msm_fb_data_type *mfd,
 			pipe->is_right_blend = false;
 		}
 
-		layer_dst_x = layer->dst_rect.x;
-		/* Re-calculate the dst x for panel HFLIP cases. */
-		if (mfd->panel_orientation & MDP_FLIP_LR)
-			layer_dst_x = total_lm_w - (layer->dst_rect.x +
-					layer->dst_rect.w);
-
 		if (is_split_lm(mfd) && __layer_needs_src_split(layer)) {
 			pipe->src_split_req = true;
 		} else if ((mixer_mux == MDSS_MDP_MIXER_MUX_LEFT) &&
-		    ((layer_dst_x + layer->dst_rect.w) > mixer->width)) {
-			if (layer_dst_x >= mixer->width) {
+		    ((layer->dst_rect.x + layer->dst_rect.w) > mixer->width)) {
+			if (layer->dst_rect.x >= mixer->width) {
 				pr_err("%pS: err dst_x can't lie in right half",
 					__builtin_return_address(0));
 				pr_cont(" flags:0x%x dst x:%d w:%d lm_w:%d\n",
-					layer->flags, layer_dst_x,
+					layer->flags, layer->dst_rect.x,
 					layer->dst_rect.w, mixer->width);
 				ret = -EINVAL;
 				goto end;
@@ -1151,13 +1142,6 @@ static int __configure_pipe_params(struct msm_fb_data_type *mfd,
 
 	pipe->multirect.mode = vinfo->multirect.mode;
 	pipe->mixer_stage = layer->z_order;
-
-	if (mfd->panel_orientation & MDP_FLIP_LR)
-		pipe->dst.x = total_lm_w - pipe->dst.x -
-				pipe->dst.w;
-	if (mfd->panel_orientation & MDP_FLIP_UD)
-		pipe->dst.y = pipe->mixer_left->height - pipe->dst.y -
-			pipe->dst.h;
 
 	memcpy(&pipe->layer, layer, sizeof(struct mdp_input_layer));
 
@@ -2152,9 +2136,7 @@ static int __validate_layers(struct msm_fb_data_type *mfd,
 	u32 left_lm_layers = 0, right_lm_layers = 0;
 	u32 left_cnt = 0, right_cnt = 0;
 	u32 left_lm_w = left_lm_w_from_mfd(mfd);
-	u32 right_lm_w = right_lm_w_from_mfd(mfd);
-	u32 total_lm_w = left_lm_w + right_lm_w;
-	u32 mixer_mux, curr_layer_dst_x, orig_dst_x;
+	u32 mixer_mux, dst_x;
 	int layer_count = commit->input_layer_cnt;
 	u32 ds_mode = 0;
 
@@ -2240,19 +2222,8 @@ static int __validate_layers(struct msm_fb_data_type *mfd,
 		enum layer_zorder_used z = LAYER_ZORDER_NONE;
 
 		layer = &layer_list[i];
-		orig_dst_x = curr_layer_dst_x = layer->dst_rect.x;
+		dst_x = layer->dst_rect.x;
 		left_blend_pipe = NULL;
-
-		/*
-		 * If the panel orientation has HFLIP, the actual dst_x
-		 * coordinate which should be programmed to HW,
-		 * would be Panel_Width - dst_x - dst_w.
-		 * For the layer validations, use the actual dst_x which
-		 * should be programmed to HW finally.
-		 */
-		if (mfd->panel_orientation & MDP_LAYER_FLIP_LR)
-			curr_layer_dst_x = total_lm_w - layer->dst_rect.x -
-				layer->dst_rect.w;
 
 		prev_layer = (i > 0) ? &layer_list[i - 1] : NULL;
 		/*
@@ -2271,7 +2242,6 @@ static int __validate_layers(struct msm_fb_data_type *mfd,
 		if (prev_layer && (prev_layer->z_order == layer->z_order)) {
 			struct mdp_rect *left = &prev_layer->dst_rect;
 			struct mdp_rect *right = &layer->dst_rect;
-			u32 left_layer_dst_x = 0;
 
 			if ((layer->flags & MDP_LAYER_ASYNC)
 				|| (prev_layer->flags & MDP_LAYER_ASYNC)) {
@@ -2282,21 +2252,11 @@ static int __validate_layers(struct msm_fb_data_type *mfd,
 			}
 
 			/*
-			 * If the panel orientation has HFLIP, the actual dst_x
-			 * coordinate should be Panel Width - dst_x - dst_w.
-			 * Re-calculate the actual dst_x for the previous layer
-			 * for panel HFLIP cases.
-			 */
-			if (mfd->panel_orientation & MDP_LAYER_FLIP_LR)
-				left_layer_dst_x = total_lm_w -
-				prev_layer->dst_rect.x - prev_layer->dst_rect.w;
-
-			/*
 			 * check if layer is right blend by checking it's
 			 * directly to the right.
 			 */
-			if (((left_layer_dst_x + left->w) == curr_layer_dst_x)
-			    && (left->y == right->y) && (left->h == right->h))
+			if (((left->x + left->w) == right->x) &&
+			    (left->y == right->y) && (left->h == right->h))
 				left_blend_pipe = pipe;
 
 			/*
@@ -2305,15 +2265,15 @@ static int __validate_layers(struct msm_fb_data_type *mfd,
 			 * required as it will lie only on the left mixer
 			 */
 			if (!__layer_needs_src_split(prev_layer) &&
-			    ((left_layer_dst_x + left->w) == left_lm_w))
+			    ((left->x + left->w) == left_lm_w))
 				left_blend_pipe = NULL;
 		}
 
 		if (!is_split_lm(mfd) || __layer_needs_src_split(layer))
 			z = LAYER_ZORDER_BOTH;
-		else if (curr_layer_dst_x >= left_lm_w)
+		else if (dst_x >= left_lm_w)
 			z = LAYER_ZORDER_RIGHT;
-		else if ((curr_layer_dst_x + layer->dst_rect.w) <= left_lm_w)
+		else if ((dst_x + layer->dst_rect.w) <= left_lm_w)
 			z = LAYER_ZORDER_LEFT;
 		else
 			z = LAYER_ZORDER_BOTH;
@@ -2329,7 +2289,7 @@ static int __validate_layers(struct msm_fb_data_type *mfd,
 			zorder_used[layer->z_order] |= z;
 		}
 
-		if ((curr_layer_dst_x < left_lm_w) ||
+		if ((layer->dst_rect.x < left_lm_w) ||
 				__layer_needs_src_split(layer)) {
 			is_single_layer = (left_lm_layers == 1);
 			mixer_mux = MDSS_MDP_MIXER_MUX_LEFT;
@@ -2437,7 +2397,7 @@ static int __validate_layers(struct msm_fb_data_type *mfd,
 		mdss_mdp_pipe_unmap(pipe);
 
 		/* keep the original copy of dst_x */
-		pipe->layer.dst_rect.x = layer->dst_rect.x = orig_dst_x;
+		pipe->layer.dst_rect.x = layer->dst_rect.x = dst_x;
 
 		if (mixer_mux == MDSS_MDP_MIXER_MUX_RIGHT)
 			right_plist[right_cnt++] = pipe;
