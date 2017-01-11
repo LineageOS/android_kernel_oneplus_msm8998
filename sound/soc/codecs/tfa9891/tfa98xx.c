@@ -98,6 +98,9 @@ static int no_start = 0;
 module_param(no_start, int, S_IRUGO);
 MODULE_PARM_DESC(no_start, "do not start the work queue; for debugging via user\n");
 
+struct tfa98xx *g_tfa98xx = NULL;
+EXPORT_SYMBOL_GPL(g_tfa98xx);
+
 static void tfa98xx_tapdet_check_update(struct tfa98xx *tfa98xx);
 static void tfa98xx_interrupt_restore(struct tfa98xx *tfa98xx);
 static int tfa98xx_get_fssel(unsigned int rate);
@@ -125,6 +128,105 @@ static struct tfa98xx_rate rate_to_fssel[] = {
 	{ 44100, 7 },
 	{ 48000, 8 },
 };
+
+static ssize_t tfa98xx_state_store(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+    pr_err("%s",__func__);
+
+	return 0;
+}
+static ssize_t tfa98xx_state_show(struct device *dev, struct device_attribute *attr,
+		char *buf)
+{
+    struct snd_soc_codec *codec;
+    struct tfa98xx *tfa98xx;
+    char *str;
+	uint16_t status;
+	int ret, calibrate_done;
+#ifdef VENDOR_EDIT
+/*wangdongdong@MultiMediaService,2016/11/30,add for speaker impedence detection*/
+	unsigned int speakerImpedance1 = 0;
+#endif
+    if(g_tfa98xx == NULL)
+    {
+        pr_err("%s g_tfa98xx = NULL\n",__func__);
+        return 0;
+    }
+
+    tfa98xx = g_tfa98xx;
+    codec = tfa98xx->codec;
+
+	mutex_lock(&tfa98xx->dsp_lock);
+	ret = tfa98xx_open(tfa98xx->handle);
+	if (ret) {
+		mutex_unlock(&tfa98xx->dsp_lock);
+		return -EBUSY;
+	}
+
+	/* Need to ensure DSP is access-able, use mtp read access for this
+	 * purpose
+	 */
+	ret = tfa98xx_get_mtp(tfa98xx->handle, &status);
+	if (ret) {
+		ret = -EIO;
+		goto r_c_err;
+	}
+
+	ret = tfaRunWaitCalibration(tfa98xx->handle, &calibrate_done);
+	if (ret) {
+		ret = -EIO;
+		goto r_c_err;
+	}
+
+	str = kmalloc(PAGE_SIZE, GFP_KERNEL);
+	if (!str) {
+		ret = -ENOMEM;
+		goto r_c_err;
+	}
+
+	switch (calibrate_done) {
+	case 1:
+		/* calibration complete ! */
+#ifndef VENDOR_EDIT
+/*wangdongdong@MultiMediaService,2016/11/30,add for speaker impedence detection*/
+		tfa_dsp_get_calibration_impedance(tfa98xx->handle);
+		ret = print_calibration(tfa98xx->handle, str, PAGE_SIZE);
+#else
+        tfa98xx_speaker_recalibration(tfa98xx->handle,&speakerImpedance1);
+        pr_err("tfa speaker calibration impedance = %d\n",speakerImpedance1);
+		ret = print_calibration_modify(tfa98xx->handle, str, PAGE_SIZE);
+#endif
+
+		break;
+	case 0:
+	case -1:
+		ret = scnprintf(str, PAGE_SIZE, "%d\n", calibrate_done);
+		break;
+	default:
+		pr_err("Unknown calibration status: %d\n", calibrate_done);
+		ret = -EINVAL;
+	}
+	pr_err("calib_done: %d - ret = %d - %s", calibrate_done, ret, str);
+
+	if (ret < 0)
+		goto r_err;
+    //modify for EngineerMode detection, different from 15801
+    if(calibrate_done == 1)
+		calibrate_done = 2;
+	//ret = simple_read_from_buffer(buf, count, ppos, str, ret);
+	ret = sprintf(buf,"%d:%d",calibrate_done,speakerImpedance1);
+
+r_err:
+	kfree(str);
+r_c_err:
+	tfa98xx_close(tfa98xx->handle);
+	mutex_unlock(&tfa98xx->dsp_lock);
+	return ret;
+}
+
+static struct device_attribute tfa98xx_state_attr =
+     __ATTR(calibra, 0444, tfa98xx_state_show, tfa98xx_state_store);
 
 /* Wrapper for tfa start */
 static enum tfa_error tfa98xx_tfa_start(struct tfa98xx *tfa98xx, int next_profile, int *vstep)
@@ -2931,6 +3033,7 @@ static int tfa98xx_probe(struct snd_soc_codec *codec)
 	dev_info(codec->dev, "tfa98xx codec registered (%s)",
 							tfa98xx->fw.name);
 
+    g_tfa98xx = tfa98xx;
 	return ret;
 }
 
@@ -3371,6 +3474,12 @@ static int tfa98xx_i2c_probe(struct i2c_client *i2c,
 		dev_info(&i2c->dev, "error creating sysfs files\n");
 
 	pr_info("%s Probe completed successfully!\n", __func__);
+
+    ret = sysfs_create_file(&i2c->dev.kobj, &tfa98xx_state_attr.attr);
+    if(ret < 0)
+    {
+        pr_err("%s sysfs_create_file tfa98xx_state_attr err.",__func__);
+    }
 
 	return 0;
 
