@@ -2115,6 +2115,7 @@ static ssize_t synaptics_rmi4_baseline_show_s3508(struct device *dev, char *buf,
 	int16_t *baseline_data_test;
 	int enable_cbc = 1;
 	int readdata_fail=0,first_check=0;
+	int16_t left_ramdata=0,right_ramdata=0;
 	int fd = -1;
 	struct timespec   now_time;
 	struct rtc_time   rtc_now_time;
@@ -2222,6 +2223,10 @@ TEST_WITH_CBC_s3508:
 			}
 			if( (y < RX_NUM ) && (x < TX_NUM) ){
 				//printk("%4d ,",baseline_data);
+				if (x == (TX_NUM-1) && y == (RX_NUM-1))
+					left_ramdata = baseline_data;
+				else if (x == (TX_NUM-1) && y == (RX_NUM-2))
+					right_ramdata = baseline_data;
 				if(((baseline_data+60) < *(baseline_data_test+count*2)) || ((baseline_data-60) > *(baseline_data_test+count*2+1))){
 					if((x == (TX_NUM-1) && (y != RX_NUM-1 || y != RX_NUM-2))||\
 						(x != (TX_NUM-1) && (y == RX_NUM-1 || y == RX_NUM-2)))//the last tx and rx last two line for touchkey,others no need take care
@@ -2336,6 +2341,7 @@ END:
 #endif
 	TPD_ERR("status...first_check:%d:readdata_fail:%d\n",first_check,readdata_fail);
 	num_read_chars += sprintf(&(buf[num_read_chars]), "imageid=0x%x,deviceid=0x%x\n", TP_FW, TP_FW);
+	num_read_chars += sprintf(&(buf[num_read_chars]), "left:=%d,right:%d\n", left_ramdata, right_ramdata);
 	num_read_chars += sprintf(&(buf[num_read_chars]), "%d error(s). %s\n", error_count, error_count?"":"All test passed.");
 	return num_read_chars;
 }
