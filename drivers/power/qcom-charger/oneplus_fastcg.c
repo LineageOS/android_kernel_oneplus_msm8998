@@ -774,7 +774,7 @@ static long  dash_dev_ioctl(struct file *filp, unsigned int cmd,
 				di->fast_switch_to_normal = false;
 				di->fast_normal_to_warm = false;
 				di->fast_chg_ing = false;
-				pr_err("fastchg stop unexpectly, witch off fastchg\n");
+				pr_err("fastchg stop unexpectly, switch off fastchg\n");
 				switch_mode_to_normal();
 				del_timer(&di->watchdog);
 				dash_write(di, REJECT_DATA);

@@ -56,6 +56,7 @@ extern void set_mcu_en_gpio_value(int value);
 static void op_battery_temp_region_set(struct smb_charger *chg,
 		temp_region_type batt_temp_region);
 static void set_usb_switch(struct smb_charger *chg, bool enable);
+static void op_handle_usb_removal(struct smb_charger *chg);
 static bool get_prop_fast_switch_to_normal(struct smb_charger *chg);
 static int get_prop_batt_temp(struct smb_charger *chg);
 static int get_prop_batt_capacity(struct smb_charger *chg);
@@ -63,6 +64,8 @@ static int get_prop_batt_current_now(struct smb_charger *chg);
 static int get_prop_batt_voltage_now(struct smb_charger *chg);
 static int set_property_on_fg(struct smb_charger *chg,
 		enum power_supply_property prop, int val);
+static int set_dash_charger_present(int status);
+static int get_prop_charger_voltage_now(struct smb_charger *chg);
 static temp_region_type
 		op_battery_temp_region_get(struct smb_charger *chg);
 #endif
@@ -2713,19 +2716,8 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 		}
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
-		if (last_vbus_present != chg->vbus_present) {
-			op_set_fast_chg_allow(chg, false);
-			set_prop_fast_switch_to_normal_false(chg);
-			set_usb_switch(chg, false);
-
-			chg->dash_on = false;
-			chg->chg_done = false;
-			chg->time_out = false;
-			chg->recharge_status = false;
-			chg->usb_enum_status = false;
-			chg->non_std_chg_present = false;
-			op_battery_temp_region_set(chg, BATT_TEMP_INVALID);
-		}
+		if (last_vbus_present != chg->vbus_present)
+			op_handle_usb_removal(chg);
 #endif
 	}
 
@@ -3443,11 +3435,33 @@ bool get_oem_charge_done_status(void)
 		return false;
 }
 
+static void op_handle_usb_removal(struct smb_charger *chg)
+{
+	op_set_fast_chg_allow(chg, false);
+	set_prop_fast_switch_to_normal_false(chg);
+	set_usb_switch(chg, false);
+	set_dash_charger_present(false);
+
+	chg->dash_on = false;
+	chg->chg_done = false;
+	chg->time_out = false;
+	chg->recharge_status = false;
+	chg->usb_enum_status = false;
+	chg->non_std_chg_present = false;
+	op_battery_temp_region_set(chg, BATT_TEMP_INVALID);
+}
+
+
 int update_dash_unplug_status(void)
 {
-	/* TODO: check if vbus > 2.5v */
-	pr_info("\n");
+	int vbus_mv;
 
+	/* check if vbus > 2.5v */
+	vbus_mv = get_prop_charger_voltage_now(g_chg);
+	if (!(vbus_mv > 2500))
+		op_handle_usb_removal(g_chg);
+	smblib_update_usb_type(g_chg);
+	power_supply_changed(g_chg->usb_psy);
 	return 0;
 }
 
@@ -3664,6 +3678,8 @@ static int set_dash_charger_present(int status)
 					DEFAULT_WALL_CHG_MA * 1000);
 		}
 		power_supply_changed(g_chg->batt_psy);
+		pr_info("dash_present = %d, charger_present = %d\n",
+				g_chg->dash_present, charger_present);
 	} else {
 		pr_err("set_dash_charger_present error\n");
 	}
