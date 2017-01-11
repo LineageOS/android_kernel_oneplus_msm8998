@@ -338,7 +338,7 @@
 };
 
 &pmi8998_charger {
-	qcom,fcc-max-ua = <3000000>;
+	qcom,fcc-max-ua = <500000>; /*Set FCC MAX 500mA by default,FCC will be set again after check battery temperature*/
 	qcom,usb-icl-ua = <1800000>;
 	qcom,fv-max-uv = <4365000>;
 	/* ibatmax setting for different temp regions */

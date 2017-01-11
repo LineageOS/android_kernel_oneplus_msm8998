@@ -183,6 +183,7 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(update_lcd_is_off),
 	POWER_SUPPLY_ATTR(check_usb_unplug),
 	POWER_SUPPLY_ATTR(switch_dash),
+	POWER_SUPPLY_ATTR(notify_charger_set_parameter),
 #endif
 	POWER_SUPPLY_ATTR(charge_type),
 	POWER_SUPPLY_ATTR(health),

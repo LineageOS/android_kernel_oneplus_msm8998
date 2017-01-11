@@ -1572,6 +1572,8 @@ int smblib_set_prop_input_suspend(struct smb_charger *chg,
 
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161014 Add charging standard */
+static int op_check_battery_temp(struct smb_charger *chg);
+
 int smblib_set_prop_chg_voltage(struct smb_charger *chg,
 				  const union power_supply_propval *val)
 {
@@ -1601,6 +1603,13 @@ int smblib_set_prop_chg_protect_status(struct smb_charger *chg,
 
 	return 0;
 }
+int smblib_set_prop_charge_parameter_set(struct smb_charger *chg)
+{
+	chg->is_power_changed = true;
+	op_check_battery_temp(chg);
+	return 0;
+}
+
 #endif
 
 int smblib_set_prop_batt_capacity(struct smb_charger *chg,
@@ -2939,7 +2948,7 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 /* david.liu@bsp, 20160926 Add dash charging */
 	temp_region = op_battery_temp_region_get(chg);
 	if (temp_region != BATT_TEMP_COLD
-		|| temp_region != BATT_TEMP_HOT) {
+		&& temp_region != BATT_TEMP_HOT) {
 		op_charging_en(chg, true);
 	}
 

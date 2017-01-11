@@ -805,14 +805,20 @@ static int fg_get_batt_id(struct fg_chip *chip, int *val)
 	*val = batt_id;
 	return 0;
 }
-
+#ifdef VENDOR_EDIT
+	/* Yangfb@bsp, 20170110 Add OP	battery profile */
+#define OP_SW_DEFAULT_ID 200
+#endif
 static int fg_get_batt_profile(struct fg_chip *chip)
 {
 	struct device_node *node = chip->dev->of_node;
 	struct device_node *batt_node, *profile_node;
 	const char *data;
 	int rc, len, batt_id;
-
+#ifdef VENDOR_EDIT
+	/* Yangfb@bsp, 20170110 Add OP	battery profile */
+	batt_id = OP_SW_DEFAULT_ID;
+#else
 	rc = fg_get_batt_id(chip, &batt_id);
 	if (rc < 0) {
 		pr_err("Error in getting batt_id rc:%d\n", rc);
@@ -820,6 +826,7 @@ static int fg_get_batt_profile(struct fg_chip *chip)
 	}
 
 	batt_id /= 1000;
+#endif
 	chip->batt_id_kohms = batt_id;
 	batt_node = of_find_node_by_name(node, "qcom,battery-data");
 	if (!batt_node) {
@@ -1860,7 +1867,35 @@ out:
 	chip->fg_restarting = false;
 	return rc;
 }
+#ifdef VENDOR_EDIT
+	/* Yangfb@bsp, 20170109 set Ibat 500mA by default */
+static void fg_notify_charger(struct fg_chip *chip)
+{
+	union power_supply_propval prop = {0, };
+	int rc;
 
+	if (!is_charger_available(chip)) {
+		pr_warn("Charger not available yet?\n");
+		return;
+	}
+	prop.intval = chip->bp.fastchg_curr_ma * 1000;
+	rc = power_supply_set_property(chip->batt_psy,
+			POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX, &prop);
+	if (rc < 0) {
+		pr_err("Error in setting constant_charge_current_max property on batt_psy, rc=%d\n",
+			rc);
+		return;
+	}
+	rc = power_supply_set_property(chip->batt_psy,
+			POWER_SUPPLY_PROP_NOTIFY_CHARGER_SET_PARAMETER, &prop);
+	if (rc < 0) {
+		pr_err("Error in setting voltage_max property on batt_psy, rc=%d\n",
+			rc);
+		return;
+	}
+	fg_dbg(chip, FG_STATUS, "Notified charger on float voltage and FCC\n");
+}
+#else
 static void fg_notify_charger(struct fg_chip *chip)
 {
 	union power_supply_propval prop = {0, };
@@ -1891,6 +1926,8 @@ static void fg_notify_charger(struct fg_chip *chip)
 
 	fg_dbg(chip, FG_STATUS, "Notified charger on float voltage and FCC\n");
 }
+
+#endif
 
 static void profile_load_work(struct work_struct *work)
 {
@@ -1956,7 +1993,6 @@ done:
 			pr_err("Error in loading capacity learning data, rc:%d\n",
 				rc);
 	}
-
 	fg_notify_charger(chip);
 	chip->profile_loaded = true;
 	fg_dbg(chip, FG_STATUS, "profile loaded successfully");
