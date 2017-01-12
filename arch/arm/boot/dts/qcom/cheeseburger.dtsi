@@ -383,7 +383,7 @@
 		status = "disabled";
 	};
 	synaptics-rmi-ts@20 {
-		compatible = "synaptics,s3320";
+		compatible = "HWK,synaptics,s3320";
 		reg = <0x20>;
 		interrupt-parent = <&tlmm>;
 		interrupts = <125 0x2008>;
