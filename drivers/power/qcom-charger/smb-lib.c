@@ -4632,6 +4632,18 @@ void fastcharge_information_unregister(struct external_battery_gauge *fast_chg)
 	fast_charger = NULL;
 }
 EXPORT_SYMBOL(fastcharge_information_unregister);
+
+static int notify_usb_enumeration_function(int status)
+{
+	pr_info("status=%d\n",status);
+	g_chg->usb_enum_status = status;
+
+	return g_chg->usb_enum_status;
+}
+
+static struct notify_usb_enumeration_status usb_enumeration  = {
+	.notify_usb_enumeration		= notify_usb_enumeration_function,
+};
 #endif
 
 static void bms_update_work(struct work_struct *work)
@@ -4984,6 +4996,8 @@ int smblib_init(struct smb_charger *chg)
 	wake_lock_init(&chg->chg_wake_lock,
 			WAKE_LOCK_SUSPEND, "chg_wake_lock");
 	g_chg = chg;
+
+	regsister_notify_usb_enumeration_status(&usb_enumeration);
 #endif
 	INIT_DELAYED_WORK(&chg->clear_hdc_work, clear_hdc_work);
 	chg->fake_capacity = -EINVAL;
