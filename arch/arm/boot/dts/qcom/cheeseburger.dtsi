@@ -357,11 +357,11 @@
 	vbatmax-warm-mv = <4080>;
 	/* vbatdet setting for different temp regions */
 	vbatdet-little-cold-mv = <3700>;
-	vbatdet-cool-mv = <4100>;
-	vbatdet-little-cool-mv = <4220>;
-	vbatdet-pre-normal-mv = <4220>;
-	vbatdet-normal-mv = <4220>;
-	vbatdet-warm-mv = <4000>;
+	vbatdet-cool-mv = <4150>;
+	vbatdet-little-cool-mv = <4270>;
+	vbatdet-pre-normal-mv = <4270>;
+	vbatdet-normal-mv = <4270>;
+	vbatdet-warm-mv = <3980>;
 	/* temp region settings */
 	cold-bat-decidegc = <30>;
 	little-cold-bat-decidegc = <0>;
