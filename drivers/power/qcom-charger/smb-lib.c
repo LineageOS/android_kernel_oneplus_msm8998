@@ -47,8 +47,8 @@
 struct smb_charger *g_chg;
 static struct external_battery_gauge *fast_charger = NULL;
 static int op_charging_en(struct smb_charger *chg, bool en);
-static bool op_set_fast_chg_allow(struct smb_charger *chg, bool enable);
-static bool get_prop_fast_chg_started(struct smb_charger *chg);
+bool op_set_fast_chg_allow(struct smb_charger *chg, bool enable);
+bool get_prop_fast_chg_started(struct smb_charger *chg);
 static bool set_prop_fast_switch_to_normal_false(struct smb_charger *chg);
 extern void mcu_en_gpio_set(int value);
 extern void usb_sw_gpio_set(int value);
@@ -3461,7 +3461,7 @@ int update_dash_unplug_status(void)
 }
 
 
-static bool get_prop_fast_chg_started(struct smb_charger *chg)
+bool get_prop_fast_chg_started(struct smb_charger *chg)
 {
 	if (fast_charger && fast_charger->fast_chg_started)
 		return fast_charger->fast_chg_started();
@@ -3491,7 +3491,7 @@ bool op_get_fastchg_ing(struct smb_charger *chg)
 	return false;
 }
 
-static bool op_set_fast_chg_allow(struct smb_charger *chg, bool enable)
+bool op_set_fast_chg_allow(struct smb_charger *chg, bool enable)
 {
 	if (fast_charger && fast_charger->set_fast_chg_allow)
 		return fast_charger->set_fast_chg_allow(enable);
