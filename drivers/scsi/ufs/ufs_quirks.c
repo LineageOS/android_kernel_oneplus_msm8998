@@ -84,7 +84,7 @@ static char* ufs_get_capacity_size(u64 capacity)
 #ifdef VENDOR_EDIT
 /* liochen@BSP, 2016/11/30, Add ufs info into *##*37847# */
 char ufs_vendor_and_rev[32]={'\0'};
-char uds_product_id[32]={'\0'};
+char ufs_product_id[32]={'\0'};
 int ufs_fill_info(struct ufs_hba *hba)
 {
 	int err=0;
@@ -115,9 +115,9 @@ int ufs_fill_info(struct ufs_hba *hba)
 
 	if(!hba->sdev_ufs_device->model) {
 		dev_err(hba->dev, "%s: UFS product id info is NULL\n", __func__);
-		strncpy(uds_product_id, "UNKNOWN", 7);
+		strncpy(ufs_product_id, "UNKNOWN", 7);
 	} else {
-		strncpy(uds_product_id, hba->sdev_ufs_device->model, 16);
+		strncpy(ufs_product_id, hba->sdev_ufs_device->model, 16);
 	}
 
 	/* Get UFS storage size*/
@@ -134,7 +134,7 @@ int ufs_fill_info(struct ufs_hba *hba)
 	strcat(ufs_vendor_and_rev, " ");
 	strcat(ufs_vendor_and_rev, ufs_rev);
 
-	push_component_info(UFS, uds_product_id, ufs_vendor_and_rev);
+	push_component_info(UFS, ufs_product_id, ufs_vendor_and_rev);
 out:
 	return err;
 
