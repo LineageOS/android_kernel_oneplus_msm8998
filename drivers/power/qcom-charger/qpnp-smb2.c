@@ -794,6 +794,7 @@ static enum power_supply_property smb2_batt_props[] = {
 	POWER_SUPPLY_PROP_FASTCHG_STATUS,
 	POWER_SUPPLY_PROP_FASTCHG_STARTING,
 	POWER_SUPPLY_CUTOFF_VOLT_WITH_CHARGER,
+	POWER_SUPPLY_PROP_CHARGING_ENABLED,
 #endif
 	POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL,
 	POWER_SUPPLY_PROP_CHARGER_TEMP,
@@ -860,6 +861,9 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_FASTCHG_STARTING:
 		val->intval = op_get_fastchg_ing(chg);
 		break;
+	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
+		val->intval = chg->charging_enabled;
+		break;
 #endif
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
 		rc = smblib_get_prop_system_temp_level(chg, val);
@@ -922,6 +926,12 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 }
 #ifdef VENDOR_EDIT
 int smblib_set_prop_charge_parameter_set(struct smb_charger *chg);
+extern void set_mcu_en_gpio_value(int value);
+extern void usb_sw_gpio_set(int value);
+extern bool op_set_fast_chg_allow(struct smb_charger *chg, bool enable);
+extern bool get_prop_fast_chg_started(struct smb_charger *chg);
+
+extern void switch_mode_to_normal(void);
 #endif
 static int smb2_batt_set_prop(struct power_supply *psy,
 		enum power_supply_property prop,
@@ -963,6 +973,21 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_NOTIFY_CHARGER_SET_PARAMETER:
 		rc = smblib_set_prop_charge_parameter_set(chg);
 		break;
+	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
+		if(!val->intval) {
+			chg->dash_on = get_prop_fast_chg_started(chg);
+			if (chg->dash_on) {
+				switch_mode_to_normal();
+				op_set_fast_chg_allow(chg, false);
+			}
+		}
+		rc = vote(chg->usb_suspend_votable, USER_VOTER,
+				!val->intval, 0);
+		rc = vote(chg->dc_suspend_votable, USER_VOTER,
+				!val->intval, 0);
+		chg->charging_enabled = (bool)val->intval;
+		break;
+
 #endif
 	case POWER_SUPPLY_PROP_CAPACITY:
 		rc = smblib_set_prop_batt_capacity(chg, val);
@@ -1001,6 +1026,7 @@ static int smb2_batt_prop_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
 	case POWER_SUPPLY_PROP_TEMP:
 	case POWER_SUPPLY_PROP_CHG_PROTECT_STATUS:
+	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
 #endif
 	case POWER_SUPPLY_PROP_PARALLEL_DISABLE:
 	case POWER_SUPPLY_PROP_PARALLEL_PERCENT:

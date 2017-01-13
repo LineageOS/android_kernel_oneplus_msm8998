@@ -556,7 +556,7 @@ static int onplus_get_average_current(void)
 		return 666 * 1000; /* retrun 666ma for default current */
 }
 
-static void switch_mode_to_normal(void)
+void switch_mode_to_normal(void)
 {
 	usb_sw_gpio_set(0);
 	mcu_en_gpio_set(1);
