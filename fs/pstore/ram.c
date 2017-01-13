@@ -57,6 +57,11 @@ static ulong ramoops_ftrace_size = MIN_MEM_SIZE;
 module_param_named(ftrace_size, ramoops_ftrace_size, ulong, 0400);
 MODULE_PARM_DESC(ftrace_size, "size of ftrace log");
 
+static ulong ramoops_device_info_size = MIN_MEM_SIZE;
+module_param_named(device_info_size, ramoops_device_info_size, ulong, 0400);
+MODULE_PARM_DESC(device_info_size, "size of device info");
+
+
 static ulong ramoops_pmsg_size = MIN_MEM_SIZE;
 module_param_named(pmsg_size, ramoops_pmsg_size, ulong, 0400);
 MODULE_PARM_DESC(pmsg_size, "size of user space message log");
@@ -92,6 +97,7 @@ struct ramoops_context {
 	struct persistent_ram_zone **przs;
 	struct persistent_ram_zone *cprz;
 	struct persistent_ram_zone *fprz;
+	struct persistent_ram_zone *dprz;
 	struct persistent_ram_zone *mprz;
 	phys_addr_t phys_addr;
 	unsigned long size;
@@ -99,6 +105,7 @@ struct ramoops_context {
 	size_t record_size;
 	size_t console_size;
 	size_t ftrace_size;
+	size_t device_info_size;
 	size_t pmsg_size;
 	int dump_oops;
 	struct persistent_ram_ecc_info ecc_info;
@@ -108,6 +115,7 @@ struct ramoops_context {
 	unsigned int dump_read_cnt;
 	unsigned int console_read_cnt;
 	unsigned int ftrace_read_cnt;
+	unsigned int device_info_read_cnt;
 	unsigned int pmsg_read_cnt;
 	struct pstore_info pstore;
 };
@@ -122,6 +130,7 @@ static int ramoops_pstore_open(struct pstore_info *psi)
 	cxt->dump_read_cnt = 0;
 	cxt->console_read_cnt = 0;
 	cxt->ftrace_read_cnt = 0;
+	cxt->device_info_read_cnt = 0;
 	cxt->pmsg_read_cnt = 0;
 	return 0;
 }
@@ -227,6 +236,9 @@ static ssize_t ramoops_pstore_read(u64 *id, enum pstore_type_id *type,
 		prz = ramoops_get_next_prz(&cxt->fprz, &cxt->ftrace_read_cnt,
 					   1, id, type, PSTORE_TYPE_FTRACE, 0);
 	if (!prz_ok(prz))
+		prz = ramoops_get_next_prz(&cxt->dprz, &cxt->device_info_read_cnt,
+					   1, id, type, PSTORE_TYPE_DEVICE_INFO, 0);
+	if (!prz_ok(prz))
 		prz = ramoops_get_next_prz(&cxt->mprz, &cxt->pmsg_read_cnt,
 					   1, id, type, PSTORE_TYPE_PMSG, 0);
 	if (!prz_ok(prz))
@@ -291,6 +303,11 @@ static int notrace ramoops_pstore_write_buf(enum pstore_type_id type,
 			return -ENOMEM;
 		persistent_ram_write(cxt->fprz, buf, size);
 		return 0;
+	} else if (type == PSTORE_TYPE_DEVICE_INFO) {
+		if (!cxt->dprz)
+			return -ENOMEM;
+		persistent_ram_write(cxt->dprz, buf, size);
+		return 0;
 	} else if (type == PSTORE_TYPE_PMSG) {
 		if (!cxt->mprz)
 			return -ENOMEM;
@@ -352,6 +369,9 @@ static int ramoops_pstore_erase(enum pstore_type_id type, u64 id, int count,
 		break;
 	case PSTORE_TYPE_FTRACE:
 		prz = cxt->fprz;
+		break;
+	case PSTORE_TYPE_DEVICE_INFO:
+		prz = cxt->dprz;
 		break;
 	case PSTORE_TYPE_PMSG:
 		prz = cxt->mprz;
@@ -531,6 +551,7 @@ static int ramoops_parse_dt(struct platform_device *pdev,
 	pdata->record_size = record_size;
 	pdata->console_size = ramoops_console_size;
 	pdata->ftrace_size = ramoops_ftrace_size;
+	pdata->device_info_size = ramoops_device_info_size;
 	pdata->pmsg_size = ramoops_pmsg_size;
 	pdata->dump_oops = dump_oops;
 	pdata->ecc_info.ecc_size = ecc_size = 0;
@@ -544,6 +565,10 @@ static int ramoops_parse_dt(struct platform_device *pdev,
 		return ret;
 
 	ret = ramoops_parse_dt_size(pdev, "ftrace-size", &pdata->ftrace_size);
+	if (ret < 0)
+		return ret;
+
+	ret = ramoops_parse_dt_size(pdev, "device-info-size", &pdata->ftrace_size);
 	if (ret < 0)
 		return ret;
 
@@ -594,7 +619,7 @@ static int ramoops_probe(struct platform_device *pdev)
 		goto fail_out;
 
 	if (!pdata->mem_size || (!pdata->record_size && !pdata->console_size &&
-			!pdata->ftrace_size && !pdata->pmsg_size)) {
+			!pdata->ftrace_size && !pdata->device_info_size && !pdata->pmsg_size)) {
 		pr_err("The memory size and the record/console size must be "
 			"non-zero\n");
 		goto fail_out;
@@ -606,6 +631,8 @@ static int ramoops_probe(struct platform_device *pdev)
 		pdata->console_size = rounddown_pow_of_two(pdata->console_size);
 	if (pdata->ftrace_size && !is_power_of_2(pdata->ftrace_size))
 		pdata->ftrace_size = rounddown_pow_of_two(pdata->ftrace_size);
+	if (pdata->device_info_size && !is_power_of_2(pdata->device_info_size))
+		pdata->device_info_size = rounddown_pow_of_two(pdata->device_info_size);
 	if (pdata->pmsg_size && !is_power_of_2(pdata->pmsg_size))
 		pdata->pmsg_size = rounddown_pow_of_two(pdata->pmsg_size);
 
@@ -615,13 +642,14 @@ static int ramoops_probe(struct platform_device *pdev)
 	cxt->record_size = pdata->record_size;
 	cxt->console_size = pdata->console_size;
 	cxt->ftrace_size = pdata->ftrace_size;
+	cxt->device_info_size = pdata->device_info_size;
 	cxt->pmsg_size = pdata->pmsg_size;
 	cxt->dump_oops = pdata->dump_oops;
 	cxt->ecc_info = pdata->ecc_info;
 
 	paddr = cxt->phys_addr;
 
-	dump_mem_sz = cxt->size - cxt->console_size - cxt->ftrace_size
+	dump_mem_sz = cxt->size - cxt->console_size - cxt->ftrace_size - cxt->device_info_size 
 			- cxt->pmsg_size;
 	err = ramoops_init_przs(dev, cxt, &paddr, dump_mem_sz);
 	if (err)
@@ -640,6 +668,12 @@ static int ramoops_probe(struct platform_device *pdev)
 	err = ramoops_init_prz(dev, cxt, &cxt->mprz, &paddr, cxt->pmsg_size, 0);
 	if (err)
 		goto fail_init_mprz;
+
+	paddr = pdata->mem_address + pdata->mem_size - cxt->device_info_size;
+	err = ramoops_init_prz(dev, cxt, &cxt->dprz, &paddr,
+			       cxt->device_info_size, 0);
+	if (err)
+		goto fail_init_dprz;
 
 	cxt->pstore.data = cxt;
 	/*
@@ -676,6 +710,7 @@ static int ramoops_probe(struct platform_device *pdev)
 	ramoops_console_size = pdata->console_size;
 	ramoops_pmsg_size = pdata->pmsg_size;
 	ramoops_ftrace_size = pdata->ftrace_size;
+	ramoops_device_info_size = pdata->device_info_size;
 
 	pr_info("attached 0x%lx@0x%llx, ecc: %d/%d\n",
 		cxt->size, (unsigned long long)cxt->phys_addr,
@@ -687,6 +722,8 @@ fail_buf:
 	kfree(cxt->pstore.buf);
 fail_clear:
 	cxt->pstore.bufsize = 0;
+	kfree(cxt->dprz);
+fail_init_dprz:
 	kfree(cxt->mprz);
 fail_init_mprz:
 	kfree(cxt->fprz);
@@ -710,6 +747,7 @@ static int ramoops_remove(struct platform_device *pdev)
 
 	persistent_ram_free(cxt->mprz);
 	persistent_ram_free(cxt->fprz);
+	persistent_ram_free(cxt->dprz);
 	persistent_ram_free(cxt->cprz);
 	ramoops_free_przs(cxt);
 
@@ -749,6 +787,7 @@ static void ramoops_register_dummy(void)
 	dummy_data->record_size = record_size;
 	dummy_data->console_size = ramoops_console_size;
 	dummy_data->ftrace_size = ramoops_ftrace_size;
+	dummy_data->device_info_size = ramoops_device_info_size;
 	dummy_data->pmsg_size = ramoops_pmsg_size;
 	dummy_data->dump_oops = dump_oops;
 	/*
