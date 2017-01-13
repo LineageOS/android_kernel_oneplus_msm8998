@@ -88,6 +88,7 @@
 #define SUPPORT_TP_SLEEP_MODE
 #define TYPE_B_PROTOCOL      //Multi-finger operation
 #define TP_FW_NAME_MAX_LEN 128
+#define SUPPORT_TP_TOUCHKEY
 
 #define TEST_MAGIC1 0x494D494C
 #define TEST_MAGIC2 0x474D4954
@@ -217,7 +218,10 @@ static void synaptics_tpedge_limitfunc(void);
 #ifdef SUPPORT_TP_SLEEP_MODE
 static int sleep_enable;
 #endif
-
+#ifdef SUPPORT_TP_TOUCHKEY
+static int key_switch = 0;
+static bool key_back_disable=false,key_appselect_disable=false;
+#endif
 static struct synaptics_ts_data *ts_g = NULL;
 static struct workqueue_struct *synaptics_wq = NULL;
 static struct workqueue_struct *synaptics_report = NULL;
@@ -1478,13 +1482,20 @@ void int_touch(void)
 
 #ifdef SUPPORT_GESTURE
 	if (ts->in_gesture_mode == 1 && ts->is_suspended == 1) {
-		gesture_judge(ts);	
+		gesture_judge(ts);
 	}
 #endif
     INT_TOUCH_END:
 	mutex_unlock(&ts->mutexreport);
 }
 static char log_count = 0;
+#ifdef SUPPORT_TP_TOUCHKEY
+#define OEM_KEY_BACK (key_switch?KEY_APPSELECT:KEY_BACK)
+#define OEM_KEY_APPSELECT (key_switch?KEY_BACK:KEY_APPSELECT)
+#else
+#define OEM_KEY_BACK KEY_BACK
+#define OEM_KEY_APPSELECT KEY_APPSELECT
+#endif
 static void int_key_report_s3508(struct synaptics_ts_data *ts)
 {
     	int ret= 0;
@@ -1499,21 +1510,21 @@ static void int_key_report_s3508(struct synaptics_ts_data *ts)
 	button_key = synaptics_rmi4_i2c_read_byte(ts->client,F1A_0D_DATA00);
 	if (1 == (++log_count % 4))
 		TPD_ERR("touch_key[0x%x],touchkey_state[0x%x]\n",button_key,ts->pre_btn_state);
-	if((button_key & 0x01) && !(ts->pre_btn_state & 0x01))//back
+	if((button_key & 0x01) && !(ts->pre_btn_state & 0x01) && !key_back_disable)//back
 	{
-		input_report_key(ts->input_dev, KEY_BACK, 1);
+		input_report_key(ts->input_dev, OEM_KEY_BACK, 1);
 		input_sync(ts->input_dev);
-	}else if(!(button_key & 0x01) && (ts->pre_btn_state & 0x01)){
-		input_report_key(ts->input_dev, KEY_BACK, 0);
+	}else if(!(button_key & 0x01) && (ts->pre_btn_state & 0x01) && !key_back_disable){
+		input_report_key(ts->input_dev, OEM_KEY_BACK, 0);
 		input_sync(ts->input_dev);
 	}
 
-	if((button_key & 0x02) && !(ts->pre_btn_state & 0x02))//menu
+	if((button_key & 0x02) && !(ts->pre_btn_state & 0x02) && !key_appselect_disable)//menu
 	{
-		input_report_key(ts->input_dev, KEY_APPSELECT, 1);
+		input_report_key(ts->input_dev, OEM_KEY_APPSELECT, 1);
 		input_sync(ts->input_dev);
-	}else if(!(button_key & 0x02) && (ts->pre_btn_state & 0x02)){
-		input_report_key(ts->input_dev, KEY_APPSELECT, 0);
+	}else if(!(button_key & 0x02) && (ts->pre_btn_state & 0x02) && !key_appselect_disable){
+		input_report_key(ts->input_dev, OEM_KEY_APPSELECT, 0);
 		input_sync(ts->input_dev);
 	}
 
@@ -3107,6 +3118,90 @@ static const struct file_operations proc_limit_enable =
 	.owner = THIS_MODULE,
 };
 #endif
+#ifdef SUPPORT_TP_TOUCHKEY
+static ssize_t key_switch_read_func(struct file *file, char __user *user_buf, size_t count, loff_t *ppos)
+{
+	int ret = 0;
+	char page[PAGESIZE];
+	struct synaptics_ts_data *ts = ts_g;
+	if(!ts)
+		return ret;
+	TPD_ERR("%s lift:%s right:%s\n",__func__,key_switch?"key_appselect":"key_back",key_switch?"key_back":"key_appselect");
+	ret = sprintf(page, "key_switch lift:%s right:%s\n", key_switch?"key_appselect":"key_back",key_switch?"key_back":"key_appselect");
+	ret = simple_read_from_buffer(user_buf, count, ppos, page, strlen(page));
+	return ret;
+}
+
+static ssize_t key_switch_write_func(struct file *file, const char __user *buffer, size_t count, loff_t *ppos)
+{
+	struct synaptics_ts_data *ts = ts_g;
+	if(!ts)
+		return count;
+	if( count > 2)
+		return count;
+
+	sscanf(&buffer[0], "%d", &key_switch);
+	TPD_ERR("%s write [%d]\n",__func__,key_switch);
+	TPD_ERR("lift:%s right:%s\n",key_switch?"key_appselect":"key_back",key_switch?"key_back":"key_appselect");
+	return count;
+}
+
+static const struct file_operations key_switch_proc_fops = {
+	.write = key_switch_write_func,
+	.read =  key_switch_read_func,
+	.open = simple_open,
+	.owner = THIS_MODULE,
+};
+static ssize_t key_disable_read_func(struct file *file, char __user *user_buf, size_t count, loff_t *ppos)
+{
+	int ret = 0;
+	char page[PAGESIZE];
+	struct synaptics_ts_data *ts = ts_g;
+	if(!ts)
+		return ret;
+	TPD_ERR("%s key_back:%s key_appselect:%s\n",__func__,key_back_disable?"disable":"enable",key_appselect_disable?"disable":"enable");
+	ret = sprintf(page, "cmd:enable,disable\nkey_back:%s key_appselect:%s\n",key_back_disable?"disable":"enable",key_appselect_disable?"disable":"enable");
+	ret = simple_read_from_buffer(user_buf, count, ppos, page, strlen(page));
+	return ret;
+}
+
+static ssize_t key_disable_write_func(struct file *file, const char __user *buffer, size_t count, loff_t *ppos)
+{
+	char buf[PAGESIZE];
+	struct synaptics_ts_data *ts = ts_g;
+	if(!ts)
+		return count;
+	if( count > sizeof(buf)){
+		TPD_ERR("%s error\n",__func__);
+		return count;
+	}
+
+	if(copy_from_user(buf, buffer, count))
+	{
+		TPD_ERR("%s copy error\n", __func__);
+		return count;
+	}
+	if (NULL != strstr(buf,"disable"))
+	{
+		key_back_disable =true;
+		key_appselect_disable = true;
+	}
+	else if (NULL != strstr(buf,"enable"))
+	{
+		key_back_disable =false;
+		key_appselect_disable = false;
+	}
+	TPD_ERR("%s key_back:%d key_appselect:%d\n",__func__,key_back_disable,key_appselect_disable);
+	return count;
+}
+
+static const struct file_operations key_disable_proc_fops = {
+	.write = key_disable_write_func,
+	.read =  key_disable_read_func,
+	.open = simple_open,
+	.owner = THIS_MODULE,
+};
+#endif
 static int init_synaptics_proc(void)
 {
 	int ret = 0;
@@ -3197,6 +3292,19 @@ static int init_synaptics_proc(void)
 		ret = -ENOMEM;
         TPD_ERR("Couldn't create touch_press\n");
 	}
+#ifdef SUPPORT_TP_TOUCHKEY
+	prEntry_tmp = proc_create("key_switch", 0666, prEntry_tp, &key_switch_proc_fops);
+	if(prEntry_tmp == NULL){
+		ret = -ENOMEM;
+        TPD_ERR("Couldn't create key_switch\n");
+	}
+
+	prEntry_tmp = proc_create("key_disable", 0666, prEntry_tp, &key_disable_proc_fops);
+	if(prEntry_tmp == NULL){
+		ret = -ENOMEM;
+        TPD_ERR("Couldn't create key_disable\n");
+	}
+#endif
 	return ret;
 }
 /******************************end****************************/
