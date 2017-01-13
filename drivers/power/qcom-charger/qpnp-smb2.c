@@ -349,6 +349,9 @@ static int smb2_parse_dt(struct smb2 *chip)
 	OF_PROP_READ(node, "qcom,cutoff-voltage-with-charger",
 				smbchg_cutoff_volt_with_charger, rc, 1);
 
+	chg->chg_enabled = !(of_property_read_bool(node,
+						"qcom,charging-disabled"));
+
 	pr_info("T0=%d, T1=%d, T2=%d, T3=%d, T4=%d, T5=%d, T6=%d\n",
 		chg->BATT_TEMP_T0, chg->BATT_TEMP_T1, chg->BATT_TEMP_T2,
 		chg->BATT_TEMP_T3, chg->BATT_TEMP_T4, chg->BATT_TEMP_T5,
@@ -862,7 +865,7 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 		val->intval = op_get_fastchg_ing(chg);
 		break;
 	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
-		val->intval = chg->charging_enabled;
+		val->intval = chg->chg_enabled;
 		break;
 #endif
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
@@ -985,9 +988,8 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 				!val->intval, 0);
 		rc = vote(chg->dc_suspend_votable, USER_VOTER,
 				!val->intval, 0);
-		chg->charging_enabled = (bool)val->intval;
+		chg->chg_enabled = (bool)val->intval;
 		break;
-
 #endif
 	case POWER_SUPPLY_PROP_CAPACITY:
 		rc = smblib_set_prop_batt_capacity(chg, val);
@@ -1327,10 +1329,17 @@ static int smb2_init_hw(struct smb2 *chip)
 		CHG_STATE_VOTER, true, 0);
 	vote(chg->pl_disable_votable,
 		PARALLEL_PSY_VOTER, true, 0);
+#ifdef VENDOR_EDIT
+	vote(chg->usb_suspend_votable,
+		DEFAULT_VOTER, !chg->chg_enabled, 0);
+	vote(chg->dc_suspend_votable,
+		DEFAULT_VOTER, !chg->chg_enabled, 0);
+#else
 	vote(chg->usb_suspend_votable,
 		DEFAULT_VOTER, chip->dt.no_battery, 0);
 	vote(chg->dc_suspend_votable,
 		DEFAULT_VOTER, chip->dt.no_battery, 0);
+#endif
 	vote(chg->fcc_max_votable,
 		DEFAULT_VOTER, true, chip->dt.fcc_ua);
 	vote(chg->fv_votable,

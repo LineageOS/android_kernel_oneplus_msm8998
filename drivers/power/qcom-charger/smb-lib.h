@@ -246,7 +246,7 @@ struct smb_charger {
 	bool				recharge_status;
 	bool				temp_littel_cool_set_current_0_point_25c;
 	bool				oem_lcd_is_on;
-	bool				charging_enabled;
+	bool				chg_enabled;
 
 	temp_region_type		mBattTempRegion;
 	enum batt_status_type		battery_status;
