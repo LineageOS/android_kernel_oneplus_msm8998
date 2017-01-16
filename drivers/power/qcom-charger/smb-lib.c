@@ -2553,6 +2553,7 @@ irqreturn_t smblib_handle_chg_state_change(int irq, void *data)
 /* david.liu@bsp, 20161109 Charging porting */
 	if (stat == TERMINATE_CHARGE) {
 		/* charge done, disable charge in software also */
+		chg->chg_done = true;
 		pr_err("TERMINATE_CHARGE: chg_done:temp:%d,soc_calib:%d,VOLT:%d,current:%d\n",
 			get_prop_batt_temp(chg), get_prop_batt_capacity(chg),
 			get_prop_batt_voltage_now(chg) / 1000,
