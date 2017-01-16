@@ -1380,11 +1380,11 @@ static int bq27541_battery_remove(struct i2c_client *client)
 	return 0;
 }
 
-/*
-static int bq27541_battery_suspend(struct i2c_client *client, pm_message_t message)
+
+static int bq27541_battery_suspend(struct device *dev)
 {
 	int ret=0;
-	struct bq27541_device_info *di = i2c_get_clientdata(client);
+	struct bq27541_device_info *di = dev_get_drvdata(dev);
 #ifdef VENDOR_EDIT_OPT_BQ_RESUME_TIME
 	cancel_delayed_work_sync(&di->battery_soc_work);
 #endif
@@ -1396,16 +1396,16 @@ static int bq27541_battery_suspend(struct i2c_client *client, pm_message_t messa
 	}
 	return 0;
 }
-*/
+
 
 /*1 minute*/
-/*
+
 #define RESUME_TIME  1*60
-static int bq27541_battery_resume(struct i2c_client *client)
+static int bq27541_battery_resume(struct device *dev)
 {
 	int ret=0;
 	int suspend_time;
-	struct bq27541_device_info *di = i2c_get_clientdata(client);
+	struct bq27541_device_info *di =  dev_get_drvdata(dev);
 	atomic_set(&di->suspended, 0);
 	ret = get_current_time(&di->rtc_resume_time);
 	if (ret ) {
@@ -1434,14 +1434,12 @@ static int bq27541_battery_resume(struct i2c_client *client)
 	schedule_delayed_work(&bq27541_di->battery_soc_work,
 			msecs_to_jiffies(RESUME_SCHDULE_SOC_UPDATE_WORK_MS));
 #else
-*/
 	/* update pre capacity when sleep time more than 1minutes */
-/*
 	bq27541_battery_soc(bq27541_di, suspend_time);
 #endif
 	return 0;
 }
-*/
+
 
 static void bq27541_shutdown(struct i2c_client *client)
 {
@@ -1461,16 +1459,17 @@ static const struct i2c_device_id bq27541_id[] = {
 	{},
 };
 MODULE_DEVICE_TABLE(i2c, BQ27541_id);
+static const struct dev_pm_ops bq27541_pm = {
+	SET_SYSTEM_SLEEP_PM_OPS(bq27541_battery_suspend, bq27541_battery_resume)
+};
 
 static struct i2c_driver bq27541_battery_driver = {
 	.driver		= {
 		.name = "bq27541-battery",
+		.pm = &bq27541_pm,
 	},
 	.probe		= bq27541_battery_probe,
 	.remove		= bq27541_battery_remove,
-	/* david@bsp mark temp */
-	//.suspend	= bq27541_battery_suspend ,
-	//.resume		= bq27541_battery_resume,
 	.shutdown	= bq27541_shutdown,
 	.id_table	= bq27541_id,
 };
