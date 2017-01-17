@@ -342,12 +342,12 @@
 	qcom,usb-icl-ua = <1800000>;
 	qcom,fv-max-uv = <4365000>;
 	/* ibatmax setting for different temp regions */
-	ibatmax-little-cold-ma = <300>;
+	ibatmax-little-cold-ma = <350>;
 	ibatmax-cool-ma = <450>;
-	ibatmax-little-cool-ma = <750>;
-	ibatmax-pre-normal-ma = <1400>;
-	ibatmax-normal-ma = <1925>; //1910
-	ibatmax-warm-ma = <750>;
+	ibatmax-little-cool-ma = <800>;
+	ibatmax-pre-normal-ma = <1425>;
+	ibatmax-normal-ma = <1950>;
+	ibatmax-warm-ma = <800>;
 	/* vbatmax setting for different temp regions */
 	vbatmax-little-cold-mv = <3975>; //3980
 	vbatmax-cool-mv = <4365>;
