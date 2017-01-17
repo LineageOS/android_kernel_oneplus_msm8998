@@ -17,10 +17,12 @@ struct project_info{
        uint32  modem;
        uint32  operator;
        uint32  ddr_manufacture_info;
-       uint32  ddr_raw;
+       uint32  ddr_row;
        uint32  ddr_column;
+       uint32  ddr_fw_version;
        uint32  ddr_reserve_info;
-	   uint32  platform_id;
+       uint32  platform_id;
+       uint32  ftm_uart_boot_mode;
 };
 
 struct component_info{
