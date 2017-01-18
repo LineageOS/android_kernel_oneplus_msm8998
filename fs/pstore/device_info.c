@@ -11,7 +11,7 @@ extern struct pstore_info *psinfo;
 
 extern uint32_t chip_serial_num;
 extern char ufs_vendor_and_rev[32];
-
+extern char ddr_manufacture_and_fw_verion[40];
 
 #define MAX_ITEM 5
 #define MAX_LENGTH 32
@@ -21,14 +21,12 @@ enum
 	serialno = 0,
 	hw_version,
 	rf_version,
-	ddr_manufacture_info,
 	pcba_number
 };
 
 char oem_serialno[16];
 char oem_hw_version[3];
 char oem_rf_version[3];
-char oem_ddr_manufacture_info[16];
 char oem_pcba_number[30];
 
 const char cmdline_info[MAX_ITEM][MAX_LENGTH] =
@@ -36,7 +34,6 @@ const char cmdline_info[MAX_ITEM][MAX_LENGTH] =
 	"androidboot.serialno=",
 	"androidboot.hw_version=",
 	"androidboot.rf_version=",
-	"ddr_manufacture_info=",
 	"androidboot.pcba_number=",
 };
 
@@ -61,8 +58,6 @@ static int __init device_info_init(void)
 			target_str = oem_hw_version;
 		else if(i == rf_version)
 			target_str = oem_rf_version;
-		else if(i == ddr_manufacture_info)
-			target_str = oem_ddr_manufacture_info;
 		else if(i == pcba_number)
 			target_str = oem_pcba_number;
 
@@ -112,12 +107,12 @@ static void __init write_device_info(const char *key, const char *value)
 static int __init init_device_info(void)
 {
 
-
 	device_info_init();
+	pstore_write_device_info(" * * * begin * * * \r\n", sizeof(" * * * begin * * * \r\n"));
 
 	write_device_info("hardware version", oem_hw_version);
 	write_device_info("rf version", oem_rf_version);
-	write_device_info("ddr manufacturer", oem_ddr_manufacture_info);
+	write_device_info("ddr manufacturer and fw version", ddr_manufacture_and_fw_verion);
 	write_device_info("pcba number", oem_pcba_number);
 	write_device_info("serial number", oem_serialno);
 
@@ -129,6 +124,7 @@ static int __init init_device_info(void)
 	write_device_info("kernel version", linux_banner);
 	write_device_info("boot command", saved_command_line);
 
+	pstore_write_device_info(" * * * end * * * \r\n", sizeof(" * * * end * * * \r\n"));
 	return 0;
 }
 

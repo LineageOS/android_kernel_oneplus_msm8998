@@ -31,8 +31,9 @@ static DEVICE_ATTR(rf_id_v3, S_IRUGO, project_info_get, NULL);
 static DEVICE_ATTR(modem, S_IRUGO, project_info_get, NULL);
 static DEVICE_ATTR(operator_no, S_IRUGO, project_info_get, NULL);
 static DEVICE_ATTR(ddr_manufacture_info, S_IRUGO, project_info_get, NULL);
-static DEVICE_ATTR(ddr_raw, S_IRUGO, project_info_get, NULL);
+static DEVICE_ATTR(ddr_row, S_IRUGO, project_info_get, NULL);
 static DEVICE_ATTR(ddr_column, S_IRUGO, project_info_get, NULL);
+static DEVICE_ATTR(ddr_fw_version, S_IRUGO, project_info_get, NULL);
 static DEVICE_ATTR(ddr_reserve_info, S_IRUGO, project_info_get, NULL);
 static DEVICE_ATTR(secboot_status, S_IRUGO, project_info_get, NULL);
 static DEVICE_ATTR(platform_id, S_IRUGO, project_info_get, NULL);
@@ -76,10 +77,12 @@ static ssize_t project_info_get(struct device *dev,
 			return sprintf(buf, "%d\n", project_info_desc->operator);
 		if (attr == &dev_attr_ddr_manufacture_info)
 			return sprintf(buf, "%d\n", project_info_desc->ddr_manufacture_info);
-		if (attr == &dev_attr_ddr_raw)
-			return sprintf(buf, "%d\n", project_info_desc->ddr_raw);
+		if (attr == &dev_attr_ddr_row)
+			return sprintf(buf, "%d\n", project_info_desc->ddr_row);
 		if (attr == &dev_attr_ddr_column)
 			return sprintf(buf, "%d\n", project_info_desc->ddr_column);
+		if (attr == &dev_attr_ddr_fw_version)
+			return sprintf(buf, "%d\n", project_info_desc->ddr_fw_version);
 		if (attr == &dev_attr_ddr_reserve_info)
 			return sprintf(buf, "%d\n", project_info_desc->ddr_reserve_info);
 		if (attr == &dev_attr_secboot_status) {
@@ -101,8 +104,9 @@ static struct attribute *project_info_sysfs_entries[] = {
 	&dev_attr_modem.attr,
 	&dev_attr_operator_no.attr,
 	&dev_attr_ddr_manufacture_info.attr,
-	&dev_attr_ddr_raw.attr,
+	&dev_attr_ddr_row.attr,
 	&dev_attr_ddr_column.attr,
+	&dev_attr_ddr_fw_version.attr,
 	&dev_attr_ddr_reserve_info.attr,
 	&dev_attr_secboot_status.attr,
 	&dev_attr_platform_id.attr,
@@ -294,6 +298,7 @@ struct ddr_manufacture{
 //ddr id and ddr name
 static char ddr_version[32] = {0};
 static char ddr_manufacture[20] = {0};
+char ddr_manufacture_and_fw_verion[40] = {0};
 static char cpu_type[20] = {0};
 
 struct ddr_manufacture ddr_manufacture_list[]={
@@ -344,6 +349,7 @@ void get_ddr_manufacture_name(void){
 		}
 	}
 }
+
 
 void get_cpu_type(void){
 	int i;
@@ -466,8 +472,9 @@ int __init init_project_info(void)
 		ddr_size = 2;
 	}
 
-	snprintf(ddr_version, sizeof(ddr_version), "size_%dG_r_%d_c_%d", ddr_size, project_info_desc->ddr_raw,project_info_desc->ddr_column);
-	push_component_info(DDR,ddr_version, ddr_manufacture);
+	snprintf(ddr_version, sizeof(ddr_version), "size_%dG_r_%d_c_%d", ddr_size, project_info_desc->ddr_row,project_info_desc->ddr_column);
+	snprintf(ddr_manufacture_and_fw_verion, sizeof(ddr_manufacture_and_fw_verion), "%s %u", ddr_manufacture, project_info_desc->ddr_fw_version);
+	push_component_info(DDR,ddr_version, ddr_manufacture_and_fw_verion);
 
 	get_cpu_type();
 	push_component_info(CPU,cpu_type, "Qualcomm");
