@@ -2658,6 +2658,11 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 	bool last_vbus_present;
 	int is_usb_supend;
 	last_vbus_present = chg->vbus_present;
+	chg->dash_on = get_prop_fast_chg_started(chg);
+	if (chg->dash_on) {
+		pr_err("return directly because dash is online\n");
+		return IRQ_HANDLED;
+	}
 #endif
 	rc = smblib_read(chg, USBIN_BASE + INT_RT_STS_OFFSET, &stat);
 	if (rc < 0) {
@@ -2695,12 +2700,6 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 			pr_info("release chg_wake_lock\n");
 			wake_unlock(&chg->chg_wake_lock);
 		}
-	}
-
-	chg->dash_on = get_prop_fast_chg_started(chg);
-	if (chg->dash_on) {
-		pr_err("return directly because dash is online\n");
-		return IRQ_HANDLED;
 	}
 #endif
 
