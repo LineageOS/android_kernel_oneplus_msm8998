@@ -3232,6 +3232,13 @@ irqreturn_t smblib_handle_switcher_power_ok(int irq, void *data)
 	struct smb_charger *chg = irq_data->parent_data;
 	int rc;
 	u8 stat;
+#ifdef VENDOR_EDIT
+	chg->dash_on = get_prop_fast_chg_started(chg);
+	if (chg->dash_on) {
+		pr_err("return directly because dash is online\n");
+		return IRQ_HANDLED;
+	}
+#endif
 
 	if (!(chg->wa_flags & BOOST_BACK_WA))
 		return IRQ_HANDLED;
