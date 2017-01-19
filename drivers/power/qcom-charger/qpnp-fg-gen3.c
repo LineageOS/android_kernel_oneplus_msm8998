@@ -846,6 +846,7 @@ static const char *fg_get_battery_type(struct fg_chip *chip)
 	return DEFAULT_BATT_TYPE;
 }
 
+#ifndef VENDOR_EDIT
 static int fg_get_batt_id(struct fg_chip *chip, int *val)
 {
 	int rc, batt_id = -EINVAL;
@@ -864,6 +865,8 @@ static int fg_get_batt_id(struct fg_chip *chip, int *val)
 	*val = batt_id;
 	return 0;
 }
+#endif
+
 #ifdef VENDOR_EDIT
 	/* Yangfb@bsp, 20170110 Add OP	battery profile */
 #define OP_SW_DEFAULT_ID 200
