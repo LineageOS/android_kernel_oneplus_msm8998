@@ -170,19 +170,11 @@ void fixup_top_recursive(struct dentry *parent) {
 	spin_lock(&parent->d_lock);
 	list_for_each_entry(dentry, &parent->d_subdirs, d_child) {
 		if (dentry->d_inode) {
-<<<<<<< HEAD
 			if (SDCARDFS_I(parent->d_inode)->top != SDCARDFS_I(dentry->d_inode)->top) {
 				get_derived_permission(parent, dentry);
 				fix_derived_permission(dentry->d_inode);
 				fixup_top_recursive(dentry);
 			}
-=======
-			mutex_lock(&dentry->d_inode->i_mutex);
-			get_derived_permission(parent, dentry);
-			fix_derived_permission(dentry->d_inode);
-			get_derive_permissions_recursive(dentry);
-			mutex_unlock(&dentry->d_inode->i_mutex);
->>>>>>> origin/qc8998
 		}
 	}
 	spin_unlock(&parent->d_lock);
