@@ -16,15 +16,12 @@
 #include <linux/irqreturn.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/consumer.h>
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161014 Add charging standard */
 #include "oem_external_fg.h"
 #include <linux/wakelock.h>
 #endif
-=======
 #include <linux/extcon.h>
->>>>>>> origin/qc8998
 #include "storm-watch.h"
 
 enum print_reason {

@@ -582,17 +582,13 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 			rc = smblib_get_prop_typec_power_role(chg, val);
 		break;
 	case POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION:
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 	case POWER_SUPPLY_PROP_OEM_TYPEC_CC_ORIENTATION:
 #endif
-		rc = smblib_get_prop_typec_cc_orientation(chg, val);
-=======
 		if (chg->micro_usb_mode)
 			val->intval = 0;
 		else
 			rc = smblib_get_prop_typec_cc_orientation(chg, val);
->>>>>>> origin/qc8998
 		break;
 	case POWER_SUPPLY_PROP_PD_ALLOWED:
 		rc = smblib_get_prop_pd_allowed(chg, val);
@@ -1555,7 +1551,6 @@ static int smb2_init_hw(struct smb2 *chip)
 		return rc;
 	}
 
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 	//xianglin modify otg current load to 1.5A
 	rc = smblib_masked_write(chg, OTG_CURRENT_LIMIT_CFG_REG, OTG_CURRENT_LIMIT_MASK, 0x5);
@@ -1566,44 +1561,6 @@ static int smb2_init_hw(struct smb2 *chip)
 	}
 #endif
 
-	/* configure power role for dual-role */
-	rc = smblib_masked_write(chg, TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
-				 TYPEC_POWER_ROLE_CMD_MASK, 0);
-	if (rc < 0) {
-		dev_err(chg->dev,
-			"Couldn't configure power role for DRP rc=%d\n", rc);
-		return rc;
-	}
-
-	/*
-	 * disable Type-C factory mode and stay in Attached.SRC state when VCONN
-	 * over-current happens
-	 */
-	rc = smblib_masked_write(chg, TYPE_C_CFG_REG,
-			FACTORY_MODE_DETECTION_EN_BIT | VCONN_OC_CFG_BIT, 0);
-	if (rc < 0) {
-		dev_err(chg->dev, "Couldn't configure Type-C rc=%d\n", rc);
-		return rc;
-	}
-
-	/* increase VCONN softstart */
-	rc = smblib_masked_write(chg, TYPE_C_CFG_2_REG,
-			VCONN_SOFTSTART_CFG_MASK, VCONN_SOFTSTART_CFG_MASK);
-	if (rc < 0) {
-		dev_err(chg->dev, "Couldn't increase VCONN softstart rc=%d\n",
-			rc);
-		return rc;
-	}
-
-	/* disable try.SINK mode */
-	rc = smblib_masked_write(chg, TYPE_C_CFG_3_REG, EN_TRYSINK_MODE_BIT, 0);
-	if (rc < 0) {
-		dev_err(chg->dev, "Couldn't set TRYSINK_MODE rc=%d\n", rc);
-		return rc;
-	}
-
-=======
->>>>>>> origin/qc8998
 	rc = smblib_masked_write(chg, QNOVO_PT_ENABLE_CMD_REG,
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */

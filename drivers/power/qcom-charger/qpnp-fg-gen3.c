@@ -353,7 +353,6 @@ module_param_named(
 	profile_dump, fg_profile_dump, bool, S_IRUSR | S_IWUSR
 );
 
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 static struct external_battery_gauge *external_fg = NULL;
@@ -377,10 +376,7 @@ void external_battery_gauge_unregister(struct external_battery_gauge *batt_gauge
 EXPORT_SYMBOL(external_battery_gauge_unregister);
 #endif
 
-static bool fg_sram_dump;
-=======
 static int fg_sram_dump_period_ms = 20000;
->>>>>>> origin/qc8998
 module_param_named(
 	sram_dump_period_ms, fg_sram_dump_period_ms, int, S_IRUSR | S_IWUSR
 );
@@ -890,11 +886,7 @@ static int fg_get_batt_profile(struct fg_chip *chip)
 
 	chip->batt_id_ohms = batt_id;
 	batt_id /= 1000;
-<<<<<<< HEAD
 #endif
-	chip->batt_id_kohms = batt_id;
-=======
->>>>>>> origin/qc8998
 	batt_node = of_find_node_by_name(node, "qcom,battery-data");
 	if (!batt_node) {
 		pr_err("Batterydata not available\n");

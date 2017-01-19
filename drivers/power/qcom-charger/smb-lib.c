@@ -2776,34 +2776,28 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 				smblib_err(chg, "Couldn't disable dpdm regulator rc=%d\n",
 					rc);
 		}
-<<<<<<< HEAD
+
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 		if (last_vbus_present != chg->vbus_present)
 			op_handle_usb_removal(chg);
 #endif
-=======
 
 		if (chg->micro_usb_mode) {
 			smblib_update_usb_type(chg);
 			extcon_set_cable_state_(chg->extcon, EXTCON_USB, false);
 			smblib_uusb_removal(chg);
 		}
->>>>>>> origin/qc8998
 	}
 
 	power_supply_changed(chg->usb_psy);
 	smblib_dbg(chg, PR_INTERRUPT, "IRQ: %s %s\n",
-<<<<<<< HEAD
-		   irq_data->name, vbus_rising ? "attached" : "detached");
+		irq_data->name, vbus_rising ? "attached" : "detached");
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 	pr_err("IRQ: %s %s\n",
-		   irq_data->name, chg->vbus_present ? "attached" : "detached");
-#endif
-=======
 		irq_data->name, vbus_rising ? "attached" : "detached");
->>>>>>> origin/qc8998
+#endif
 	return IRQ_HANDLED;
 }
 
