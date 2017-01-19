@@ -31,7 +31,6 @@
 #include <linux/regulator/machine.h>
 #include <linux/regulator/of_regulator.h>
 #include <linux/qpnp/power-on.h>
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 #include <linux/syscalls.h>
 #endif
@@ -39,9 +38,7 @@
 //hefaxi@filesystems, 2015/12/07, add for force dump function
 #include <linux/oem_force_dump.h>
 #endif
-=======
 #include <linux/power_supply.h>
->>>>>>> origin/qc8998
 
 #define PMIC_VER_8941           0x01
 #define PMIC_VERSION_REG        0x0105

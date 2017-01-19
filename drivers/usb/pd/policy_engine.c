@@ -2749,8 +2749,6 @@ struct usbpd *usbpd_create(struct device *parent)
 	pd->vconn_is_external = device_property_present(parent,
 					"qcom,vconn-uses-external-source");
 
-<<<<<<< HEAD
-=======
 	/*
 	 * Register the Android dual-role class (/sys/class/dual_role_usb/).
 	 * The first instance should be named "otg_default" as that's what
@@ -2775,7 +2773,6 @@ struct usbpd *usbpd_create(struct device *parent)
 		pd->dual_role->drv_data = pd;
 	}
 
->>>>>>> origin/qc8998
 	pd->current_pr = PR_NONE;
 	pd->current_dr = DR_NONE;
 	list_add_tail(&pd->instance, &_usbpd);
