@@ -425,6 +425,7 @@ obj-$(CONFIG_SND_SOC_MSM_STUB)  += snd-soc-msm-stub.o
 # Amp
 obj-$(CONFIG_SND_SOC_MAX9877)	+= snd-soc-max9877.o
 obj-$(CONFIG_SND_SOC_TPA6130A2)	+= snd-soc-tpa6130a2.o
+<<<<<<< HEAD
 obj-y += msm8x16/
 
 #wangdongdong@MultiMediaService,2016/09/30,add for tfa9891
@@ -439,3 +440,7 @@ snd-soc-tfa98xx-objs += tfa9891/tfa9897_init.o
 snd-soc-tfa98xx-objs += tfa9891/tfa9890_init.o
 snd-soc-tfa98xx-objs += tfa9891/tfa9887B_init.o
 snd-soc-tfa98xx-objs += tfa9891/tfa9887_init.o
+=======
+obj-y += sdm660_cdc/
+obj-y += msm_sdw/
+>>>>>>> origin/qc8998

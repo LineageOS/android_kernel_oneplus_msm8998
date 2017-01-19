@@ -214,6 +214,13 @@ static struct smb_params v1_params = {
 		.max_u	= 2000,
 		.step_u	= 200,
 	},
+	.freq_boost		= {
+		.name	= "boost switching frequency",
+		.reg	= CFG_BUCKBOOST_FREQ_SELECT_BOOST_REG,
+		.min_u	= 600,
+		.max_u	= 2000,
+		.step_u	= 200,
+	},
 };
 
 #define STEP_CHARGING_MAX_STEPS	5
@@ -222,6 +229,7 @@ struct smb_dt_props {
 	int	usb_icl_ua;
 	int	otg_cl_ua;
 	int	dc_icl_ua;
+	int	boost_threshold_ua;
 	int	fv_uv;
 	int	wipower_max_uw;
 	u32	step_soc_threshold[STEP_CHARGING_MAX_STEPS - 1];
@@ -273,6 +281,7 @@ module_param_named(
 );
 
 #define MICRO_1P5A	1500000
+#define MICRO_P1A	100000
 static int smb2_parse_dt(struct smb2 *chip)
 {
 	struct smb_charger *chg = &chip->chg;
@@ -437,6 +446,12 @@ static int smb2_parse_dt(struct smb2 *chip)
 	if (rc < 0)
 		chip->dt.dc_icl_ua = -EINVAL;
 
+	rc = of_property_read_u32(node,
+				"qcom,boost-threshold-ua",
+				&chip->dt.boost_threshold_ua);
+	if (rc < 0)
+		chip->dt.boost_threshold_ua = MICRO_P1A;
+
 	rc = of_property_read_u32(node, "qcom,wipower-max-uw",
 				&chip->dt.wipower_max_uw);
 	if (rc < 0)
@@ -480,6 +495,9 @@ static int smb2_parse_dt(struct smb2 *chip)
 
 	chip->dt.auto_recharge_soc = of_property_read_bool(node,
 						"qcom,auto-recharge-soc");
+
+	chg->micro_usb_mode = of_property_read_bool(node, "qcom,micro-usb");
+
 	return 0;
 }
 
@@ -506,6 +524,7 @@ static enum power_supply_property smb2_usb_props[] = {
 	POWER_SUPPLY_PROP_PD_ACTIVE,
 	POWER_SUPPLY_PROP_INPUT_CURRENT_SETTLED,
 	POWER_SUPPLY_PROP_INPUT_CURRENT_NOW,
+	POWER_SUPPLY_PROP_BOOST_CURRENT,
 	POWER_SUPPLY_PROP_PE_START,
 };
 
@@ -549,19 +568,31 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 			val->intval = chg->usb_psy_desc.type;
 		break;
 	case POWER_SUPPLY_PROP_TYPEC_MODE:
-		if (chip->bad_part)
+		if (chg->micro_usb_mode)
+			val->intval = POWER_SUPPLY_TYPEC_NONE;
+		else if (chip->bad_part)
 			val->intval = POWER_SUPPLY_TYPEC_SOURCE_DEFAULT;
 		else
 			rc = smblib_get_prop_typec_mode(chg, val);
 		break;
 	case POWER_SUPPLY_PROP_TYPEC_POWER_ROLE:
-		rc = smblib_get_prop_typec_power_role(chg, val);
+		if (chg->micro_usb_mode)
+			val->intval = POWER_SUPPLY_TYPEC_PR_NONE;
+		else
+			rc = smblib_get_prop_typec_power_role(chg, val);
 		break;
 	case POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION:
+<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 	case POWER_SUPPLY_PROP_OEM_TYPEC_CC_ORIENTATION:
 #endif
 		rc = smblib_get_prop_typec_cc_orientation(chg, val);
+=======
+		if (chg->micro_usb_mode)
+			val->intval = 0;
+		else
+			rc = smblib_get_prop_typec_cc_orientation(chg, val);
+>>>>>>> origin/qc8998
 		break;
 	case POWER_SUPPLY_PROP_PD_ALLOWED:
 		rc = smblib_get_prop_pd_allowed(chg, val);
@@ -574,6 +605,9 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_NOW:
 		rc = smblib_get_prop_usb_current_now(chg, val);
+		break;
+	case POWER_SUPPLY_PROP_BOOST_CURRENT:
+		val->intval = chg->boost_current_ua;
 		break;
 	case POWER_SUPPLY_PROP_PD_IN_HARD_RESET:
 		rc = smblib_get_prop_pd_in_hard_reset(chg, val);
@@ -628,6 +662,9 @@ static int smb2_usb_set_prop(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_PD_USB_SUSPEND_SUPPORTED:
 		chg->system_suspend_supported = val->intval;
+		break;
+	case POWER_SUPPLY_PROP_BOOST_CURRENT:
+		rc = smblib_set_prop_boost_current(chg, val);
 		break;
 	default:
 		pr_err("set prop %d is not supported\n", psp);
@@ -814,6 +851,7 @@ static enum power_supply_property smb2_batt_props[] = {
 	POWER_SUPPLY_PROP_CHARGE_DONE,
 	POWER_SUPPLY_PROP_PARALLEL_DISABLE,
 	POWER_SUPPLY_PROP_PARALLEL_PERCENT,
+	POWER_SUPPLY_PROP_SET_SHIP_MODE,
 };
 
 static int smb2_batt_get_prop(struct power_supply *psy,
@@ -915,6 +953,10 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_PARALLEL_PERCENT:
 		val->intval = chg->pl.slave_pct;
 		break;
+	case POWER_SUPPLY_PROP_SET_SHIP_MODE:
+		/* Not in ship mode as long as device is active */
+		val->intval = 0;
+		break;
 	default:
 		pr_err("batt power supply prop %d not supported\n", psp);
 		return -EINVAL;
@@ -1008,6 +1050,12 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX:
 		vote(chg->fcc_max_votable, DEFAULT_VOTER, true, val->intval);
+		break;
+	case POWER_SUPPLY_PROP_SET_SHIP_MODE:
+		/* Not in ship mode as long as the device is active */
+		if (!val->intval)
+			break;
+		rc = smblib_set_prop_ship_mode(chg, val);
 		break;
 	default:
 		rc = -EINVAL;
@@ -1278,6 +1326,99 @@ static int smb2_config_wipower_input_power(struct smb2 *chip, int uw)
 	return 0;
 }
 
+static int smb2_configure_typec(struct smb_charger *chg)
+{
+	int rc;
+
+	/*
+	 * trigger the usb-typec-change interrupt only when the CC state
+	 * changes
+	 */
+	rc = smblib_write(chg, TYPE_C_INTRPT_ENB_REG,
+			  TYPEC_CCSTATE_CHANGE_INT_EN_BIT);
+	if (rc < 0) {
+		dev_err(chg->dev,
+			"Couldn't configure Type-C interrupts rc=%d\n", rc);
+		return rc;
+	}
+
+	/* configure power role for dual-role */
+	rc = smblib_masked_write(chg, TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
+				 TYPEC_POWER_ROLE_CMD_MASK, 0);
+	if (rc < 0) {
+		dev_err(chg->dev,
+			"Couldn't configure power role for DRP rc=%d\n", rc);
+		return rc;
+	}
+
+	/*
+	 * disable Type-C factory mode and stay in Attached.SRC state when VCONN
+	 * over-current happens
+	 */
+	rc = smblib_masked_write(chg, TYPE_C_CFG_REG,
+			FACTORY_MODE_DETECTION_EN_BIT | VCONN_OC_CFG_BIT, 0);
+	if (rc < 0) {
+		dev_err(chg->dev, "Couldn't configure Type-C rc=%d\n", rc);
+		return rc;
+	}
+
+	/* increase VCONN softstart */
+	rc = smblib_masked_write(chg, TYPE_C_CFG_2_REG,
+			VCONN_SOFTSTART_CFG_MASK, VCONN_SOFTSTART_CFG_MASK);
+	if (rc < 0) {
+		dev_err(chg->dev, "Couldn't increase VCONN softstart rc=%d\n",
+			rc);
+		return rc;
+	}
+
+	/* disable try.SINK mode */
+	rc = smblib_masked_write(chg, TYPE_C_CFG_3_REG, EN_TRYSINK_MODE_BIT, 0);
+	if (rc < 0) {
+		dev_err(chg->dev, "Couldn't set TRYSINK_MODE rc=%d\n", rc);
+		return rc;
+	}
+
+	rc = smblib_validate_initial_typec_legacy_status(chg);
+	if (rc < 0) {
+		dev_err(chg->dev, "Couldn't validate typec legacy status rc=%d\n",
+			rc);
+		return rc;
+	}
+
+	return rc;
+}
+
+static int smb2_disable_typec(struct smb_charger *chg)
+{
+	int rc;
+
+	/* configure FSM in idle state */
+	rc = smblib_masked_write(chg, TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
+			TYPEC_DISABLE_CMD_BIT, TYPEC_DISABLE_CMD_BIT);
+	if (rc < 0) {
+		dev_err(chg->dev, "Couldn't put FSM in idle rc=%d\n", rc);
+		return rc;
+	}
+
+	/* configure micro USB mode */
+	rc = smblib_masked_write(chg, TYPE_C_CFG_REG,
+			TYPE_C_OR_U_USB_BIT, TYPE_C_OR_U_USB_BIT);
+	if (rc < 0) {
+		dev_err(chg->dev, "Couldn't enable micro USB mode rc=%d\n", rc);
+		return rc;
+	}
+
+	/* release FSM from idle state */
+	rc = smblib_masked_write(chg, TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
+			TYPEC_DISABLE_CMD_BIT, 0);
+	if (rc < 0) {
+		dev_err(chg->dev, "Couldn't release FSM rc=%d\n", rc);
+		return rc;
+	}
+
+	return rc;
+}
+
 static int smb2_init_hw(struct smb2 *chip)
 {
 	struct smb_charger *chg = &chip->chg;
@@ -1306,6 +1447,7 @@ static int smb2_init_hw(struct smb2 *chip)
 
 	chg->otg_cl_ua = chip->dt.otg_cl_ua;
 	chg->dcp_icl_ua = chip->dt.usb_icl_ua;
+	chg->boost_threshold_ua = chip->dt.boost_threshold_ua;
 
 	rc = smblib_read(chg, APSD_RESULT_STATUS_REG, &stat);
 	if (rc < 0) {
@@ -1348,14 +1490,18 @@ static int smb2_init_hw(struct smb2 *chip)
 		DCP_VOTER, true, chip->dt.usb_icl_ua);
 	vote(chg->dc_icl_votable,
 		DEFAULT_VOTER, true, chip->dt.dc_icl_ua);
-	vote(chg->hvdcp_disable_votable, DEFAULT_VOTER,
+	vote(chg->hvdcp_disable_votable_indirect, DEFAULT_VOTER,
 		chip->dt.hvdcp_disable, 0);
-	vote(chg->hvdcp_disable_votable, PD_INACTIVE_VOTER,
+	vote(chg->hvdcp_disable_votable_indirect, PD_INACTIVE_VOTER,
 			true, 0);
 	vote(chg->pd_disallowed_votable_indirect, CC_DETACHED_VOTER,
 			true, 0);
 	vote(chg->pd_disallowed_votable_indirect, HVDCP_TIMEOUT_VOTER,
 			true, 0);
+	vote(chg->pd_disallowed_votable_indirect, MICRO_USB_VOTER,
+			chg->micro_usb_mode, 0);
+	vote(chg->hvdcp_enable_votable, MICRO_USB_VOTER,
+			chg->micro_usb_mode, 0);
 
 #ifdef VENDOR_EDIT
 	/* disable HVDCP */
@@ -1381,12 +1527,10 @@ static int smb2_init_hw(struct smb2 *chip)
 		return rc;
 	}
 
-	/*
-	 * trigger the usb-typec-change interrupt only when the CC state
-	 * changes
-	 */
-	rc = smblib_write(chg, TYPE_C_INTRPT_ENB_REG,
-			  TYPEC_CCSTATE_CHANGE_INT_EN_BIT);
+	if (chg->micro_usb_mode)
+		rc = smb2_disable_typec(chg);
+	else
+		rc = smb2_configure_typec(chg);
 	if (rc < 0) {
 		dev_err(chg->dev,
 			"Couldn't configure Type-C interrupts rc=%d\n", rc);
@@ -1411,6 +1555,7 @@ static int smb2_init_hw(struct smb2 *chip)
 		return rc;
 	}
 
+<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 	//xianglin modify otg current load to 1.5A
 	rc = smblib_masked_write(chg, OTG_CURRENT_LIMIT_CFG_REG, OTG_CURRENT_LIMIT_MASK, 0x5);
@@ -1457,6 +1602,8 @@ static int smb2_init_hw(struct smb2 *chip)
 		return rc;
 	}
 
+=======
+>>>>>>> origin/qc8998
 	rc = smblib_masked_write(chg, QNOVO_PT_ENABLE_CMD_REG,
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
@@ -1556,13 +1703,6 @@ static int smb2_init_hw(struct smb2 *chip)
 		return rc;
 	}
 
-	rc = smblib_validate_initial_typec_legacy_status(chg);
-	if (rc < 0) {
-		dev_err(chg->dev, "Couldn't validate typec legacy status rc=%d\n",
-			rc);
-		return rc;
-	}
-
 	if (chip->dt.auto_recharge_soc) {
 		rc = smblib_masked_write(chg, FG_UPDATE_CFG_2_SEL_REG,
 				SOC_LT_CHG_RECHARGE_THRESH_SEL_BIT |
@@ -1619,7 +1759,7 @@ static int smb2_setup_wa_flags(struct smb2 *chip)
 		if (pmic_rev_id->rev4 == PMI8998_V2P0_REV4) /* PMI rev 2.0 */
 			chg->wa_flags |= TYPEC_CC2_REMOVAL_WA_BIT;
 		break;
-	case PMFALCON_SUBTYPE:
+	case PM660_SUBTYPE:
 		chip->chg.wa_flags |= BOOST_BACK_WA;
 		break;
 	default:
@@ -2051,6 +2191,22 @@ static int smb2_probe(struct platform_device *pdev)
 	if (rc < 0) {
 		pr_err("Couldn't initialize vconn regulator rc=%d\n",
 			rc);
+		goto cleanup;
+	}
+
+	/* extcon registration */
+	chg->extcon = devm_extcon_dev_allocate(chg->dev, smblib_extcon_cable);
+	if (IS_ERR(chg->extcon)) {
+		rc = PTR_ERR(chg->extcon);
+		dev_err(chg->dev, "failed to allocate extcon device rc=%d\n",
+				rc);
+		goto cleanup;
+	}
+
+	rc = devm_extcon_dev_register(chg->dev, chg->extcon);
+	if (rc < 0) {
+		dev_err(chg->dev, "failed to register extcon device rc=%d\n",
+				rc);
 		goto cleanup;
 	}
 

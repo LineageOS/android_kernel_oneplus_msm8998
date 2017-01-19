@@ -1075,7 +1075,7 @@ static u32 xhci_find_real_port_number(struct xhci_hcd *xhci,
 	struct usb_device *top_dev;
 	struct usb_hcd *hcd;
 
-	if (udev->speed == USB_SPEED_SUPER)
+	if (udev->speed >= USB_SPEED_SUPER)
 		hcd = xhci->shared_hcd;
 	else
 		hcd = xhci->main_hcd;
@@ -1110,6 +1110,7 @@ int xhci_setup_addressable_virt_dev(struct xhci_hcd *xhci, struct usb_device *ud
 	/* 3) Only the control endpoint is valid - one endpoint context */
 	slot_ctx->dev_info |= cpu_to_le32(LAST_CTX(1) | udev->route);
 	switch (udev->speed) {
+	case USB_SPEED_SUPER_PLUS:
 	case USB_SPEED_SUPER:
 		slot_ctx->dev_info |= cpu_to_le32(SLOT_SPEED_SS);
 		max_packets = MAX_PACKET(512);
@@ -1297,6 +1298,7 @@ static unsigned int xhci_get_endpoint_interval(struct usb_device *udev,
 		}
 		/* Fall through - SS and HS isoc/int have same decoding */
 
+	case USB_SPEED_SUPER_PLUS:
 	case USB_SPEED_SUPER:
 		if (usb_endpoint_xfer_int(&ep->desc) ||
 		    usb_endpoint_xfer_isoc(&ep->desc)) {
@@ -1337,7 +1339,7 @@ static unsigned int xhci_get_endpoint_interval(struct usb_device *udev,
 static u32 xhci_get_endpoint_mult(struct usb_device *udev,
 		struct usb_host_endpoint *ep)
 {
-	if (udev->speed != USB_SPEED_SUPER ||
+	if (udev->speed < USB_SPEED_SUPER ||
 			!usb_endpoint_xfer_isoc(&ep->desc))
 		return 0;
 	return ep->ss_ep_comp.bmAttributes;
@@ -1387,7 +1389,7 @@ static u32 xhci_get_max_esit_payload(struct usb_device *udev,
 			usb_endpoint_xfer_bulk(&ep->desc))
 		return 0;
 
-	if (udev->speed == USB_SPEED_SUPER)
+	if (udev->speed >= USB_SPEED_SUPER)
 		return le16_to_cpu(ep->ss_ep_comp.wBytesPerInterval);
 
 	max_packet = GET_MAX_PACKET(usb_endpoint_maxp(&ep->desc));
@@ -1458,6 +1460,7 @@ int xhci_endpoint_init(struct xhci_hcd *xhci,
 	max_packet = GET_MAX_PACKET(usb_endpoint_maxp(&ep->desc));
 	max_burst = 0;
 	switch (udev->speed) {
+	case USB_SPEED_SUPER_PLUS:
 	case USB_SPEED_SUPER:
 		/* dig out max burst from ep companion desc */
 		max_burst = ep->ss_ep_comp.bMaxBurst;
@@ -1789,11 +1792,84 @@ void xhci_free_command(struct xhci_hcd *xhci,
 	kfree(command);
 }
 
+void xhci_handle_sec_intr_events(struct xhci_hcd *xhci, int intr_num)
+{
+	union xhci_trb *erdp_trb, *current_trb;
+	struct xhci_segment	*seg;
+	u64 erdp_reg;
+	u32 iman_reg;
+	dma_addr_t deq;
+	unsigned long segment_offset;
+
+	/* disable irq, ack pending interrupt and ack all pending events */
+
+	iman_reg =
+		readl_relaxed(&xhci->sec_ir_set[intr_num]->irq_pending);
+	iman_reg &= ~IMAN_IE;
+	writel_relaxed(iman_reg,
+			&xhci->sec_ir_set[intr_num]->irq_pending);
+	iman_reg =
+		readl_relaxed(&xhci->sec_ir_set[intr_num]->irq_pending);
+	if (iman_reg & IMAN_IP)
+		writel_relaxed(iman_reg,
+			&xhci->sec_ir_set[intr_num]->irq_pending);
+
+	/* last acked event trb is in erdp reg  */
+	erdp_reg =
+		xhci_read_64(xhci, &xhci->sec_ir_set[intr_num]->erst_dequeue);
+	deq = (dma_addr_t)(erdp_reg & ~ERST_PTR_MASK);
+	if (!deq) {
+		pr_debug("%s: event ring handling not required\n", __func__);
+		return;
+	}
+
+	seg = xhci->sec_event_ring[intr_num]->first_seg;
+	segment_offset = deq - seg->dma;
+
+	/* find out virtual address of the last acked event trb */
+	erdp_trb = current_trb = &seg->trbs[0] +
+				(segment_offset/sizeof(*current_trb));
+
+	/* read cycle state of the last acked trb to find out CCS */
+	xhci->sec_event_ring[intr_num]->cycle_state =
+				(current_trb->event_cmd.flags & TRB_CYCLE);
+
+	 while (1) {
+		/* last trb of the event ring: toggle cycle state */
+		if (current_trb == &seg->trbs[TRBS_PER_SEGMENT - 1]) {
+			xhci->sec_event_ring[intr_num]->cycle_state ^= 1;
+			current_trb = &seg->trbs[0];
+		} else {
+			current_trb++;
+		}
+
+		/* cycle state transition */
+		if ((le32_to_cpu(current_trb->event_cmd.flags) & TRB_CYCLE) !=
+		    xhci->sec_event_ring[intr_num]->cycle_state)
+			break;
+	}
+
+	if (erdp_trb != current_trb) {
+		deq =
+		xhci_trb_virt_to_dma(xhci->sec_event_ring[intr_num]->deq_seg,
+					current_trb);
+		if (deq == 0)
+			xhci_warn(xhci,
+				"WARN ivalid SW event ring dequeue ptr.\n");
+		/* Update HC event ring dequeue pointer */
+		erdp_reg &= ERST_PTR_MASK;
+		erdp_reg |= ((u64) deq & (u64) ~ERST_PTR_MASK);
+	}
+
+	/* Clear the event handler busy flag (RW1C); event ring is empty. */
+	erdp_reg |= ERST_EHB;
+	xhci_write_64(xhci, erdp_reg,
+			&xhci->sec_ir_set[intr_num]->erst_dequeue);
+}
+
 int xhci_sec_event_ring_cleanup(struct usb_hcd *hcd, unsigned intr_num)
 {
 	int size;
-	u32 iman_reg;
-	u64 erdp_reg;
 	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
 	struct device	*dev = xhci_to_hcd(xhci)->self.controller;
 
@@ -1806,28 +1882,7 @@ int xhci_sec_event_ring_cleanup(struct usb_hcd *hcd, unsigned intr_num)
 	size =
 	sizeof(struct xhci_erst_entry)*(xhci->sec_erst[intr_num].num_entries);
 	if (xhci->sec_erst[intr_num].entries) {
-		/*
-		 * disable irq, ack pending interrupt and clear EHB for xHC to
-		 * generate interrupt again when new event ring is setup
-		 */
-		iman_reg =
-			readl_relaxed(&xhci->sec_ir_set[intr_num]->irq_pending);
-		iman_reg &= ~IMAN_IE;
-		writel_relaxed(iman_reg,
-				&xhci->sec_ir_set[intr_num]->irq_pending);
-		iman_reg =
-			readl_relaxed(&xhci->sec_ir_set[intr_num]->irq_pending);
-		if (iman_reg & IMAN_IP)
-			writel_relaxed(iman_reg,
-				&xhci->sec_ir_set[intr_num]->irq_pending);
-		/* make sure IP gets cleared before clearing EHB */
-		mb();
-
-		erdp_reg = xhci_read_64(xhci,
-				&xhci->sec_ir_set[intr_num]->erst_dequeue);
-		xhci_write_64(xhci, erdp_reg | ERST_EHB,
-				&xhci->sec_ir_set[intr_num]->erst_dequeue);
-
+		xhci_handle_sec_intr_events(xhci, intr_num);
 		dma_free_coherent(dev, size, xhci->sec_erst[intr_num].entries,
 				xhci->sec_erst[intr_num].erst_dma_addr);
 		xhci->sec_erst[intr_num].entries = NULL;

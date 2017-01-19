@@ -2716,11 +2716,6 @@ struct usbpd *usbpd_create(struct device *parent)
 		goto destroy_wq;
 	}
 
-	pd->psy_nb.notifier_call = psy_changed;
-	ret = power_supply_reg_notifier(&pd->psy_nb);
-	if (ret)
-		goto put_psy;
-
 	/*
 	 * associate extcon with the parent dev as it could have a DT
 	 * node which will be useful for extcon_get_edev_by_phandle()
@@ -2729,31 +2724,58 @@ struct usbpd *usbpd_create(struct device *parent)
 	if (IS_ERR(pd->extcon)) {
 		usbpd_err(&pd->dev, "failed to allocate extcon device\n");
 		ret = PTR_ERR(pd->extcon);
-		goto unreg_psy;
+		goto put_psy;
 	}
 
 	pd->extcon->mutually_exclusive = usbpd_extcon_exclusive;
 	ret = devm_extcon_dev_register(parent, pd->extcon);
 	if (ret) {
 		usbpd_err(&pd->dev, "failed to register extcon device\n");
-		goto unreg_psy;
+		goto put_psy;
 	}
 
 	pd->vbus = devm_regulator_get(parent, "vbus");
 	if (IS_ERR(pd->vbus)) {
 		ret = PTR_ERR(pd->vbus);
-		goto unreg_psy;
+		goto put_psy;
 	}
 
 	pd->vconn = devm_regulator_get(parent, "vconn");
 	if (IS_ERR(pd->vconn)) {
 		ret = PTR_ERR(pd->vconn);
-		goto unreg_psy;
+		goto put_psy;
 	}
 
 	pd->vconn_is_external = device_property_present(parent,
 					"qcom,vconn-uses-external-source");
 
+<<<<<<< HEAD
+=======
+	/*
+	 * Register the Android dual-role class (/sys/class/dual_role_usb/).
+	 * The first instance should be named "otg_default" as that's what
+	 * Android expects.
+	 * Note this is different than the /sys/class/usbpd/ created above.
+	 */
+	pd->dr_desc.name = (num_pd_instances == 1) ?
+				"otg_default" : dev_name(&pd->dev);
+	pd->dr_desc.supported_modes = DUAL_ROLE_SUPPORTED_MODES_DFP_AND_UFP;
+	pd->dr_desc.properties = usbpd_dr_properties;
+	pd->dr_desc.num_properties = ARRAY_SIZE(usbpd_dr_properties);
+	pd->dr_desc.get_property = usbpd_dr_get_property;
+	pd->dr_desc.set_property = usbpd_dr_set_property;
+	pd->dr_desc.property_is_writeable = usbpd_dr_prop_writeable;
+
+	pd->dual_role = devm_dual_role_instance_register(&pd->dev,
+			&pd->dr_desc);
+	if (IS_ERR(pd->dual_role)) {
+		usbpd_err(&pd->dev, "could not register dual_role instance\n");
+		goto put_psy;
+	} else {
+		pd->dual_role->drv_data = pd;
+	}
+
+>>>>>>> origin/qc8998
 	pd->current_pr = PR_NONE;
 	pd->current_dr = DR_NONE;
 	list_add_tail(&pd->instance, &_usbpd);
@@ -2762,13 +2784,18 @@ struct usbpd *usbpd_create(struct device *parent)
 	INIT_LIST_HEAD(&pd->rx_q);
 	INIT_LIST_HEAD(&pd->svid_handlers);
 
+	pd->psy_nb.notifier_call = psy_changed;
+	ret = power_supply_reg_notifier(&pd->psy_nb);
+	if (ret)
+		goto del_inst;
+
 	/* force read initial power_supply values */
 	psy_changed(&pd->psy_nb, PSY_EVENT_PROP_CHANGED, pd->usb_psy);
 
 	return pd;
 
-unreg_psy:
-	power_supply_unreg_notifier(&pd->psy_nb);
+del_inst:
+	list_del(&pd->instance);
 put_psy:
 	power_supply_put(pd->usb_psy);
 destroy_wq:
