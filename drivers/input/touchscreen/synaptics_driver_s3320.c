@@ -135,9 +135,13 @@ struct test_header {
 #define Down2UpSwip         11  // |^
 #define Mgestrue            12  // M
 #define Wgestrue            13  // W
+#define Sgestrue            14  // S
 
 // carlo@oneplus.net 2015-05-25, begin.
 #ifdef VENDOR_EDIT_OXYGEN
+#define KEY_GESTURE_W          	246 //w
+#define KEY_GESTURE_M      		247 //m
+#define KEY_GESTURE_S			248 //s
 #define KEY_DOUBLE_TAP          249 // double tap to wake
 #define KEY_GESTURE_CIRCLE      250 // draw circle to lunch camera
 #define KEY_GESTURE_TWO_SWIPE	251 // swipe two finger vertically to play/pause
@@ -173,6 +177,7 @@ int Down2UpSwip_gesture =0;//"down to up |"
 
 int Wgestrue_gesture =0;//"(W)"
 int Mgestrue_gesture =0;//"(M)"
+int Sgestrue_gesture =0;//"(S)"
 
 #endif
 //ruanbanmao@BSP add for tp gesture 2015-05-06, end
@@ -1218,6 +1223,7 @@ static void gesture_judge(struct synaptics_ts_data *ts)
 		case UNICODE_DETECT:
 			gesture = (gesture_buffer[2] == 0x77) ? Wgestrue :
 				(gesture_buffer[2] == 0x6d) ? Mgestrue :
+				(gesture_buffer[2] == 0x73) ? Sgestrue :
 				UnkownGestrue;
             //#endif, ruanbanmao@bsp 2015-05-06, end.
 	}
@@ -1248,6 +1254,15 @@ static void gesture_judge(struct synaptics_ts_data *ts)
 		case DouSwip:
 			keyCode = KEY_GESTURE_TWO_SWIPE;
 			break;
+		case Wgestrue:
+			keyCode = KEY_GESTURE_W;
+			break;
+		case Mgestrue:
+			keyCode = KEY_GESTURE_M;
+			break;
+		case Sgestrue:
+			keyCode = KEY_GESTURE_S;
+			break;
 		default:
 			break;
 	}
@@ -1266,6 +1281,7 @@ static void gesture_judge(struct synaptics_ts_data *ts)
 			gesture == Up2DownSwip ? "(up to down |)" :
 			gesture == Down2UpSwip ? "(down to up |)" :
 			gesture == Mgestrue ? "(M)" :
+			gesture == Sgestrue ? "(S)" :
 			gesture == Wgestrue ? "(W)" : "[unknown]");
 	synaptics_get_coordinate_point(ts);
 
@@ -1273,7 +1289,8 @@ static void gesture_judge(struct synaptics_ts_data *ts)
         LeftVee_gesture,RightVee_gesture,DouSwip_gesture,Circle_gesture,UpVee_gesture,DouTap_gesture);
 	if((gesture == DouTap && DouTap_gesture)||(gesture == RightVee && RightVee_gesture)\
         ||(gesture == LeftVee && LeftVee_gesture)||(gesture == UpVee && UpVee_gesture)\
-        ||(gesture == Circle && Circle_gesture)||(gesture == DouSwip && DouSwip_gesture)){
+        ||(gesture == Circle && Circle_gesture)||(gesture == DouSwip && DouSwip_gesture)\
+	||gesture == Sgestrue || gesture == Wgestrue || gesture == Mgestrue){
 		gesture_upload = gesture;
 		input_report_key(ts->input_dev, keyCode, 1);
 		input_sync(ts->input_dev);
@@ -1670,7 +1687,7 @@ static ssize_t tp_gesture_write_func(struct file *file, const char __user *buffe
 	struct synaptics_ts_data *ts = ts_g;
 	if(!ts)
 		return count;
-	if( count > 2 || ts->is_suspended)
+	if( count > 3 || ts->is_suspended)
 		return count;
 	if( copy_from_user(buf, buffer, count) ){
 		TPD_ERR(KERN_INFO "%s: read proc input error.\n", __func__);
@@ -1678,7 +1695,7 @@ static ssize_t tp_gesture_write_func(struct file *file, const char __user *buffe
 	}
 	//ruanbanmao@BSP add for tp gesture 2015-05-06, begin
 	#ifdef VENDOR_EDIT
-	TPD_ERR("%s write [0x%x]\n",__func__,buf[0]);
+	TPD_ERR("%s write argc1[0x%x],argc2[0x%x]\n",__func__,buf[0],buf[1]);
 
 	UpVee_gesture = (buf[0] & BIT0)?1:0; //"V"
 	DouSwip_gesture = (buf[0] & BIT1)?1:0;//"||"
@@ -1687,8 +1704,12 @@ static ssize_t tp_gesture_write_func(struct file *file, const char __user *buffe
 	Circle_gesture = (buf[0] & BIT6)?1:0; //"O"
 	DouTap_gesture = (buf[0] & BIT7)?1:0; //double tap
 
+	Sgestrue_gesture = (buf[1] & BIT0)?1:0;//"S"
+	Mgestrue_gesture = (buf[1] & BIT1)?1:0; //"M"
+	Wgestrue_gesture = (buf[1] & BIT2)?1:0; //"W"
+
 	if(DouTap_gesture||Circle_gesture||UpVee_gesture||LeftVee_gesture\
-        ||RightVee_gesture||DouSwip_gesture)
+      ||RightVee_gesture||DouSwip_gesture||Sgestrue_gesture||Mgestrue_gesture||Wgestrue_gesture)
 	{
 		ts->gesture_enable = 1;
 	}
