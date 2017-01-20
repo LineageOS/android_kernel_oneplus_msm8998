@@ -77,7 +77,7 @@ struct pn544_dev    {
     unsigned int        firm_gpio;
     unsigned int        irq_gpio;
     unsigned int        ese_pwr_gpio; /* gpio used by SPI to provide power to p61 via NFCC */
-    unsigned int        svdd_power_gpio;
+    unsigned int        wake_up_gpio;
     struct mutex        p61_state_mutex; /* used to make p61_current_state flag secure */
     p61_access_state_t  p61_current_state; /* stores the current P61 state */
     bool                nfc_ven_enabled; /* stores the VEN pin state powered by Nfc */
@@ -231,13 +231,15 @@ static ssize_t pn544_dev_write(struct file *filp, const char __user *buf,
     int ret;
 
     pn544_dev = filp->private_data;
-
+    gpio_set_value(pn544_dev->wake_up_gpio, 1); 
+    
     if (count > MAX_BUFFER_SIZE)
         count = MAX_BUFFER_SIZE;
 
     if (copy_from_user(tmp, buf, count)) {
         pr_err("%s : failed to copy from user space\n", __func__);
-        return -EFAULT;
+        ret= -EFAULT;
+        goto gotoret;
     }
 
     pr_debug("%s : writing %zu bytes.\n", __func__, count);
@@ -251,7 +253,9 @@ static ssize_t pn544_dev_write(struct file *filp, const char __user *buf,
     /* pn544 seems to be slow in handling I2C write requests
      * so add 1ms delay after I2C send oparation */
     udelay(1000);
+    gpio_set_value(pn544_dev->wake_up_gpio, 0); 
 
+gotoret:
     return ret;
 }
 
@@ -339,6 +343,7 @@ static int pn544_dev_open(struct inode *inode, struct file *filp)
     return 0;
 }
 #define QPAY_ESE_POWER
+#ifdef QPAY_ESE_POWER
 /*
  * Power management of the eSE
  * NFC & eSE ON : NFC_EN high and eSE_pwr_req high.
@@ -398,7 +403,7 @@ static int nqx_ese_pwr_contrl(struct pn544_dev *pn544_dev, unsigned long int arg
     }
     return r;
 }
-
+#endif
 long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
         unsigned long arg)
 {
@@ -757,15 +762,15 @@ static int pn544_parse_dt(struct device *dev,
     if ((!gpio_is_valid(data->clk_gpio)))
          return -EINVAL;
 
-    data->svdd_power_gpio = of_get_named_gpio(np, "nxp,pn544-svdd-power", 0);
-    if ((!gpio_is_valid(data->svdd_power_gpio)))
+    data->wake_up_gpio = of_get_named_gpio(np, "nxp,pn544-wake-up", 0);
+    if ((!gpio_is_valid(data->wake_up_gpio)))
           return -EINVAL;
 
     r = of_property_read_string(np, "qcom,clk-src", &data->clk_src_name);
 
 
     pr_info("%s: %d, %d, %d, %d ,%d, %d %d\n", __func__,
-        data->irq_gpio, data->ven_gpio, data->firm_gpio, data->ese_pwr_gpio, data->clk_gpio,data->svdd_power_gpio, errorno);
+        data->irq_gpio, data->ven_gpio, data->firm_gpio, data->ese_pwr_gpio, data->clk_gpio,data->wake_up_gpio, errorno);
 
     return errorno;
 }
@@ -834,7 +839,7 @@ static int pn544_probe(struct i2c_client *client,
     if (ret)
         goto err_firm;
 
-    ret = gpio_request(platform_data->svdd_power_gpio, "svdd_power_gpio");
+    ret = gpio_request(platform_data->wake_up_gpio, "nfc_wake_up");
     if(ret)
         goto err_svdd_power;
 
@@ -905,7 +910,7 @@ static int pn544_probe(struct i2c_client *client,
     pn544_dev->client   = client;
     pn544_dev->clk_src_name = platform_data->clk_src_name;
     pn544_dev->clk_gpio = platform_data->clk_gpio;
-    pn544_dev->svdd_power_gpio  = platform_data->svdd_power_gpio;
+    pn544_dev->wake_up_gpio  = platform_data->wake_up_gpio;
 
     if (!strcmp(pn544_dev->clk_src_name, "BBCLK3")) {
         pr_info("get %s\n",pn544_dev->clk_src_name);
@@ -947,9 +952,9 @@ static int pn544_probe(struct i2c_client *client,
         pr_err("%s : not able to set clk_gpio as input\n", __func__);
         goto err_gpio_set;
     }
-    ret = gpio_direction_output(pn544_dev->svdd_power_gpio, 0);
+    ret = gpio_direction_output(pn544_dev->wake_up_gpio, 0);
     if (ret < 0) {
-        pr_err("%s : not able to set svdd_power_gpio as output\n", __func__);
+        pr_err("%s : not able to set wake_up_gpio as output\n", __func__);
         goto err_gpio_set;
     }
 
@@ -1004,7 +1009,7 @@ static int pn544_probe(struct i2c_client *client,
 
     kfree(pn544_dev);
     err_exit:
-    gpio_free(platform_data->svdd_power_gpio);
+    gpio_free(platform_data->wake_up_gpio);
     err_svdd_power:
     gpio_free(platform_data->firm_gpio);
     err_firm:

@@ -88,6 +88,6 @@ struct pn544_i2c_platform_data {
     unsigned int firm_gpio;
     unsigned int ese_pwr_gpio; /* gpio to give power to p61, only TEE should use this */
     unsigned int clk_gpio;
-    unsigned int svdd_power_gpio;
+    unsigned int wake_up_gpio;
     const char *clk_src_name;
 };
