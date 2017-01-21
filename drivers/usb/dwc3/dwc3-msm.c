@@ -3016,6 +3016,7 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 	 */
 	mdwc->lpm_flags = MDWC3_POWER_COLLAPSE | MDWC3_SS_PHY_SUSPEND;
 	atomic_set(&dwc->in_lpm, 1);
+	dwc3_msm_resume(mdwc);
 	pm_runtime_set_suspended(mdwc->dev);
 	pm_runtime_set_autosuspend_delay(mdwc->dev, 1000);
 	pm_runtime_use_autosuspend(mdwc->dev);
@@ -3540,8 +3541,10 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 	case OTG_STATE_UNDEFINED:
 		/* Do nothing if no cable connected */
 		if (test_bit(ID, &mdwc->inputs) &&
-				!test_bit(B_SESS_VLD, &mdwc->inputs))
+				!test_bit(B_SESS_VLD, &mdwc->inputs)){
+			dwc3_msm_suspend(mdwc);
 			break;
+			}
 
 		dbg_event(0xFF, "Exit UNDEF", 0);
 		mdwc->otg_state = OTG_STATE_B_IDLE;

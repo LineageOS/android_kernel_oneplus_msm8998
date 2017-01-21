@@ -259,7 +259,7 @@ module_param(min_sink_current, int, S_IRUSR | S_IWUSR);
 static bool ss_host;
 module_param(ss_host, bool, S_IRUSR | S_IWUSR);
 
-static bool ss_dev = true;
+static bool ss_dev = false;
 module_param(ss_dev, bool, S_IRUSR | S_IWUSR);
 
 static const u32 default_src_caps[] = { 0x36019096 };	/* VSafe5V @ 1.5A */
