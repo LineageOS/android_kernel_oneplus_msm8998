@@ -191,7 +191,7 @@
 	        <0x3 0xc0 0x1 IRQ_TYPE_NONE>;
 	qcom,wave-shape = "sine";
 	qcom,play-mode = "buffer";
-	qcom,wave-samples = [7e 7e 3e 3e 3e 3e 3e 3e];
+	qcom,wave-samples = [3e 3e 3e 3e 3e 3e 3e 3e];
 	qcom,wave-rep-cnt = <1>;
 	qcom,wave-samp-rep-cnt = <1>;
 	qcom,vmax-mv = <2088>;
