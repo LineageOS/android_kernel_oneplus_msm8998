@@ -797,11 +797,8 @@ next_block:
 				}
 			} else {
 				err = __allocate_data_block(&dn);
-				#ifndef VENDOR_EDIT
-				// Anderson@filesystem, 2016/12/08, Avoid flush to storage every time when benchmark test
 				if (!err)
 					set_inode_flag(inode, FI_APPEND_WRITE);
-				#endif
 			}
 			if (err)
 				goto sync_out;
@@ -1817,16 +1814,10 @@ static ssize_t f2fs_direct_IO(struct kiocb *iocb, struct iov_iter *iter,
 	up_read(&F2FS_I(inode)->dio_rwsem[rw]);
 
 	if (rw == WRITE) {
-		#ifdef VENDOR_EDIT
-		// Anderson@filesystem, 2017/01/06, Avoid flush to storage every time when benchmark test
-		if (err < 0)
-			f2fs_write_failed(mapping, offset + count);
-		#else
 		if (err > 0)
 			set_inode_flag(inode, FI_UPDATE_WRITE);
 		else if (err < 0)
 			f2fs_write_failed(mapping, offset + count);
-		#endif
 	}
 
 	trace_f2fs_direct_IO_exit(inode, offset, count, rw, err);
