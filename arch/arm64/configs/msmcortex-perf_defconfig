@@ -664,3 +664,7 @@ CONFIG_F2FS_FS_SECURITY=y
 CONFIG_KSWAPD_CPU_AFFINITY_MASK="ff"
 #endif
 
+#ifdef VENDOR_EDIT
+# /* liochen@filesystem, 2017/01/25, Support sdcardfs filesystem in kernel */
+CONFIG_SDCARD_FS=y
+#endif
