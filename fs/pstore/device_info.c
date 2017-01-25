@@ -13,7 +13,7 @@ extern uint32_t chip_serial_num;
 extern char ufs_vendor_and_rev[32];
 extern char ddr_manufacture_and_fw_verion[40];
 
-#define MAX_ITEM 5
+#define MAX_ITEM 4
 #define MAX_LENGTH 32
 
 enum
@@ -24,10 +24,10 @@ enum
 	pcba_number
 };
 
-char oem_serialno[16];
-char oem_hw_version[3];
-char oem_rf_version[3];
-char oem_pcba_number[30];
+static char oem_serialno[16] = {0};
+static char oem_hw_version[3] = {0};
+static char oem_rf_version[3] = {0};
+static char oem_pcba_number[30] = {0};
 
 const char cmdline_info[MAX_ITEM][MAX_LENGTH] =
 {
@@ -41,7 +41,7 @@ const char cmdline_info[MAX_ITEM][MAX_LENGTH] =
 
 static int __init device_info_init(void)
 {
-	int i, j;
+	int i, j, target_len;
 	char *substr, *target_str;
 
 	for(i=0; i<MAX_ITEM; i++)
@@ -52,18 +52,29 @@ static int __init device_info_init(void)
 		else
 			continue;
 
-		if(i == serialno)
+		if(i == serialno) {
 			target_str = oem_serialno;
-		else if(i == hw_version)
+			target_len = sizeof(oem_serialno);
+		}
+		else if(i == hw_version) {
 			target_str = oem_hw_version;
-		else if(i == rf_version)
+			target_len = sizeof(oem_hw_version);
+		}
+		else if(i == rf_version) {
 			target_str = oem_rf_version;
-		else if(i == pcba_number)
+			target_len = sizeof(oem_rf_version);
+		}
+		else if(i == pcba_number) {
 			target_str = oem_pcba_number;
+			target_len = sizeof(oem_pcba_number);
+		}
+		else
+			continue;
 
-		for(j=0; substr[j] != ' '; j++)
+		for(j = 0; substr[j] != ' ' && j < target_len; j++)
 			target_str[j] = substr[j];
-		target_str[j] = '\0';
+		//target_str[j] = '\0';
+
 	}
 	return 1;
 }
@@ -74,6 +85,9 @@ static int __init device_info_init(void)
 static void __init pstore_write_device_info(const char *s, unsigned c)
 {
 	const char *e = s + c;
+
+	if (c <= 0)
+		return;
 
 	while (s < e) {
 		unsigned long flags;
@@ -94,6 +108,9 @@ static void __init pstore_write_device_info(const char *s, unsigned c)
 		s += c;
 		c = e - s;
 	}
+
+	return;
+
 }
 
 static void __init write_device_info(const char *key, const char *value)
@@ -108,7 +125,7 @@ static int __init init_device_info(void)
 {
 
 	device_info_init();
-	pstore_write_device_info(" * * * begin * * * \r\n", sizeof(" * * * begin * * * \r\n"));
+	pstore_write_device_info(" * * * begin * * * \r\n", strlen(" * * * begin * * * \r\n"));
 
 	write_device_info("hardware version", oem_hw_version);
 	write_device_info("rf version", oem_rf_version);
@@ -116,6 +133,7 @@ static int __init init_device_info(void)
 	write_device_info("pcba number", oem_pcba_number);
 	write_device_info("serial number", oem_serialno);
 
+	memset(oem_serialno, 0, sizeof(oem_serialno));
 	scnprintf(oem_serialno, sizeof(oem_serialno), "%x", chip_serial_num);
 	write_device_info("socinfo serial_number", oem_serialno);
 
@@ -124,7 +142,9 @@ static int __init init_device_info(void)
 	write_device_info("kernel version", linux_banner);
 	write_device_info("boot command", saved_command_line);
 
-	pstore_write_device_info(" * * * end * * * \r\n", sizeof(" * * * end * * * \r\n"));
+	pstore_write_device_info(" * * * end * * * \r\n", strlen(" * * * end * * * \r\n"));
+
+
 	return 0;
 }
 

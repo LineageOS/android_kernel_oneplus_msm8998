@@ -24,8 +24,15 @@
 #include <linux/list.h>
 #include <linux/types.h>
 
-struct persistent_ram_buffer;
+//struct persistent_ram_buffer;
 struct rs_control;
+
+struct persistent_ram_buffer {
+	uint32_t    sig;
+	atomic_t    start;
+	atomic_t    size;
+	uint8_t     data[0];
+};
 
 struct persistent_ram_ecc_info {
 	int block_size;

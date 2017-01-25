@@ -688,11 +688,13 @@ static int ramoops_probe(struct platform_device *pdev)
 	if (err)
 		goto fail_init_mprz;
 
-	paddr = pdata->mem_address + pdata->mem_size - cxt->device_info_size;
+	//paddr = pdata->mem_address + pdata->mem_size - cxt->device_info_size;
 	err = ramoops_init_prz(dev, cxt, &cxt->dprz, &paddr,
 			       cxt->device_info_size, 0);
 	if (err)
 		goto fail_init_dprz;
+
+	memset(cxt->dprz->buffer->data, 0, cxt->dprz->buffer_size);
 
 	cxt->pstore.data = cxt;
 	/*
