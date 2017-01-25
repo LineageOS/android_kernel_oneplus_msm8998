@@ -86,7 +86,11 @@ static struct f2fs_dir_entry *find_in_block(struct page *dentry_page,
 				struct fscrypt_name *fname,
 				f2fs_hash_t namehash,
 				int *max_slots,
+				#ifdef VENDOR_EDIT
+				struct page **res_page, unsigned int flags)
+				#else
 				struct page **res_page)
+				#endif
 {
 	struct f2fs_dentry_block *dentry_blk;
 	struct f2fs_dir_entry *de;
@@ -95,7 +99,11 @@ static struct f2fs_dir_entry *find_in_block(struct page *dentry_page,
 	dentry_blk = (struct f2fs_dentry_block *)kmap(dentry_page);
 
 	make_dentry_ptr(NULL, &d, (void *)dentry_blk, 1);
+	#ifdef VENDOR_EDIT
+	de = find_target_dentry(fname, namehash, max_slots, &d, flags);
+	#else
 	de = find_target_dentry(fname, namehash, max_slots, &d);
+	#endif
 	if (de)
 		*res_page = dentry_page;
 	else
@@ -106,7 +114,11 @@ static struct f2fs_dir_entry *find_in_block(struct page *dentry_page,
 
 struct f2fs_dir_entry *find_target_dentry(struct fscrypt_name *fname,
 			f2fs_hash_t namehash, int *max_slots,
+			#ifdef VENDOR_EDIT
+			struct f2fs_dentry_ptr *d, unsigned int flags)
+			#else
 			struct f2fs_dentry_ptr *d)
+			#endif
 {
 	struct f2fs_dir_entry *de;
 	unsigned long bit_pos = 0;
@@ -142,6 +154,12 @@ struct f2fs_dir_entry *find_target_dentry(struct fscrypt_name *fname,
 			de->hash_code == namehash &&
 			!memcmp(de_name.name, name->name, name->len))
 			goto found;
+		#ifdef VENDOR_EDIT
+		else if (flags == CASE_INSENSITIVE && de_name.len == name->len &&
+			!strncasecmp(de_name.name, name->name, name->len)) {
+			goto found;
+		}
+		#endif
 
 		if (max_slots && max_len > *max_slots)
 			*max_slots = max_len;
@@ -160,7 +178,11 @@ found:
 static struct f2fs_dir_entry *find_in_level(struct inode *dir,
 					unsigned int level,
 					struct fscrypt_name *fname,
+					#ifdef VENDOR_EDIT
+					struct page **res_page, unsigned int flags)
+					#else
 					struct page **res_page)
+					#endif
 {
 	struct qstr name = FSTR_TO_QSTR(&fname->disk_name);
 	int s = GET_DENTRY_SLOTS(name.len);
@@ -198,7 +220,11 @@ static struct f2fs_dir_entry *find_in_level(struct inode *dir,
 		}
 
 		de = find_in_block(dentry_page, fname, namehash, &max_slots,
+								#ifdef VENDOR_EDIT
+								res_page, flags);
+								#else
 								res_page);
+								#endif
 		if (de)
 			break;
 
@@ -216,7 +242,11 @@ static struct f2fs_dir_entry *find_in_level(struct inode *dir,
 }
 
 struct f2fs_dir_entry *__f2fs_find_entry(struct inode *dir,
+			#ifdef VENDOR_EDIT
+			struct fscrypt_name *fname, struct page **res_page, unsigned int flags)
+			#else
 			struct fscrypt_name *fname, struct page **res_page)
+			#endif
 {
 	unsigned long npages = dir_blocks(dir);
 	struct f2fs_dir_entry *de = NULL;
@@ -245,7 +275,11 @@ struct f2fs_dir_entry *__f2fs_find_entry(struct inode *dir,
 
 	for (level = 0; level < max_depth; level++) {
 		*res_page = NULL;
+		#ifdef VENDOR_EDIT
+		de = find_in_level(dir, level, fname, res_page, flags);
+		#else
 		de = find_in_level(dir, level, fname, res_page);
+		#endif
 		if (de || IS_ERR(*res_page))
 			break;
 	}
@@ -260,7 +294,11 @@ out:
  * Entry is guaranteed to be valid.
  */
 struct f2fs_dir_entry *f2fs_find_entry(struct inode *dir,
+			#ifdef VENDOR_EDIT
+			const struct qstr *child, struct page **res_page, unsigned int flags)
+			#else
 			const struct qstr *child, struct page **res_page)
+			#endif
 {
 	struct f2fs_dir_entry *de = NULL;
 	struct fscrypt_name fname;
@@ -272,7 +310,11 @@ struct f2fs_dir_entry *f2fs_find_entry(struct inode *dir,
 		return NULL;
 	}
 
+	#ifdef VENDOR_EDIT
+	de = __f2fs_find_entry(dir, &fname, res_page, flags);
+	#else
 	de = __f2fs_find_entry(dir, &fname, res_page);
+	#endif
 
 	fscrypt_free_filename(&fname);
 	return de;
@@ -282,7 +324,11 @@ struct f2fs_dir_entry *f2fs_parent_dir(struct inode *dir, struct page **p)
 {
 	struct qstr dotdot = QSTR_INIT("..", 2);
 
+	#ifdef VENDOR_EDIT
+	return f2fs_find_entry(dir, &dotdot, p, CASE_SENSITIVE);
+	#else
 	return f2fs_find_entry(dir, &dotdot, p);
+	#endif
 }
 
 ino_t f2fs_inode_by_name(struct inode *dir, const struct qstr *qstr,
@@ -291,7 +337,11 @@ ino_t f2fs_inode_by_name(struct inode *dir, const struct qstr *qstr,
 	ino_t res = 0;
 	struct f2fs_dir_entry *de;
 
+	#ifdef VENDOR_EDIT
+	de = f2fs_find_entry(dir, qstr, page, CASE_SENSITIVE);
+	#else
 	de = f2fs_find_entry(dir, qstr, page);
+	#endif
 	if (de) {
 		res = le32_to_cpu(de->ino);
 		f2fs_dentry_kunmap(dir, *page);

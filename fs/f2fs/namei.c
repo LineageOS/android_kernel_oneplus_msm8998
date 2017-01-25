@@ -237,7 +237,11 @@ static int __recover_dot_dentries(struct inode *dir, nid_t pino)
 
 	f2fs_lock_op(sbi);
 
+	#ifdef VENDOR_EDIT
+	de = f2fs_find_entry(dir, &dot, &page, CASE_SENSITIVE);
+	#else
 	de = f2fs_find_entry(dir, &dot, &page);
+	#endif
 	if (de) {
 		f2fs_dentry_kunmap(dir, page);
 		f2fs_put_page(page, 0);
@@ -250,7 +254,11 @@ static int __recover_dot_dentries(struct inode *dir, nid_t pino)
 			goto out;
 	}
 
+	#ifdef VENDOR_EDIT
+	de = f2fs_find_entry(dir, &dotdot, &page, CASE_SENSITIVE);
+	#else
 	de = f2fs_find_entry(dir, &dotdot, &page);
+	#endif
 	if (de) {
 		f2fs_dentry_kunmap(dir, page);
 		f2fs_put_page(page, 0);
@@ -295,7 +303,15 @@ static struct dentry *f2fs_lookup(struct inode *dir, struct dentry *dentry,
 	if (dentry->d_name.len > F2FS_NAME_LEN)
 		return ERR_PTR(-ENAMETOOLONG);
 
+	#ifdef VENDOR_EDIT
+	if (flags & LOOKUP_CASE_INSENSITIVE)
+		de = f2fs_find_entry(dir, &dentry->d_name, &page, CASE_INSENSITIVE);
+	else
+		de = f2fs_find_entry(dir, &dentry->d_name, &page, CASE_SENSITIVE);
+	#else
 	de = f2fs_find_entry(dir, &dentry->d_name, &page);
+	#endif
+
 	if (!de) {
 		if (IS_ERR(page))
 			return (struct dentry *)page;
@@ -346,7 +362,11 @@ static int f2fs_unlink(struct inode *dir, struct dentry *dentry)
 
 	trace_f2fs_unlink_enter(dir, dentry);
 
+	#ifdef VENDOR_EDIT
+	de = f2fs_find_entry(dir, &dentry->d_name, &page, CASE_SENSITIVE);
+	#else
 	de = f2fs_find_entry(dir, &dentry->d_name, &page);
+	#endif
 	if (!de) {
 		if (IS_ERR(page))
 			err = PTR_ERR(page);
@@ -666,7 +686,11 @@ static int f2fs_rename(struct inode *old_dir, struct dentry *old_dentry,
 		goto out;
 	}
 
+	#ifdef VENDOR_EDIT
+	old_entry = f2fs_find_entry(old_dir, &old_dentry->d_name, &old_page, CASE_SENSITIVE);
+	#else
 	old_entry = f2fs_find_entry(old_dir, &old_dentry->d_name, &old_page);
+	#endif
 	if (!old_entry) {
 		if (IS_ERR(old_page))
 			err = PTR_ERR(old_page);
@@ -696,7 +720,12 @@ static int f2fs_rename(struct inode *old_dir, struct dentry *old_dentry,
 
 		err = -ENOENT;
 		new_entry = f2fs_find_entry(new_dir, &new_dentry->d_name,
+						#ifdef VENDOR_EDIT
+						&new_page, CASE_SENSITIVE);
+						#else
 						&new_page);
+						#endif
+
 		if (!new_entry) {
 			if (IS_ERR(new_page))
 				err = PTR_ERR(new_page);
@@ -757,7 +786,11 @@ static int f2fs_rename(struct inode *old_dir, struct dentry *old_dentry,
 			old_page = NULL;
 
 			old_entry = f2fs_find_entry(old_dir,
+						#ifdef VENDOR_EDIT
+						&old_dentry->d_name, &old_page, CASE_SENSITIVE);
+						#else
 						&old_dentry->d_name, &old_page);
+						#endif
 			if (!old_entry) {
 				err = -ENOENT;
 				if (IS_ERR(old_page))
@@ -846,14 +879,22 @@ static int f2fs_cross_rename(struct inode *old_dir, struct dentry *old_dentry,
 			 !fscrypt_has_permitted_context(old_dir, new_inode)))
 		return -EPERM;
 
+	#ifdef VENDOR_EDIT
+	old_entry = f2fs_find_entry(old_dir, &old_dentry->d_name, &old_page, CASE_SENSITIVE);
+	#else
 	old_entry = f2fs_find_entry(old_dir, &old_dentry->d_name, &old_page);
+	#endif
 	if (!old_entry) {
 		if (IS_ERR(old_page))
 			err = PTR_ERR(old_page);
 		goto out;
 	}
 
+	#ifdef VENDOR_EDIT
+	new_entry = f2fs_find_entry(new_dir, &new_dentry->d_name, &new_page, CASE_SENSITIVE);
+	#else
 	new_entry = f2fs_find_entry(new_dir, &new_dentry->d_name, &new_page);
+	#endif
 	if (!new_entry) {
 		if (IS_ERR(new_page))
 			err = PTR_ERR(new_page);

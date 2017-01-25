@@ -127,7 +127,11 @@ static int recover_dentry(struct inode *inode, struct page *ipage,
 		goto out;
 	}
 retry:
+	#ifdef VENDOR_EDIT
+	de = __f2fs_find_entry(dir, &fname, &page, CASE_SENSITIVE);
+	#else
 	de = __f2fs_find_entry(dir, &fname, &page);
+	#endif
 	if (de && inode->i_ino == le32_to_cpu(de->ino))
 		goto out_unmap_put;
 

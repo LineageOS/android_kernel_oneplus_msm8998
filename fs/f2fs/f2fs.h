@@ -176,6 +176,13 @@ enum {
 	CP_DISCARD,
 };
 
+#ifdef VENDOR_EDIT
+enum {
+	CASE_SENSITIVE,
+	CASE_INSENSITIVE,
+};
+#endif
+
 #define DEF_BATCHED_TRIM_SECTIONS	2
 #define BATCHED_TRIM_SEGMENTS(sbi)	\
 		(SM_I(sbi)->trim_sections * (sbi)->segs_per_sec)
@@ -2043,8 +2050,13 @@ struct dentry *f2fs_get_parent(struct dentry *child);
  */
 void set_de_type(struct f2fs_dir_entry *, umode_t);
 unsigned char get_de_type(struct f2fs_dir_entry *);
+#ifdef VENDOR_EDIT
+struct f2fs_dir_entry *find_target_dentry(struct fscrypt_name *,
+			f2fs_hash_t, int *, struct f2fs_dentry_ptr *, unsigned int);
+#else
 struct f2fs_dir_entry *find_target_dentry(struct fscrypt_name *,
 			f2fs_hash_t, int *, struct f2fs_dentry_ptr *);
+#endif
 int f2fs_fill_dentries(struct dir_context *, struct f2fs_dentry_ptr *,
 			unsigned int, struct fscrypt_str *);
 void do_make_empty_dir(struct inode *, struct inode *,
@@ -2054,10 +2066,18 @@ struct page *init_inode_metadata(struct inode *, struct inode *,
 void update_parent_metadata(struct inode *, struct inode *, unsigned int);
 int room_for_filename(const void *, int, int);
 void f2fs_drop_nlink(struct inode *, struct inode *);
+#ifdef VENDOR_EDIT
+struct f2fs_dir_entry *__f2fs_find_entry(struct inode *, struct fscrypt_name *,
+							struct page **, unsigned int);
+struct f2fs_dir_entry *f2fs_find_entry(struct inode *, const struct qstr *,
+							struct page **, unsigned int);
+#else
 struct f2fs_dir_entry *__f2fs_find_entry(struct inode *, struct fscrypt_name *,
 							struct page **);
 struct f2fs_dir_entry *f2fs_find_entry(struct inode *, const struct qstr *,
 							struct page **);
+#endif
+
 struct f2fs_dir_entry *f2fs_parent_dir(struct inode *, struct page **);
 ino_t f2fs_inode_by_name(struct inode *, const struct qstr *, struct page **);
 void f2fs_set_link(struct inode *, struct f2fs_dir_entry *,
