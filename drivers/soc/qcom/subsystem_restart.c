@@ -770,7 +770,7 @@ static ssize_t proc_restart_level_all_write(struct file *p_file, const char __us
 		subsys = find_subsys("modem");
 		if (!subsys)
 			return ENODEV;
-		subsys->restart_level = RESET_SOC;
+		subsys->restart_level = RESET_SUBSYS_COUPLED;
 
 		subsys = find_subsys("spss");
 		if (!subsys)
@@ -1184,8 +1184,8 @@ static void device_restart_work_hdlr(struct work_struct *work)
 	 */
 	msleep(100);
 	#ifndef JUST_FOR_BRINGUP
-	panic("subsys-restart: Resetting the SoC - %s crashed.",
-						dev->desc->name);
+	//panic("subsys-restart: Resetting the SoC - %s crashed.",
+	//					dev->desc->name);
 	#endif
 }
 
