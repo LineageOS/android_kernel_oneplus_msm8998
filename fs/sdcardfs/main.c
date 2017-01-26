@@ -58,8 +58,10 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 	/* by default, we use AID_MEDIA_RW as uid, gid */
 	opts->fs_low_uid = AID_MEDIA_RW;
 	opts->fs_low_gid = AID_MEDIA_RW;
+	vfsopts->mask = 0;
 	opts->multiuser = false;
 	opts->fs_user_id = 0;
+	vfsopts->gid = 0;
 	/* by default, 0MB is reserved */
 	opts->reserved_mb = 0;
 
@@ -92,6 +94,7 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 		case Opt_gid:
 			if (match_int(&args[0], &option))
 				return 0;
+			vfsopts->gid = option;
 			break;
 		case Opt_userid:
 			if (match_int(&args[0], &option))
@@ -101,6 +104,7 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 		case Opt_mask:
 			if (match_int(&args[0], &option))
 				return 0;
+			vfsopts->mask = option;
 			break;
 		case Opt_multiuser:
 			opts->multiuser = true;
