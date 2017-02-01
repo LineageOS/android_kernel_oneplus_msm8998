@@ -219,9 +219,8 @@ static struct dentry *__sdcardfs_lookup(struct dentry *dentry,
 	struct vfsmount *lower_dir_mnt;
 	struct dentry *lower_dir_dentry = NULL;
 	struct dentry *lower_dentry;
-	const char *name;
+	const struct qstr *name;
 	struct path lower_path;
-	struct qstr this;
 	struct sdcardfs_sb_info *sbi;
 
 	sbi = SDCARDFS_SB(dentry->d_sb);
@@ -231,7 +230,7 @@ static struct dentry *__sdcardfs_lookup(struct dentry *dentry,
 	if (IS_ROOT(dentry))
 		goto out;
 
-	name = dentry->d_name.name;
+	name = &dentry->d_name;
 
 	/* now start the actual lookup procedure */
 	lower_dir_dentry = lower_parent_path->dentry;
@@ -239,11 +238,11 @@ static struct dentry *__sdcardfs_lookup(struct dentry *dentry,
 
 	#ifdef VENDOR_EDIT
 	/* liochen@filesystem, 2016/11/01, Add LOOKUP_CASE_INSENSITIVE flag */
-	err = vfs_path_lookup(lower_dir_dentry, lower_dir_mnt, name, LOOKUP_CASE_INSENSITIVE,
+	err = vfs_path_lookup(lower_dir_dentry, lower_dir_mnt, name->name, LOOKUP_CASE_INSENSITIVE,
                                 &lower_path);
 	#else
 	/* Use vfs_path_lookup to check if the dentry exists or not */
-	err = vfs_path_lookup(lower_dir_dentry, lower_dir_mnt, name, 0,
+	err = vfs_path_lookup(lower_dir_dentry, lower_dir_mnt, name->name, 0,
 				&lower_path);
 	#endif
 
@@ -254,8 +253,8 @@ static struct dentry *__sdcardfs_lookup(struct dentry *dentry,
 		mutex_lock(&d_inode(lower_dir_dentry)->i_mutex);
 		spin_lock(&lower_dir_dentry->d_lock);
 		list_for_each_entry(child, &lower_dir_dentry->d_subdirs, d_child) {
-			if (child && child->d_inode) {
-				if (strcasecmp(child->d_name.name, name)==0) {
+			if (child && d_inode(child)) {
+				if (qstr_case_eq(&child->d_name, name)) {
 					match = dget(child);
 					break;
 				}
@@ -314,14 +313,11 @@ static struct dentry *__sdcardfs_lookup(struct dentry *dentry,
 		goto out;
 
 	/* instatiate a new negative dentry */
-	this.name = name;
-	this.len = strlen(name);
-	this.hash = full_name_hash(this.name, this.len);
-	lower_dentry = d_lookup(lower_dir_dentry, &this);
+	lower_dentry = d_lookup(lower_dir_dentry, name);
 	if (lower_dentry)
 		goto setup_lower;
 
-	lower_dentry = d_alloc(lower_dir_dentry, &this);
+	lower_dentry = d_alloc(lower_dir_dentry, name);
 	if (!lower_dentry) {
 		err = -ENOMEM;
 		goto out;
@@ -366,7 +362,7 @@ struct dentry *sdcardfs_lookup(struct inode *dir, struct dentry *dentry,
 
 	parent = dget_parent(dentry);
 
-	if(!check_caller_access_to_name(d_inode(parent), dentry->d_name.name)) {
+	if(!check_caller_access_to_name(d_inode(parent), &dentry->d_name)) {
 		ret = ERR_PTR(-EACCES);
 		printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n"
                          "	dentry: %s, task:%s\n",
