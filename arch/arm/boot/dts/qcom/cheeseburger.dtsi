@@ -391,7 +391,8 @@
 	warm-bat-decidegc = <450>;
 	hot-bat-decidegc = <530>;
 	/* other settings */
-	qcom,cutoff-voltage-with-charger=<3250>;
+	qcom,cutoff-voltage-with-charger = <3250>;
+	disable-pd;
 };
 
 &pmi8998_fg {

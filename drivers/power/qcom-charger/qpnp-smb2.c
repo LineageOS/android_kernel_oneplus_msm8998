@@ -361,6 +361,9 @@ static int smb2_parse_dt(struct smb2 *chip)
 	chg->chg_enabled = !(of_property_read_bool(node,
 						"qcom,charging-disabled"));
 
+	chg->pd_disabled = of_property_read_bool(node,
+						"disable-pd");
+
 	pr_info("T0=%d, T1=%d, T2=%d, T3=%d, T4=%d, T5=%d, T6=%d\n",
 		chg->BATT_TEMP_T0, chg->BATT_TEMP_T1, chg->BATT_TEMP_T2,
 		chg->BATT_TEMP_T3, chg->BATT_TEMP_T4, chg->BATT_TEMP_T5,
@@ -389,8 +392,8 @@ static int smb2_parse_dt(struct smb2 *chip)
 		chg->ibatmax[BATT_TEMP_WARM],
 		chg->vbatmax[BATT_TEMP_WARM],
 		chg->vbatdet[BATT_TEMP_WARM]);
-	pr_info("cutoff_volt_with_charger=%d\n",
-		smbchg_cutoff_volt_with_charger);
+	pr_info("cutoff_volt_with_charger=%d, disable-pd=%d\n",
+		smbchg_cutoff_volt_with_charger, chg->pd_disabled);
 
 	/* disable step_chg */
 	chg->step_chg_enabled = false;
