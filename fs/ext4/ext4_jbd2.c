@@ -43,6 +43,10 @@ static int ext4_journal_check_start(struct super_block *sb)
 	journal_t *journal;
 
 	might_sleep();
+
+	if (unlikely(ext4_forced_shutdown(EXT4_SB(sb))))
+		return -EIO;
+
 	if (sb->s_flags & MS_RDONLY)
 		return -EROFS;
 	WARN_ON(sb->s_writers.frozen == SB_FREEZE_COMPLETE);
