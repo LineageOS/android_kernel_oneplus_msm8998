@@ -14,6 +14,7 @@
 #include <linux/mount.h>
 #include <linux/file.h>
 #include <linux/random.h>
+#include <linux/delay.h>
 #include <asm/uaccess.h>
 #include "ext4_jbd2.h"
 #include "ext4.h"
@@ -200,6 +201,53 @@ static int uuid_is_zero(__u8 u[16])
 		if (u[i])
 			return 0;
 	return 1;
+}
+
+int ext4_goingdown(struct super_block *sb, unsigned long arg)
+{
+	struct ext4_sb_info *sbi = EXT4_SB(sb);
+	__u32 flags;
+
+	if (!capable(CAP_SYS_ADMIN))
+		return -EPERM;
+
+	if (get_user(flags, (__u32 __user *)arg))
+		return -EFAULT;
+
+	if (flags > EXT4_GOING_FLAGS_NOLOGFLUSH)
+		return -EINVAL;
+
+	if (ext4_forced_shutdown(sbi))
+		return 0;
+
+	ext4_msg(sb, KERN_ALERT, "shut down requested (%d)", flags);
+
+	switch (flags) {
+	case EXT4_GOING_FLAGS_DEFAULT:
+		freeze_bdev(sb->s_bdev);
+		set_bit(EXT4_FLAGS_SHUTDOWN, &sbi->s_ext4_flags);
+		thaw_bdev(sb->s_bdev, sb);
+		break;
+	case EXT4_GOING_FLAGS_LOGFLUSH:
+		set_bit(EXT4_FLAGS_SHUTDOWN, &sbi->s_ext4_flags);
+		if (sbi->s_journal && !is_journal_aborted(sbi->s_journal))
+			(void) ext4_force_commit(sb);
+		if (sbi->s_journal)
+			(void) jbd2_journal_destroy(sbi->s_journal);
+		sbi->s_journal = NULL;
+		break;
+	case EXT4_GOING_FLAGS_NOLOGFLUSH:
+		set_bit(EXT4_FLAGS_SHUTDOWN, &sbi->s_ext4_flags);
+		if (sbi->s_journal && !is_journal_aborted(sbi->s_journal)) {
+			msleep(100);
+			(void) jbd2_journal_abort(sbi->s_journal, 0);
+		}
+		sbi->s_journal = NULL;
+		break;
+	default:
+		return -EINVAL;
+	}
+	return 0;
 }
 
 long ext4_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
@@ -703,6 +751,8 @@ encryption_policy_out:
 		return -EOPNOTSUPP;
 #endif
 	}
+	case EXT4_IOC_GOINGDOWN:
+		return ext4_goingdown(sb, arg);
 	default:
 		return -ENOTTY;
 	}
@@ -769,6 +819,7 @@ long ext4_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case EXT4_IOC_SET_ENCRYPTION_POLICY:
 	case EXT4_IOC_GET_ENCRYPTION_PWSALT:
 	case EXT4_IOC_GET_ENCRYPTION_POLICY:
+	case EXT4_IOC_GOINGDOWN:
 		break;
 	default:
 		return -ENOIOCTLCMD;
