@@ -1189,9 +1189,20 @@ static void flush_inline_data(struct f2fs_sb_info *sbi, nid_t ino)
 	if (!inode)
 		return;
 
+	#ifndef VENDOR_EDIT
+	//f2fs: fix to avoid deadlock when merging inline data
 	page = pagecache_get_page(inode->i_mapping, 0, FGP_LOCK|FGP_NOWAIT, 0);
+	#else
+	page = pagecache_get_page(inode->i_mapping, 0, FGP_NOWAIT, 0);
+	#endif
 	if (!page)
 		goto iput_out;
+
+	#ifdef VENDOR_EDIT
+	//f2fs: fix to avoid deadlock when merging inline data
+	if (!trylock_page(page))
+		goto page_out;
+	#endif
 
 	if (!PageUptodate(page))
 		goto page_out;
@@ -1208,7 +1219,14 @@ static void flush_inline_data(struct f2fs_sb_info *sbi, nid_t ino)
 	if (ret)
 		set_page_dirty(page);
 page_out:
+#ifndef VENDOR_EDIT
+//f2fs: fix to avoid deadlock when merging inline data
 	f2fs_put_page(page, 1);
+#else
+	unlock_page(page);
+release_out:
+	f2fs_put_page(page, 0);
+#endif
 iput_out:
 	iput(inode);
 }
