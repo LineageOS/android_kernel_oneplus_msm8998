@@ -141,22 +141,26 @@ void fixup_perms_recursive(struct dentry *dentry, const char* name, size_t len) 
 	info = SDCARDFS_I(dentry->d_inode);
 
 	if (needs_fixup(info->perm)) {
-		mutex_lock(&dentry->d_inode->i_mutex);
-		child = lookup_one_len(name, dentry, len);
-		mutex_unlock(&dentry->d_inode->i_mutex);
-		if (!IS_ERR(child)) {
-			if (child->d_inode) {
-				get_derived_permission(dentry, child);
-				fix_derived_permission(child->d_inode);
-			}
-			dput(child);
+		spin_lock(&dentry->d_lock);
+		list_for_each_entry(child, &dentry->d_subdirs, d_child) {
+				dget(child);
+				if (!strncasecmp(child->d_name.name, name, len)) {
+					if (d_inode(child)) {
+						get_derived_permission(dentry, child);
+						fixup_tmp_permissions(d_inode(child));
+						dput(child);
+						break;
+					}
+				}
+				dput(child);
 		}
+		spin_unlock(&dentry->d_lock);
 	} else 	if (descendant_may_need_fixup(info->perm)) {
-		mutex_lock(&dentry->d_inode->i_mutex);
+		spin_lock(&dentry->d_lock);
 		list_for_each_entry(child, &dentry->d_subdirs, d_child) {
 				fixup_perms_recursive(child, name, len);
 		}
-		mutex_unlock(&dentry->d_inode->i_mutex);
+		spin_unlock(&dentry->d_lock);
 	}
 	dput(dentry);
 }
@@ -172,7 +176,7 @@ void fixup_top_recursive(struct dentry *parent) {
 		if (dentry->d_inode) {
 			if (SDCARDFS_I(parent->d_inode)->top != SDCARDFS_I(dentry->d_inode)->top) {
 				get_derived_permission(parent, dentry);
-				fix_derived_permission(dentry->d_inode);
+				fixup_tmp_permissions(d_inode(dentry));
 				fixup_top_recursive(dentry);
 			}
 		}
@@ -202,7 +206,7 @@ inline void update_derived_permission_lock(struct dentry *dentry)
 			dput(parent);
 		}
 	}
-	fix_derived_permission(dentry->d_inode);
+	fixup_tmp_permissions(d_inode(dentry));
 }
 
 int need_graft_path(struct dentry *dentry)
