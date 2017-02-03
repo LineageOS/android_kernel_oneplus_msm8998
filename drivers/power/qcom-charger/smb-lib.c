@@ -2228,6 +2228,9 @@ int smblib_set_prop_pd_active(struct smb_charger *chg,
 
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
+	if (chg->pd_disabled)
+		return rc;
+
 	pr_info("set pd_active=%d\n", val->intval);
 #endif
 	if (!get_effective_result(chg->pd_allowed_votable)) {
@@ -2497,6 +2500,12 @@ int smblib_set_prop_pd_in_hard_reset(struct smb_charger *chg,
 				const union power_supply_propval *val)
 {
 	int rc;
+
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20170202 Add pd_disabled */
+	if(chg->pd_disabled)
+		return rc;
+#endif
 
 	rc = smblib_masked_write(chg, TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
 				 EXIT_SNK_BASED_ON_CC_BIT,
