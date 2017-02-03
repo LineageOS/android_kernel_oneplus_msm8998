@@ -1201,7 +1201,7 @@ static void flush_inline_data(struct f2fs_sb_info *sbi, nid_t ino)
 	#ifdef VENDOR_EDIT
 	//f2fs: fix to avoid deadlock when merging inline data
 	if (!trylock_page(page))
-		goto page_out;
+		goto release_out;
 	#endif
 
 	if (!PageUptodate(page))
