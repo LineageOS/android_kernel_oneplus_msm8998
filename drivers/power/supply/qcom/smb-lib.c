@@ -3668,24 +3668,9 @@ static void smblib_hvdcp_detect_work(struct work_struct *work)
 		power_supply_changed(chg->usb_psy);
 }
 
-<<<<<<< HEAD:drivers/power/qcom-charger/smb-lib.c
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161014 Add charging standard */
 irqreturn_t smblib_handle_aicl_done(int irq, void *data)
-=======
-static void bms_update_work(struct work_struct *work)
-{
-	struct smb_charger *chg = container_of(work, struct smb_charger,
-						bms_update_work);
-
-	smblib_suspend_on_debug_battery(chg);
-
-	if (chg->batt_psy)
-		power_supply_changed(chg->batt_psy);
-}
-
-static void step_soc_req_work(struct work_struct *work)
->>>>>>> origin/qc8998:drivers/power/supply/qcom/smb-lib.c
 {
 	struct smb_irq_data *irq_data = data;
 	struct smb_charger *chg = irq_data->parent_data;
@@ -3700,6 +3685,17 @@ static void step_soc_req_work(struct work_struct *work)
 
 	pr_info("IRQ: %s AICL result=%d\n", irq_data->name, icl_ma);
 	return IRQ_HANDLED;
+}
+
+static void bms_update_work(struct work_struct *work)
+{
+	struct smb_charger *chg = container_of(work, struct smb_charger,
+						bms_update_work);
+
+	smblib_suspend_on_debug_battery(chg);
+
+	if (chg->batt_psy)
+		power_supply_changed(chg->batt_psy);
 }
 
 static int get_property_from_fg(struct smb_charger *chg,
@@ -5052,13 +5048,6 @@ static struct notify_usb_enumeration_status usb_enumeration  = {
 	.notify_usb_enumeration		= notify_usb_enumeration_function,
 };
 #endif
-
-static void bms_update_work(struct work_struct *work)
-{
-	struct smb_charger *chg = container_of(work, struct smb_charger,
-						bms_update_work);
-	power_supply_changed(chg->batt_psy);
-}
 
 static void step_soc_req_work(struct work_struct *work)
 {
