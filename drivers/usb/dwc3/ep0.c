@@ -39,7 +39,7 @@
 
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20170112 Add usb enumeration status */
-#include "../../power/qcom-charger/oem_external_fg.h"
+#include "../../power/supply/qcom/oem_external_fg.h"
 #endif
 
 static bool enable_dwc3_u1u2;
