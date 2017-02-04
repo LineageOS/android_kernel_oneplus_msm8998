@@ -71,7 +71,6 @@ enum pon_restart_reason {
 #endif
 };
 
-<<<<<<< HEAD:include/linux/qpnp/power-on.h
 #ifdef VENDOR_EDIT
 /* Define OEM reboot mode magic*/
 #define AGING_MODE		0x77665510
@@ -84,10 +83,7 @@ enum pon_restart_reason {
 #define MODEM_MODE		0x7766550b
 #endif
 
-#ifdef CONFIG_QPNP_POWER_ON
-=======
 #ifdef CONFIG_INPUT_QPNP_POWER_ON
->>>>>>> origin/qc8998:include/linux/input/qpnp-power-on.h
 int qpnp_pon_system_pwr_off(enum pon_power_off_type type);
 int qpnp_pon_is_warm_reset(void);
 int qpnp_pon_trigger_config(enum pon_trigger_source pon_src, bool enable);

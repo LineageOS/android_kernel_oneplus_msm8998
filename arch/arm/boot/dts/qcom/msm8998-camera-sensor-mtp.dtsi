@@ -11,8 +11,6 @@
  * GNU General Public License for more details.
  */
 
-<<<<<<< HEAD
-=======
 &soc {
 	led_flash0: qcom,camera-flash@0 {
 		cell-index = <0>;
@@ -356,4 +354,3 @@
 		status = "ok";
 	};
 };
->>>>>>> origin/qc8998

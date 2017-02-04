@@ -256,15 +256,7 @@ static void *usbpd_ipc_log;
 static int min_sink_current = 900;
 module_param(min_sink_current, int, S_IRUSR | S_IWUSR);
 
-<<<<<<< HEAD
-static bool ss_host;
-module_param(ss_host, bool, S_IRUSR | S_IWUSR);
 
-static bool ss_dev = false;
-module_param(ss_dev, bool, S_IRUSR | S_IWUSR);
-
-=======
->>>>>>> origin/qc8998
 static const u32 default_src_caps[] = { 0x36019096 };	/* VSafe5V @ 1.5A */
 static const u32 default_snk_caps[] = { 0x2601905A };	/* 5V @ 900mA */
 
