@@ -127,8 +127,12 @@ extern bool icnss_is_qmi_disable(void);
 extern bool icnss_is_fw_ready(void);
 extern int icnss_set_wlan_mac_address(const u8 *in, const uint32_t len);
 extern u8 *icnss_get_wlan_mac_address(struct device *dev, uint32_t *num);
+<<<<<<< HEAD
 //#ifdef VENDOR_EDIT
 extern void cnss_set_fw_version(u32 version);
 //#endif VENDOR_EDIT
+=======
+extern int icnss_trigger_recovery(struct device *dev);
+>>>>>>> origin/qc8998
 
 #endif /* _ICNSS_WLAN_H_ */
