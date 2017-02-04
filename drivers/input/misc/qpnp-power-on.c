@@ -30,8 +30,6 @@
 #include <linux/regulator/driver.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/of_regulator.h>
-<<<<<<< HEAD:drivers/input/qpnp-power-on.c
-#include <linux/qpnp/power-on.h>
 #ifdef VENDOR_EDIT
 #include <linux/syscalls.h>
 #endif
@@ -39,9 +37,7 @@
 //hefaxi@filesystems, 2015/12/07, add for force dump function
 #include <linux/oem_force_dump.h>
 #endif
-=======
 #include <linux/input/qpnp-power-on.h>
->>>>>>> origin/qc8998:drivers/input/misc/qpnp-power-on.c
 #include <linux/power_supply.h>
 
 #define PMIC_VER_8941           0x01
@@ -2353,17 +2349,14 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 			rc);
 		return rc;
 	}
-<<<<<<< HEAD:drivers/input/qpnp-power-on.c
 	//#ifdef VENDOR_EDIT
 	// change by taokai@bsp 2016/11/9, print all pon reason
 	//index = ffs(pon_sts) - 1;
-=======
 
 	if (sys_reset)
 		boot_reason = ffs(pon_sts);
 
 	index = ffs(pon_sts) - 1;
->>>>>>> origin/qc8998:drivers/input/misc/qpnp-power-on.c
 	cold_boot = !qpnp_pon_is_warm_reset();
 	for_each_set_bit(index, (unsigned long *)&pon_sts, ARRAY_SIZE(qpnp_pon_reason)){
 	if (index >= ARRAY_SIZE(qpnp_pon_reason) || index < 0) {
