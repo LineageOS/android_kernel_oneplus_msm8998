@@ -585,7 +585,11 @@ static void armv8pmu_idle_update(struct arm_pmu *cpu_pmu)
 	struct perf_event *event;
 	int idx;
 
+#ifdef VENDOR_EDIT
+	if (!cpu_pmu || !(cpu_pmu->hw_events))
+#else
 	if (!cpu_pmu)
+#endif
 		return;
 
 	hw_events = this_cpu_ptr(cpu_pmu->hw_events);
