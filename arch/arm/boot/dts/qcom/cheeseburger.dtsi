@@ -109,6 +109,20 @@
             };
         };
 
+        oem_at_cable_mux {
+            at_cable_default: at_cable_default {
+                mux {
+                    pins = "gpio7";
+                    function = "gpio";
+                };
+
+                config {
+                    pins = "gpio7";
+                    drive-strength = <2>;
+                    bias-pull-down;
+                };
+            };
+         };
 	};
 
 	/* Tri-state key */
@@ -131,6 +145,14 @@
    		pinctrl-names = "oem_rf_cable_active", "oem_rf_cable_suspend";
 		pinctrl-0 = <&oem_rf_cable_active>;
 		pinctrl-1 = <&oem_rf_cable_suspend>;
+    };
+
+    oem_at_cable {
+        compatible = "oem,at_cable";
+        at,cable-gpio  = <&tlmm 7 0>;
+
+        pinctrl-names = "default";
+        pinctrl-0 = <&at_cable_default>;
     };
 
 	/* Fingerprint */

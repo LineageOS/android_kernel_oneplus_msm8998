@@ -295,6 +295,7 @@ exit:
 }
 static struct of_device_id rf_of_match[] = {
 	{ .compatible = "oem,rf_cable", },
+	{ .compatible = "oem,at_cable", },
 	{}
 };
 MODULE_DEVICE_TABLE(of, rf_of_match);
