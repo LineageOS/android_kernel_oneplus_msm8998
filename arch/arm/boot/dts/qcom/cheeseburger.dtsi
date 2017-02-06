@@ -515,6 +515,11 @@
 		qcom,wsa-devs = <>;
 		qcom,wsa-aux-dev-prefix = <>;
 	};
+
+	sound-tavil {
+		qcom,usbc-analog-en1_gpio = <>;
+		qcom,usbc-analog-en2_n_gpio = <>;
+	};
 };
 
 &i2c_9 { /* BLSP2 QUP9 for Audio Speaker */
@@ -534,6 +539,14 @@
 };
 
 &wcd_us_euro_gpio {
+	status = "disabled";
+};
+
+&wcd_usbc_analog_en1_gpio {
+	status = "disabled";
+};
+
+&wcd_usbc_analog_en2n_gpio {
 	status = "disabled";
 };
 
