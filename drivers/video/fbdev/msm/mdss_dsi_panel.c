@@ -852,7 +852,14 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_dsi_ctrl_pdata *sctrl = NULL;
+//#ifdef VENDOR_EDIT
+	static bool first_bl_level = true;
 
+	if (first_bl_level || (bl_level == 0)){
+        printk("---backlight level = %d---\n", bl_level);
+        first_bl_level = (bl_level == 0)? true : false;
+	}
+//#endif
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
 		return;
@@ -1048,7 +1055,9 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
-
+//#ifdef VENDOR_EDIT
+    pr_err("%s start\n", __func__);
+//#endif
 	pinfo = &pdata->panel_info;
 	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
@@ -1105,6 +1114,9 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 		mdss_dba_utils_video_on(pinfo->dba_data, pinfo);
 end:
 	pr_debug("%s:-\n", __func__);
+//#ifdef VENDOR_EDIT
+    pr_err("%s end\n", __func__);
+//#endif
 	return ret;
 }
 
@@ -1119,7 +1131,9 @@ static int mdss_dsi_post_panel_on(struct mdss_panel_data *pdata)
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
-
+//#ifdef VENDOR_EDIT
+    pr_err("%s start\n", __func__);
+//#endif
 	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
@@ -1144,6 +1158,9 @@ static int mdss_dsi_post_panel_on(struct mdss_panel_data *pdata)
 
 end:
 	pr_debug("%s:-\n", __func__);
+//#ifdef VENDOR_EDIT
+    pr_err("%s end\n", __func__);
+//#endif
 	return 0;
 }
 
@@ -1156,7 +1173,9 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
-
+//#ifdef VENDOR_EDIT
+    pr_err("%s start\n", __func__);
+//#endif
 	pinfo = &pdata->panel_info;
 	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
@@ -1182,6 +1201,9 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 
 end:
 	pr_debug("%s:-\n", __func__);
+//#ifdef VENDOR_EDIT
+    pr_err("%s end\n", __func__);
+//#endif
 	return 0;
 }
 

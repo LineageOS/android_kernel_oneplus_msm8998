@@ -1196,7 +1196,9 @@ static int mdss_dsi_off(struct mdss_panel_data *pdata, int power_state)
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
-
+//#ifdef VENDOR_EDIT
+    pr_err("%s start\n", __func__);
+//#endif
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
@@ -1258,7 +1260,9 @@ panel_power_ctrl:
 	ctrl_pdata->cur_max_pkt_size = 0;
 end:
 	pr_debug("%s-:\n", __func__);
-
+//#ifdef VENDOR_EDIT
+    pr_err("%s end\n", __func__);
+//#endif
 	return ret;
 }
 
@@ -1379,7 +1383,9 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
-
+//#ifdef VENDOR_EDIT
+    pr_err("%s start\n", __func__);
+//#endif
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
@@ -1479,6 +1485,9 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 
 end:
 	pr_debug("%s-:\n", __func__);
+//#ifdef VENDOR_EDIT
+    pr_err("%s end\n", __func__);
+//#endif
 	return ret;
 }
 
