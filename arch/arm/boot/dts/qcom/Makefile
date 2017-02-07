@@ -137,6 +137,7 @@ dtb-$(CONFIG_ARCH_MSM8998) += cheeseburger-evb.dtb
 dtb-$(CONFIG_ARCH_MSM8998) += cheeseburger-v2.1-evb.dtb
 dtb-$(CONFIG_ARCH_MSM8998) += cheeseburger-v2.1-t0.dtb
 dtb-$(CONFIG_ARCH_MSM8998) += cheeseburger-v2.1-evt1.dtb
+dtb-$(CONFIG_ARCH_MSM8998) += cheeseburger-v2.1-evt2.dtb
 #endif
 
 dtb-$(CONFIG_ARCH_MSMHAMSTER) += msmhamster-rumi.dtb
