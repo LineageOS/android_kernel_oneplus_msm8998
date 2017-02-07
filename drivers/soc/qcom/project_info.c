@@ -435,6 +435,12 @@ int __init init_project_info(void)
 		case 12:
 		    snprintf(mainboard_version, sizeof(mainboard_version), "%s","T0");
 		    break;
+		case 13:
+		    snprintf(mainboard_version, sizeof(mainboard_version), "%s","EVT1");
+		    break;
+		case 14:
+		    snprintf(mainboard_version, sizeof(mainboard_version), "%s","EVT2");
+		    break;
 		default:
 		    snprintf(mainboard_version, sizeof(mainboard_version), "%d",project_info_desc->hw_version);
 		    break;
