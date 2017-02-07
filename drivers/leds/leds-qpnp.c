@@ -2546,14 +2546,13 @@ static ssize_t duty_pcts_store(struct device *dev,
 
 	#else
 	rets= sscanf((const char *)buffer,
-		"bean %x %x %x %x %x %x %x %x %x %x %x ",
+		"%x %x %x %x %x %x %x %x %x %x %x ",
 			    &pwm_cfg->old_duty_pcts[0], &pwm_cfg->old_duty_pcts[1],
 			    &pwm_cfg->old_duty_pcts[2], &pwm_cfg->old_duty_pcts[3],
 			    &pwm_cfg->old_duty_pcts[4], &pwm_cfg->old_duty_pcts[5],
 			    &pwm_cfg->old_duty_pcts[6],&pwm_cfg->old_duty_pcts[7],
 			    &pwm_cfg->old_duty_pcts[8], &pwm_cfg->old_duty_pcts[9],
 			    &pwm_cfg->old_duty_pcts[10]);
-	printk("bean set rets = %d\n",rets);
 	if(rets != 11)
 	{
 		pr_err("duty_pcts_store: Invalid paramter:%d\n", rets);
