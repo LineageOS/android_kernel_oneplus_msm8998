@@ -3021,7 +3021,7 @@ static ssize_t touch_press_status_read(struct file *file, char __user *user_buf,
 		for (y = 0; y < RX_NUM; y++){
 			if ((delta[x][y] < -30) && (delta[x][y] > -250))
 			{
-				str_n += sprintf(&page[str_n],"x%d,y%d = %4d\n", x, y, delta[x][y]);
+				//str_n += sprintf(&page[str_n],"x%d,y%d = %4d\n", x, y, delta[x][y]);
 				press_points++;
 			}
 			if((delta[x][y] > 30) && (delta[x][y] < 200))
