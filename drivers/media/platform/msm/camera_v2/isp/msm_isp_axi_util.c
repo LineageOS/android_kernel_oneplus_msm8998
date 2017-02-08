@@ -867,10 +867,12 @@ void msm_isp_increment_frame_id(struct vfe_device *vfe_dev,
 			 */
 			if (ms_res->src_sof_mask & (1 <<
 				src_info->dual_hw_ms_info.index)) {
+/*
 				pr_err("Frame out of sync on vfe %d\n",
 					vfe_dev->pdev->id);
 				msm_isp_halt_send_error(vfe_dev,
 					ISP_EVENT_BUF_FATAL_ERROR);
+*/
 			}
 			ms_res->src_sof_mask |= (1 <<
 					src_info->dual_hw_ms_info.index);
