@@ -138,21 +138,16 @@
 		pinctrl-0 = <&tri_state_key_active>;
 		pinctrl-1 = <&tri_state_key_suspend>;
 	};
-       oem_rf_cable {
-            compatible = "oem,rf_cable";
-            interrupt-parent = <&tlmm>;
-            rf,cable-gpio    = <&tlmm 36 0>;
-   		pinctrl-names = "oem_rf_cable_active", "oem_rf_cable_suspend";
-		pinctrl-0 = <&oem_rf_cable_active>;
+
+    oem_rf_cable {
+		compatible = "oem,rf_cable";
+		interrupt-parent = <&tlmm>;
+		rf,cable-gpio    = <&tlmm 36 0>;
+		at,cable-gpio  = <&tlmm 7 0>;
+		pinctrl-names = "oem_rf_cable_active", "oem_rf_cable_suspend", "default";
+		pinctrl-0 = <&oem_rf_cable_active >;
 		pinctrl-1 = <&oem_rf_cable_suspend>;
-    };
-
-    oem_at_cable {
-        compatible = "oem,at_cable";
-        at,cable-gpio  = <&tlmm 7 0>;
-
-        pinctrl-names = "default";
-        pinctrl-0 = <&at_cable_default>;
+		pinctrl-2 = <&at_cable_default>;
     };
 
 	/* Fingerprint */
