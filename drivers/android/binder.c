@@ -2350,6 +2350,15 @@ retry:
 		switch (w->type) {
 		case BINDER_WORK_TRANSACTION: {
 			t = container_of(w, struct binder_transaction, work);
+			//#ifdef VENDOR_EDIT
+            //MaJunhai@OnePlus..MultiMediaService, add /proc/process/task/taskid/wakeup || /proc/process/wakeup for ion tracking
+            if(t->from) {
+                task_thread_info(current)->pid = t->from->pid;
+                task_thread_info(current)->tgid = t->from->proc->pid;
+                //printk("%s to waken by %5d:%5d\n", current->comm, task_thread_info(current)->tgid, task_thread_info(current)->pid);
+                //printk("%s to waken by %5d:%5d\n", current->comm, t->from->proc->pid, t->from->pid);
+            }
+           //#endif
 		} break;
 		case BINDER_WORK_TRANSACTION_COMPLETE: {
 			cmd = BR_TRANSACTION_COMPLETE;
