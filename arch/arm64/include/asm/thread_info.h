@@ -50,6 +50,11 @@ struct thread_info {
 	struct task_struct	*task;		/* main task structure */
 	int			preempt_count;	/* 0 => preemptable, <0 => bug */
 	int			cpu;		/* cpu */
+    //#ifdef VENDOR_EDIT
+    //MaJunhai@OnePlus..MultiMediaService, add /proc/process/task/taskid/wakeup || /proc/process/wakeup for ion tracking
+    pid_t       tgid;
+    pid_t       pid;
+    //#endif
 };
 
 #define INIT_THREAD_INFO(tsk)						\
