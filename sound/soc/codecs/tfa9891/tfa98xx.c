@@ -2813,10 +2813,15 @@ static int tfa98xx_startup(struct snd_pcm_substream *substream,
 			tfa98xx->rate_constraint.count += 1;
 		}
 	}
-    
+
+/*zhiguang.su@MultiMediaService,2017-02-09,changed for NXP advise,avoid 8k tinyplay problem*/
+    return 0;
+    #if 0
 	return snd_pcm_hw_constraint_list(substream->runtime, 0,
 				   SNDRV_PCM_HW_PARAM_RATE,
 				   &tfa98xx->rate_constraint);
+	#endif
+
 }
 
 static int tfa98xx_set_dai_sysclk(struct snd_soc_dai *codec_dai,
