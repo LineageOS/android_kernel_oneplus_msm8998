@@ -168,7 +168,12 @@
 				0x8c 0x21C
 				0xf0 0x23C
 				0x00 0x240>;
-};
+   };
+
+   force_enable_serial {
+        compatible = "oem,force_serial";
+   };
+
 };
 
 &pm8998_gpios {

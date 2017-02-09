@@ -60,6 +60,20 @@
 extern void printascii(char *);
 #endif
 
+/*zyh we use dynamic add console , so we can't use __init  __exit, this will cause can't find func*/
+#ifdef __init
+#undef __init
+#endif
+
+#ifdef __exit
+#undef __exit
+#endif
+
+#define __init
+#define __exit
+
+
+
 int console_printk[4] = {
 	CONSOLE_LOGLEVEL_DEFAULT,	/* console_loglevel */
 	MESSAGE_LOGLEVEL_DEFAULT,	/* default_message_loglevel */
@@ -2142,6 +2156,16 @@ static int __init console_setup(char *str)
 	return 1;
 }
 __setup("console=", console_setup);
+
+#ifdef VENDOR_EDIT
+int force_oem_console_setup(char *str)
+{
+	console_setup(str);
+	return 1;
+}
+#endif
+
+EXPORT_SYMBOL(force_oem_console_setup);
 
 /**
  * add_preferred_console - add a device to the list of preferred consoles.
