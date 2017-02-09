@@ -267,7 +267,7 @@ void fixup_perms_recursive(struct dentry *dentry, struct limit_search *limit) {
 	info = SDCARDFS_I(d_inode(dentry));
 
 	if (needs_fixup(info->perm)) {
-		mutex_lock(&dentry->d_inode->i_mutex);
+		spin_lock(&dentry->d_lock);
 		list_for_each_entry(child, &dentry->d_subdirs, d_child) {
 			dget(child);
 			if (!(limit->flags & BY_NAME) || !strncasecmp(child->d_name.name, limit->name, limit->length)) {
@@ -280,13 +280,13 @@ void fixup_perms_recursive(struct dentry *dentry, struct limit_search *limit) {
 			}
 			dput(child);
 		}
-		mutex_unlock(&dentry->d_inode->i_mutex);
+		spin_unlock(&dentry->d_lock);
 	} else 	if (descendant_may_need_fixup(info, limit)) {
-		mutex_lock(&dentry->d_inode->i_mutex);
+		spin_lock(&dentry->d_lock);
 		list_for_each_entry(child, &dentry->d_subdirs, d_child) {
 				fixup_perms_recursive(child, limit);
 		}
-		mutex_unlock(&dentry->d_inode->i_mutex);
+		spin_unlock(&dentry->d_lock);
 	}
 	dput(dentry);
 }
@@ -297,7 +297,7 @@ void drop_recursive(struct dentry *parent) {
 	if (!d_inode(parent))
 		return;
 	info = SDCARDFS_I(d_inode(parent));
-	mutex_lock(&parent->d_inode->i_mutex);
+	spin_lock(&parent->d_lock);
 	list_for_each_entry(dentry, &parent->d_subdirs, d_child) {
 		if (d_inode(dentry)) {
 			if (SDCARDFS_I(d_inode(parent))->top != SDCARDFS_I(d_inode(dentry))->top) {
@@ -306,7 +306,7 @@ void drop_recursive(struct dentry *parent) {
 			}
 		}
 	}
-	mutex_unlock(&parent->d_inode->i_mutex);
+	spin_unlock(&parent->d_lock);
 }
 
 void fixup_top_recursive(struct dentry *parent) {
@@ -316,7 +316,7 @@ void fixup_top_recursive(struct dentry *parent) {
 	if (!d_inode(parent))
 		return;
 	info = SDCARDFS_I(d_inode(parent));
-	mutex_lock(&parent->d_inode->i_mutex);
+	spin_lock(&parent->d_lock);
 	list_for_each_entry(dentry, &parent->d_subdirs, d_child) {
 		if (d_inode(dentry)) {
 			if (SDCARDFS_I(d_inode(parent))->top != SDCARDFS_I(d_inode(dentry))->top) {
@@ -326,7 +326,7 @@ void fixup_top_recursive(struct dentry *parent) {
 			}
 		}
 	}
-	mutex_unlock(&parent->d_inode->i_mutex);
+	spin_unlock(&parent->d_lock);
 }
 
 /* main function for updating derived permission */
