@@ -65,6 +65,10 @@ static int sdcardfs_create(struct inode *dir, struct dentry *dentry,
 	const struct cred *saved_cred = NULL;
 	struct fs_struct *saved_fs;
 	struct fs_struct *copied_fs;
+	#ifdef VENDOR_EDIT
+	//Anderson, add log to check take picture status
+	struct dentry *parent = NULL;
+	#endif
 
 	if(!check_caller_access_to_name(dir, dentry->d_name.name)) {
 		printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n"
@@ -95,6 +99,12 @@ static int sdcardfs_create(struct inode *dir, struct dentry *dentry,
 	current->fs = copied_fs;
 	current->fs->umask = 0;
 	err = vfs_create2(lower_dentry_mnt, d_inode(lower_parent_dentry), lower_dentry, mode, want_excl);
+	#ifdef VENDOR_EDIT
+	//Anderson, add log to check take picture status
+	parent = dget_parent(dentry);
+	if(parent != NULL && !strcmp(parent->d_name.name, "Camera"))
+		printk(KERN_INFO "%s: %s %s %d\n", __FUNCTION__, parent->d_name.name, dentry->d_name.name, err);
+	#endif
 	if (err)
 		goto out;
 
@@ -476,6 +486,10 @@ static int sdcardfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 	struct dentry *trap = NULL;
 	struct path lower_old_path, lower_new_path;
 	const struct cred *saved_cred = NULL;
+	#ifdef VENDOR_EDIT
+	//Anderson, add log to check rename picture status
+	struct dentry *parent = NULL;
+	#endif
 
 	if(!check_caller_access_to_name(old_dir, old_dentry->d_name.name) ||
 		!check_caller_access_to_name(new_dir, new_dentry->d_name.name)) {
@@ -513,6 +527,12 @@ static int sdcardfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 			 d_inode(lower_old_dir_dentry), lower_old_dentry,
 			 d_inode(lower_new_dir_dentry), lower_new_dentry,
 			 NULL, 0);
+	#ifdef VENDOR_EDIT
+	//Anderson, add log to check rename picture status
+	parent = dget_parent(new_dentry);
+	if(parent != NULL && !strcmp(parent->d_name.name, "Camera"))
+		printk(KERN_INFO "%s: %s %s %d\n", __FUNCTION__, parent->d_name.name, new_dentry->d_name.name, err);
+	#endif
 	if (err)
 		goto out;
 
