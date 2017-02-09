@@ -119,6 +119,9 @@ struct tfa98xx {
 #endif
 	u8 reg;
 
+//su
+    bool startInit;
+
 	unsigned int count_wait_for_source_state;
 	unsigned int count_noclk;
 	unsigned int flags;

@@ -107,6 +107,9 @@ static int tfa98xx_get_fssel(unsigned int rate);
 
 static int get_profile_from_list(char *buf, int id);
 static int get_profile_id_for_sr(int id, unsigned int rate); 
+/*zhiguang.su@MultiMediaService,2017-02-09,avoid no sound for ftm*/
+static void tfa98xx_dsp_startInit(struct tfa98xx *tfa98xx);
+
 #ifdef VENDOR_EDIT
 /*wangdongdong@MultiMediaService,2016/11/30,add for speaker impedence detection*/
 static int tfa98xx_speaker_recalibration(Tfa98xx_handle_t handle,unsigned int *speakerImpedance);
@@ -2687,6 +2690,16 @@ static void tfa98xx_dsp_init(struct tfa98xx *tfa98xx)
 	return;
 }
 
+/*zhiguang.su@MultiMediaService,2017-02-09,avoid no sound for ftm*/
+static void tfa98xx_dsp_startInit(struct tfa98xx *tfa98xx)
+{
+	/* Only do dsp init for master device */
+	if (tfa98xx->handle != 0)
+		return;
+
+	tfa98xx_dsp_init(tfa98xx);
+}
+
 
 static void tfa98xx_dsp_init_work(struct work_struct *work)
 {
@@ -2952,12 +2965,20 @@ static int tfa98xx_mute(struct snd_soc_dai *dai, int mute, int stream)
 			tfa98xx->pstream = 1;
 		else
 			tfa98xx->cstream = 1;
-
+/*zhiguang.su@MultiMediaService,2017-02-09,avoid no sound for ftm*/
+       if(!tfa98xx->startInit)
+       {
+           tfa98xx->startInit = true;
+           tfa98xx_dsp_startInit(tfa98xx);
+       }
+       else
+       {
 		/* Start DSP */
 		if (tfa98xx->dsp_init != TFA98XX_DSP_INIT_PENDING)
 			queue_delayed_work(tfa98xx->tfa98xx_wq,
 							&tfa98xx->init_work,
 							0);
+		}
 	}
 
 	return 0;
@@ -3037,6 +3058,8 @@ static int tfa98xx_probe(struct snd_soc_codec *codec)
 
 	dev_info(codec->dev, "tfa98xx codec registered (%s)",
 							tfa98xx->fw.name);
+/*zhiguang.su@MultiMediaService,2017-02-09,avoid no sound for ftm*/
+tfa98xx->startInit = false;
 
     g_tfa98xx = tfa98xx;
 	return ret;
