@@ -1546,6 +1546,12 @@ struct task_struct {
 	unsigned int kill_flag;
 	struct timespec ttu;
 #endif
+
+#ifdef VENDOR_EDIT
+//xiaoxiaohuan add for fd leak debug
+    bool dump_fd_leak;
+#endif
+
 #ifdef CONFIG_SMP
 	struct llist_node wake_entry;
 	int on_cpu;
