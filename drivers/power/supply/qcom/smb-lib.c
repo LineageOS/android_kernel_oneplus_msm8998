@@ -65,7 +65,6 @@ static int get_prop_batt_voltage_now(struct smb_charger *chg);
 static int set_property_on_fg(struct smb_charger *chg,
 		enum power_supply_property prop, int val);
 static int set_dash_charger_present(int status);
-static int get_prop_charger_voltage_now(struct smb_charger *chg);
 static temp_region_type
 		op_battery_temp_region_get(struct smb_charger *chg);
 #endif
@@ -3881,14 +3880,19 @@ static void op_handle_usb_removal(struct smb_charger *chg)
 
 int update_dash_unplug_status(void)
 {
-	int vbus_mv;
+	int rc;
+	union power_supply_propval vbus_val;
 
-	/* check if vbus > 2.5v */
-	vbus_mv = get_prop_charger_voltage_now(g_chg);
-	if (!(vbus_mv > 2500))
+	rc = smblib_get_prop_usb_voltage_now(g_chg, &vbus_val);
+	if (rc < 0) {
+		pr_err("failed to read usb_voltage rc=%d\n", rc);
+	} else if (vbus_val.intval <= 2500) {
 		op_handle_usb_removal(g_chg);
+	}
+
 	smblib_update_usb_type(g_chg);
 	power_supply_changed(g_chg->usb_psy);
+
 	return 0;
 }
 
@@ -4133,32 +4137,6 @@ static void op_check_charge_timeout(struct smb_charger *chg)
 		op_charging_en(chg, false);
 		chg->time_out = true;
 	}
-}
-
-static int get_prop_charger_voltage_now(struct smb_charger *chg)
-{
-	int vchg_uv = 0;
-
-	if(!is_usb_present(chg))
-		return 0;
-
-	if (chg->fake_chgvol)
-		return chg->fake_chgvol;
-
-	if (!chg->iio.usbin_v_chan ||
-		PTR_ERR(chg->iio.usbin_v_chan) == -EPROBE_DEFER)
-		chg->iio.usbin_v_chan = iio_channel_get(chg->dev, "usbin_v");
-
-	if (IS_ERR(chg->iio.usbin_v_chan)) {
-		pr_err("failed to get usbin_v iio_channel");
-		return 0;
-	}
-
-	iio_read_channel_processed(chg->iio.usbin_v_chan, &vchg_uv);
-	if (chg->vbus_present && vchg_uv == 0)
-		return 5000;
-
-	return vchg_uv / 1000;
 }
 
 static int get_prop_batt_present(struct smb_charger *chg)
@@ -4694,17 +4672,15 @@ static void op_check_battery_uovp(struct smb_charger *chg)
 	return;
 }
 
-static void op_check_charger_uovp(struct smb_charger *chg)
+static void op_check_charger_uovp(struct smb_charger *chg, int vchg_mv)
 {
 	static int over_volt_count = 0, not_over_volt_count = 0;
 	static bool uovp_satus, pre_uovp_satus;
-	int vchg_mv = CHG_VOLTAGE_NORMAL;
 	int detect_time = 3; /* 3 x 6s = 18s */
 
 	if (!chg->vbus_present)
 		return;
 
-	vchg_mv = get_prop_charger_voltage_now(chg);
 	pr_debug("charger_voltage=%d charger_ovp=%d\n", vchg_mv, chg->chg_ovp);
 
 	if (!chg->chg_ovp) {
@@ -4799,6 +4775,8 @@ static void op_heartbeat_work(struct work_struct *work)
 	bool charger_present;
 	bool fast_charging;
 	static int batt_temp = 0, vbat_mv = 0;
+	union power_supply_propval vbus_val;
+	int rc;
 
 	op_check_charge_timeout(chg);
 
@@ -4830,7 +4808,13 @@ static void op_heartbeat_work(struct work_struct *work)
 							msecs_to_jiffies(100));
 	}
 
-	op_check_charger_uovp(chg);
+	rc = smblib_get_prop_usb_voltage_now(chg, &vbus_val);
+	if (rc < 0) {
+		pr_err("failed to read usb_voltage rc=%d\n", rc);
+		vbus_val.intval = CHG_VOLTAGE_NORMAL;
+	}
+
+	op_check_charger_uovp(chg, vbus_val.intval);
 	op_check_battery_uovp(chg);
 
 	vbat_mv = get_prop_batt_voltage_now(chg) / 1000;
@@ -4872,7 +4856,7 @@ out:
 				get_prop_batt_current_now(chg) / 1000,
 				get_prop_batt_temp(chg),
 				chg->usb_psy_desc.type,
-				get_prop_charger_voltage_now(chg));
+				vbus_val.intval);
 	}
 
 	/*update time 6s*/
@@ -4977,9 +4961,10 @@ enum chg_protect_status_type {
 
 int get_prop_chg_protect_status(struct smb_charger *chg)
 {
-	int temp, vbus_mv;
+	int temp, rc;
 	bool batt_present;
 	temp_region_type temp_region;
+	union power_supply_propval vbus_val;
 
 	if (chg->use_fake_protect_sts)
 		return chg->fake_protect_sts;
@@ -4987,11 +4972,16 @@ int get_prop_chg_protect_status(struct smb_charger *chg)
 	if (!is_usb_present(chg))
 		return 0;
 
+	rc = smblib_get_prop_usb_voltage_now(chg, &vbus_val);
+	if (rc < 0) {
+		pr_err("failed to read usb_voltage rc=%d\n", rc);
+		vbus_val.intval= CHG_VOLTAGE_NORMAL;
+	}
+
 	temp = get_prop_batt_temp(chg);
-	vbus_mv = get_prop_charger_voltage_now(chg);
 	batt_present = get_prop_batt_present(chg);
 	temp_region = op_battery_temp_region_get(chg);
-	if (chg->chg_ovp && vbus_mv >= CHG_SOFT_OVP_MV - 100)
+	if (chg->chg_ovp && vbus_val.intval >= CHG_SOFT_OVP_MV - 100)
 		return PROTECT_CHG_OVP;
 	else if (BATT_REMOVE_TEMP > temp || !batt_present)
 		return  PROTECT_BATT_MISSING;
