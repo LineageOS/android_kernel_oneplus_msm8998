@@ -26,6 +26,10 @@
 #include <linux/regulator/driver.h>
 #include <linux/regulator/of_regulator.h>
 #include <linux/regulator/machine.h>
+#ifdef VENDOR_EDIT
+#include <linux/delay.h>
+#include <linux/proc_fs.h>
+#endif
 #include "smb-reg.h"
 #include "smb-lib.h"
 #include "storm-watch.h"
@@ -978,6 +982,7 @@ extern bool op_set_fast_chg_allow(struct smb_charger *chg, bool enable);
 extern bool get_prop_fast_chg_started(struct smb_charger *chg);
 
 extern void switch_mode_to_normal(void);
+struct smb_charger *g_chip ;
 #endif
 static int smb2_batt_set_prop(struct power_supply *psy,
 		enum power_supply_property prop,
@@ -2084,6 +2089,26 @@ static void smb2_create_debugfs(struct smb2 *chip)
 
 #endif
 
+#ifdef VENDOR_EDIT /* add shipmode */
+#ifdef CONFIG_PROC_FS
+static ssize_t write_ship_mode(struct file *file, const char __user *buf,
+				   size_t count, loff_t *ppos)
+{
+
+	if (count) {
+		g_chip->ship_mode = true;
+		pr_err(" * * * XCB * * * write_ship_mode\n");
+	}
+	return count;
+}
+
+static const struct file_operations proc_ship_mode_operations = {
+	.write		= write_ship_mode,
+	.llseek		= noop_llseek,
+};
+#endif
+#endif
+
 static int smb2_probe(struct platform_device *pdev)
 {
 	struct smb2 *chip;
@@ -2098,6 +2123,9 @@ static int smb2_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	chg = &chip->chg;
+#ifdef VENDOR_EDIT /* add shipmode */
+	g_chip = chg;
+#endif
 	chg->dev = &pdev->dev;
 	chg->param = v1_params;
 	chg->debug_mask = &__debug_mask;
@@ -2248,6 +2276,13 @@ static int smb2_probe(struct platform_device *pdev)
 		goto cleanup;
 	}
 	batt_charge_type = val.intval;
+#ifdef VENDOR_EDIT//add shipmode
+#ifdef CONFIG_PROC_FS
+	if (!proc_create("ship_mode", S_IFREG | S_IWUSR | S_IRUGO, NULL,
+		 &proc_ship_mode_operations))
+	pr_err("Failed to register proc interface\n");
+#endif
+#endif
 
 	pr_info("QPNP SMB2 probed successfully usb:present=%d type=%d batt:present = %d health = %d charge = %d\n",
 		usb_present, chg->usb_psy_desc.type,
@@ -2281,11 +2316,23 @@ static int smb2_remove(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 	return 0;
 }
-
 static void smb2_shutdown(struct platform_device *pdev)
 {
 	struct smb2 *chip = platform_get_drvdata(pdev);
 	struct smb_charger *chg = &chip->chg;
+#ifdef VENDOR_EDIT /* add shipmode */
+#ifdef CONFIG_PROC_FS
+	pr_info("smbchg_shutdown\n");
+	if (chg->ship_mode) {
+		pr_info("smbchg_shutdown enter ship_mode\n");
+		smblib_masked_write(chg, SHIP_MODE_REG, SHIP_MODE_EN_BIT,
+			SHIP_MODE_EN_BIT);
+		msleep(1000);
+		pr_err("after 1s\n");
+		while(1);
+	}
+#endif
+#endif
 
 	/* configure power role for UFP */
 	smblib_masked_write(chg, TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
