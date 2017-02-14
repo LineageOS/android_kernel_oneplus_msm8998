@@ -315,6 +315,8 @@ struct qpnp_hap {
 	u8				act_type;
 	u8				wave_shape;
 	u8 wave_samp[QPNP_HAP_WAV_SAMP_LEN];
+	u8 wave_samp_overdrive[QPNP_HAP_WAV_SAMP_LEN];
+	u8 wave_samp_normal[QPNP_HAP_WAV_SAMP_LEN];
 	u8 shadow_wave_samp[QPNP_HAP_WAV_SAMP_LEN];
 	u8 brake_pat[QPNP_HAP_BRAKE_PAT_LEN];
 	u8				reg_en_ctl;
@@ -788,6 +790,16 @@ static int qpnp_hap_parse_buffer_dt(struct qpnp_hap *hap)
 			hap->wave_samp[i] = QPNP_HAP_WAV_SAMP_MAX;
 	} else {
 		memcpy(hap->wave_samp, prop->value, QPNP_HAP_WAV_SAMP_LEN);
+		memcpy(hap->wave_samp_normal, prop->value, QPNP_HAP_WAV_SAMP_LEN);
+	}
+	prop = of_find_property(pdev->dev.of_node,
+			"qcom,wave-samples-overdrive", &temp);
+	if (!prop || temp != QPNP_HAP_WAV_SAMP_LEN) {
+		dev_err(&pdev->dev, "Invalid wave samples, use default");
+		for (i = 0; i < QPNP_HAP_WAV_SAMP_LEN; i++)
+			hap->wave_samp_overdrive[i] = QPNP_HAP_WAV_SAMP_MAX;
+	} else {
+		memcpy(hap->wave_samp_overdrive, prop->value, QPNP_HAP_WAV_SAMP_LEN);
 	}
 
 	hap->use_play_irq = of_property_read_bool(pdev->dev.of_node,
@@ -946,6 +958,18 @@ static ssize_t qpnp_hap_wf_samp_store(struct device *dev,
 
 	hap->shadow_wave_samp[index] = (u8) data;
 	return count;
+}
+
+static int qpnp_hap_wf_samp_store_all(struct timed_output_dev *timed_dev,bool use_overdrive)
+{
+   struct qpnp_hap *hap = container_of(timed_dev, struct qpnp_hap,
+                    timed_dev);
+   memcpy(hap->shadow_wave_samp, use_overdrive? hap->wave_samp_overdrive:hap->wave_samp_normal, QPNP_HAP_WAV_SAMP_LEN);
+   mutex_lock(&hap->wf_lock);
+   hap->wf_update = true;
+   mutex_unlock(&hap->wf_lock);
+
+   return 0;
 }
 
 static ssize_t qpnp_hap_wf_s0_store(struct device *dev,
@@ -1666,6 +1690,8 @@ static void qpnp_hap_td_enable(struct timed_output_dev *dev, int value)
 	} else {
 		value = (value > hap->timeout_ms ?
 				 hap->timeout_ms : value);
+		//if value < 11ms,use overdrive
+		qpnp_hap_wf_samp_store_all(dev, (value<11?1:0));
 		hap->state = 1;
 		hrtimer_start(&hap->hap_timer,
 			      ktime_set(value / 1000, (value % 1000) * 1000000),
