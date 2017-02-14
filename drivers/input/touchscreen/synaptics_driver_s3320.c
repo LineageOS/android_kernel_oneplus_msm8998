@@ -1645,7 +1645,7 @@ static ssize_t tp_baseline_test_read_func(struct file *file, char __user *user_b
 	if(!ts)
 		return baseline_ret;
 	if(baseline_ret == 0){
-		count = synaptics_rmi4_baseline_show(ts->dev,page,0);
+		count = synaptics_rmi4_baseline_show(ts->dev,page,1);
 		baseline_ret = simple_read_from_buffer(user_buf, count, ppos, page, strlen(page));
 	}else{
 		baseline_ret = 0;
