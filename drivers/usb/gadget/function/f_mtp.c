@@ -1984,7 +1984,9 @@ struct usb_function *function_alloc_mtp_ptp(struct usb_function_instance *fi,
 	dev->function.setup = mtp_ctrlreq_configfs;
 	dev->function.free_func = mtp_free;
 	dev->is_ptp = !mtp_config;
+#ifndef VENDER_EDIT
 	fi->f = &dev->function;
+#endif
 
 	return &dev->function;
 }
