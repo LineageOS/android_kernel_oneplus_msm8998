@@ -200,7 +200,7 @@ static struct dsi_cmd_desc backlight_cmd = {
 };
 //#ifdef VENDOR_EDIT
 //samsung s6e3fa6 panel backlight
-static char led_pwm2[3] = {0x51, 0x00, 0x00};	/* DTYPE_DCS_WRITE1 */
+static char led_pwm2[3] = {0x51, 0x00, 0x00};	/* DTYPE_DCS_LWRITE */
 static struct dsi_cmd_desc backlight_cmd2 = {
 	{DTYPE_DCS_LWRITE, 1, 0, 0, 1, sizeof(led_pwm2)},
 	led_pwm2
@@ -846,7 +846,30 @@ static void mdss_dsi_panel_switch_mode(struct mdss_panel_data *pdata,
 			(!pdata->panel_info.send_pps_before_switch))
 		mdss_dsi_panel_dsc_pps_send(ctrl_pdata, &pdata->panel_info);
 }
+//#ifdef VENDOR_EDIT
+/*******************************************************************************
+remap backlight level 0-->55 to 0-->55
+remap backlight level 55-->230 to 55-->200
+remap backlight level 230-->255 to 200-->255
+********************************************************************************/
+static u32 backlight_level_remap(struct mdss_dsi_ctrl_pdata *ctrl, u32 level)
+{
+    u32 remap_level = 0;
 
+    if (ctrl->bklt_max == 255){
+        if (level < 55){
+            remap_level = level;
+        } else if ((level >= 55) && (level <= 230)){
+            remap_level = (level*29+330)/35;
+        }else{
+            remap_level = level*11/5-306;
+        }
+    } else{
+        remap_level = level;
+    }
+	return remap_level;
+}
+//#endif
 static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 							u32 bl_level)
 {
@@ -868,6 +891,12 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
+  //#ifdef VENDOR_EDIT
+    if (ctrl_pdata->high_brightness_panel){
+       pr_debug("%s goto backlight level remap\n", __func__);
+       bl_level = backlight_level_remap(ctrl_pdata, bl_level);
+    }
+  //#endif
 	/*
 	 * Some backlight controllers specify a minimum duty cycle
 	 * for the backlight brightness. If the brightness is less
@@ -3097,7 +3126,11 @@ static int mdss_panel_parse_dt(struct device_node *np,
 		"qcom,mdss-dsi-panel-dci-p3-off-command",
 		"qcom,mdss-dsi-dci-p3-command-state");
 //#endif
-
+//#ifdef VENDOR_EDIT
+	ctrl_pdata->high_brightness_panel= of_property_read_bool(np,
+					"qcom,mdss-dsi-high-brightness-panel");
+    pr_err("high brightness panel: %d\n", ctrl_pdata->high_brightness_panel);
+//#endif
 	if (pinfo->is_dba_panel) {
 		bridge_chip_name = of_get_property(np,
 			"qcom,bridge-name", &len);
