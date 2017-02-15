@@ -565,6 +565,9 @@ struct mdss_dsi_ctrl_pdata {
 
 	struct dsi_err_container err_cont;
 //#ifdef VENDOR_EDIT
+    bool high_brightness_panel;
+//#endif
+//#ifdef VENDOR_EDIT
 	int acl_mode;
 	struct dsi_panel_cmds acl_cmds;
 	int acl_ncmds;
