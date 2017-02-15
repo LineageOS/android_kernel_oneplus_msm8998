@@ -3586,12 +3586,7 @@ static int fg_parse_dt(struct fg_chip *chip)
 	if (rc < 0)
 		chip->dt.sys_term_curr_ma = DEFAULT_SYS_TERM_CURR_MA;
 	else
-#ifdef VENDOR_EDIT
-/* yangfangbiao@bsp, 20170209 Add term current */
-		chip->dt.sys_term_curr_ma = -temp;
-#else
 		chip->dt.sys_term_curr_ma = temp;
-#endif
 	rc = of_property_read_u32(node, "qcom,fg-delta-soc-thr", &temp);
 	if (rc < 0)
 		chip->dt.delta_soc_thr = DEFAULT_DELTA_SOC_THR;
