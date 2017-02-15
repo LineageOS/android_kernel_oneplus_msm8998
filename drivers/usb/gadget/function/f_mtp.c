@@ -39,6 +39,9 @@
 #include <linux/usb/f_mtp.h>
 #include <linux/configfs.h>
 #include <linux/usb/composite.h>
+#ifdef VENDOR_EDIT
+#include <linux/pm_qos.h>
+#endif
 
 #include "configfs.h"
 
@@ -104,6 +107,11 @@ enum buf_type {
 #define DRIVER_NAME "mtp"
 
 #define MAX_ITERATION		100
+#ifdef VENDOR_EDIT
+/* values for qos requests */
+#define FILE_LENGTH	10 * 1024 * 1024
+#define PM_QOS_TIMEOUT	200000
+#endif
 
 unsigned int mtp_rx_req_len = MTP_RX_BUFFER_INIT_SIZE;
 module_param(mtp_rx_req_len, uint, S_IRUGO | S_IWUSR);
@@ -115,6 +123,12 @@ unsigned int mtp_tx_reqs = MTP_TX_REQ_MAX;
 module_param(mtp_tx_reqs, uint, S_IRUGO | S_IWUSR);
 
 static const char mtp_shortname[] = DRIVER_NAME "_usb";
+#ifdef VENDOR_EDIT
+static struct pm_qos_request little_cpu_mtp_freq;
+//static struct pm_qos_request big_cpu_mtp_freq;
+static struct delayed_work cpu_freq_qos_work;
+static struct workqueue_struct *cpu_freq_qos_queue;
+#endif
 
 struct mtp_dev {
 	struct usb_function function;
@@ -921,6 +935,15 @@ static void send_file_work(struct work_struct *data)
 	count = dev->xfer_file_length;
 
 	DBG(cdev, "send_file_work(%lld %lld)\n", offset, count);
+#if 0
+	if (dev->xfer_file_length >= FILE_LENGTH) {
+		pm_qos_update_request(&little_cpu_mtp_freq, MAX_CPUFREQ);
+		//pm_qos_update_request(&big_cpu_mtp_freq, MAX_CPUFREQ - 1);
+	} else {
+		pm_qos_update_request_timeout(&little_cpu_mtp_freq, MAX_CPUFREQ-2, PM_QOS_TIMEOUT);
+                //pm_qos_update_request_timeout(&big_cpu_mtp_freq, MAX_CPUFREQ-1, PM_QOS_TIMEOUT);
+	}
+# endif
 
 	if (dev->xfer_send_header) {
 		hdr_size = sizeof(struct mtp_data_header);
@@ -1012,7 +1035,12 @@ static void send_file_work(struct work_struct *data)
 
 	if (req)
 		mtp_req_put(dev, &dev->tx_idle, req);
-
+# if 0
+	if (dev->xfer_file_length >= FILE_LENGTH) {
+		pm_qos_update_request(&little_cpu_mtp_freq, MIN_CPUFREQ);
+		//pm_qos_update_request(&big_cpu_mtp_freq, MIN_CPUFREQ);
+	}
+#endif
 	DBG(cdev, "send_file_work returning %d state:%d\n", r, dev->state);
 	/* write the result */
 	dev->xfer_result = r;
@@ -1043,6 +1071,13 @@ static void receive_file_work(struct work_struct *data)
 	if (!IS_ALIGNED(count, dev->ep_out->maxpacket))
 		DBG(cdev, "%s- count(%lld) not multiple of mtu(%d)\n", __func__,
 						count, dev->ep_out->maxpacket);
+
+#ifdef VENDOR_EDIT
+	if (delayed_work_pending(&cpu_freq_qos_work))
+		cancel_delayed_work(&cpu_freq_qos_work);
+	pm_qos_update_request(&little_cpu_mtp_freq, MAX_CPUFREQ);
+	//pm_qos_update_request(&big_cpu_mtp_freq, MAX_CPUFREQ - 1);
+#endif
 
 	while (count > 0 || write_req) {
 		if (count > 0) {
@@ -1121,11 +1156,22 @@ static void receive_file_work(struct work_struct *data)
 		}
 	}
 
+#ifdef VENDOR_EDIT
+	queue_delayed_work(cpu_freq_qos_queue, &cpu_freq_qos_work, msecs_to_jiffies(1000)*3);
+#endif
 	DBG(cdev, "receive_file_work returning %d\n", r);
 	/* write the result */
 	dev->xfer_result = r;
 	smp_wmb();
 }
+
+#ifdef VENDOR_EDIT
+static void update_qos_request(struct work_struct *data)
+{
+	pm_qos_update_request(&little_cpu_mtp_freq, MIN_CPUFREQ);
+	//pm_qos_update_request(&big_cpu_mtp_freq, MIN_CPUFREQ);
+}
+#endif
 
 static int mtp_send_event(struct mtp_dev *dev, struct mtp_event *event)
 {
@@ -1795,6 +1841,12 @@ static int __mtp_setup(struct mtp_instance *fi_mtp)
 	INIT_WORK(&dev->send_file_work, send_file_work);
 	INIT_WORK(&dev->receive_file_work, receive_file_work);
 
+#ifdef VENDOR_EDIT
+	cpu_freq_qos_queue = create_singlethread_workqueue("f_mtp_qos");
+	INIT_DELAYED_WORK(&cpu_freq_qos_work, update_qos_request);
+	pm_qos_add_request(&little_cpu_mtp_freq, PM_QOS_C0_CPUFREQ_MIN, MIN_CPUFREQ);
+	//pm_qos_add_request(&big_cpu_mtp_freq, PM_QOS_C1_CPUFREQ_MIN, MIN_CPUFREQ);
+#endif
 	_mtp_dev = dev;
 
 	ret = misc_register(&mtp_device);
@@ -1805,6 +1857,11 @@ static int __mtp_setup(struct mtp_instance *fi_mtp)
 	return 0;
 
 err2:
+#ifdef VENDOR_EDIT
+	//pm_qos_remove_request(&big_cpu_mtp_freq);
+	pm_qos_remove_request(&little_cpu_mtp_freq);
+	destroy_workqueue(cpu_freq_qos_queue);
+#endif
 	destroy_workqueue(dev->wq);
 err1:
 	_mtp_dev = NULL;
@@ -1827,6 +1884,11 @@ static void mtp_cleanup(void)
 		return;
 
 	mtp_debugfs_remove();
+#ifdef VENDOR_EDIT
+	//pm_qos_remove_request(&big_cpu_mtp_freq);
+	pm_qos_remove_request(&little_cpu_mtp_freq);
+	destroy_workqueue(cpu_freq_qos_queue);
+#endif
 	misc_deregister(&mtp_device);
 	destroy_workqueue(dev->wq);
 	_mtp_dev = NULL;
