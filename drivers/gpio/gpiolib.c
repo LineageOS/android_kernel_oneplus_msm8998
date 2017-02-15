@@ -45,6 +45,16 @@
 #define	extra_checks	0
 #endif
 
+#ifdef CONFIG_PM_SUSPEND_DEBUG_OP
+#define seq_printf(m, fmt, ...)         \
+do {                                                    \
+        if (m)                                          \
+                seq_printf(m, fmt, ##__VA_ARGS__);      \
+        else                                            \
+                pr_info(fmt, ##__VA_ARGS__);            \
+} while (0)
+#endif
+
 /* gpio_lock prevents conflicts during gpio_desc[] table updates.
  * While any GPIO is requested, its gpio_chip is not removable;
  * each GPIO's "requested" flag serves as a lock and refcount.
