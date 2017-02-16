@@ -17,6 +17,9 @@
 #include <linux/pm_wakeirq.h>
 #include <linux/types.h>
 #include <trace/events/power.h>
+#ifdef VENDOR_EDIT
+#include <linux/pm_wakeup.h>
+#endif
 
 #include "power.h"
 
@@ -65,6 +68,13 @@ static struct wakeup_source deleted_ws = {
 	.name = "deleted",
 	.lock =  __SPIN_LOCK_UNLOCKED(deleted_ws.lock),
 };
+
+#ifdef VENDOR_EDIT
+//wujialong@BSP, 2016/05/4, add for sleep debug
+#define WORK_TIMEOUT	60*1000
+static void ws_printk(struct work_struct *work);
+static DECLARE_DELAYED_WORK(ws_printk_work, ws_printk);
+#endif
 
 /**
  * wakeup_source_prepare - Prepare a new wakeup source for initialization.
@@ -861,6 +871,24 @@ void pm_print_active_wakeup_sources(void)
 	rcu_read_unlock();
 }
 EXPORT_SYMBOL_GPL(pm_print_active_wakeup_sources);
+
+#ifdef VENDOR_EDIT
+static void ws_printk(struct work_struct *work)
+{
+        pm_print_active_wakeup_sources();
+        queue_delayed_work(system_freezable_wq, &ws_printk_work, msecs_to_jiffies(WORK_TIMEOUT));
+}
+
+void pm_print_active_wakeup_sources_queue(bool on)
+{
+        if (on) {
+                queue_delayed_work(system_freezable_wq, &ws_printk_work, msecs_to_jiffies(WORK_TIMEOUT));
+        } else {
+                cancel_delayed_work(&ws_printk_work);
+        }
+}
+EXPORT_SYMBOL_GPL(pm_print_active_wakeup_sources_queue);
+#endif /* VENDOR_EDIT */
 
 /**
  * pm_wakeup_pending - Check if power transition in progress should be aborted.
