@@ -33,6 +33,9 @@
 #include "mdss_debug.h"
 #include "mdss_dsi_phy.h"
 #include "mdss_dba_utils.h"
+//#ifdef VENDOR_EDIT
+#include <linux/param_rw.h>
+//#endif
 
 #define XO_CLK_RATE	19200000
 #define CMDLINE_DSI_CTL_NUM_STRING_LEN 2
@@ -1399,6 +1402,40 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 	pinfo = &pdata->panel_info;
 	mipi = &pdata->panel_info.mipi;
 
+//#ifdef VENDOR_EDIT
+	if (!ctrl_pdata->SRGB_first_on){
+		ctrl_pdata->SRGB_first_on = 1;
+		get_param_lcm_srgb_mode(&(ctrl_pdata->SRGB_mode));
+		if (1 == ctrl_pdata->SRGB_mode){
+			mdss_dsi_panel_set_srgb_mode(ctrl_pdata,ctrl_pdata->SRGB_mode);
+		} else{
+		    pr_err("%s:sRGB mode %d\n",__func__,ctrl_pdata->SRGB_mode);
+		}
+	}
+//#endif
+//#ifdef VENDOR_EDIT
+	if (!ctrl_pdata->Adobe_RGB_first_on){
+		ctrl_pdata->Adobe_RGB_first_on = 1;
+		get_param_lcm_adobe_rgb_mode(&(ctrl_pdata->Adobe_RGB_mode));
+		if (1 == ctrl_pdata->Adobe_RGB_mode){
+			mdss_dsi_panel_set_adobe_rgb_mode(ctrl_pdata,ctrl_pdata->Adobe_RGB_mode);
+		} else{
+		    pr_err("%s:Adobe RGB mode %d\n",__func__,ctrl_pdata->Adobe_RGB_mode);
+		}
+	}
+//#endif
+//#ifdef VENDOR_EDIT
+	if (!ctrl_pdata->dci_p3_first_on){
+		ctrl_pdata->dci_p3_first_on = 1;
+		get_param_lcm_dci_p3_mode(&(ctrl_pdata->dci_p3_mode));
+		if (1 == ctrl_pdata->dci_p3_mode){
+			mdss_dsi_panel_set_dci_p3_mode(ctrl_pdata,ctrl_pdata->dci_p3_mode);
+		} else{
+		    pr_err("%s:DCI-P3 mode %d\n",__func__,ctrl_pdata->dci_p3_mode);
+		}
+	}
+//#endif
+
 	if (mdss_dsi_is_panel_on_interactive(pdata)) {
 		/*
 		 * all interrupts are disabled at LK
@@ -2736,6 +2773,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
     //#ifdef VENDOR_EDIT
 	case MDSS_EVENT_PANEL_SET_SRGB_MODE:
 		ctrl_pdata->SRGB_mode= (int)(unsigned long) arg;
+	    set_param_lcm_srgb_mode(&(ctrl_pdata->SRGB_mode));
 		mdss_dsi_panel_set_srgb_mode(ctrl_pdata, (int)(unsigned long) ctrl_pdata->SRGB_mode);
 		break;
 	case MDSS_EVENT_PANEL_GET_SRGB_MODE:
@@ -2745,6 +2783,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
     //#ifdef VENDOR_EDIT
 	case MDSS_EVENT_PANEL_SET_ADOBE_RGB_MODE:
 		ctrl_pdata->Adobe_RGB_mode= (int)(unsigned long) arg;
+		set_param_lcm_adobe_rgb_mode(&(ctrl_pdata->Adobe_RGB_mode));
 		mdss_dsi_panel_set_adobe_rgb_mode(ctrl_pdata,(int)(unsigned long) ctrl_pdata->Adobe_RGB_mode);
 		break;
 	case MDSS_EVENT_PANEL_GET_ADOBE_RGB_MODE:
@@ -2754,6 +2793,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
     //#ifdef VENDOR_EDIT
 	case MDSS_EVENT_PANEL_SET_DCI_P3_MODE:
 		ctrl_pdata->dci_p3_mode= (int)(unsigned long) arg;
+		set_param_lcm_dci_p3_mode(&(ctrl_pdata->dci_p3_mode));
 		mdss_dsi_panel_set_dci_p3_mode(ctrl_pdata,(int)(unsigned long) ctrl_pdata->dci_p3_mode);
 		break;
 	case MDSS_EVENT_PANEL_GET_DCI_P3_MODE:
