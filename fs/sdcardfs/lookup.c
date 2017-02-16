@@ -254,7 +254,7 @@ static struct dentry *__sdcardfs_lookup(struct dentry *dentry,
 		mutex_lock(&d_inode(lower_dir_dentry)->i_mutex);
 		spin_lock(&lower_dir_dentry->d_lock);
 		list_for_each_entry(child, &lower_dir_dentry->d_subdirs, d_child) {
-			if (child && child->d_inode) {
+			if (child && d_inode(child)) {
 				if (strcasecmp(child->d_name.name, name)==0) {
 					match = dget(child);
 					break;
@@ -375,7 +375,7 @@ struct dentry *sdcardfs_lookup(struct inode *dir, struct dentry *dentry,
         }
 
 	/* save current_cred and override it */
-	OVERRIDE_CRED_PTR(SDCARDFS_SB(dir->i_sb), saved_cred, SDCARDFS_I(dir));
+	OVERRIDE_CRED_PTR(SDCARDFS_SB(dir->i_sb), saved_cred);
 
 	sdcardfs_get_lower_path(parent, &lower_parent_path);
 
@@ -399,7 +399,6 @@ struct dentry *sdcardfs_lookup(struct inode *dir, struct dentry *dentry,
 		/* get derived permission */
 		get_derived_permission(parent, dentry);
 		fixup_tmp_permissions(d_inode(dentry));
-		fixup_lower_ownership(dentry, dentry->d_name.name);
 	}
 	/* update parent directory's atime */
 	fsstack_copy_attr_atime(d_inode(parent),
