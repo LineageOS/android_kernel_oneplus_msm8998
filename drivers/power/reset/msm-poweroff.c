@@ -155,7 +155,10 @@ static void set_dload_mode(int on)
 	ret = scm_set_dload_mode(on ? SCM_DLOAD_MODE : 0, 0);
 	if (ret)
 		pr_err("Failed to set secure DLOAD mode: %d\n", ret);
-
+#ifdef VENDOR_EDIT
+	if(!on)
+		scm_disable_sdi();
+#endif
 	dload_mode_enabled = on;
 }
 
