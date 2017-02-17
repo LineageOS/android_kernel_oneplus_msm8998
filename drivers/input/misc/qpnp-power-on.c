@@ -2010,17 +2010,6 @@ static int read_gen2_pon_off_reason(struct qpnp_pon *pon, u16 *reason,
 		}
 		*reason = (u8)buf[0];
 		*reason_index_offset = 0;
-	} else if (reg & QPNP_GEN2_FAULT_SEQ) {
-		rc = regmap_bulk_read(pon->regmap,
-				QPNP_FAULT_REASON1(pon),
-				buf, 2);
-		if (rc) {
-			dev_err(&pon->pdev->dev, "Unable to read FAULT_REASON regs rc:%d\n",
-				rc);
-			return rc;
-		}
-		*reason = (u8)buf[0] | (u16)(buf[1] << 8);
-		*reason_index_offset = POFF_REASON_FAULT_OFFSET;
 	} else if (reg & QPNP_GEN2_S3_RESET_SEQ) {
 		rc = regmap_read(pon->regmap,
 				QPNP_S3_RESET_REASON(pon),
@@ -2032,6 +2021,14 @@ static int read_gen2_pon_off_reason(struct qpnp_pon *pon, u16 *reason,
 		}
 		*reason = (u8)buf[0];
 		*reason_index_offset = POFF_REASON_S3_RESET_OFFSET;
+	} else {
+		rc = regmap_bulk_read(pon->regmap, QPNP_FAULT_REASON1(pon), buf, 2);
+		if (rc) {
+			dev_err(&pon->pdev->dev, "Unable to read FAULT_REASON regs rc:%d\n", rc);
+			return rc;
+	}
+		*reason = (u8)buf[0] | (u16)(buf[1] << 8);
+		*reason_index_offset = POFF_REASON_FAULT_OFFSET;
 	}
 
 	return 0;
@@ -2180,10 +2177,10 @@ static ssize_t pwroff_reason_show(struct kobject *kobj, struct kobj_attribute *a
 	        ret += strlen(pbuf);
             pbuf += strlen(pbuf);
         }
-		for_each_set_bit(index, (unsigned long *)&poff_sts, ARRAY_SIZE(qpnp_poff_reason)){
-			sprintf(pbuf, "[%d] ", index);
-			ret += strlen(pbuf);
-			pbuf += strlen(pbuf);
+        if (index < ARRAY_SIZE(qpnp_poff_reason) && index >= 0){
+            sprintf(pbuf, "[%d] ", index);
+            ret += strlen(pbuf);
+            pbuf += strlen(pbuf);
         }
 		sprintf(pbuf, "\n");
 		ret += strlen(pbuf);
