@@ -3618,13 +3618,6 @@ irqreturn_t smblib_handle_switcher_power_ok(int irq, void *data)
 	struct smb_charger *chg = irq_data->parent_data;
 	int rc;
 	u8 stat;
-#ifdef VENDOR_EDIT
-	chg->dash_on = get_prop_fast_chg_started(chg);
-	if (chg->dash_on) {
-		pr_err("return directly because dash is online\n");
-		return IRQ_HANDLED;
-	}
-#endif
 
 	if (!(chg->wa_flags & BOOST_BACK_WA))
 		return IRQ_HANDLED;
@@ -3896,6 +3889,15 @@ int update_dash_unplug_status(void)
 	return 0;
 }
 
+int check_usb_suspend(void)
+{
+	if (!is_usb_present(g_chg))
+		return 0;
+
+	schedule_delayed_work(&g_chg->enable_usb_suspend_work,
+						msecs_to_jiffies(3000));
+	return 0;
+}
 
 bool get_prop_fast_chg_started(struct smb_charger *chg)
 {
@@ -4064,6 +4066,20 @@ static void op_re_kick_work(struct work_struct *work)
 				msecs_to_jiffies(500));
 	}
 }
+static void op_enable_usb_suspend_work(struct work_struct *work)
+{
+	struct smb_charger *chg = container_of(work,
+			struct smb_charger,
+			enable_usb_suspend_work.work);
+	int is_usb_supend;
+	if (!is_usb_present(chg))
+	return;
+	smblib_get_usb_suspend(chg,&is_usb_supend);
+	if(is_usb_supend)
+		vote(chg->usb_suspend_votable,
+				BOOST_BACK_VOTER, false, 0);
+}
+
 #endif
 
 static void op_check_allow_switch_dash_work(struct work_struct *work)
@@ -5021,6 +5037,7 @@ bool get_prop_fastchg_status(struct smb_charger *chg)
 
 static struct notify_dash_event notify_unplug_event  = {
 	.notify_event					= update_dash_unplug_status,
+	.check_usb_suspend				= check_usb_suspend,
 	.notify_dash_charger_present	= set_dash_charger_present,
 };
 
@@ -5398,6 +5415,7 @@ int smblib_init(struct smb_charger *chg)
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 	INIT_DELAYED_WORK(&chg->re_kick_work, op_re_kick_work);
+	INIT_DELAYED_WORK(&chg->enable_usb_suspend_work, op_enable_usb_suspend_work);
 	INIT_DELAYED_WORK(&chg->check_switch_dash_work,
 			op_check_allow_switch_dash_work);
 	INIT_DELAYED_WORK(&chg->heartbeat_work,

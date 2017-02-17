@@ -502,6 +502,12 @@ static void oneplus_notify_pmic_check_charger_present(void)
 		notify_event->notify_event();
 }
 
+static void notify_check_usb_suspend(void)
+{
+	if (notify_event && notify_event->check_usb_suspend)
+		notify_event->check_usb_suspend();
+}
+
 static void update_charger_present_status(struct work_struct *work)
 {
 	oneplus_notify_dash_charger_present(false);
@@ -824,6 +830,7 @@ static long  dash_dev_ioctl(struct file *filp, unsigned int cmd,
 				di->fast_chg_allow = false;
 				di->fast_chg_ing = false;
 				oneplus_notify_pmic_check_charger_present();
+				notify_check_usb_suspend();
 				wake_unlock(&di->fastchg_wake_lock);
 			}
 			break;
@@ -840,6 +847,7 @@ static long  dash_dev_ioctl(struct file *filp, unsigned int cmd,
 				di->fast_chg_ing = false;
 				oneplus_notify_pmic_check_charger_present();
 				oneplus_notify_dash_charger_present(false);
+				notify_check_usb_suspend();
 				wake_unlock(&di->fastchg_wake_lock);
 			}
 			break;

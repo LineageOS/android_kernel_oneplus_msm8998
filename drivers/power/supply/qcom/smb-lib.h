@@ -275,6 +275,7 @@ struct smb_charger {
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 	struct delayed_work	re_kick_work;
+	struct delayed_work	enable_usb_suspend_work;
 	struct delayed_work	check_switch_dash_work;
 	struct delayed_work heartbeat_work;
 	struct wake_lock	chg_wake_lock;
