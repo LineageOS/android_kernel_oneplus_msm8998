@@ -27,6 +27,8 @@
 #include <linux/clk/msm-clk.h>
 #include "cam_soc_api.h"
 
+void msm_ispif_dump_cbcr(void);
+
 struct msm_cam_bus_pscale_data {
 	struct msm_bus_scale_pdata *pdata;
 	uint32_t bus_client;
@@ -394,6 +396,9 @@ int msm_camera_clk_enable(struct device *dev,
 			if (rc < 0) {
 				pr_err("%s enable failed\n",
 					   clk_info[i].clk_name);
+				if (strcmp("camss_vfe_vfe0_clk", clk_info[i].clk_name) == 0) {
+					msm_ispif_dump_cbcr();
+				}
 				goto cam_clk_enable_err;
 			}
 			if (clk_info[i].delay > 20) {

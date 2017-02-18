@@ -836,8 +836,6 @@ static int branch_clk_enable(struct clk *c)
 	/* Wait for clock to enable before continuing. */
 	ret = branch_clk_halt_check(c, branch->halt_check, CBCR_REG(branch),
 				BRANCH_ON);
-	if (ret)
-		branch_clk_disable(c);
 
 	return ret;
 }

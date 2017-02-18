@@ -56,6 +56,8 @@
 #define CDBG(fmt, args...) do { } while (0)
 #endif
 
+struct ispif_device ispif_dev;
+
 static int msm_ispif_clk_ahb_enable(struct ispif_device *ispif, int enable);
 static int ispif_close_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh);
 static long msm_ispif_subdev_ioctl_unlocked(struct v4l2_subdev *sd,
@@ -1726,6 +1728,8 @@ static const struct v4l2_subdev_internal_ops msm_ispif_internal_ops = {
 static int ispif_probe(struct platform_device *pdev)
 {
 	int rc;
+	struct ispif_device *ispif = &ispif_dev;
+#if 0
 	struct ispif_device *ispif;
 
 	ispif = kzalloc(sizeof(struct ispif_device), GFP_KERNEL);
@@ -1733,7 +1737,7 @@ static int ispif_probe(struct platform_device *pdev)
 		pr_err("%s: no enough memory\n", __func__);
 		return -ENOMEM;
 	}
-
+#endif
 	if (pdev->dev.of_node) {
 		of_property_read_u32((&pdev->dev)->of_node,
 		"cell-index", &pdev->id);
@@ -1763,6 +1767,12 @@ static int ispif_probe(struct platform_device *pdev)
 		goto reg_base_fail;
 	}
 
+	ispif->clk_base = msm_camera_get_reg_base(pdev, "clk_base", 0);
+	if (!ispif->clk_base) {
+		rc = -ENOMEM;
+		goto reg_base_fail;
+	}
+	
 	ispif->irq = msm_camera_get_irq(pdev, "ispif");
 	if (!ispif->irq) {
 		rc = -ENODEV;
@@ -1855,6 +1865,26 @@ static int __init msm_ispif_init_module(void)
 static void __exit msm_ispif_exit_module(void)
 {
 	platform_driver_unregister(&ispif_driver);
+}
+
+void msm_ispif_dump_cbcr(void)
+{
+	uint32_t val;
+	struct ispif_device *ispif = &ispif_dev;
+
+	udelay(500);
+	val = msm_camera_io_r(ispif->clk_base + 0x3660);
+	pr_err("%s: 0xC8C3660: 0x%x\n", __func__, val);
+	val = msm_camera_io_r(ispif->clk_base + 0x3664);
+	pr_err("%s: 0xC8C3664: 0x%x\n", __func__, val);
+	val = msm_camera_io_r(ispif->clk_base + 0x34A0);
+	pr_err("%s: 0xC8C34A0: 0x%x\n", __func__, val);
+	val = msm_camera_io_r(ispif->clk_base + 0x016C);
+	pr_err("%s: 0xC8C016C: 0x%x\n", __func__, val);
+        val = msm_camera_io_r(ispif->clk_base + 0x36A8);
+        pr_err("%s: 0xC8C36A8: 0x%x\n", __func__, val);
+
+	panic("The VFE clock failed to turn on. Treating this as fatal\n");
 }
 
 module_init(msm_ispif_init_module);
