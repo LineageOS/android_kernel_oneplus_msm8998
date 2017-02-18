@@ -156,6 +156,7 @@ struct dwc3_msm {
 	struct clk		*xo_clk;
 	struct clk		*core_clk;
 	long			core_clk_rate;
+	long			core_clk_rate_hs;
 	struct clk		*iface_clk;
 	struct clk		*sleep_clk;
 	struct clk		*utmi_clk;
@@ -195,6 +196,7 @@ struct dwc3_msm {
 	struct power_supply	*usb_psy;
 	struct work_struct	vbus_draw_work;
 	bool			in_host_mode;
+	enum usb_device_speed	max_rh_port_speed;
 	unsigned int		tx_fifo_size;
 	bool			vbus_active;
 	bool			suspend;
@@ -340,6 +342,23 @@ static inline void dwc3_msm_write_readback(void *base, u32 offset,
 	if (tmp != val)
 		pr_err("%s: write: %x to QSCRATCH: %x FAILED\n",
 			__func__, val, offset);
+}
+
+static bool dwc3_msm_is_ss_rhport_connected(struct dwc3_msm *mdwc)
+{
+	int i, num_ports;
+	u32 reg;
+
+	reg = dwc3_msm_read_reg(mdwc->base, USB3_HCSPARAMS1);
+	num_ports = HCS_MAX_PORTS(reg);
+
+	for (i = 0; i < num_ports; i++) {
+		reg = dwc3_msm_read_reg(mdwc->base, USB3_PORTSC + i*0x10);
+		if ((reg & PORT_CONNECT) && DEV_SUPERSPEED(reg))
+			return true;
+	}
+
+	return false;
 }
 
 static bool dwc3_msm_is_host_superspeed(struct dwc3_msm *mdwc)
@@ -2128,6 +2147,7 @@ static int dwc3_msm_suspend(struct dwc3_msm *mdwc)
 static int dwc3_msm_resume(struct dwc3_msm *mdwc)
 {
 	int ret;
+	long core_clk_rate;
 	struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
 
 	dev_dbg(mdwc->dev, "%s: exiting lpm\n", __func__);
@@ -2175,7 +2195,15 @@ static int dwc3_msm_resume(struct dwc3_msm *mdwc)
 	clk_prepare_enable(mdwc->iface_clk);
 	if (mdwc->noc_aggr_clk)
 		clk_prepare_enable(mdwc->noc_aggr_clk);
-	clk_set_rate(mdwc->core_clk, mdwc->core_clk_rate);
+
+	core_clk_rate = mdwc->core_clk_rate;
+	if (mdwc->in_host_mode && mdwc->max_rh_port_speed == USB_SPEED_HIGH) {
+		core_clk_rate = mdwc->core_clk_rate_hs;
+		dev_dbg(mdwc->dev, "%s: set hs core clk rate %ld\n", __func__,
+			core_clk_rate);
+	}
+
+	clk_set_rate(mdwc->core_clk, core_clk_rate);
 	clk_prepare_enable(mdwc->core_clk);
 
 	/* set Memory core: ON, Memory periphery: ON */
@@ -2496,6 +2524,11 @@ static int dwc3_msm_get_clk_gdsc(struct dwc3_msm *mdwc)
 	if (ret)
 		dev_err(mdwc->dev, "fail to set core_clk freq:%d\n", ret);
 
+	if (of_property_read_u32(mdwc->dev->of_node, "qcom,core-clk-rate-hs",
+				(u32 *)&mdwc->core_clk_rate_hs)) {
+		dev_dbg(mdwc->dev, "USB core-clk-rate-hs is not present\n");
+		mdwc->core_clk_rate_hs = mdwc->core_clk_rate;
+	}
 
 	mdwc->core_reset = devm_reset_control_get(mdwc->dev, "core_reset");
 	if (IS_ERR(mdwc->core_reset)) {
@@ -2575,6 +2608,8 @@ static int dwc3_msm_id_notifier(struct notifier_block *nb,
 
 	speed = extcon_get_cable_state_(edev, EXTCON_USB_SPEED);
 	dwc->maximum_speed = (speed <= 0) ? USB_SPEED_HIGH : USB_SPEED_SUPER;
+	if (dwc->maximum_speed > dwc->max_hw_supp_speed)
+		dwc->maximum_speed = dwc->max_hw_supp_speed;
 
 	if (mdwc->id_state != id) {
 		mdwc->id_state = id;
@@ -2616,6 +2651,8 @@ static int dwc3_msm_vbus_notifier(struct notifier_block *nb,
 
 	speed = extcon_get_cable_state_(edev, EXTCON_USB_SPEED);
 	dwc->maximum_speed = (speed <= 0) ? USB_SPEED_HIGH : USB_SPEED_SUPER;
+	if (dwc->maximum_speed > dwc->max_hw_supp_speed)
+		dwc->maximum_speed = dwc->max_hw_supp_speed;
 
 	mdwc->vbus_active = event;
 	if (dwc->is_drd && !mdwc->in_restart) {
@@ -2717,12 +2754,46 @@ static ssize_t mode_store(struct device *dev, struct device_attribute *attr,
 }
 
 static DEVICE_ATTR_RW(mode);
+
+static ssize_t speed_show(struct device *dev, struct device_attribute *attr,
+		char *buf)
+{
+	struct dwc3_msm *mdwc = dev_get_drvdata(dev);
+	struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
+
+	return snprintf(buf, PAGE_SIZE, "%s",
+			usb_speed_string(dwc->max_hw_supp_speed));
+}
+
+static ssize_t speed_store(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	struct dwc3_msm *mdwc = dev_get_drvdata(dev);
+	struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
+	enum usb_device_speed req_speed = USB_SPEED_UNKNOWN;
+
+	if (sysfs_streq(buf, "high"))
+		req_speed = USB_SPEED_HIGH;
+	else if (sysfs_streq(buf, "super"))
+		req_speed = USB_SPEED_SUPER;
+
+	if (req_speed != USB_SPEED_UNKNOWN &&
+			req_speed != dwc->max_hw_supp_speed) {
+		dwc->maximum_speed = dwc->max_hw_supp_speed = req_speed;
+		schedule_work(&mdwc->restart_usb_work);
+	}
+
+	return count;
+}
+static DEVICE_ATTR_RW(speed);
+
 static void msm_dwc3_perf_vote_work(struct work_struct *w);
 
 static int dwc3_msm_probe(struct platform_device *pdev)
 {
 	struct device_node *node = pdev->dev.of_node, *dwc3_node;
 	struct device	*dev = &pdev->dev;
+	union power_supply_propval pval = {0};
 	struct dwc3_msm *mdwc;
 	struct dwc3	*dwc;
 	struct resource *res;
@@ -3060,6 +3131,10 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 	}
 
 	device_create_file(&pdev->dev, &dev_attr_mode);
+<<<<<<< HEAD
+=======
+	device_create_file(&pdev->dev, &dev_attr_speed);
+>>>>>>> origin/qc8998
 
 	host_mode = usb_get_dr_mode(&mdwc->dwc3->dev) == USB_DR_MODE_HOST;
 	if (!dwc->is_drd && host_mode) {
@@ -3179,10 +3254,26 @@ static int dwc3_msm_host_notifier(struct notifier_block *nb,
 	if (udev->parent && !udev->parent->parent &&
 			udev->dev.parent->parent == &dwc->xhci->dev) {
 		if (event == USB_DEVICE_ADD && udev->actconfig) {
+			if (!dwc3_msm_is_ss_rhport_connected(mdwc)) {
+				/*
+				 * Core clock rate can be reduced only if root
+				 * hub SS port is not enabled/connected.
+				 */
+				clk_set_rate(mdwc->core_clk,
+				mdwc->core_clk_rate_hs);
+				dev_dbg(mdwc->dev,
+					"set hs core clk rate %ld\n",
+					mdwc->core_clk_rate_hs);
+				mdwc->max_rh_port_speed = USB_SPEED_HIGH;
+			} else {
+				mdwc->max_rh_port_speed = USB_SPEED_SUPER;
+			}
+
 			if (udev->speed >= USB_SPEED_SUPER)
 				max_power = udev->actconfig->desc.bMaxPower * 8;
 			else
 				max_power = udev->actconfig->desc.bMaxPower * 2;
+
 			dev_dbg(mdwc->dev, "%s configured bMaxPower:%d (mA)\n",
 					dev_name(&udev->dev), max_power);
 
@@ -3194,6 +3285,7 @@ static int dwc3_msm_host_notifier(struct notifier_block *nb,
 			pval.intval = 0;
 			power_supply_set_property(mdwc->usb_psy,
 					POWER_SUPPLY_PROP_BOOST_CURRENT, &pval);
+			mdwc->max_rh_port_speed = USB_SPEED_UNKNOWN;
 		}
 	}
 
@@ -3553,7 +3645,11 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 	case OTG_STATE_UNDEFINED:
 		/* put controller and phy in suspend if no cable connected */
 		if (test_bit(ID, &mdwc->inputs) &&
+<<<<<<< HEAD
 				!test_bit(B_SESS_VLD, &mdwc->inputs)){
+=======
+				!test_bit(B_SESS_VLD, &mdwc->inputs)) {
+>>>>>>> origin/qc8998
 			dbg_event(0xFF, "undef_id_!bsv", 0);
 			pm_runtime_set_active(mdwc->dev);
 			pm_runtime_enable(mdwc->dev);
