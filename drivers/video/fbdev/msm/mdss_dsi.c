@@ -2797,7 +2797,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 					&ctrl_pdata->dba_work, HZ);
 		}
 		break;
-<<<<<<< HEAD
     //#ifdef VENDOR_EDIT
 	case MDSS_EVENT_PANEL_SET_ACL:
 		ctrl_pdata->acl_mode = (int)(unsigned long) arg;
@@ -2847,14 +2846,12 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		break;
 	//#endif
 
-=======
 	case MDSS_EVENT_DSI_TIMING_DB_CTRL:
 		mdss_dsi_timing_db_ctrl(ctrl_pdata, (int)(unsigned long)arg);
 		break;
 	case MDSS_EVENT_AVR_MODE:
 		mdss_dsi_avr_config(ctrl_pdata, (int)(unsigned long) arg);
 		break;
->>>>>>> origin/qc8998
 	default:
 		pr_debug("%s: unhandled event=%d\n", __func__, event);
 		break;

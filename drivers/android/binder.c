@@ -4285,7 +4285,6 @@ BINDER_DEBUG_ENTRY(stats);
 BINDER_DEBUG_ENTRY(transactions);
 BINDER_DEBUG_ENTRY(transaction_log);
 
-<<<<<<< HEAD
 // neiltsai, 20161115, add for oemlogkit used
 #ifdef VENDOR_EDIT
 static int proc_state_open(struct inode *inode, struct file *file)
@@ -4334,7 +4333,6 @@ static int binder_proc_init(void)
 }
 #endif
 // neiltsai end
-=======
 static int __init init_binder_device(const char *name)
 {
 	int ret;
@@ -4362,7 +4360,6 @@ static int __init init_binder_device(const char *name)
 	return ret;
 }
 
->>>>>>> origin/qc8998
 static int __init binder_init(void)
 {
 	int ret;
@@ -4406,13 +4403,11 @@ static int __init binder_init(void)
 				    &binder_transaction_log_failed,
 				    &binder_transaction_log_fops);
 	}
-<<<<<<< HEAD
 // neiltsai, 20161115, add for oemlogkit used
 #ifdef VENDOR_EDIT
     binder_proc_init();
 #endif
 // neiltsai end
-=======
 
 	/*
 	 * Copy the module_parameter string, because we don't want to
@@ -4444,7 +4439,6 @@ err_alloc_device_names_failed:
 
 	destroy_workqueue(binder_deferred_workqueue);
 
->>>>>>> origin/qc8998
 	return ret;
 }
 

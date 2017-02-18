@@ -827,7 +827,6 @@ static ssize_t mdss_fb_get_dfps_mode(struct device *dev,
 	return ret;
 }
 
-<<<<<<< HEAD
 //#ifdef VENDOR_EDIT
 static ssize_t mdss_fb_get_ACL(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -1047,7 +1046,6 @@ static DEVICE_ATTR(DCI_P3, S_IRUGO | S_IWUSR,
 	mdss_fb_get_dci_p3_mode, mdss_fb_set_dci_p3_mode);
 //#endif
 
-=======
 static ssize_t mdss_fb_change_persist_mode(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t len)
 {
@@ -1116,7 +1114,6 @@ static ssize_t mdss_fb_get_persist_mode(struct device *dev,
 	return ret;
 }
 
->>>>>>> origin/qc8998
 static DEVICE_ATTR(msm_fb_type, S_IRUGO, mdss_fb_get_type, NULL);
 static DEVICE_ATTR(msm_fb_split, S_IRUGO | S_IWUSR, mdss_fb_show_split,
 					mdss_fb_store_split);
@@ -1148,7 +1145,6 @@ static struct attribute *mdss_fb_attrs[] = {
 	&dev_attr_msm_fb_thermal_level.attr,
 	&dev_attr_msm_fb_panel_status.attr,
 	&dev_attr_msm_fb_dfps_mode.attr,
-<<<<<<< HEAD
     &dev_attr_measured_fps.attr,
 //#ifdef VENDOR_EDIT
 	&dev_attr_acl.attr,
@@ -1165,10 +1161,8 @@ static struct attribute *mdss_fb_attrs[] = {
 //#ifdef VENDOR_EDIT
 	&dev_attr_DCI_P3.attr,
 //#endif
-=======
 	&dev_attr_measured_fps.attr,
 	&dev_attr_msm_fb_persist_mode.attr,
->>>>>>> origin/qc8998
 	NULL,
 };
 

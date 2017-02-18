@@ -3131,10 +3131,7 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 	}
 
 	device_create_file(&pdev->dev, &dev_attr_mode);
-<<<<<<< HEAD
-=======
 	device_create_file(&pdev->dev, &dev_attr_speed);
->>>>>>> origin/qc8998
 
 	host_mode = usb_get_dr_mode(&mdwc->dwc3->dev) == USB_DR_MODE_HOST;
 	if (!dwc->is_drd && host_mode) {
@@ -3645,11 +3642,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 	case OTG_STATE_UNDEFINED:
 		/* put controller and phy in suspend if no cable connected */
 		if (test_bit(ID, &mdwc->inputs) &&
-<<<<<<< HEAD
-				!test_bit(B_SESS_VLD, &mdwc->inputs)){
-=======
 				!test_bit(B_SESS_VLD, &mdwc->inputs)) {
->>>>>>> origin/qc8998
 			dbg_event(0xFF, "undef_id_!bsv", 0);
 			pm_runtime_set_active(mdwc->dev);
 			pm_runtime_enable(mdwc->dev);

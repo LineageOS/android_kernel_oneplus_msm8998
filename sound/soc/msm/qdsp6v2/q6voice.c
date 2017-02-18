@@ -3990,15 +3990,9 @@ static int voice_send_cvp_media_fmt_info_cmd(struct voice_data *v)
 {
 	int ret;
 
-<<<<<<< HEAD
-        ret = voice_send_cvp_device_channels_cmd(v);
-        if (ret < 0)
-            goto done;
-=======
 	ret = voice_send_cvp_device_channels_cmd(v);
 	if (ret < 0)
 		goto done;
->>>>>>> origin/qc8998
 
 	if (voice_get_cvd_int_version(common.cvd_version) >=
 	    CVD_INT_VERSION_2_3) {
