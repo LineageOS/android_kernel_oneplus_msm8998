@@ -498,7 +498,12 @@ static void msm_gpio_dbg_show_one(struct seq_file *s,
 #ifdef VENDOR_EDIT
 #ifdef CONFIG_PM_SUSPEND_DEBUG_OP
 	p = buf;
-	p += sprintf(p, " %-8s: %-3s fun%d", g->name, is_out ? "out" : "in", func);
+	if (s) {
+		seq_printf(s, " %-8s: %-3s fun%d", g->name, is_out ? "out" : "in", func);
+		if (gpio <= 149)//the ship real gpio
+			seq_printf(s, " %s", chip->get(chip, offset) ? "hi":"lo");
+	} else
+		p += sprintf(p, " %-8s: %-3s fun%d", g->name, is_out ? "out" : "in", func);
 
 #else
 	seq_printf(s, " %-8s: %-3s fun%d", g->name, is_out ? "out" : "in", func);
@@ -507,15 +512,23 @@ static void msm_gpio_dbg_show_one(struct seq_file *s,
 #endif
 #else
 #ifdef CONFIG_PM_SUSPEND_DEBUG_OP
-	p += sprintf(p, " %-8s: %-3s %d", g->name, is_out ? "out" : "in", func);
+	if (s)
+		seq_printf(s, " %-8s: %-3s %d", g->name, is_out ? "out" : "in", func);
+	else
+		p += sprintf(p, " %-8s: %-3s %d", g->name, is_out ? "out" : "in", func);
 #else
 	seq_printf(s, " %-8s: %-3s %d", g->name, is_out ? "out" : "in", func);
 #endif
 #endif
 #ifdef CONFIG_PM_SUSPEND_DEBUG_OP
-	p +=sprintf(p, " %dmA", msm_regval_to_drive(drive));
-	p +=sprintf(p, " %s\n", pulls[pull]);
-	pr_info("%s", buf);
+	if (s) {
+		seq_printf(s, " %dmA", msm_regval_to_drive(drive));
+		seq_printf(s, " %s", pulls[pull]);
+	} else {
+		p +=sprintf(p, " %dmA", msm_regval_to_drive(drive));
+		p +=sprintf(p, " %s\n", pulls[pull]);
+		pr_info("%s", buf);
+	}
 #else
 	seq_printf(s, " %dmA", msm_regval_to_drive(drive));
 	seq_printf(s, " %s", pulls[pull]);
@@ -533,7 +546,10 @@ static void msm_gpio_dbg_show(struct seq_file *s, struct gpio_chip *chip)
 			continue;
 #endif
 		msm_gpio_dbg_show_one(s, NULL, chip, i, gpio);
-#ifndef CONFIG_PM_SUSPEND_DEBUG_OP
+#ifdef CONFIG_PM_SUSPEND_DEBUG_OP
+		if (s)
+			seq_puts(s, "\n");
+#else
 		seq_puts(s, "\n");
 #endif
 	}
