@@ -649,6 +649,9 @@ struct buf_data {
 	char *string_buf; /* cmd buf as string, 3 bytes per number */
 	int sblen; /* string buffer length */
 	int sync_flag;
+//#ifdef VENDOR_EDIT
+    struct mdss_dsi_ctrl_pdata *ctrl;
+//#endif
 };
 
 struct mdss_dsi_debugfs_info {
@@ -835,7 +838,9 @@ static int mdss_dsi_cmd_flush(struct file *file, fl_owner_t id)
 	int blen, len, i;
 	char *buf, *bufp, *bp;
 	struct dsi_ctrl_hdr *dchdr;
-
+//#ifdef VENDOR_EDIT
+    struct mdss_dsi_ctrl_pdata * ctrl_data = pcmds->ctrl;
+//#endif
 	if (!pcmds->string_buf)
 		return 0;
 
@@ -897,6 +902,11 @@ static int mdss_dsi_cmd_flush(struct file *file, fl_owner_t id)
 		pcmds->buf = buf;
 		pcmds->blen = blen;
 	}
+//#ifdef VENDOR_EDIT
+	if ((ctrl_data != NULL) && (ctrl_data->debugfs_info != NULL)){
+        ctrl_data->debugfs_info->override_flag = 1;
+    }
+//#endif
 	return 0;
 }
 
@@ -966,7 +976,10 @@ static int mdss_dsi_debugfs_setup(struct mdss_panel_data *pdata,
 				ctrl_pdata->on_cmds);
 	DEBUGFS_CREATE_DCS_CMD("dsi_off_cmd", dfs->root, &dfs->off_cmd,
 				ctrl_pdata->off_cmds);
-
+//#ifdef VENDOR_EDIT
+    dfs->on_cmd.ctrl = ctrl_pdata;
+    dfs->off_cmd.ctrl = ctrl_pdata;
+//#endif
 	debugfs_create_u32("dsi_err_counter", 0644, dfs->root,
 			   &dfs_ctrl->err_cont.max_err_index);
 	debugfs_create_u32("dsi_err_time_delta", 0644, dfs->root,
