@@ -34,6 +34,9 @@
 #include <linux/mmu_context.h>
 #include <linux/poll.h>
 #include <linux/eventfd.h>
+#ifdef VENDOR_EDIT
+#include <linux/pm_qos.h>
+#endif
 
 #include "u_fs.h"
 #include "u_f.h"
@@ -43,6 +46,13 @@
 #define FUNCTIONFS_MAGIC	0xa647361 /* Chosen by a honest dice roll ;) */
 
 #define NUM_PAGES	10 /* # of pages for ipc logging */
+
+#ifdef VENDOR_EDIT
+#define PM_QOS_REQUEST_SIZE	0xF000 /* > 4096*/
+#define ADB_QOS_TIMEOUT		500000
+
+static struct pm_qos_request adb_little_cpu_qos;
+#endif
 
 static void *ffs_ipc_log;
 #define ffs_log(fmt, ...) do { \
@@ -1044,6 +1054,9 @@ ffs_epfile_open(struct inode *inode, struct file *file)
 	smp_mb__before_atomic();
 	atomic_set(&epfile->error, 0);
 
+#ifdef VENDOR_EDIT
+	pm_qos_add_request(&adb_little_cpu_qos, PM_QOS_C0_CPUFREQ_MIN, MIN_CPUFREQ);
+#endif
 	ffs_log("exit:state %d setup_state %d flag %lu", epfile->ffs->state,
 		epfile->ffs->setup_state, epfile->ffs->flags);
 
@@ -1079,6 +1092,10 @@ static ssize_t ffs_epfile_write_iter(struct kiocb *kiocb, struct iov_iter *from)
 {
 	struct ffs_io_data io_data, *p = &io_data;
 	ssize_t res;
+#ifdef VENDOR_EDIT
+	struct ffs_epfile *epfile = kiocb->ki_filp->private_data;
+	bool adb_write_flag = false;
+#endif
 
 	ENTER();
 
@@ -1100,9 +1117,22 @@ static ssize_t ffs_epfile_write_iter(struct kiocb *kiocb, struct iov_iter *from)
 
 	kiocb->private = p;
 
+#ifdef VENDOR_EDIT
+	if (p->aio) {
+		kiocb_set_cancel_fn(kiocb, ffs_aio_cancel);
+	} else {
+		if ((strcmp(epfile->name, "ep1") == 0) || (strcmp(epfile->name, "ep2") == 0))
+			adb_write_flag = true;
+
+		if ((p->data.count & PM_QOS_REQUEST_SIZE) && adb_write_flag) {
+			pm_qos_update_request_timeout(&adb_little_cpu_qos, (MAX_CPUFREQ - 4), ADB_QOS_TIMEOUT);
+		}
+	}
+#else	
 	if (p->aio)
 		kiocb_set_cancel_fn(kiocb, ffs_aio_cancel);
-
+#endif
+		
 	res = ffs_epfile_io(kiocb->ki_filp, p);
 	if (res == -EIOCBQUEUED)
 		return res;
@@ -1120,6 +1150,10 @@ static ssize_t ffs_epfile_read_iter(struct kiocb *kiocb, struct iov_iter *to)
 {
 	struct ffs_io_data io_data, *p = &io_data;
 	ssize_t res;
+#ifdef VENDOR_EDIT
+	struct ffs_epfile *epfile = kiocb->ki_filp->private_data;
+	bool adb_read_flag = false;
+#endif
 
 	ENTER();
 
@@ -1150,8 +1184,20 @@ static ssize_t ffs_epfile_read_iter(struct kiocb *kiocb, struct iov_iter *to)
 
 	kiocb->private = p;
 
+#ifdef VENDOR_EDIT
+	if (p->aio) {
+		kiocb_set_cancel_fn(kiocb, ffs_aio_cancel);
+	} else {
+		if ((strcmp(epfile->name, "ep1") == 0) || (strcmp(epfile->name, "ep2") == 0))
+        		adb_read_flag = true;
+
+		if ((p->data.count & PM_QOS_REQUEST_SIZE) && adb_read_flag)
+        		pm_qos_update_request_timeout(&adb_little_cpu_qos, (MAX_CPUFREQ - 4), ADB_QOS_TIMEOUT);	
+	}
+#else
 	if (p->aio)
 		kiocb_set_cancel_fn(kiocb, ffs_aio_cancel);
+#endif
 
 	res = ffs_epfile_io(kiocb->ki_filp, p);
 	if (res == -EIOCBQUEUED)
@@ -1184,6 +1230,9 @@ ffs_epfile_release(struct inode *inode, struct file *file)
 	atomic_set(&epfile->error, 1);
 	ffs_data_closed(epfile->ffs);
 	file->private_data = NULL;
+#ifdef VENDOR_EDIT
+	pm_qos_remove_request(&adb_little_cpu_qos);
+#endif
 
 	ffs_log("exit");
 
