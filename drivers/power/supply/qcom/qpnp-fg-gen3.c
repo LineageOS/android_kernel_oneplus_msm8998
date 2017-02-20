@@ -1061,10 +1061,11 @@ static void fg_notify_charger(struct fg_chip *chip)
 	union power_supply_propval prop = {0, };
 	int rc;
 
-	if (!is_charger_available(chip)) {
-		pr_warn("Charger not available yet?\n");
+	if (!chip->batt_psy)
 		return;
-	}
+
+	if (!chip->profile_available)
+		return;
 
 	prop.intval = chip->bp.fastchg_curr_ma * 1000;
 	rc = power_supply_set_property(chip->batt_psy,

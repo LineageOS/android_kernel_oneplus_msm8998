@@ -2797,7 +2797,6 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 	struct dwc3_msm *mdwc;
 	struct dwc3	*dwc;
 	struct resource *res;
-	union power_supply_propval pval = {0};
 	void __iomem *tcsr;
 	bool host_mode;
 	int ret = 0;
