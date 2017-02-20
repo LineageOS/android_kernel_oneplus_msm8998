@@ -1054,6 +1054,38 @@ static int fg_set_esr_timer(struct fg_chip *chip, int cycles, bool charging,
 
 /* Other functions HERE */
 
+#ifdef VENDOR_EDIT
+/* Yangfb@bsp, 20170109 set Ibat 500mA by default */
+static void fg_notify_charger(struct fg_chip *chip)
+{
+	union power_supply_propval prop = {0, };
+	int rc;
+
+	if (!is_charger_available(chip)) {
+		pr_warn("Charger not available yet?\n");
+		return;
+	}
+
+	prop.intval = chip->bp.fastchg_curr_ma * 1000;
+	rc = power_supply_set_property(chip->batt_psy,
+			POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX, &prop);
+	if (rc < 0) {
+		pr_err("Error in setting constant_charge_current_max property on batt_psy, rc=%d\n",
+			rc);
+		return;
+	}
+
+	rc = power_supply_set_property(chip->batt_psy,
+			POWER_SUPPLY_PROP_NOTIFY_CHARGER_SET_PARAMETER, &prop);
+	if (rc < 0) {
+		pr_err("Error in setting voltage_max property on batt_psy, rc=%d\n",
+			rc);
+		return;
+	}
+
+	fg_dbg(chip, FG_STATUS, "Notified charger on float voltage and FCC\n");
+}
+#else
 static void fg_notify_charger(struct fg_chip *chip)
 {
 	union power_supply_propval prop = {0, };
@@ -1085,6 +1117,7 @@ static void fg_notify_charger(struct fg_chip *chip)
 
 	fg_dbg(chip, FG_STATUS, "Notified charger on float voltage and FCC\n");
 }
+#endif
 
 static int fg_awake_cb(struct votable *votable, void *data, int awake,
 			const char *client)
@@ -2239,71 +2272,7 @@ out:
 	chip->fg_restarting = false;
 	return rc;
 }
-#ifdef VENDOR_EDIT
-	/* Yangfb@bsp, 20170109 set Ibat 500mA by default */
-static void fg_notify_charger(struct fg_chip *chip)
-{
-	union power_supply_propval prop = {0, };
-	int rc;
 
-<<<<<<< HEAD
-	if (!is_charger_available(chip)) {
-		pr_warn("Charger not available yet?\n");
-		return;
-	}
-	prop.intval = chip->bp.fastchg_curr_ma * 1000;
-	rc = power_supply_set_property(chip->batt_psy,
-			POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX, &prop);
-	if (rc < 0) {
-		pr_err("Error in setting constant_charge_current_max property on batt_psy, rc=%d\n",
-			rc);
-		return;
-	}
-	rc = power_supply_set_property(chip->batt_psy,
-			POWER_SUPPLY_PROP_NOTIFY_CHARGER_SET_PARAMETER, &prop);
-	if (rc < 0) {
-		pr_err("Error in setting voltage_max property on batt_psy, rc=%d\n",
-			rc);
-		return;
-	}
-	fg_dbg(chip, FG_STATUS, "Notified charger on float voltage and FCC\n");
-}
-#else
-static void fg_notify_charger(struct fg_chip *chip)
-{
-	union power_supply_propval prop = {0, };
-	int rc;
-
-	if (!is_charger_available(chip)) {
-		pr_warn("Charger not available yet?\n");
-		return;
-	}
-
-	prop.intval = chip->bp.float_volt_uv;
-	rc = power_supply_set_property(chip->batt_psy,
-			POWER_SUPPLY_PROP_VOLTAGE_MAX, &prop);
-	if (rc < 0) {
-		pr_err("Error in setting voltage_max property on batt_psy, rc=%d\n",
-			rc);
-		return;
-	}
-
-	prop.intval = chip->bp.fastchg_curr_ma * 1000;
-	rc = power_supply_set_property(chip->batt_psy,
-			POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX, &prop);
-	if (rc < 0) {
-		pr_err("Error in setting constant_charge_current_max property on batt_psy, rc=%d\n",
-			rc);
-		return;
-	}
-
-	fg_dbg(chip, FG_STATUS, "Notified charger on float voltage and FCC\n");
-}
-
-#endif
-
-=======
->>>>>>> origin/qc8998
 static void profile_load_work(struct work_struct *work)
 {
 	struct fg_chip *chip = container_of(work,
@@ -2368,11 +2337,8 @@ done:
 			pr_err("Error in loading capacity learning data, rc:%d\n",
 				rc);
 	}
-<<<<<<< HEAD
-=======
 
 	batt_psy_initialized(chip);
->>>>>>> origin/qc8998
 	fg_notify_charger(chip);
 	chip->profile_loaded = true;
 	chip->soc_reporting_ready = true;
@@ -2714,12 +2680,6 @@ static int fg_get_time_to_empty(struct fg_chip *chip, int *val)
 	return 0;
 }
 
-<<<<<<< HEAD
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20160926 Add dash charging */
-#define DEFALUT_BATT_TEMP	250
-#endif
-=======
 static int fg_update_maint_soc(struct fg_chip *chip)
 {
 	int rc = 0, msoc;
@@ -2762,7 +2722,10 @@ out:
 	return rc;
 }
 
->>>>>>> origin/qc8998
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20160926 Add dash charging */
+#define DEFALUT_BATT_TEMP	250
+#endif
 /* PSY CALLBACKS STAY HERE */
 static int fg_psy_get_property(struct power_supply *psy,
 				       enum power_supply_property psp,
@@ -2773,7 +2736,6 @@ static int fg_psy_get_property(struct power_supply *psy,
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_CAPACITY:
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 		if(!get_extern_fg_regist_done())
@@ -2784,10 +2746,7 @@ static int fg_psy_get_property(struct power_supply *psy,
 		else
 			pval->intval = 50;
 #else
-		if (chip->fg_restarting)
-			pval->intval = chip->last_soc;
-		else
-			rc = fg_get_prop_capacity(chip, &pval->intval);
+		rc = fg_get_prop_capacity(chip, &pval->intval);
 #endif
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
@@ -2798,17 +2757,11 @@ static int fg_psy_get_property(struct power_supply *psy,
 		else
 			pval->intval = 4000000; /* 4000mV */
 #else
-		rc = fg_get_battery_voltage(chip, &pval->intval);
-#endif
-=======
-		rc = fg_get_prop_capacity(chip, &pval->intval);
-		break;
-	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		if (chip->battery_missing)
 			pval->intval = 3700000;
 		else
 			rc = fg_get_battery_voltage(chip, &pval->intval);
->>>>>>> origin/qc8998
+#endif
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
 #ifdef VENDOR_EDIT

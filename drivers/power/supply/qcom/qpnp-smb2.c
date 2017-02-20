@@ -1569,21 +1569,12 @@ static int smb2_init_hw(struct smb2 *chip)
 	}
 
 	/* votes must be cast before configuring software control */
-<<<<<<< HEAD
-	vote(chg->pl_disable_votable,
-		PL_INDIRECT_VOTER, true, 0);
-	vote(chg->pl_disable_votable,
-		CHG_STATE_VOTER, true, 0);
-	vote(chg->pl_disable_votable,
-		PARALLEL_PSY_VOTER, true, 0);
 #ifdef VENDOR_EDIT
 	vote(chg->usb_suspend_votable,
 		DEFAULT_VOTER, !chg->chg_enabled, 0);
 	vote(chg->dc_suspend_votable,
 		DEFAULT_VOTER, !chg->chg_enabled, 0);
 #else
-=======
->>>>>>> origin/qc8998
 	vote(chg->usb_suspend_votable,
 		DEFAULT_VOTER, chip->dt.no_battery, 0);
 	vote(chg->dc_suspend_votable,

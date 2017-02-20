@@ -758,101 +758,6 @@ static int smblib_fcc_max_vote_callback(struct votable *votable, void *data,
 	return vote(chg->fcc_votable, FCC_MAX_RESULT_VOTER, true, fcc_ua);
 }
 
-<<<<<<< HEAD
-static int smblib_fcc_vote_callback(struct votable *votable, void *data,
-			int total_fcc_ua, const char *client)
-{
-	struct smb_charger *chg = data;
-	union power_supply_propval pval = {0, };
-	int rc, master_fcc_ua = total_fcc_ua, slave_fcc_ua = 0;
-
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20161014 Add charging standard */
-	pr_info("set fcc=%d, mode=%d\n", total_fcc_ua, chg->mode);
-#endif
-	if (total_fcc_ua < 0)
-		return 0;
-
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20161109 Charging porting */
-	if (chg->pl.psy && chg->mode == PARALLEL_MASTER
-#else
-	if (chg->mode == PARALLEL_MASTER
-#endif
-		&& !get_effective_result_locked(chg->pl_disable_votable)) {
-		smblib_split_fcc(chg, total_fcc_ua, &master_fcc_ua,
-				 &slave_fcc_ua);
-
-		/*
-		 * parallel charger is not disabled, implying that
-		 * chg->pl.psy exists
-		 */
-		pval.intval = slave_fcc_ua;
-		rc = power_supply_set_property(chg->pl.psy,
-				POWER_SUPPLY_PROP_CURRENT_MAX, &pval);
-		if (rc < 0) {
-			smblib_err(chg, "Could not set parallel fcc, rc=%d\n",
-				rc);
-			return rc;
-		}
-
-		chg->pl.slave_fcc_ua = slave_fcc_ua;
-	}
-
-	rc = smblib_set_charge_param(chg, &chg->param.fcc, master_fcc_ua);
-	if (rc < 0) {
-		smblib_err(chg, "Couldn't set master fcc rc=%d\n", rc);
-		return rc;
-	}
-
-	smblib_dbg(chg, PR_PARALLEL, "master_fcc=%d slave_fcc=%d distribution=(%d/%d)\n",
-		   master_fcc_ua, slave_fcc_ua,
-		   (master_fcc_ua * 100) / total_fcc_ua,
-		   (slave_fcc_ua * 100) / total_fcc_ua);
-
-	return 0;
-}
-
-#define PARALLEL_FLOAT_VOLTAGE_DELTA_UV 50000
-static int smblib_fv_vote_callback(struct votable *votable, void *data,
-			int fv_uv, const char *client)
-{
-	struct smb_charger *chg = data;
-	union power_supply_propval pval = {0, };
-	int rc = 0;
-
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20161014 Add charging standard */
-	pr_info("set fv_uv=%d, mode=%d, psy=%d\n", fv_uv, chg->mode,
-			chg->pl.psy ? 1 : 0);
-#endif
-	if (fv_uv < 0) {
-		smblib_dbg(chg, PR_MISC, "No Voter\n");
-		return 0;
-	}
-
-	rc = smblib_set_charge_param(chg, &chg->param.fv, fv_uv);
-	if (rc < 0) {
-		smblib_err(chg, "Couldn't set floating voltage rc=%d\n", rc);
-		return rc;
-	}
-
-	if (chg->mode == PARALLEL_MASTER && chg->pl.psy) {
-		pval.intval = fv_uv + PARALLEL_FLOAT_VOLTAGE_DELTA_UV;
-		rc = power_supply_set_property(chg->pl.psy,
-				POWER_SUPPLY_PROP_VOLTAGE_MAX, &pval);
-		if (rc < 0) {
-			smblib_err(chg,
-				"Couldn't set float on parallel rc=%d\n", rc);
-			return rc;
-		}
-	}
-
-	return 0;
-}
-
-=======
->>>>>>> origin/qc8998
 #define USBIN_25MA	25000
 #define USBIN_100MA	100000
 #define USBIN_150MA	150000
@@ -1053,42 +958,6 @@ static int smblib_awake_vote_callback(struct votable *votable, void *data,
 	return 0;
 }
 
-<<<<<<< HEAD
-static int smblib_pl_disable_vote_callback(struct votable *votable, void *data,
-			int pl_disable, const char *client)
-{
-	struct smb_charger *chg = data;
-	union power_supply_propval pval = {0, };
-	int rc;
-
-	if (chg->mode != PARALLEL_MASTER || !chg->pl.psy)
-		return 0;
-
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20161014 Add charging standard */
-	pr_info("set pl_disable=%d\n", pl_disable);
-#endif
-	chg->pl.taper_pct = 100;
-	rerun_election(chg->fv_votable);
-	rerun_election(chg->fcc_votable);
-
-	pval.intval = pl_disable;
-	rc = power_supply_set_property(chg->pl.psy,
-			POWER_SUPPLY_PROP_INPUT_SUSPEND, &pval);
-	if (rc < 0) {
-		smblib_err(chg,
-			"Couldn't change slave suspend state rc=%d\n", rc);
-		return rc;
-	}
-
-	smblib_dbg(chg, PR_PARALLEL, "parallel charging %s\n",
-		   pl_disable ? "disabled" : "enabled");
-
-	return 0;
-}
-
-=======
->>>>>>> origin/qc8998
 static int smblib_chg_disable_vote_callback(struct votable *votable, void *data,
 			int chg_disable, const char *client)
 {
@@ -2854,42 +2723,6 @@ unlock:
 	return IRQ_HANDLED;
 }
 
-<<<<<<< HEAD
-static void smblib_pl_handle_chg_state_change(struct smb_charger *chg, u8 stat)
-{
-	bool pl_enabled;
-
-	if (chg->mode != PARALLEL_MASTER)
-		return;
-
-	pl_enabled = !get_effective_result_locked(chg->pl_disable_votable);
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20161014 Add charging standard */
-	pr_info("IRQ: stat=%d, pl_enabled=%d\n", stat, pl_enabled);
-#endif
-	switch (stat) {
-	case FAST_CHARGE:
-	case FULLON_CHARGE:
-		vote(chg->pl_disable_votable, CHG_STATE_VOTER, false, 0);
-		break;
-	case TAPER_CHARGE:
-		if (pl_enabled) {
-			cancel_delayed_work_sync(&chg->pl_taper_work);
-			schedule_delayed_work(&chg->pl_taper_work, 0);
-		}
-		break;
-	case TERMINATE_CHARGE:
-	case INHIBIT_CHARGE:
-	case DISABLE_CHARGE:
-		vote(chg->pl_disable_votable, TAPER_END_VOTER, false, 0);
-		break;
-	default:
-		break;
-	}
-}
-
-=======
->>>>>>> origin/qc8998
 irqreturn_t smblib_handle_chg_state_change(int irq, void *data)
 {
 	struct smb_irq_data *irq_data = data;
@@ -2907,8 +2740,6 @@ irqreturn_t smblib_handle_chg_state_change(int irq, void *data)
 	}
 
 	stat = stat & BATTERY_CHARGER_STATUS_MASK;
-<<<<<<< HEAD
-	smblib_pl_handle_chg_state_change(chg, stat);
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161109 Charging porting */
 	if (stat == TERMINATE_CHARGE) {
@@ -2921,8 +2752,6 @@ irqreturn_t smblib_handle_chg_state_change(int irq, void *data)
 		op_charging_en(chg, false);
 	}
 #endif
-=======
->>>>>>> origin/qc8998
 	power_supply_changed(chg->batt_psy);
 	return IRQ_HANDLED;
 }
@@ -3724,25 +3553,6 @@ irqreturn_t smblib_handle_wdog_bark(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-/***************
- * Work Queues *
- ***************/
-
-static void smblib_hvdcp_detect_work(struct work_struct *work)
-{
-	struct smb_charger *chg = container_of(work, struct smb_charger,
-					       hvdcp_detect_work.work);
-
-	vote(chg->pd_disallowed_votable_indirect, HVDCP_TIMEOUT_VOTER,
-				false, 0);
-	if (get_effective_result(chg->pd_disallowed_votable_indirect))
-		/* pd is still disabled, try hvdcp */
-		try_rerun_apsd_for_hvdcp(chg);
-	else
-		/* notify pd now that pd is allowed */
-		power_supply_changed(chg->usb_psy);
-}
-
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161014 Add charging standard */
 irqreturn_t smblib_handle_aicl_done(int irq, void *data)
@@ -3760,17 +3570,6 @@ irqreturn_t smblib_handle_aicl_done(int irq, void *data)
 
 	pr_info("IRQ: %s AICL result=%d\n", irq_data->name, icl_ma);
 	return IRQ_HANDLED;
-}
-
-static void bms_update_work(struct work_struct *work)
-{
-	struct smb_charger *chg = container_of(work, struct smb_charger,
-						bms_update_work);
-
-	smblib_suspend_on_debug_battery(chg);
-
-	if (chg->batt_psy)
-		power_supply_changed(chg->batt_psy);
 }
 
 static int get_property_from_fg(struct smb_charger *chg,
@@ -3798,7 +3597,6 @@ static int get_property_from_fg(struct smb_charger *chg,
 	return rc;
 }
 
-<<<<<<< HEAD
 static int set_property_on_fg(struct smb_charger *chg,
 		enum power_supply_property prop, int val)
 {
@@ -3886,11 +3684,7 @@ static bool get_prop_fast_switch_to_normal(struct smb_charger *chg)
 	}
 }
 
-
 bool is_fastchg_allowed(struct smb_charger *chg)
-=======
-static void clear_hdc_work(struct work_struct *work)
->>>>>>> origin/qc8998
 {
 	int temp;
 	static int pre_temp = 0;
@@ -4107,8 +3901,6 @@ static void switch_fast_chg(struct smb_charger *chg)
 	}
 }
 
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20161117 Fix dash in power off charging mode */
 static void op_re_kick_allowed_voltage(struct smb_charger  *chg)
 {
 	const struct apsd_result *apsd_result;
@@ -4151,8 +3943,6 @@ static void op_enable_usb_suspend_work(struct work_struct *work)
 		vote(chg->usb_suspend_votable,
 				BOOST_BACK_VOTER, false, 0);
 }
-
-#endif
 
 static void op_check_allow_switch_dash_work(struct work_struct *work)
 {
@@ -5143,6 +4933,36 @@ static struct notify_usb_enumeration_status usb_enumeration  = {
 };
 #endif
 
+/***************
+ * Work Queues *
+ ***************/
+
+static void smblib_hvdcp_detect_work(struct work_struct *work)
+{
+	struct smb_charger *chg = container_of(work, struct smb_charger,
+					       hvdcp_detect_work.work);
+
+	vote(chg->pd_disallowed_votable_indirect, HVDCP_TIMEOUT_VOTER,
+				false, 0);
+	if (get_effective_result(chg->pd_disallowed_votable_indirect))
+		/* pd is still disabled, try hvdcp */
+		try_rerun_apsd_for_hvdcp(chg);
+	else
+		/* notify pd now that pd is allowed */
+		power_supply_changed(chg->usb_psy);
+}
+
+static void bms_update_work(struct work_struct *work)
+{
+	struct smb_charger *chg = container_of(work, struct smb_charger,
+						bms_update_work);
+
+	smblib_suspend_on_debug_battery(chg);
+
+	if (chg->batt_psy)
+		power_supply_changed(chg->batt_psy);
+}
+
 static void step_soc_req_work(struct work_struct *work)
 {
 	struct smb_charger *chg = container_of(work, struct smb_charger,
@@ -5157,58 +4977,6 @@ static void step_soc_req_work(struct work_struct *work)
 	}
 
 	step_charge_soc_update(chg, pval.intval);
-}
-
-static void smblib_pl_detect_work(struct work_struct *work)
-{
-	struct smb_charger *chg = container_of(work, struct smb_charger,
-						pl_detect_work);
-
-	vote(chg->pl_disable_votable, PARALLEL_PSY_VOTER, false, 0);
-}
-
-#define MINIMUM_PARALLEL_FCC_UA		500000
-#define PL_TAPER_WORK_DELAY_MS		100
-#define TAPER_RESIDUAL_PCT		75
-static void smblib_pl_taper_work(struct work_struct *work)
-{
-	struct smb_charger *chg = container_of(work, struct smb_charger,
-						pl_taper_work.work);
-	union power_supply_propval pval = {0, };
-	int rc;
-
-	smblib_dbg(chg, PR_PARALLEL, "starting parallel taper work\n");
-	if (chg->pl.slave_fcc_ua < MINIMUM_PARALLEL_FCC_UA) {
-		smblib_dbg(chg, PR_PARALLEL, "parallel taper is done\n");
-		vote(chg->pl_disable_votable, TAPER_END_VOTER, true, 0);
-		goto done;
-	}
-
-	rc = smblib_get_prop_batt_charge_type(chg, &pval);
-	if (rc < 0) {
-		smblib_err(chg, "Couldn't get batt charge type rc=%d\n", rc);
-		goto done;
-	}
-
-	if (pval.intval == POWER_SUPPLY_CHARGE_TYPE_TAPER) {
-		smblib_dbg(chg, PR_PARALLEL, "master is taper charging; reducing slave FCC\n");
-		vote(chg->awake_votable, PL_TAPER_WORK_RUNNING_VOTER, true, 0);
-		/* Reduce the taper percent by 25 percent */
-		chg->pl.taper_pct = chg->pl.taper_pct
-					* TAPER_RESIDUAL_PCT / 100;
-		rerun_election(chg->fcc_votable);
-		schedule_delayed_work(&chg->pl_taper_work,
-				msecs_to_jiffies(PL_TAPER_WORK_DELAY_MS));
-		return;
-	}
-
-	/*
-	 * Master back to Fast Charge, get out of this round of taper reduction
-	 */
-	smblib_dbg(chg, PR_PARALLEL, "master is fast charging; waiting for next taper\n");
-
-done:
-	vote(chg->awake_votable, PL_TAPER_WORK_RUNNING_VOTER, false, 0);
 }
 
 static void clear_hdc_work(struct work_struct *work)

@@ -46,15 +46,11 @@ static ssize_t power_supply_show_property(struct device *dev,
 	static char *type_text[] = {
 		"Unknown", "Battery", "UPS", "Mains", "USB", "USB_DCP",
 		"USB_CDP", "USB_ACA", "USB_HVDCP", "USB_HVDCP_3", "USB_PD",
-<<<<<<< HEAD
-		"Wireless", "BMS", "USB_Parallel", "Wipower",
+		"Wireless", "BMS", "Parallel", "Main", "Wipower",
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161109 Charging porting */
 		"TYPEC", "TYPEC_UFP", "TYPEC_DFP", "DASH"
 #else
-=======
-		"Wireless", "BMS", "Parallel", "Main", "Wipower",
->>>>>>> origin/qc8998
 		"TYPEC", "TYPEC_UFP", "TYPEC_DFP"
 #endif
 	};
