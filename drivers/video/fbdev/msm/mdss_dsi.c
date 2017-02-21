@@ -1620,7 +1620,6 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 			ATRACE_END("dsi_panel_on");
 		}
 	}
-#ifdef VENDOR_EDIT
 //#ifdef VENDOR_EDIT
     if (!ctrl_pdata->setting_mode_loaded){
         ctrl_pdata->setting_mode_loaded = true;
@@ -1660,7 +1659,7 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 		    pr_err("sRGB mode(reading mode) %d\n", ctrl_pdata->reading_mode);
 		}
     }
-#endif
+//#endif
 	if ((pdata->panel_info.type == MIPI_CMD_PANEL) &&
 		mipi->vsync_enable && mipi->hw_vsync_mode) {
 		mdss_dsi_set_tear_on(ctrl_pdata);
