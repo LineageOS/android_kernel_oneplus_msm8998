@@ -829,7 +829,7 @@ int set_param_lcm_adobe_rgb_mode(uint * lcm_adobe_rgb_mode)
 		pr_info("%s[%d]  failed\n",__func__, __LINE__);
 		return ret;
 	}
-        pr_err("set lcm_srgb_mode = %d\n", *lcm_adobe_rgb_mode);
+        pr_err("set lcm_adobe_mode = %d\n", *lcm_adobe_rgb_mode);
 	return ret;
 }
 EXPORT_SYMBOL(set_param_lcm_adobe_rgb_mode);
@@ -861,7 +861,7 @@ int set_param_lcm_dci_p3_mode(uint * lcm_dci_p3_mode)
 		pr_info("%s[%d]  failed\n",__func__, __LINE__);
 		return ret;
 	}
-        pr_err("set lcm_srgb_mode = %d\n", *lcm_dci_p3_mode);
+        pr_err("set lcm_dci_p3_mode = %d\n", *lcm_dci_p3_mode);
 	return ret;
 }
 EXPORT_SYMBOL(set_param_lcm_dci_p3_mode);
@@ -880,6 +880,70 @@ int get_param_lcm_dci_p3_mode(uint *lcm_dci_p3_mode)
 	return ret;
 }
 EXPORT_SYMBOL(get_param_lcm_dci_p3_mode);
+/***********************************************************************/
+int set_param_lcm_night_mode(uint * lcm_night_mode)
+{
+	int ret;
+	uint32 sid_index= PARAM_SID_LCD;
+	uint32 offset = offsetof(param_lcd_t, lcm_night_mode);
+
+	ret = set_param_by_index_and_offset(sid_index,offset,
+	            lcm_night_mode, sizeof(*lcm_night_mode));
+	if(ret < 0){
+		pr_info("%s[%d]  failed\n",__func__, __LINE__);
+		return ret;
+	}
+        pr_err("set lcm_night_mode = %d\n", *lcm_night_mode);
+	return ret;
+}
+EXPORT_SYMBOL(set_param_lcm_night_mode);
+
+int get_param_lcm_night_mode(uint *lcm_night_mode)
+{
+	int ret;
+	uint32 sid_index= PARAM_SID_LCD;
+	uint32 offset = offsetof(param_lcd_t, lcm_night_mode);
+
+	ret = get_param_by_index_and_offset(sid_index,offset,lcm_night_mode, sizeof(*lcm_night_mode));
+	if(ret < 0){
+		pr_info("%s[%d]  failed\n",__func__, __LINE__);
+		return ret;
+	}
+	return ret;
+}
+EXPORT_SYMBOL(get_param_lcm_night_mode);
+/***********************************************************************/
+int set_param_lcm_reading_mode(uint * lcm_reading_mode)
+{
+	int ret;
+	uint32 sid_index= PARAM_SID_LCD;
+	uint32 offset = offsetof(param_lcd_t, lcm_reading_mode);
+
+	ret = set_param_by_index_and_offset(sid_index,offset,
+	            lcm_reading_mode, sizeof(*lcm_reading_mode));
+	if(ret < 0){
+		pr_info("%s[%d]  failed\n",__func__, __LINE__);
+		return ret;
+	}
+        pr_err("set lcm_reading_mode = %d\n", *lcm_reading_mode);
+	return ret;
+}
+EXPORT_SYMBOL(set_param_lcm_reading_mode);
+
+int get_param_lcm_reading_mode(uint *lcm_reading_mode)
+{
+	int ret;
+	uint32 sid_index= PARAM_SID_LCD;
+	uint32 offset = offsetof(param_lcd_t, lcm_reading_mode);
+
+	ret = get_param_by_index_and_offset(sid_index,offset,lcm_reading_mode, sizeof(*lcm_reading_mode));
+	if(ret < 0){
+		pr_info("%s[%d]  failed\n",__func__, __LINE__);
+		return ret;
+	}
+	return ret;
+}
+EXPORT_SYMBOL(get_param_lcm_reading_mode);
 /***************************************************************************/
 int get_param_download_info(param_download_t *download_info)
 {

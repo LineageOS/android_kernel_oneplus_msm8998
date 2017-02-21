@@ -582,22 +582,28 @@ struct mdss_dsi_ctrl_pdata {
 	int  hbm_mode;
 //#endif
 //#ifdef VENDOR_EDIT
+	bool setting_mode_loaded;
+//#endif
+//#ifdef VENDOR_EDIT
 	int SRGB_mode;
-	int SRGB_first_on;
 	struct dsi_panel_cmds srgb_on_cmds;
 	struct dsi_panel_cmds srgb_off_cmds;
 //#endif
 //#ifdef VENDOR_EDIT
 	int Adobe_RGB_mode;
-	int Adobe_RGB_first_on;
 	struct dsi_panel_cmds Adobe_RGB_on_cmds;
 	struct dsi_panel_cmds Adobe_RGB_off_cmds;
 //#endif
 //#ifdef VENDOR_EDIT
 	int dci_p3_mode;
-	int dci_p3_first_on;
 	struct dsi_panel_cmds dci_p3_on_cmds;
 	struct dsi_panel_cmds dci_p3_off_cmds;
+//#endif
+//#ifdef VENDOR_EDIT
+	int night_mode;
+//#endif
+//#ifdef VENDOR_EDIT
+	int reading_mode;
 //#endif
 //#ifdef VENDOR_EDIT
 	int disp_vci_en_gpio;
@@ -769,6 +775,14 @@ int mdss_dsi_panel_get_adobe_rgb_mode(struct mdss_dsi_ctrl_pdata *ctrl);
 //#ifdef VENDOR_EDIT
 int mdss_dsi_panel_set_dci_p3_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level);
 int mdss_dsi_panel_get_dci_p3_mode(struct mdss_dsi_ctrl_pdata *ctrl);
+//#endif
+//#ifdef VENDOR_EDIT
+int mdss_dsi_panel_set_night_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level);
+int mdss_dsi_panel_get_night_mode(struct mdss_dsi_ctrl_pdata *ctrl);
+//#endif
+//#ifdef VENDOR_EDIT
+int mdss_dsi_panel_set_reading_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level);
+int mdss_dsi_panel_get_reading_mode(struct mdss_dsi_ctrl_pdata *ctrl);
 //#endif
 static inline const char *__mdss_dsi_pm_name(enum dsi_pm_type module)
 {

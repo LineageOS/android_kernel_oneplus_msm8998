@@ -44,7 +44,8 @@ typedef struct
     uint lcm_srgb_mode;
     uint lcm_adobe_rgb_mode;
     uint lcm_dci_p3_mode;
-	
+	uint lcm_night_mode;
+    uint lcm_reading_mode;
 }param_lcd_t;
 
 typedef struct
@@ -302,7 +303,10 @@ int set_param_lcm_adobe_rgb_mode(uint * lcm_adobe_rgb_mode);
 int get_param_lcm_adobe_rgb_mode(uint *lcm_adobe_rgb_mode);
 int set_param_lcm_dci_p3_mode(uint * lcm_dci_p3_mode);
 int get_param_lcm_dci_p3_mode(uint *lcm_dci_p3_mode);
-
+int set_param_lcm_night_mode(uint * lcm_night_mdoe);
+int get_param_lcm_night_mode(uint *lcm_night_mode);
+int set_param_lcm_reading_mode(uint * lcm_reading_mdoe);
+int get_param_lcm_reading_mode(uint *lcm_reading_mode);
 
 int get_param_download_info(param_download_t *download_info);
 /* liochen@BSP, 2016/07/26, store crash record in PARAM */

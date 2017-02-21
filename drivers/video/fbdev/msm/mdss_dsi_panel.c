@@ -1030,19 +1030,21 @@ int mdss_dsi_panel_set_hbm_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 
 	hbm_on_cmds = &ctrl->hbm_on_cmds;
 	hbm_off_cmds = &ctrl->hbm_off_cmds;
-
-	if (hbm_on_cmds->cmd_cnt){
-        if (level){
+    if (level){
+        if (hbm_on_cmds->cmd_cnt){
             mdss_dsi_panel_cmds_send(ctrl, hbm_on_cmds, CMD_REQ_COMMIT);
-            pr_err("HBM Mode ON\n");
+            pr_err("HBM Mode On.\n");
+        } else{
+            pr_err("This Panel not support HBM Mode On.");
         }
-        else{
+    } else{
+        if (hbm_off_cmds->cmd_cnt){
             mdss_dsi_panel_cmds_send(ctrl, hbm_off_cmds, CMD_REQ_COMMIT);
-            pr_err("HBM Mode OFF\n");
+            pr_err("HBM Mode Off.\n");
+        } else{
+            pr_err("This Panel not support HBM Mode Off.");
         }
-	} else{
-        pr_err("This Panel does not support HBM Mode");
-	}
+    }
 	return 0;
 }
 
@@ -1054,21 +1056,26 @@ int mdss_dsi_panel_get_hbm_mode(struct mdss_dsi_ctrl_pdata *ctrl)
 //#ifdef VENDOR_EDIT
 int mdss_dsi_panel_set_srgb_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 {
-	struct dsi_panel_cmds *srgb_on_cmds,*srgb_off_cmds;
+	struct dsi_panel_cmds *srgb_on_cmds;
+	struct dsi_panel_cmds* srgb_off_cmds;
 
 	srgb_on_cmds = &ctrl->srgb_on_cmds;
 	srgb_off_cmds = &ctrl->srgb_off_cmds;
-    if (srgb_on_cmds->cmd_cnt){
-        if (level){
+	if (level){
+        if (srgb_on_cmds->cmd_cnt){
             mdss_dsi_panel_cmds_send(ctrl, srgb_on_cmds, CMD_REQ_COMMIT);
             pr_err("sRGB Mode On.\n");
         } else{
+            pr_err("This panel not support sRGB mode on.\n");
+        }
+	} else{
+        if (srgb_off_cmds->cmd_cnt){
             mdss_dsi_panel_cmds_send(ctrl, srgb_off_cmds, CMD_REQ_COMMIT);
             pr_err("sRGB Mode off.\n");
+        } else{
+            pr_err("This panel not support sRGB mode off.\n");
         }
-    } else{
-        pr_err("This Panel does not support sRGB mode");
-    }
+	}
 	return 0;
 }
 int mdss_dsi_panel_get_srgb_mode(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1079,20 +1086,25 @@ int mdss_dsi_panel_get_srgb_mode(struct mdss_dsi_ctrl_pdata *ctrl)
 //#ifdef VENDOR_EDIT
 int mdss_dsi_panel_set_adobe_rgb_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 {
-	struct dsi_panel_cmds *adobe_rgb_on_cmds,*adobe_rgb_off_cmds;
+	struct dsi_panel_cmds *adobe_rgb_on_cmds;
+	struct dsi_panel_cmds *adobe_rgb_off_cmds;
 
 	adobe_rgb_on_cmds = &ctrl->Adobe_RGB_on_cmds;
 	adobe_rgb_off_cmds = &ctrl->Adobe_RGB_off_cmds;
-	if (adobe_rgb_on_cmds->cmd_cnt){
-        if (level){
+	if (level){
+        if (adobe_rgb_on_cmds->cmd_cnt){
             mdss_dsi_panel_cmds_send(ctrl, adobe_rgb_on_cmds, CMD_REQ_COMMIT);
             pr_err("Adobe RGB Mode On.\n");
         } else{
-            mdss_dsi_panel_cmds_send(ctrl, adobe_rgb_off_cmds, CMD_REQ_COMMIT);
-            pr_err("Adobe RGB Mode off.\n");
+            pr_err("This Panel not support Adobe RGB mode On.\n");
         }
-    } else{
-        pr_err("This Panel does not support Adobe RGB mode");
+	} else{
+        if (adobe_rgb_off_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, adobe_rgb_off_cmds, CMD_REQ_COMMIT);
+            pr_err("Adobe RGB Mode Off.\n");
+        } else{
+            pr_err("This Panel not support Adobe RGB mode Off.\n");
+        }
 	}
 	return 0;
 }
@@ -1104,26 +1116,91 @@ int mdss_dsi_panel_get_adobe_rgb_mode(struct mdss_dsi_ctrl_pdata *ctrl)
 //#ifdef VENDOR_EDIT
 int mdss_dsi_panel_set_dci_p3_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 {
-	struct dsi_panel_cmds *dci_p3_on_cmds,*dci_p3_off_cmds;
+	struct dsi_panel_cmds *dci_p3_on_cmds;
+	struct dsi_panel_cmds *dci_p3_off_cmds;
 
 	dci_p3_on_cmds = &ctrl->dci_p3_on_cmds;
 	dci_p3_off_cmds = &ctrl->dci_p3_off_cmds;
-	if (dci_p3_on_cmds->cmd_cnt){
-        if (level){
+	if (level){
+        if (dci_p3_on_cmds->cmd_cnt){
             mdss_dsi_panel_cmds_send(ctrl, dci_p3_on_cmds, CMD_REQ_COMMIT);
-            pr_err("DCI P3 Mode On.\n");
+            pr_err("DCI-P3 Mode On.\n");
         }else{
-            mdss_dsi_panel_cmds_send(ctrl, dci_p3_off_cmds, CMD_REQ_COMMIT);
-            pr_err("DCI P3 Mode off.\n");
+            pr_err("This Panel not support DCI-P3 mode On.\n");
         }
-    } else{
-        pr_err("This Panel does not support DCI-P3 mode");
+	} else{
+        if (dci_p3_off_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, dci_p3_off_cmds, CMD_REQ_COMMIT);
+            pr_err("DCI-P3 Mode Off.\n");
+        }else{
+            pr_err("This Panel not support DCI-P3 mode Off.\n");
+        }
 	}
 	return 0;
 }
 int mdss_dsi_panel_get_dci_p3_mode(struct mdss_dsi_ctrl_pdata *ctrl)
 {
    return ctrl->dci_p3_mode;
+}
+//#endif
+//#ifdef VENDOR_EDIT
+int mdss_dsi_panel_set_night_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+{
+	struct dsi_panel_cmds *night_mode_on_cmds;
+	struct dsi_panel_cmds *night_mode_off_cmds;
+
+	night_mode_on_cmds = &ctrl->srgb_on_cmds; //night mode same as sRGB mode
+	night_mode_off_cmds = &ctrl->srgb_off_cmds;//night mode same as sRGB mode
+    if (level){
+        if (night_mode_on_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_on_cmds, CMD_REQ_COMMIT);
+            pr_err("sRGB Mode On (night mode).\n");
+        } else{
+            pr_err("This panel not support sRGB mode on (night mode).\n");
+        }
+    } else{
+        if (night_mode_off_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_off_cmds, CMD_REQ_COMMIT);
+            pr_err("sRGB Mode off (night mode).\n");
+        } else{
+            pr_err("This panel not support sRGB mode off (night mode).\n");
+        }
+    }
+	return 0;
+}
+int mdss_dsi_panel_get_night_mode(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+   return ctrl->night_mode;
+}
+//#endif
+//#ifdef VENDOR_EDIT
+int mdss_dsi_panel_set_reading_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+{
+	struct dsi_panel_cmds *reading_mode_on_cmds;
+	struct dsi_panel_cmds *reading_mode_off_cmds;
+
+	reading_mode_on_cmds = &ctrl->srgb_on_cmds; //reading mode same as sRGB mode
+	reading_mode_off_cmds = &ctrl->srgb_off_cmds;//reading mode same as sRGB mode
+    if (level){
+        if (reading_mode_on_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, reading_mode_on_cmds, CMD_REQ_COMMIT);
+            pr_err("sRGB Mode On (reading mode).\n");
+        } else{
+            pr_err("This panel not support sRGB mode on (reading mode).\n");
+        }
+    } else{
+        if (reading_mode_off_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, reading_mode_off_cmds, CMD_REQ_COMMIT);
+            pr_err("sRGB Mode off (reading mode).\n");
+        } else{
+            pr_err("This panel not support sRGB mode off (reading mode).\n");
+        }
+    }
+	return 0;
+}
+int mdss_dsi_panel_get_reading_mode(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+   return ctrl->reading_mode;
 }
 //#endif
 static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
@@ -1188,7 +1265,16 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
         mdss_dsi_panel_set_dci_p3_mode(ctrl, mdss_dsi_panel_get_dci_p3_mode(ctrl));
     }
 //#endif
-
+//#ifdef VENDOR_EDIT
+    if (mdss_dsi_panel_get_night_mode(ctrl)){
+        mdss_dsi_panel_set_night_mode(ctrl, mdss_dsi_panel_get_night_mode(ctrl));
+    }
+//#endif
+//#ifdef VENDOR_EDIT
+    if (mdss_dsi_panel_get_reading_mode(ctrl)){
+        mdss_dsi_panel_set_reading_mode(ctrl, mdss_dsi_panel_get_reading_mode(ctrl));
+    }
+//#endif
 	if (pinfo->compression_mode == COMPRESSION_DSC)
 		mdss_dsi_panel_dsc_pps_send(ctrl, pinfo);
 

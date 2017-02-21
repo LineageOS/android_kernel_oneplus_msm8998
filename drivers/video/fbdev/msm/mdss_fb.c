@@ -1045,6 +1045,92 @@ static ssize_t mdss_fb_set_dci_p3_mode(struct device *dev,
 static DEVICE_ATTR(DCI_P3, S_IRUGO | S_IWUSR,
 	mdss_fb_get_dci_p3_mode, mdss_fb_set_dci_p3_mode);
 //#endif
+//#ifdef VENDOR_EDIT
+static ssize_t mdss_fb_get_night_mode(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int ret = 0;
+	int level = 0;
+
+	level = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_GET_NIGHT_MODE,
+			NULL);
+	ret=scnprintf(buf, PAGE_SIZE, "mode = %d\n"
+					                        "0-->Night Mode OFF\n"
+											"1-->Night Mode ON\n",
+										    level);
+	return ret;
+}
+
+static ssize_t mdss_fb_set_night_mode(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int rc = 0;
+	int level = 0;
+
+	rc = kstrtoint(buf, 10, &level);
+	if (rc) {
+		pr_err("kstrtoint failed. rc=%d\n", rc);
+		return rc;
+	}
+    rc = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_SET_NIGHT_MODE,
+	    (void *)(unsigned long)level);
+	if (rc)
+		pr_err("Fail to set Night mode: %d\n", level);
+
+	return count;
+}
+
+static DEVICE_ATTR(night_mode, S_IRUGO | S_IWUSR,
+	mdss_fb_get_night_mode, mdss_fb_set_night_mode);
+
+//#endif
+//#ifdef VENDOR_EDIT
+static ssize_t mdss_fb_get_reading_mode(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int ret = 0;
+	int level = 0;
+
+	level = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_GET_READING_MODE,
+			NULL);
+	ret=scnprintf(buf, PAGE_SIZE, "mode = %d\n"
+					                        "0-->Reading Mode OFF\n"
+											"1-->Reading Mode ON\n",
+										    level);
+	return ret;
+}
+
+static ssize_t mdss_fb_set_reading_mode(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int rc = 0;
+	int level = 0;
+
+	rc = kstrtoint(buf, 10, &level);
+	if (rc) {
+		pr_err("kstrtoint failed. rc=%d\n", rc);
+		return rc;
+	}
+    rc = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_SET_READING_MODE,
+	    (void *)(unsigned long)level);
+	if (rc)
+		pr_err("Fail to set Reading mode: %d\n", level);
+
+	return count;
+}
+
+static DEVICE_ATTR(reading_mode, S_IRUGO | S_IWUSR,
+	mdss_fb_get_reading_mode, mdss_fb_set_reading_mode);
+
+//#endif
 
 static ssize_t mdss_fb_change_persist_mode(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t len)
@@ -1160,6 +1246,12 @@ static struct attribute *mdss_fb_attrs[] = {
 //#endif
 //#ifdef VENDOR_EDIT
 	&dev_attr_DCI_P3.attr,
+//#endif
+//#ifdef VENDOR_EDIT
+	&dev_attr_night_mode.attr,
+//#endif
+//#ifdef VENDOR_EDIT
+	&dev_attr_reading_mode.attr,
 //#endif
 	&dev_attr_measured_fps.attr,
 	&dev_attr_msm_fb_persist_mode.attr,
