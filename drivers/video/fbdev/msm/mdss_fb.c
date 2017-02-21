@@ -1231,7 +1231,7 @@ static struct attribute *mdss_fb_attrs[] = {
 	&dev_attr_msm_fb_thermal_level.attr,
 	&dev_attr_msm_fb_panel_status.attr,
 	&dev_attr_msm_fb_dfps_mode.attr,
-    &dev_attr_measured_fps.attr,
+	&dev_attr_measured_fps.attr,
 //#ifdef VENDOR_EDIT
 	&dev_attr_acl.attr,
 //#endif
@@ -1253,7 +1253,6 @@ static struct attribute *mdss_fb_attrs[] = {
 //#ifdef VENDOR_EDIT
 	&dev_attr_reading_mode.attr,
 //#endif
-	&dev_attr_measured_fps.attr,
 	&dev_attr_msm_fb_persist_mode.attr,
 	NULL,
 };
