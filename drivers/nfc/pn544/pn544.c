@@ -90,6 +90,7 @@ struct pn544_dev    {
     struct  clk         *s_clk;
     struct regulator    *p544_regulator;
     struct regulator    *p544_regulator_s4;
+    union  nxp_uinfo    nxp_info;
 
 };
 /*enable nfc log cmd echo 1 > sys/module/pn544/parameters/nfc_kernel_log*/
@@ -776,12 +777,130 @@ static int pn544_parse_dt(struct device *dev,
 }
 #endif
 
+/* Check for availability of NQ_ NFC controller hardware */
+static int nfcc_nxp_hw_check(struct i2c_client *client, struct pn544_dev *pn544_dev)
+{
+    int ret = 0;
+
+    unsigned char raw_nci_reset_cmd[] =  {0x20, 0x00, 0x01, 0x00};
+    unsigned char raw_nci_init_cmd[] =   {0x20, 0x01, 0x00};
+    unsigned char nci_init_rsp[28];
+    unsigned char nci_reset_rsp[6];
+    unsigned char init_rsp_len = 0;
+    unsigned int enable_gpio = pn544_dev->ven_gpio;
+    /* making sure that the NFCC starts in a clean state. */
+    gpio_set_value(enable_gpio, 0);/* ULPM: Disable */
+    /* hardware dependent delay */
+    msleep(20);
+    gpio_set_value(enable_gpio, 1);/* HPD : Enable*/
+    /* hardware dependent delay */
+    msleep(20);
+
+    /* send NCI CORE RESET CMD with Keep Config parameters */
+    ret = i2c_master_send(client, raw_nci_reset_cmd,
+                        sizeof(raw_nci_reset_cmd));
+    if (ret < 0) {
+        dev_err(&client->dev,
+        "%s: - i2c_master_send Error\n", __func__);
+        goto err_nfcc_hw_check;
+    }
+    /* hardware dependent delay */
+    msleep(30);
+
+    /* Read Response of RESET command */
+    ret = i2c_master_recv(client, nci_reset_rsp,
+        sizeof(nci_reset_rsp));
+    dev_err(&client->dev,
+    "%s: - nq - reset cmd answer : NfcNciRx %x %x %x\n",
+    __func__, nci_reset_rsp[0],
+    nci_reset_rsp[1], nci_reset_rsp[2]);
+    if (ret < 0) {
+        dev_err(&client->dev,
+        "%s: - i2c_master_recv Error\n", __func__);
+        goto err_nfcc_hw_check;
+    }
+    ret = i2c_master_send(client, raw_nci_init_cmd,
+        sizeof(raw_nci_init_cmd));
+    if (ret < 0) {
+        dev_err(&client->dev,
+        "%s: - i2c_master_send Error\n", __func__);
+        goto err_nfcc_hw_check;
+    }
+    /* hardware dependent delay */
+    msleep(30);
+    /* Read Response of INIT command */
+    ret = i2c_master_recv(client, nci_init_rsp,
+        sizeof(nci_init_rsp));
+    if (ret < 0) {
+        dev_err(&client->dev,
+        "%s: - i2c_master_recv Error\n", __func__);
+        goto err_nfcc_hw_check;
+    }
+    init_rsp_len = 2 + nci_init_rsp[2]; /*payload + len*/
+    if (init_rsp_len > PAYLOAD_HEADER_LENGTH) {
+        pn544_dev->nxp_info.info.chip_type =
+                nci_init_rsp[init_rsp_len - 3];
+        pn544_dev->nxp_info.info.rom_version =
+                nci_init_rsp[init_rsp_len - 2];
+        pn544_dev->nxp_info.info.fw_major =
+                nci_init_rsp[init_rsp_len - 1];
+        pn544_dev->nxp_info.info.fw_minor =
+                nci_init_rsp[init_rsp_len];
+    }
+    dev_err(&pn544_dev->client->dev, "NQ NFCC chip_type = %x\n",
+        pn544_dev->nxp_info.info.chip_type);
+    dev_err(&pn544_dev->client->dev, "NQ fw version = %x.%x.%x\n",
+        pn544_dev->nxp_info.info.rom_version,
+        pn544_dev->nxp_info.info.fw_major,
+        pn544_dev->nxp_info.info.fw_minor);
+
+    switch (pn544_dev->nxp_info.info.chip_type) {
+    case NXP_NQ_210:
+        dev_err(&client->dev,
+        "%s: ## NFCC == NQ210 ##\n", __func__);
+        break;
+    case NXP_NQ_220:
+        dev_err(&client->dev,
+        "%s: ## NFCC == NQ220 ##\n", __func__);
+        break;
+    case NXP_NQ_310:
+        dev_err(&client->dev,
+        "%s: ## NFCC == NQ310 ##\n", __func__);
+        break;
+    case NXP_NQ_330:
+        dev_err(&client->dev,
+        "%s: ## NFCC == NQ330 ##\n", __func__);
+        break;
+    case NXP_PN66T:
+        dev_err(&client->dev,
+        "%s: ## NFCC == PN66T ##\n", __func__);
+        break;
+    default:
+        dev_err(&client->dev,
+        "%s: - NFCC HW not Supported\n", __func__);
+        break;
+    }
+
+    /*Disable NFC by default to save power on boot*/
+    gpio_set_value(enable_gpio, 0);/* ULPM: Disable */
+    ret = 0;
+    goto done;
+
+err_nfcc_hw_check:
+    ret = -ENXIO;
+    dev_err(&client->dev,
+        "%s: - NFCC HW not available\n", __func__);
+done:
+    return ret;
+}
+
 static int pn544_probe(struct i2c_client *client,
         const struct i2c_device_id *id)
 {
     int ret;
     struct pn544_i2c_platform_data *platform_data;
     struct pn544_dev *pn544_dev;
+    int i=0;
 #if !DRAGON_NFC
     platform_data = client->dev.platform_data;
 #else
@@ -957,7 +1076,25 @@ static int pn544_probe(struct i2c_client *client,
         pr_err("%s : not able to set wake_up_gpio as output\n", __func__);
         goto err_gpio_set;
     }
-
+   
+    for (i=0 ;i < 5 ; i++)
+    {
+        ret = nfcc_nxp_hw_check(client, pn544_dev);
+        if( !ret )
+        {
+           break;
+        }
+        else
+        {
+           pr_err("i2c read/write error retry i=%d \n", i);
+        }
+    }
+    if (ret) {
+        /* make sure NFCC is not enabled */
+        gpio_set_value(pn544_dev->ven_gpio, 0);
+        /* We don't think there is hardware switch NFC OFF */
+        goto err_gpio_set;
+    }
     /* init mutex and queues */
     init_waitqueue_head(&pn544_dev->read_wq);
     mutex_init(&pn544_dev->read_mutex);
