@@ -749,7 +749,12 @@ static void pl_deinit(void)
 	kfree(chip);
 }
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20170221 fix Initial sequence */
+early_initcall(pl_init);
+#else
 module_init(pl_init);
+#endif
 module_exit(pl_deinit)
 
 MODULE_DESCRIPTION("");
