@@ -70,6 +70,31 @@
 */
 #define P544_SET_NFC_SERVICE_PID _IOW(PN544_MAGIC, 0x05, unsigned int)
 
+
+#define PAYLOAD_HEADER_LENGTH       (0x3)
+
+
+struct nxp_devinfo {
+    unsigned char chip_type;
+    unsigned char rom_version;
+    unsigned char fw_major;
+    unsigned char fw_minor;
+};
+
+union nxp_uinfo {
+    unsigned int i;
+    struct nxp_devinfo info;
+};
+enum nfcc_chip_variant {
+    NXP_NQ_210          = 0x48, /**< NFCC NQ210 */
+    NXP_NQ_220          = 0x58, /**< NFCC NQ220 */
+    NXP_NQ_310          = 0x40, /**< NFCC NQ310 */
+    NXP_NQ_330          = 0x51, /**< NFCC NQ330 */
+    NXP_PN66T           = 0x18, /**< NFCC PN66T */
+    NXP_NOT_SUPPORTED           = 0xFF  /**< NFCC is not supported */
+};
+
+
 typedef enum p61_access_state{
     P61_STATE_INVALID = 0x0000,
     P61_STATE_IDLE = 0x0100, /* p61 is free to use */
