@@ -502,14 +502,15 @@ static void oneplus_notify_pmic_check_charger_present(void)
 		notify_event->notify_event();
 }
 
-static void notify_check_usb_suspend(void)
+static void notify_check_usb_suspend(bool status)
 {
 	if (notify_event && notify_event->check_usb_suspend)
-		notify_event->check_usb_suspend();
+		notify_event->check_usb_suspend(status);
 }
 
 static void update_charger_present_status(struct work_struct *work)
 {
+	notify_check_usb_suspend(true);
 	oneplus_notify_dash_charger_present(false);
 	oneplus_notify_pmic_check_charger_present();
 }
@@ -759,7 +760,6 @@ static long  dash_dev_ioctl(struct file *filp, unsigned int cmd,
 			oneplus_notify_dash_charger_present(true);
 			if (arg == DASH_NOTIFY_FAST_PRESENT + 1) {
 				wake_lock(&di->fastchg_wake_lock);
-				di->fast_chg_started = true;
 				bq27541_data->set_alow_reading(false);
 				di->fast_chg_allow = false;
 				di->fast_normal_to_warm = false;
@@ -770,6 +770,8 @@ static long  dash_dev_ioctl(struct file *filp, unsigned int cmd,
 				dash_write(di, REJECT_DATA);
 			} else if (arg == DASH_NOTIFY_FAST_PRESENT + 3) {
 				dash_write(di, ALLOW_DATA);
+				di->fast_chg_started = true;
+				notify_check_usb_suspend(false);
 			}
 			break;
 		case DASH_NOTIFY_FAST_ABSENT:
@@ -785,6 +787,7 @@ static long  dash_dev_ioctl(struct file *filp, unsigned int cmd,
 				del_timer(&di->watchdog);
 				dash_write(di, REJECT_DATA);
 			} else if (arg == DASH_NOTIFY_FAST_ABSENT + 2) {
+				notify_check_usb_suspend(true);
 				oneplus_notify_dash_charger_present(false);
 				oneplus_notify_pmic_check_charger_present();
 				wake_unlock(&di->fastchg_wake_lock);
@@ -829,8 +832,8 @@ static long  dash_dev_ioctl(struct file *filp, unsigned int cmd,
 				di->fast_chg_started = false;
 				di->fast_chg_allow = false;
 				di->fast_chg_ing = false;
+				notify_check_usb_suspend(true);
 				oneplus_notify_pmic_check_charger_present();
-				notify_check_usb_suspend();
 				wake_unlock(&di->fastchg_wake_lock);
 			}
 			break;
@@ -845,9 +848,9 @@ static long  dash_dev_ioctl(struct file *filp, unsigned int cmd,
 				di->fast_chg_started = false;
 				di->fast_chg_allow = false;
 				di->fast_chg_ing = false;
+				notify_check_usb_suspend(true);
 				oneplus_notify_pmic_check_charger_present();
 				oneplus_notify_dash_charger_present(false);
-				notify_check_usb_suspend();
 				wake_unlock(&di->fastchg_wake_lock);
 			}
 			break;
@@ -864,6 +867,7 @@ static long  dash_dev_ioctl(struct file *filp, unsigned int cmd,
 				di->fast_switch_to_normal = false;
 				di->fast_normal_to_warm = false;
 				di->fast_chg_ing = false;
+				notify_check_usb_suspend(true);
 			}
 			break;
 		case DASH_NOTIFY_INVALID_DATA_CMD:
@@ -878,6 +882,7 @@ static long  dash_dev_ioctl(struct file *filp, unsigned int cmd,
 				switch_mode_to_normal();
 				del_timer(&di->watchdog);
 				wake_unlock(&di->fastchg_wake_lock);
+				notify_check_usb_suspend(true);
 				oneplus_notify_pmic_check_charger_present();
 			}
 			break;
