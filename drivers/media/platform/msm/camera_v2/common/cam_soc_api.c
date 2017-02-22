@@ -396,7 +396,7 @@ int msm_camera_clk_enable(struct device *dev,
 			if (rc < 0) {
 				pr_err("%s enable failed\n",
 					   clk_info[i].clk_name);
-				if (strcmp("camss_vfe_vfe0_clk", clk_info[i].clk_name) == 0) {
+				if (strcmp("camss_vfe_clk", clk_info[i].clk_name) == 0) {
 					msm_ispif_dump_cbcr();
 				}
 				goto cam_clk_enable_err;
