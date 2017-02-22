@@ -879,11 +879,17 @@ static ssize_t tfa98xx_dbgfs_dsp_state_set(struct file *file,
 		pr_err("tfa_stop complete: %d\n", ret);
 	} else if (!strncmp(buf, mon_start_cmd, sizeof(mon_start_cmd) - 1)) {
 		pr_info("Manual start of monitor thread...\n");
+#ifndef VENDOR_EDIT
+/*suzhiguang@MultiMedia.AudioDrv, 2017-02-21,monitor will cause some problem,ref CBG-1183,remove it */
 		queue_delayed_work(tfa98xx->tfa98xx_wq,
 					&tfa98xx->monitor_work, HZ);
+#endif
 	} else if (!strncmp(buf, mon_stop_cmd, sizeof(mon_stop_cmd) - 1)) {
 		pr_info("Manual stop of monitor thread...\n");
+#ifndef VENDOR_EDIT
+/*suzhiguang@MultiMedia.AudioDrv, 2017-02-21,monitor will cause some problem,ref CBG-1183,remove it */
 		cancel_delayed_work_sync(&tfa98xx->monitor_work);
+#endif
 	} else {
 		return -EINVAL;
 	}
@@ -1530,8 +1536,10 @@ static int tfa98xx_set_stop_ctl(struct snd_kcontrol *kcontrol,
 	tfa98xx_close(tfa98xx->handle);
 
 	if ((ucontrol->value.integer.value[0] != 0) && ready) {
+#ifndef VENDOR_EDIT
+/*suzhiguang@MultiMedia.AudioDrv, 2017-02-21,monitor will cause some problem,ref CBG-1183,remove it */
 		cancel_delayed_work_sync(&tfa98xx->monitor_work);
-
+#endif
 		cancel_delayed_work_sync(&tfa98xx->init_work);
 		if (tfa98xx->dsp_fw_state != TFA98XX_DSP_FW_OK)
 			return 0;
@@ -2564,6 +2572,8 @@ static void tfa98xx_tapdet_work(struct work_struct *work)
 	queue_delayed_work(tfa98xx->tfa98xx_wq, &tfa98xx->tapdet_work, HZ/10);
 }
 
+#ifndef VENDOR_EDIT
+/*suzhiguang@MultiMedia.AudioDrv, 2017-02-21,monitor will cause some problem,ref CBG-1183,remove it */
 static void tfa98xx_monitor(struct work_struct *work)
 {
 	struct tfa98xx *tfa98xx;
@@ -2614,9 +2624,15 @@ static void tfa98xx_monitor(struct work_struct *work)
 		}
 	}
 
+#ifndef VENDOR_EDIT
+/*suzhiguang@MultiMedia.AudioDrv, 2017-02-21,monitor will cause some problem,ref CBG-1183,remove it */
 	/* reschedule */
 	queue_delayed_work(tfa98xx->tfa98xx_wq, &tfa98xx->monitor_work, 5*HZ);
+#endif
+
 }
+#endif
+
 
 static void tfa98xx_dsp_init(struct tfa98xx *tfa98xx)
 {
@@ -2662,9 +2678,12 @@ static void tfa98xx_dsp_init(struct tfa98xx *tfa98xx)
 			 * periodically, and re-init IC to recover if
 			 * needed.
 			 */
+ #ifndef VENDOR_EDIT
+/*suzhiguang@MultiMedia.AudioDrv, 2017-02-21,monitor will cause some problem,ref CBG-1183,remove it */
 			queue_delayed_work(tfa98xx->tfa98xx_wq,
 						&tfa98xx->monitor_work,
 						1*HZ);
+#endif
 		}
 	} else {
 		/* exceeded max number ot start tentatives, cancel start */
@@ -2950,9 +2969,10 @@ static int tfa98xx_mute(struct snd_soc_dai *dai, int mute, int stream)
 			tfa98xx->cstream = 0;
 		if (tfa98xx->pstream != 0 || tfa98xx->cstream != 0)
 			return 0;
-
+#ifndef VENDOR_EDIT
+/*suzhiguang@MultiMedia.AudioDrv, 2017-02-21,monitor will cause some problem,ref CBG-1183,remove it */
 		cancel_delayed_work_sync(&tfa98xx->monitor_work);
-
+#endif
 		cancel_delayed_work_sync(&tfa98xx->init_work);
 		if (tfa98xx->dsp_fw_state != TFA98XX_DSP_FW_OK)
 			return 0;
@@ -3037,7 +3057,12 @@ static int tfa98xx_probe(struct snd_soc_codec *codec)
 		return -ENOMEM;
 
 	INIT_DELAYED_WORK(&tfa98xx->init_work, tfa98xx_dsp_init_work);
+
+#ifndef VENDOR_EDIT
+/*suzhiguang@MultiMedia.AudioDrv, 2017-02-21,monitor will cause some problem,ref CBG-1183,remove it */
 	INIT_DELAYED_WORK(&tfa98xx->monitor_work, tfa98xx_monitor);
+#endif
+
 	INIT_DELAYED_WORK(&tfa98xx->interrupt_work, tfa98xx_interrupt);
 	INIT_DELAYED_WORK(&tfa98xx->tapdet_work, tfa98xx_tapdet_work);
 
@@ -3073,7 +3098,10 @@ static int tfa98xx_remove(struct snd_soc_codec *codec)
 	tfa98xx_inputdev_unregister(tfa98xx);
 
 	cancel_delayed_work_sync(&tfa98xx->interrupt_work);
+#ifndef VENDOR_EDIT
+/*suzhiguang@MultiMedia.AudioDrv, 2017-02-21,monitor will cause some problem,ref CBG-1183,remove it */
 	cancel_delayed_work_sync(&tfa98xx->monitor_work);
+#endif
 	cancel_delayed_work_sync(&tfa98xx->init_work);
 	cancel_delayed_work_sync(&tfa98xx->tapdet_work);
 
@@ -3524,7 +3552,10 @@ static int tfa98xx_i2c_remove(struct i2c_client *i2c)
 	pr_err("\n");
 
 	cancel_delayed_work_sync(&tfa98xx->interrupt_work);
+#ifndef VENDOR_EDIT
+/*suzhiguang@MultiMedia.AudioDrv, 2017-02-21,monitor will cause some problem,ref CBG-1183,remove it */
 	cancel_delayed_work_sync(&tfa98xx->monitor_work);
+#endif
 	cancel_delayed_work_sync(&tfa98xx->init_work);
 	cancel_delayed_work_sync(&tfa98xx->tapdet_work);
 
