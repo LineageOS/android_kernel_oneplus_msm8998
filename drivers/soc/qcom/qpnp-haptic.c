@@ -1706,7 +1706,7 @@ static void qpnp_hap_td_enable(struct timed_output_dev *dev, int value)
 	mutex_unlock(&hap->lock);
 	#endif //VENDOR_EDIT
 	/* shankai 2015-07-7 modify end for optimizing the response speed of the vibrator*/
-	schedule_work(&hap->work);
+	//schedule_work(&hap->work); wulaibin remove it 2017-02-22 for vibrete time nonuniform
 }
 
 /* play pwm bytes */
