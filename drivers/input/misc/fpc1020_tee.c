@@ -84,6 +84,7 @@ struct fpc1020_data {
     int id2_gpio;
     struct input_dev	*input_dev;
     int screen_state;//1: on 0:off
+    int sensor_version;//0x01:fpc1245 0x02:fpc1263
 	#endif
 	#if defined(CONFIG_FB)
 	struct notifier_block fb_notif;
@@ -364,12 +365,23 @@ static ssize_t screen_state_get(struct device* device,
 
 static DEVICE_ATTR(screen_state, S_IRUSR , screen_state_get, NULL);
 
+static ssize_t sensor_version_get(struct device* device,
+			     struct device_attribute* attribute,
+			     char* buffer)
+{
+	struct fpc1020_data* fpc1020 = dev_get_drvdata(device);
+	return scnprintf(buffer, PAGE_SIZE, "%i\n", fpc1020->sensor_version);
+}
+
+static DEVICE_ATTR(sensor_version, S_IRUSR , sensor_version_get, NULL);
+
 static struct attribute *attributes[] = {
 	//&dev_attr_hw_reset.attr,
 	&dev_attr_irq.attr,
 	&dev_attr_report_home.attr,
 	&dev_attr_update_info.attr,
 	&dev_attr_screen_state.attr,
+	&dev_attr_sensor_version.attr,
 	NULL
 };
 
@@ -616,25 +628,51 @@ static int fpc1020_probe(struct platform_device *pdev)
     #endif
     /**
     *           ID0(GPIO39)   ID1(GPIO41)   ID1(GPIO63)
+    *   fpc1245
     *   O-film   1            1             1
     *   Primax   1            0             0
+    *   truly    0            0             1
+    *
+    *   fpc1263
+    *   O-film   1            1             0
+    *   Primax   0            0             0
+    *   truly    0            1             1
+    *fingerchip/
+    *   qtech    0            1             0
     *   Goodix   1            0             1
-    *   ALL      1            1             0
+    *   
     */
+    fpc1020->sensor_version = 0x02;
 	if(gpio_get_value(fpc1020->id0_gpio) && gpio_get_value(fpc1020->id1_gpio)&&\
-	   gpio_get_value(fpc1020->id2_gpio))
+	   gpio_get_value(fpc1020->id2_gpio)){
         push_component_info(FINGERPRINTS,"fpc1245" , "FPC(OF)");
-    else if(gpio_get_value(fpc1020->id0_gpio) && !gpio_get_value(fpc1020->id1_gpio)&&\
-            !gpio_get_value(fpc1020->id2_gpio))
+        fpc1020->sensor_version = 0x01;
+    }else if(gpio_get_value(fpc1020->id0_gpio) && !gpio_get_value(fpc1020->id1_gpio)&&\
+            !gpio_get_value(fpc1020->id2_gpio)){
         push_component_info(FINGERPRINTS,"fpc1245" , "FPC(Primax)");
-    else if(gpio_get_value(fpc1020->id0_gpio) && !gpio_get_value(fpc1020->id1_gpio)&&\
-            gpio_get_value(fpc1020->id2_gpio))
-        push_component_info(FINGERPRINTS,"fpc1245" , "FPC(Goodix)");
-    else if(gpio_get_value(fpc1020->id0_gpio) && gpio_get_value(fpc1020->id1_gpio)&&\
-            !gpio_get_value(fpc1020->id2_gpio))
-        push_component_info(FINGERPRINTS,"fpc1245" , "FPC(ALL)");
-    else
-        push_component_info(FINGERPRINTS,"fpc1245" , "FPC");
+        fpc1020->sensor_version = 0x01;
+    }else if(!gpio_get_value(fpc1020->id0_gpio) && !gpio_get_value(fpc1020->id1_gpio)&&\
+            gpio_get_value(fpc1020->id2_gpio)){
+        push_component_info(FINGERPRINTS,"fpc1245" , "FPC(truly)");
+        fpc1020->sensor_version = 0x01;
+    }else if(gpio_get_value(fpc1020->id0_gpio) && gpio_get_value(fpc1020->id1_gpio)&&\
+            !gpio_get_value(fpc1020->id2_gpio)){
+        push_component_info(FINGERPRINTS,"fpc1263" , "FPC(OF)");
+    }else if(!gpio_get_value(fpc1020->id0_gpio) && !gpio_get_value(fpc1020->id1_gpio)&&\
+            !gpio_get_value(fpc1020->id2_gpio)){
+        push_component_info(FINGERPRINTS,"fpc1263" , "FPC(Primax)");
+    }else if(!gpio_get_value(fpc1020->id0_gpio) && gpio_get_value(fpc1020->id1_gpio)&&\
+            gpio_get_value(fpc1020->id2_gpio)){
+        push_component_info(FINGERPRINTS,"fpc1263" , "FPC(truly)");
+    }else if(!gpio_get_value(fpc1020->id0_gpio) && gpio_get_value(fpc1020->id1_gpio)&&\
+            !gpio_get_value(fpc1020->id2_gpio)){
+        push_component_info(FINGERPRINTS,"fpc1263" , "FPC(f/p)");
+    }else if(gpio_get_value(fpc1020->id0_gpio) && !gpio_get_value(fpc1020->id1_gpio)&&\
+            gpio_get_value(fpc1020->id2_gpio)){
+        push_component_info(FINGERPRINTS,"fpc1263" , "FPC(Goodix)");
+    }else{
+        push_component_info(FINGERPRINTS,"fpc" , "FPC");
+    }
 
 	dev_info(dev, "%s: ok\n", __func__);
 exit:
