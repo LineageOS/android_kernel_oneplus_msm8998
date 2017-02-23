@@ -1054,9 +1054,6 @@ ffs_epfile_open(struct inode *inode, struct file *file)
 	smp_mb__before_atomic();
 	atomic_set(&epfile->error, 0);
 
-#ifdef VENDOR_EDIT
-	pm_qos_add_request(&adb_little_cpu_qos, PM_QOS_C0_CPUFREQ_MIN, MIN_CPUFREQ);
-#endif
 	ffs_log("exit:state %d setup_state %d flag %lu", epfile->ffs->state,
 		epfile->ffs->setup_state, epfile->ffs->flags);
 
@@ -1230,9 +1227,6 @@ ffs_epfile_release(struct inode *inode, struct file *file)
 	atomic_set(&epfile->error, 1);
 	ffs_data_closed(epfile->ffs);
 	file->private_data = NULL;
-#ifdef VENDOR_EDIT
-	pm_qos_remove_request(&adb_little_cpu_qos);
-#endif
 
 	ffs_log("exit");
 
@@ -1926,6 +1920,9 @@ static int ffs_epfiles_create(struct ffs_data *ffs)
 
 	ffs->epfiles = epfiles;
 
+#ifdef VENDOR_EDIT
+	pm_qos_add_request(&adb_little_cpu_qos, PM_QOS_C0_CPUFREQ_MIN, MIN_CPUFREQ);
+#endif
 	ffs_log("exit: epfile name %s state %d setup_state %d flag %lu",
 		epfile->name, ffs->state, ffs->setup_state, ffs->flags);
 
@@ -1951,6 +1948,9 @@ static void ffs_epfiles_destroy(struct ffs_epfile *epfiles, unsigned count)
 	}
 
 	kfree(epfiles);
+#ifdef VENDOR_EDIT
+	pm_qos_remove_request(&adb_little_cpu_qos);
+#endif
 
 	ffs_log("exit");
 }
