@@ -34,7 +34,7 @@ struct external_battery_gauge {
 
 struct notify_dash_event {
 	int (*notify_event) (void);
-	int (*check_usb_suspend) (void);
+	int (*check_usb_suspend) (int status);
 	int (*notify_dash_charger_present) (int true);
 };
 

@@ -2862,7 +2862,6 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161014 Add charging standard */
 	bool last_vbus_present;
-	int is_usb_supend;
 	last_vbus_present = chg->vbus_present;
 	chg->dash_on = get_prop_fast_chg_started(chg);
 	if (chg->dash_on) {
@@ -2898,10 +2897,6 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 		if (chg->vbus_present) {
 			pr_info("acquire chg_wake_lock\n");
 			wake_lock(&chg->chg_wake_lock);
-			smblib_get_usb_suspend(chg,&is_usb_supend);
-			if(is_usb_supend)
-				vote(chg->usb_suspend_votable,
-						BOOST_BACK_VOTER, false, 0);
 		} else {
 			pr_info("release chg_wake_lock\n");
 			wake_unlock(&chg->chg_wake_lock);
@@ -3531,7 +3526,6 @@ irqreturn_t smblib_handle_switcher_power_ok(int irq, void *data)
 
 	if (stat & USE_DCIN_BIT)
 		return IRQ_HANDLED;
-
 	if (is_storming(&irq_data->storm_data)) {
 		smblib_err(chg, "Reverse boost detected: suspending input\n");
 		vote(chg->usb_suspend_votable, BOOST_BACK_VOTER, true, 0);
@@ -3754,14 +3748,51 @@ int update_dash_unplug_status(void)
 
 	return 0;
 }
-
-int check_usb_suspend(void)
+int op_handle_switcher_power_ok(void)
 {
-	if (!is_usb_present(g_chg))
+	int rc;
+	u8 stat;
+	struct storm_watch *wdata;
+
+	if(!g_chg)
+		return 0;
+	if (!(g_chg->wa_flags & BOOST_BACK_WA))
 		return 0;
 
-	schedule_delayed_work(&g_chg->enable_usb_suspend_work,
-						msecs_to_jiffies(3000));
+	rc = smblib_read(g_chg, POWER_PATH_STATUS_REG, &stat);
+	if (rc < 0) {
+		smblib_err(g_chg, "Couldn't read POWER_PATH_STATUS rc=%d\n", rc);
+		return 0;
+	}
+	smblib_err(g_chg, "POWER_PATH_STATUS stat=0x%x\n", stat);
+
+	if ((stat & USE_USBIN_BIT) &&
+		get_effective_result(g_chg->usb_suspend_votable))
+		return 0;
+
+	if (stat & USE_DCIN_BIT)
+		return 0;
+	wdata = &g_chg->irq_info[SWITCH_POWER_OK_IRQ].irq_data->storm_data;
+	if (is_storming(wdata)) {
+		smblib_err(g_chg, "OP Reverse boost detected: suspending input\n");
+		vote(g_chg->usb_suspend_votable, BOOST_BACK_VOTER, true, 0);
+	}
+
+	return 0;
+}
+
+int check_usb_suspend(int enable)
+{
+	pr_err("%s,en=%d\n",__func__,enable);
+	if(!g_chg)
+		return 0;
+	if(enable){
+		op_handle_switcher_power_ok();
+		enable_irq(g_chg->irq_info[SWITCH_POWER_OK_IRQ].irq);
+	}
+	else{
+		disable_irq(g_chg->irq_info[SWITCH_POWER_OK_IRQ].irq);
+	}
 	return 0;
 }
 
