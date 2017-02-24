@@ -32,6 +32,9 @@
 /* I/O */
 &soc {
 	gpio_keys {
+		vol_up {
+			/delete-property/ gpio-key,wakeup;
+		};
 		vol_down {
 			label = "volume_down";
 			gpios = <&pm8998_gpios 5 0x1>;
