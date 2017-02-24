@@ -36,6 +36,7 @@
 #include <linux/sched.h>
 #include <linux/pm_qos.h>
 #include <linux/cpufreq.h>
+#include <linux/pm_wakeup.h>
 #endif
 
 #include <asm/fb.h>
@@ -1959,6 +1960,8 @@ static int fb_state_change(struct notifier_block *nb,
 		if (val == FB_EARLY_EVENT_BLANK) {
 			pm_qos_update_request(&lcdspeedup_little_cpu_qos, MIN_CPUFREQ);
 			pm_qos_update_request(&lcdspeedup_big_cpu_qos, MIN_CPUFREQ);
+			/* add print actvie ws */
+			pm_print_active_wakeup_sources_queue(true);
 			pr_debug("::: LCD start off :::\n");
 		}
 		break;
@@ -1989,6 +1992,8 @@ static int fb_state_change(struct notifier_block *nb,
 		if (val == FB_EVENT_BLANK) {
 			//Wujialong 20160314 enable sched_boost when wakeup and disable sched_boost when screen on
 			sched_set_boost(NO_BOOST);
+			/* remove print actvie ws */
+			pm_print_active_wakeup_sources_queue(false);
 			pr_debug("::: LCD is on :::\n");
 		}
 		break;

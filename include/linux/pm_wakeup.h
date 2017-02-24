@@ -110,7 +110,7 @@ extern void __pm_wakeup_event(struct wakeup_source *ws, unsigned int msec);
 extern void pm_wakeup_event(struct device *dev, unsigned int msec);
 #ifdef VENDOR_EDIT
 //wujialong@BSP, 2016/05/4, add for sleep debug
-extern void pm_print_active_wakeup_sources(void);
+extern void pm_print_active_wakeup_sources_queue(bool on);
 #endif /* VENDOR_EDIT */
 
 #else /* !CONFIG_PM_SLEEP */
