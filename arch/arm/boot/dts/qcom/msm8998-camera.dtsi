@@ -449,9 +449,8 @@
 		cell-index = <0>;
 		compatible = "qcom,ispif-v3.0", "qcom,ispif";
 		reg = <0xca31000 0xc00>,
-			<0xca00020 0x4>,
-			<0xc8c0000 0x5000>;
-		reg-names = "ispif", "csi_clk_mux", "clk_base";
+			<0xca00020 0x4>;
+		reg-names = "ispif", "csi_clk_mux";
 		interrupts = <0 309 0>;
 		interrupt-names = "ispif";
 		qcom,num-isps = <0x2>;

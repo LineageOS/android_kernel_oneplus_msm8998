@@ -205,7 +205,7 @@ static struct alpha_pll_clk mmpll7_pll = {
 		.parent = &mmsscc_xo.c,
 		.dbg_name = "mmpll7_pll",
 		.ops = &clk_ops_fixed_fabia_alpha_pll,
-		VDD_MM_PLL_FMAX_MAP1(NOMINAL, 960000000),
+		VDD_MM_PLL_FMAX_MAP1(LOW, 960000000),
 		CLK_INIT(mmpll7_pll.c),
 	},
 };
