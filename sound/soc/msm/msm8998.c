@@ -40,7 +40,10 @@
 #include "../codecs/wcd934x/wcd934x.h"
 #include "../codecs/wcd934x/wcd934x-mbhc.h"
 #include "../codecs/wsa881x.h"
-
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv, 2015-11-09, add for debug*/
+#include <sound/sounddebug.h>
+#endif
 #define DRV_NAME "msm8998-asoc-snd"
 
 #define __CHIPSET__ "MSM8998 "
