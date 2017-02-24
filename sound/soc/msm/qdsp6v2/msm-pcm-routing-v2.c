@@ -45,7 +45,10 @@
 #include "msm-ds2-dap-config.h"
 #include "q6voice.h"
 #include "sound/q6lsm.h"
-
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv, 2015-11-09, add for debug*/
+#include <sound/sounddebug.h>
+#endif
 #ifndef CONFIG_DOLBY_DAP
 #undef DOLBY_ADM_COPP_TOPOLOGY_ID
 #define DOLBY_ADM_COPP_TOPOLOGY_ID 0xFFFFFFFE

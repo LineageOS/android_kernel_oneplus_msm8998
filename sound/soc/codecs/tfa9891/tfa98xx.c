@@ -30,6 +30,11 @@
 
 #include "config.h"
 
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv, 2015-11-09, add for debug*/
+#include <sound/sounddebug.h>
+#endif
+
 #define I2C_RETRIES 50
 #define I2C_RETRY_DELAY 5 /* ms */
 /* TODO: remove genregs usage? */
@@ -109,6 +114,12 @@ static int get_profile_from_list(char *buf, int id);
 static int get_profile_id_for_sr(int id, unsigned int rate); 
 /*zhiguang.su@MultiMediaService,2017-02-09,avoid no sound for ftm*/
 static void tfa98xx_dsp_startInit(struct tfa98xx *tfa98xx);
+
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv, 2015-11-09, add for debug*/
+int testLogOn = 0;
+EXPORT_SYMBOL_GPL(testLogOn);
+#endif
 
 #ifdef VENDOR_EDIT
 /*wangdongdong@MultiMediaService,2016/11/30,add for speaker impedence detection*/
@@ -230,6 +241,40 @@ r_c_err:
 
 static struct device_attribute tfa98xx_state_attr =
      __ATTR(calibra, 0444, tfa98xx_state_show, tfa98xx_state_store);
+
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv, 2015-11-05, add for debug*/
+static ssize_t tfa98xx_Log_state_store(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+    pr_err("%s",__func__);
+
+    if (sysfs_streq(buf, "LogOn"))
+    {
+        testLogOn = 1;
+    }
+    else if(sysfs_streq(buf, "LogOff"))
+    {
+        testLogOn = 0;
+    }
+    else
+    {
+        testLogOn = 0;
+        count = -EINVAL;
+    }
+    return count;
+}
+
+static ssize_t tfa98xx_Log_state_show(struct device *dev, struct device_attribute *attr,
+		char *buf)
+{
+    return 0;
+}
+
+static struct device_attribute tfa98xx_Log_state_attr =
+     __ATTR(Log, S_IWUSR|S_IRUGO, tfa98xx_Log_state_show, tfa98xx_Log_state_store);
+
+#endif
 
 /* Wrapper for tfa start */
 static enum tfa_error tfa98xx_tfa_start(struct tfa98xx *tfa98xx, int next_profile, int *vstep)
@@ -3535,6 +3580,11 @@ static int tfa98xx_i2c_probe(struct i2c_client *i2c,
     if(ret < 0)
     {
         pr_err("%s sysfs_create_file tfa98xx_state_attr err.",__func__);
+    }
+	ret = sysfs_create_file(&i2c->dev.kobj, &tfa98xx_Log_state_attr.attr);
+    if(ret < 0)
+    {
+        pr_err("%s sysfs_create_file tfa98xx_Log_state_attr err.",__func__);
     }
 
 	return 0;

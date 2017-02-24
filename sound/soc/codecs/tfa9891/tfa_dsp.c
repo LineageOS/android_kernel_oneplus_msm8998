@@ -24,7 +24,10 @@
 #include "tfa_dsp_fw.h"
 /* TODO: remove genregs usage? */
 #include "tfa98xx_genregs_N1C.h"
-
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv, 2015-11-09, add for debug*/
+#include <sound/sounddebug.h>
+#endif
 /* handle macro for bitfield */
 #define TFA_MK_BF(reg, pos, len) ((reg<<8)|(pos<<4)|(len-1))
 
