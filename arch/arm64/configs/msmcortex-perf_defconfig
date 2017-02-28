@@ -680,3 +680,11 @@ CONFIG_KSWAPD_CPU_AFFINITY_MASK="ff"
 # /* liochen@filesystem, 2017/01/25, Support sdcardfs filesystem in kernel */
 CONFIG_SDCARD_FS=y
 #endif
+
+#add, for PPT test
+# CONFIG_SCHED_DEBUG is not set
+# CONFIG_SYSRQ_SCHED_DEBUG is not set
+# CONFIG_DEBUG_BUGVERBOSE is not set
+# CONFIG_DEBUG_RODATA is not set
+# CONFIG_DEBUG_ALIGN_RODATA is not set
+#end
