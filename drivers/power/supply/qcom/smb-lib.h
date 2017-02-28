@@ -315,6 +315,7 @@ struct smb_charger {
 	bool				oem_lcd_is_on;
 	bool				chg_enabled;
 	bool				pd_disabled;
+	bool				deal_vusbin_error_done;
 
 	temp_region_type		mBattTempRegion;
 	enum batt_status_type		battery_status;

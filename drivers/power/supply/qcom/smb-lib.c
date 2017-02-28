@@ -2862,6 +2862,7 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161014 Add charging standard */
 	bool last_vbus_present;
+	int is_usb_supend;
 	last_vbus_present = chg->vbus_present;
 	chg->dash_on = get_prop_fast_chg_started(chg);
 	if (chg->dash_on) {
@@ -2897,6 +2898,12 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 		if (chg->vbus_present) {
 			pr_info("acquire chg_wake_lock\n");
 			wake_lock(&chg->chg_wake_lock);
+			smblib_get_usb_suspend(chg,&is_usb_supend);
+			if(is_usb_supend && chg->deal_vusbin_error_done){
+			vote(chg->usb_suspend_votable,
+                                   BOOST_BACK_VOTER, false, 0);
+			chg->deal_vusbin_error_done = false;
+                   }
 		} else {
 			pr_info("release chg_wake_lock\n");
 			wake_unlock(&chg->chg_wake_lock);
@@ -3753,9 +3760,8 @@ int update_dash_unplug_status(void)
 }
 int op_handle_switcher_power_ok(void)
 {
-	int rc;
+	int rc,switch_to_normal;
 	u8 stat;
-	struct storm_watch *wdata;
 
 	if(!g_chg)
 		return 0;
@@ -3775,10 +3781,14 @@ int op_handle_switcher_power_ok(void)
 
 	if (stat & USE_DCIN_BIT)
 		return 0;
-	wdata = &g_chg->irq_info[SWITCH_POWER_OK_IRQ].irq_data->storm_data;
-	if (is_storming(wdata)) {
+	if (stat == 0x95) {
 		smblib_err(g_chg, "OP Reverse boost detected: suspending input\n");
 		vote(g_chg->usb_suspend_votable, BOOST_BACK_VOTER, true, 0);
+		g_chg->deal_vusbin_error_done = true;
+		switch_to_normal = get_prop_fast_switch_to_normal(g_chg);
+		if(switch_to_normal)
+		schedule_delayed_work(&g_chg->enable_usb_suspend_work,
+						msecs_to_jiffies(3000));
 	}
 
 	return 0;
