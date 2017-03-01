@@ -390,11 +390,11 @@
 	qcom,fv-max-uv = <4365000>;
 	/* ibatmax setting for different temp regions */
 	ibatmax-little-cold-ma = <350>;
-	ibatmax-cool-ma = <450>;
-	ibatmax-little-cool-ma = <800>;
-	ibatmax-pre-normal-ma = <1425>;
-	ibatmax-normal-ma = <1950>;
-	ibatmax-warm-ma = <800>;
+	ibatmax-cool-ma = <500>;
+	ibatmax-little-cool-ma = <850>;
+	ibatmax-pre-normal-ma = <1550>;
+	ibatmax-normal-ma = <2200>;
+	ibatmax-warm-ma = <850>;
 	/* vbatmax setting for different temp regions */
 	vbatmax-little-cold-mv = <3975>; //3980
 	vbatmax-cool-mv = <4365>;
