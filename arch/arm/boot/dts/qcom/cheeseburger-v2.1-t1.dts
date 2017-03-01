@@ -16,10 +16,10 @@
 #include "msm8998-v2.1.dtsi"
 #include "msm8998-mtp.dtsi"
 #include "cheeseburger.dtsi"
-#include "cheeseburger-evt1.dtsi"
+#include "cheeseburger-t1.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. MSM 8998 v2.1 MTP";
 	compatible = "qcom,msm8998-mtp", "qcom,msm8998", "qcom,mtp";
-	qcom,board-id = <8 0 16859 14>;
+	qcom,board-id = <8 0 16859 13>;
 };

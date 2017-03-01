@@ -442,9 +442,12 @@ int __init init_project_info(void)
 		    snprintf(mainboard_version, sizeof(mainboard_version), "%s","T0");
 		    break;
 		case 13:
-		    snprintf(mainboard_version, sizeof(mainboard_version), "%s","EVT1");
+		    snprintf(mainboard_version, sizeof(mainboard_version), "%s","T1");
 		    break;
 		case 14:
+		    snprintf(mainboard_version, sizeof(mainboard_version), "%s","EVT1");
+		    break;
+		case 15:
 		    snprintf(mainboard_version, sizeof(mainboard_version), "%s","EVT2");
 		    break;
 		default:
