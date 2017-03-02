@@ -763,6 +763,9 @@ const char * const vmstat_text[] = {
 	"workingset_nodereclaim",
 	"nr_anon_transparent_hugepages",
 	"nr_free_cma",
+#ifdef VENDOR_EDIT
+	"nr_free_defrag",
+#endif
 	"nr_swapcache",
 
 	/* enum writeback_stat_item counters */
@@ -931,11 +934,17 @@ static char * const migratetype_names[MIGRATE_TYPES] = {
 	"CMA",
 #endif
 	"HighAtomic",
+#ifdef VENDOR_EDIT
+	"Defrag-Pool",
+#endif
 #ifdef CONFIG_MEMORY_ISOLATION
 	"Isolate",
 #endif
 };
 
+#ifdef VENDOR_EDIT
+#include <../drivers/oneplus/coretech/defrag/defrag_helper.h>
+#endif
 static void frag_show_print(struct seq_file *m, pg_data_t *pgdat,
 						struct zone *zone)
 {
@@ -954,6 +963,9 @@ static int frag_show(struct seq_file *m, void *arg)
 {
 	pg_data_t *pgdat = (pg_data_t *)arg;
 	walk_zones_in_node(m, pgdat, frag_show_print);
+#ifdef VENDOR_EDIT
+	print_fp_statistics(m);
+#endif
 	return 0;
 }
 

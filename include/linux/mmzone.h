@@ -57,6 +57,9 @@ enum {
 #endif
 	MIGRATE_PCPTYPES, /* the number of types on the pcp lists */
 	MIGRATE_HIGHATOMIC = MIGRATE_PCPTYPES,
+#ifdef VENDOR_EDIT
+	MIGRATE_UNMOVABLE_DEFRAG_POOL,
+#endif
 #ifdef CONFIG_MEMORY_ISOLATION
 	MIGRATE_ISOLATE,	/* can't allocate from here */
 #endif
@@ -83,6 +86,13 @@ bool is_cma_pageblock(struct page *page);
 #  define is_migrate_cma_page(_page) false
 #endif
 
+#ifdef VENDOR_EDIT
+static inline int is_migrate_defrag(int migratetype)
+{
+	return migratetype == MIGRATE_UNMOVABLE_DEFRAG_POOL;
+}
+#endif
+
 #define for_each_migratetype_order(order, type) \
 	for (order = 0; order < MAX_ORDER; order++) \
 		for (type = 0; type < MIGRATE_TYPES; type++)
@@ -106,6 +116,9 @@ static inline int get_pfnblock_migratetype(struct page *page, unsigned long pfn)
 struct free_area {
 	struct list_head	free_list[MIGRATE_TYPES];
 	unsigned long		nr_free;
+#ifdef VENDOR_EDIT
+	unsigned long		nr_free_defrag;
+#endif
 };
 
 struct pglist_data;
@@ -171,6 +184,9 @@ enum zone_stat_item {
 	WORKINGSET_NODERECLAIM,
 	NR_ANON_TRANSPARENT_HUGEPAGES,
 	NR_FREE_CMA_PAGES,
+#ifdef VENDOR_EDIT
+	NR_FREE_DEFRAG_POOL,
+#endif
 	NR_SWAPCACHE,
 	NR_VM_ZONE_STAT_ITEMS };
 
