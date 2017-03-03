@@ -2928,6 +2928,21 @@ static int fg_psy_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_DEBUG_BATTERY:
 		pval->intval = is_debug_batt_id(chip);
 		break;
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20170303 Add internal FG info */
+	case POWER_SUPPLY_PROP_FG_CAPACITY:
+		rc = fg_get_prop_capacity(chip, &pval->intval);
+		break;
+	case POWER_SUPPLY_PROP_FG_VOLTAGE_NOW:
+		if (chip->battery_missing)
+			pval->intval = 3700000;
+		else
+			rc = fg_get_battery_voltage(chip, &pval->intval);
+		break;
+	case POWER_SUPPLY_PROP_FG_CURRENT_NOW:
+			rc = fg_get_battery_current(chip, &pval->intval);
+		break;
+#endif
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE:
 		rc = fg_get_sram_prop(chip, FG_SRAM_VBATT_FULL, &pval->intval);
 		break;

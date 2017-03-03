@@ -69,6 +69,9 @@ static int set_property_on_fg(struct smb_charger *chg,
 static int set_dash_charger_present(int status);
 static temp_region_type
 		op_battery_temp_region_get(struct smb_charger *chg);
+static int get_prop_fg_capacity(struct smb_charger *chg);
+static int get_prop_fg_current_now(struct smb_charger *chg);
+static int get_prop_fg_voltage_now(struct smb_charger *chg);
 #endif
 
 #define smblib_err(chg, fmt, ...)		\
@@ -2899,10 +2902,14 @@ irqreturn_t smblib_handle_chg_state_change(int irq, void *data)
 	if (stat == TERMINATE_CHARGE) {
 		/* charge done, disable charge in software also */
 		chg->chg_done = true;
-		pr_err("TERMINATE_CHARGE: chg_done:temp:%d,soc_calib:%d,VOLT:%d,current:%d\n",
-			get_prop_batt_temp(chg), get_prop_batt_capacity(chg),
+		pr_err("TERMINATE_CHARGE: chg_done: CAP=%d (Q:%d), VBAT=%d (Q:%d), IBAT=%d (Q:%d), BAT_TEMP=%d\n",
+			get_prop_batt_capacity(chg),
+			get_prop_fg_capacity(chg),
 			get_prop_batt_voltage_now(chg) / 1000,
-			get_prop_batt_current_now(chg) / 1000);
+			get_prop_fg_voltage_now(chg) / 1000,
+			get_prop_batt_current_now(chg) / 1000,
+			get_prop_fg_current_now(chg) / 1000,
+			get_prop_batt_temp(chg));
 		op_charging_en(chg, false);
 	}
 #endif
@@ -4499,6 +4506,48 @@ static int get_prop_batt_voltage_now(struct smb_charger *chg)
 	return uv;
 }
 
+static int get_prop_fg_capacity(struct smb_charger *chg)
+{
+	int capacity, rc;
+
+	if (chg->fake_capacity >= 0)
+		return chg->fake_capacity;
+
+	rc = get_property_from_fg(chg, POWER_SUPPLY_PROP_FG_CAPACITY, &capacity);
+	if (rc) {
+		pr_err("Couldn't get capacity rc=%d\n", rc);
+		capacity = DEFAULT_BATT_CAPACITY;
+	}
+
+	return capacity;
+}
+
+static int get_prop_fg_current_now(struct smb_charger *chg)
+{
+	int ua, rc;
+
+	rc = get_property_from_fg(chg, POWER_SUPPLY_PROP_FG_CURRENT_NOW, &ua);
+	if (rc) {
+		pr_err("Couldn't get current rc=%d\n", rc);
+		ua = DEFAULT_BATT_CURRENT_NOW;
+	}
+
+	return ua;
+}
+
+static int get_prop_fg_voltage_now(struct smb_charger *chg)
+{
+	int uv, rc;
+
+	rc = get_property_from_fg(chg, POWER_SUPPLY_PROP_FG_VOLTAGE_NOW, &uv);
+	if (rc) {
+		pr_err("Couldn't get voltage rc=%d\n", rc);
+		uv = DEFAULT_BATT_VOLTAGE_NOW;
+	}
+
+	return uv;
+}
+
 int get_prop_batt_status(struct smb_charger *chg)
 {
 	int capacity, batt_status, rc;
@@ -5041,10 +5090,14 @@ void checkout_term_current(struct smb_charger *chg, int batt_temp)
 		//set_property_on_fg(chg, POWER_SUPPLY_PROP_CHARGE_DONE, 1);
 		chg->chg_done = true;
 		term_current_reached = 0;
-		pr_err("chg_done: temp=%d, soc_calib=%d, VOLT=%d, current:%d\n",
-				get_prop_batt_temp(chg), get_prop_batt_capacity(chg),
+		pr_err("chg_done: CAP=%d (Q:%d), VBAT=%d (Q:%d), IBAT=%d (Q:%d), BAT_TEMP=%d\n",
+				get_prop_batt_capacity(chg),
+				get_prop_fg_capacity(chg),
 				get_prop_batt_voltage_now(chg) / 1000,
-				get_prop_batt_current_now(chg) / 1000);
+				get_prop_fg_voltage_now(chg) / 1000,
+				get_prop_batt_current_now(chg) / 1000,
+				get_prop_fg_current_now(chg) / 1000,
+				get_prop_batt_temp(chg));
 		op_charging_en(chg, false);
 	}
 }
@@ -5133,10 +5186,13 @@ static void op_heartbeat_work(struct work_struct *work)
 
 out:
 	if (charger_present) {
-		pr_info("CAP=%d, VBAT=%d, IBAT=%d, BAT_TEMP=%d, CHG_TYPE=%d, VBUS=%d\n",
+		pr_info("CAP=%d (Q:%d), VBAT=%d (Q:%d), IBAT=%d (Q:%d), BAT_TEMP=%d, CHG_TYPE=%d, VBUS=%d\n",
 				get_prop_batt_capacity(chg),
+				get_prop_fg_capacity(chg),
 				get_prop_batt_voltage_now(chg) / 1000,
+				get_prop_fg_voltage_now(chg) / 1000,
 				get_prop_batt_current_now(chg) / 1000,
+				get_prop_fg_current_now(chg) / 1000,
 				get_prop_batt_temp(chg),
 				chg->usb_psy_desc.type,
 				vbus_val.intval);
