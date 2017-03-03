@@ -281,9 +281,11 @@ int msm_isp47_ahb_clk_cfg(struct vfe_device *vfe_dev,
 
 	vfe_dev->hw_info->vfe_ops.platform_ops.get_clk_rates(vfe_dev,
 							&clk_rates);
-	if (vfe_dev->msm_isp_vfe_clk_rate <= clk_rates.svs_rate)
+	if (vfe_dev->vfe_clk_info[vfe_dev->hw_info->vfe_clk_idx].clk_rate <=
+		clk_rates.svs_rate)
 		src_clk_vote = CAM_AHB_SVS_VOTE;
-	else if (vfe_dev->msm_isp_vfe_clk_rate <= clk_rates.nominal_rate)
+	else if (vfe_dev->vfe_clk_info[vfe_dev->hw_info->vfe_clk_idx].clk_rate
+		<= clk_rates.nominal_rate)
 		src_clk_vote = CAM_AHB_NOMINAL_VOTE;
 	else
 		src_clk_vote = CAM_AHB_TURBO_VOTE;
@@ -2511,7 +2513,7 @@ int msm_vfe47_set_clk_rate(struct vfe_device *vfe_dev, long *rate)
 	if (rc < 0)
 		return rc;
 	*rate = clk_round_rate(vfe_dev->vfe_clk[clk_idx], *rate);
-	vfe_dev->msm_isp_vfe_clk_rate = *rate;
+	vfe_dev->vfe_clk_info[clk_idx].clk_rate = *rate;
 
 	if (vfe_dev->hw_info->vfe_ops.core_ops.ahb_clk_cfg)
 		vfe_dev->hw_info->vfe_ops.core_ops.ahb_clk_cfg(vfe_dev, NULL);
