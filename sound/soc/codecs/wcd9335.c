@@ -195,7 +195,12 @@ module_param(sido_buck_svs_voltage, int,
 MODULE_PARM_DESC(sido_buck_svs_voltage,
 			"setting for SVS voltage for SIDO BUCK");
 
+#ifndef VENDOR_EDIT
+/*wangdongdong@MultiMediaService,2017/03/03,modify delay time to avoid pop when route to new path*/
 #define TASHA_TX_UNMUTE_DELAY_MS	25
+#else
+#define TASHA_TX_UNMUTE_DELAY_MS        50
+#endif
 
 static int tx_unmute_delay = TASHA_TX_UNMUTE_DELAY_MS;
 module_param(tx_unmute_delay, int,
