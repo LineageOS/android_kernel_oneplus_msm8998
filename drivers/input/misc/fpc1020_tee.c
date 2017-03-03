@@ -323,6 +323,15 @@ static ssize_t report_home_set(struct device *dev,
 /*        }
 #endif*/
 	}
+#ifdef VENDOR_EDIT //WayneChang, 2017/3/3, add for Quick Pay feature
+    else if (!strncmp(buf, "timeout", strlen("timeout")))
+    {
+      input_report_key(fpc1020->input_dev,KEY_F2,1);
+      input_sync(fpc1020->input_dev);
+      input_report_key(fpc1020->input_dev,KEY_F2,0);
+      input_sync(fpc1020->input_dev);
+    }
+#endif
 	else
 		return -EINVAL;
 /*#ifdef VENDOR_EDIT //WayneChang, 2015/12/02, add for key to abs, simulate key in abs through virtual key system
