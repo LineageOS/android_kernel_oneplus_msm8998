@@ -1149,21 +1149,21 @@ int mdss_dsi_panel_set_night_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	struct dsi_panel_cmds *night_mode_on_cmds;
 	struct dsi_panel_cmds *night_mode_off_cmds;
 
-	night_mode_on_cmds = &ctrl->srgb_on_cmds; //night mode same as sRGB mode
-	night_mode_off_cmds = &ctrl->srgb_off_cmds;//night mode same as sRGB mode
+	night_mode_on_cmds = &ctrl->night_mode_on_cmds; //night mode same as sRGB mode
+	night_mode_off_cmds = &ctrl->night_mode_off_cmds;//night mode same as sRGB mode
     if (level){
         if (night_mode_on_cmds->cmd_cnt){
             mdss_dsi_panel_cmds_send(ctrl, night_mode_on_cmds, CMD_REQ_COMMIT);
-            pr_err("sRGB Mode On (night mode).\n");
+            pr_err("Night  Mode On (night mode).\n");
         } else{
-            pr_err("This panel not support sRGB mode on (night mode).\n");
+            pr_err("This panel not support Night mode on (night mode).\n");
         }
     } else{
         if (night_mode_off_cmds->cmd_cnt){
             mdss_dsi_panel_cmds_send(ctrl, night_mode_off_cmds, CMD_REQ_COMMIT);
-            pr_err("sRGB Mode off (night mode).\n");
+            pr_err("Night Mode off (night mode).\n");
         } else{
-            pr_err("This panel not support sRGB mode off (night mode).\n");
+            pr_err("This panel not support night mode off (night mode).\n");
         }
     }
 	return 0;
@@ -1179,21 +1179,21 @@ int mdss_dsi_panel_set_reading_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	struct dsi_panel_cmds *reading_mode_on_cmds;
 	struct dsi_panel_cmds *reading_mode_off_cmds;
 
-	reading_mode_on_cmds = &ctrl->srgb_on_cmds; //reading mode same as sRGB mode
-	reading_mode_off_cmds = &ctrl->srgb_off_cmds;//reading mode same as sRGB mode
+	reading_mode_on_cmds = &ctrl->read_mode_on_cmds; //reading mode same as sRGB mode
+	reading_mode_off_cmds = &ctrl->read_mode_off_cmds;//reading mode same as sRGB mode
     if (level){
         if (reading_mode_on_cmds->cmd_cnt){
             mdss_dsi_panel_cmds_send(ctrl, reading_mode_on_cmds, CMD_REQ_COMMIT);
-            pr_err("sRGB Mode On (reading mode).\n");
+            pr_err("Reading Mode On (reading mode).\n");
         } else{
-            pr_err("This panel not support sRGB mode on (reading mode).\n");
+            pr_err("This panel not support Reading  mode on (reading mode).\n");
         }
     } else{
         if (reading_mode_off_cmds->cmd_cnt){
             mdss_dsi_panel_cmds_send(ctrl, reading_mode_off_cmds, CMD_REQ_COMMIT);
-            pr_err("sRGB Mode off (reading mode).\n");
+            pr_err("Reading Mode off (reading mode).\n");
         } else{
-            pr_err("This panel not support sRGB mode off (reading mode).\n");
+            pr_err("This panel not support Reading mode off (reading mode).\n");
         }
     }
 	return 0;
@@ -3258,6 +3258,18 @@ static int mdss_panel_parse_dt(struct device_node *np,
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->srgb_off_cmds,
 		"qcom,mdss-dsi-panel-srgb-off-command",
 		"qcom,mdss-dsi-srgb-command-state");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->night_mode_on_cmds,
+		"qcom,mdss-dsi-panel-night-mode-on-command",
+		"qcom,mdss-dsi-night-mode-command-state");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->night_mode_off_cmds,
+		"qcom,mdss-dsi-panel-night-mode-off-command",
+		"qcom,mdss-dsi-night-mode-command-state");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->read_mode_on_cmds,
+		"qcom,mdss-dsi-panel-read-mode-on-command",
+		"qcom,mdss-dsi-read-mode-command-state");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->read_mode_off_cmds,
+		"qcom,mdss-dsi-panel-read-mode-off-command",
+		"qcom,mdss-dsi-read-mode-command-state");
 //#endif
 //#ifdef VENDOR_EDIT
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->Adobe_RGB_on_cmds,
