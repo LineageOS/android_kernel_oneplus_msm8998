@@ -601,9 +601,15 @@ struct mdss_dsi_ctrl_pdata {
 //#endif
 //#ifdef VENDOR_EDIT
 	int night_mode;
+	struct dsi_panel_cmds night_mode_on_cmds;
+	struct dsi_panel_cmds night_mode_off_cmds;
+
 //#endif
 //#ifdef VENDOR_EDIT
 	int reading_mode;
+	struct dsi_panel_cmds read_mode_on_cmds;
+	struct dsi_panel_cmds read_mode_off_cmds;
+
 //#endif
 //#ifdef VENDOR_EDIT
 	int disp_vci_en_gpio;
