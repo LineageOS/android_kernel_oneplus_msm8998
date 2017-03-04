@@ -3054,7 +3054,7 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 			wake_lock(&chg->chg_wake_lock);
 			smblib_get_usb_suspend(chg,&is_usb_supend);
 			if(is_usb_supend && chg->deal_vusbin_error_done){
-			vote(chg->usb_suspend_votable,
+			vote(chg->usb_icl_votable,
                                    BOOST_BACK_VOTER, false, 0);
 			chg->deal_vusbin_error_done = false;
                    }
@@ -4115,6 +4115,7 @@ int update_dash_unplug_status(void)
 
 	return 0;
 }
+
 int op_handle_switcher_power_ok(void)
 {
 	int rc,switch_to_normal;
@@ -4133,20 +4134,19 @@ int op_handle_switcher_power_ok(void)
 	smblib_err(g_chg, "POWER_PATH_STATUS stat=0x%x\n", stat);
 
 	if ((stat & USE_USBIN_BIT) &&
-		get_effective_result(g_chg->usb_suspend_votable))
+			get_effective_result(g_chg->usb_icl_votable) < USBIN_25MA)
 		return 0;
 
 	if (stat & USE_DCIN_BIT)
 		return 0;
-	if (stat == 0x95) {
+
 		smblib_err(g_chg, "OP Reverse boost detected: suspending input\n");
-		vote(g_chg->usb_suspend_votable, BOOST_BACK_VOTER, true, 0);
+		vote(g_chg->usb_icl_votable, BOOST_BACK_VOTER, true, 0);
 		g_chg->deal_vusbin_error_done = true;
 		switch_to_normal = get_prop_fast_switch_to_normal(g_chg);
 		if(switch_to_normal)
 		schedule_delayed_work(&g_chg->enable_usb_suspend_work,
 						msecs_to_jiffies(3000));
-	}
 
 	return 0;
 }
@@ -4341,7 +4341,7 @@ static void op_enable_usb_suspend_work(struct work_struct *work)
 	return;
 	smblib_get_usb_suspend(chg,&is_usb_supend);
 	if(is_usb_supend)
-		vote(chg->usb_suspend_votable,
+		vote(chg->usb_icl_votable,
 				BOOST_BACK_VOTER, false, 0);
 }
 

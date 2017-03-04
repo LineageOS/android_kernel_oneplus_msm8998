@@ -888,7 +888,6 @@ static const char *fg_get_battery_type(struct fg_chip *chip)
 	return DEFAULT_BATT_TYPE;
 }
 
-#ifndef VENDOR_EDIT
 static int fg_batt_missing_config(struct fg_chip *chip, bool enable)
 {
 	int rc;
@@ -934,7 +933,6 @@ out:
 
 	return rc;
 }
-#endif
 
 #ifdef VENDOR_EDIT
 	/* Yangfb@bsp, 20170110 Add OP	battery profile */
@@ -2889,9 +2887,9 @@ static int fg_psy_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_RESISTANCE_ID:
 #ifdef VENDOR_EDIT
-		pval->intval = OP_SW_DEFAULT_ID
+		pval->intval = OP_SW_DEFAULT_ID;
 #else
-		pval->intval = chip->batt_id_ohms;OP_SW_DEFAULT_ID
+		pval->intval = chip->batt_id_ohms;
 #endif
 		break;
 	case POWER_SUPPLY_PROP_BATTERY_TYPE:
