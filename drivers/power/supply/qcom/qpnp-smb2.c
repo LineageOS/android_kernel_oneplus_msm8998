@@ -1184,7 +1184,7 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 				op_set_fast_chg_allow(chg, false);
 			}
 		}
-		rc = vote(chg->usb_suspend_votable, USER_VOTER,
+		rc = vote(chg->usb_icl_votable, USER_VOTER,
 				!val->intval, 0);
 		rc = vote(chg->dc_suspend_votable, USER_VOTER,
 				!val->intval, 0);
@@ -1632,7 +1632,7 @@ static int smb2_init_hw(struct smb2 *chip)
 
 	/* votes must be cast before configuring software control */
 #ifdef VENDOR_EDIT
-	vote(chg->usb_suspend_votable,
+	vote(chg->usb_icl_votable,
 		DEFAULT_VOTER, !chg->chg_enabled, 0);
 	vote(chg->dc_suspend_votable,
 		DEFAULT_VOTER, !chg->chg_enabled, 0);
