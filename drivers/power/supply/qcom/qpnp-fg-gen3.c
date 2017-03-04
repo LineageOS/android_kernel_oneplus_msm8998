@@ -888,10 +888,7 @@ static const char *fg_get_battery_type(struct fg_chip *chip)
 	return DEFAULT_BATT_TYPE;
 }
 
-<<<<<<< HEAD
 #ifndef VENDOR_EDIT
-static int fg_get_batt_id(struct fg_chip *chip, int *val)
-=======
 static int fg_batt_missing_config(struct fg_chip *chip, bool enable)
 {
 	int rc;
@@ -905,7 +902,6 @@ static int fg_batt_missing_config(struct fg_chip *chip, bool enable)
 }
 
 static int fg_get_batt_id(struct fg_chip *chip)
->>>>>>> origin/qc8998
 {
 	int rc, ret, batt_id = 0;
 
@@ -949,25 +945,8 @@ static int fg_get_batt_profile(struct fg_chip *chip)
 	struct device_node *node = chip->dev->of_node;
 	struct device_node *batt_node, *profile_node;
 	const char *data;
-<<<<<<< HEAD
-	int rc, len, batt_id;
-#ifdef VENDOR_EDIT
-	/* Yangfb@bsp, 20170110 Add OP	battery profile */
-	batt_id = OP_SW_DEFAULT_ID;
-#else
-	rc = fg_get_batt_id(chip, &batt_id);
-	if (rc < 0) {
-		pr_err("Error in getting batt_id rc:%d\n", rc);
-		return rc;
-	}
-
-	chip->batt_id_ohms = batt_id;
-	batt_id /= 1000;
-#endif
-=======
 	int rc, len;
 
->>>>>>> origin/qc8998
 	batt_node = of_find_node_by_name(node, "qcom,battery-data");
 	if (!batt_node) {
 		pr_err("Batterydata not available\n");
@@ -2909,7 +2888,11 @@ static int fg_psy_get_property(struct power_supply *psy,
 		pval->intval = chip->cl.nom_cap_uah;
 		break;
 	case POWER_SUPPLY_PROP_RESISTANCE_ID:
-		pval->intval = chip->batt_id_ohms;
+#ifdef VENDOR_EDIT
+		pval->intval = OP_SW_DEFAULT_ID
+#else
+		pval->intval = chip->batt_id_ohms;OP_SW_DEFAULT_ID
+#endif
 		break;
 	case POWER_SUPPLY_PROP_BATTERY_TYPE:
 		pval->strval = fg_get_battery_type(chip);

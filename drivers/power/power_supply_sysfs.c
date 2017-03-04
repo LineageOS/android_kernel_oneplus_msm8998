@@ -132,17 +132,14 @@ static ssize_t power_supply_show_property(struct device *dev,
 		return sprintf(buf, "%s\n", typec_text[value.intval]);
 	else if (off == POWER_SUPPLY_PROP_TYPEC_POWER_ROLE)
 		return sprintf(buf, "%s\n", typec_pr_text[value.intval]);
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 	else if (off == POWER_SUPPLY_PROP_OEM_TYPEC_CC_ORIENTATION)
 		return sprintf(buf, "%s\n", cc_orientation_text[value.intval]);
 #endif
-=======
 	else if (off == POWER_SUPPLY_PROP_DIE_HEALTH)
 		return sprintf(buf, "%s\n", health_text[value.intval]);
 	else if (off == POWER_SUPPLY_PROP_CONNECTOR_HEALTH)
 		return sprintf(buf, "%s\n", health_text[value.intval]);
->>>>>>> origin/qc8998
 	else if (off >= POWER_SUPPLY_PROP_MODEL_NAME)
 		return sprintf(buf, "%s\n", value.strval);
 

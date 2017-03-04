@@ -15,12 +15,7 @@
 #include <linux/device.h>
 #include <linux/iio/consumer.h>
 #include <linux/module.h>
-<<<<<<< HEAD
-#include <linux/platform_device.h>
-#include <linux/regmap.h>
-#include <linux/power_supply.h>
-=======
->>>>>>> origin/qc8998
+
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_irq.h>
