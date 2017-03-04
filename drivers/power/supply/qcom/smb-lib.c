@@ -798,25 +798,7 @@ int smblib_rerun_apsd_if_required(struct smb_charger *chg)
  * VOTABLE CALLBACKS *
  *********************/
 
-<<<<<<< HEAD
-static int smblib_usb_suspend_vote_callback(struct votable *votable, void *data,
-			int suspend, const char *client)
-{
-	struct smb_charger *chg = data;
 
-#ifdef VENDOR_EDIT
-	/* david.liu@bsp, 20161014 Add charging standard */
-	pr_err("set usb suspend=%d\n", suspend);
-#endif
-	/* resume input if suspend is invalid */
-	if (suspend < 0)
-		suspend = 0;
-
-	return smblib_set_usb_suspend(chg, (bool)suspend);
-}
-
-=======
->>>>>>> origin/qc8998
 static int smblib_dc_suspend_vote_callback(struct votable *votable, void *data,
 			int suspend, const char *client)
 {
@@ -829,52 +811,11 @@ static int smblib_dc_suspend_vote_callback(struct votable *votable, void *data,
 	return smblib_set_dc_suspend(chg, (bool)suspend);
 }
 
-<<<<<<< HEAD
-static int smblib_fcc_max_vote_callback(struct votable *votable, void *data,
-			int fcc_ua, const char *client)
-{
-	struct smb_charger *chg = data;
-
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20161014 Add charging standard */
-	pr_info("set fcc_ua=%d\n", fcc_ua);
-#endif
-	return vote(chg->fcc_votable, FCC_MAX_RESULT_VOTER, true, fcc_ua);
-}
-
-=======
->>>>>>> origin/qc8998
 #define USBIN_25MA	25000
 #define USBIN_100MA	100000
 #define USBIN_150MA	150000
 #define USBIN_500MA	500000
 #define USBIN_900MA	900000
-<<<<<<< HEAD
-#ifndef VENDOR_EDIT
-/* david.liu@bsp, 20161214 usb can't charge in power off charging */
-static int smblib_usb_icl_vote_callback(struct votable *votable, void *data,
-			int icl_ua, const char *client)
-{
-	struct smb_charger *chg = data;
-	int rc = 0;
-	bool suspend = (icl_ua < USBIN_25MA);
-	u8 icl_options = 0;
-
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20161014 Add charging standard */
-	pr_info("set iusb_max=%d, type=%d\n", icl_ua,
-			chg->usb_psy_desc.type);
-#endif
-	if (icl_ua < 0) {
-		smblib_dbg(chg, PR_MISC, "No Voter hence suspending\n");
-		icl_ua = 0;
-	}
-
-	if (suspend)
-		goto out;
-=======
->>>>>>> origin/qc8998
-
 
 static int set_sdp_current(struct smb_charger *chg, int icl_ua)
 {
@@ -913,50 +854,6 @@ static int set_sdp_current(struct smb_charger *chg, int icl_ua)
 
 	return rc;
 }
-#else
-static int smblib_usb_icl_vote_callback(struct votable *votable, void *data,
-			int icl_ua, const char *client)
-{
-	struct smb_charger *chg = data;
-	int rc = 0;
-	bool suspend;
-
-	if (icl_ua < 0) {
-		smblib_dbg(chg, PR_MISC, "No Voter hence suspending\n");
-		icl_ua = 0;
-	}
-
-	pr_info("set iusb_max=%d, type=%d\n", icl_ua,
-			chg->usb_psy_desc.type);
-
-	suspend = (icl_ua < USBIN_25MA);
-	if (suspend)
-		goto suspend;
-
-	if (chg->usb_psy_desc.type == POWER_SUPPLY_TYPE_USB)
-		rc = smblib_masked_write(chg, USBIN_ICL_OPTIONS_REG,
-				USB51_MODE_BIT,
-				(icl_ua > USBIN_100MA) ? USB51_MODE_BIT : 0);
-	else
-		rc = smblib_set_charge_param(chg, &chg->param.usb_icl, icl_ua);
-
-	if (rc < 0) {
-		dev_err(chg->dev,
-			"Couldn't set USB input current limit rc=%d\n", rc);
-		return rc;
-	}
-
-suspend:
-	rc = vote(chg->usb_suspend_votable, PD_VOTER, suspend, 0);
-	if (rc < 0) {
-		dev_err(chg->dev, "Couldn't %s input rc=%d\n",
-			suspend ? "suspend" : "resume", rc);
-		return rc;
-	}
-
-	return rc;
-}
-#endif
 
 static int smblib_usb_icl_vote_callback(struct votable *votable, void *data,
 			int icl_ua, const char *client)
@@ -4000,9 +3897,22 @@ bool get_oem_charge_done_status(void)
 		return false;
 }
 
-<<<<<<< HEAD
 static void op_handle_usb_removal(struct smb_charger *chg)
-=======
+{
+	op_set_fast_chg_allow(chg, false);
+	set_prop_fast_switch_to_normal_false(chg);
+	set_usb_switch(chg, false);
+	set_dash_charger_present(false);
+
+	chg->dash_on = false;
+	chg->chg_done = false;
+	chg->time_out = false;
+	chg->recharge_status = false;
+	chg->usb_enum_status = false;
+	chg->non_std_chg_present = false;
+	op_battery_temp_region_set(chg, BATT_TEMP_INVALID);
+}
+
 static void smblib_otg_oc_exit(struct smb_charger *chg, bool success)
 {
 	int rc;
@@ -4185,23 +4095,6 @@ static void smblib_otg_ss_done_work(struct work_struct *work)
 
 	smblib_otg_oc_exit(chg, success);
 	mutex_unlock(&chg->otg_oc_lock);
-}
-
-static int smblib_create_votables(struct smb_charger *chg)
->>>>>>> origin/qc8998
-{
-	op_set_fast_chg_allow(chg, false);
-	set_prop_fast_switch_to_normal_false(chg);
-	set_usb_switch(chg, false);
-	set_dash_charger_present(false);
-
-	chg->dash_on = false;
-	chg->chg_done = false;
-	chg->time_out = false;
-	chg->recharge_status = false;
-	chg->usb_enum_status = false;
-	chg->non_std_chg_present = false;
-	op_battery_temp_region_set(chg, BATT_TEMP_INVALID);
 }
 
 

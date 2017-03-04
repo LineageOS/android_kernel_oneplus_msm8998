@@ -1587,18 +1587,13 @@ static int smb2_init_hw(struct smb2 *chip)
 	smblib_get_charge_param(chg, &chg->param.usb_icl,
 				&chg->default_icl_ua);
 	if (chip->dt.usb_icl_ua < 0)
-<<<<<<< HEAD
-		smblib_get_charge_param(chg, &chg->param.usb_icl,
-					&chip->dt.usb_icl_ua);
+		chip->dt.usb_icl_ua = chg->default_icl_ua;
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 	pr_info("vbat_max=%d, ibat_max=%d, iusb_max=%d\n",
 		chip->dt.fv_uv, chip->dt.fcc_ua, chip->dt.usb_icl_ua);
 #endif
-=======
-		chip->dt.usb_icl_ua = chg->default_icl_ua;
->>>>>>> origin/qc8998
-
+		
 	if (chip->dt.dc_icl_ua < 0)
 		smblib_get_charge_param(chg, &chg->param.dc_icl,
 					&chip->dt.dc_icl_ua);
@@ -1636,27 +1631,19 @@ static int smb2_init_hw(struct smb2 *chip)
 	}
 
 	/* votes must be cast before configuring software control */
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 	vote(chg->usb_suspend_votable,
 		DEFAULT_VOTER, !chg->chg_enabled, 0);
 	vote(chg->dc_suspend_votable,
 		DEFAULT_VOTER, !chg->chg_enabled, 0);
 #else
-	vote(chg->usb_suspend_votable,
-		DEFAULT_VOTER, chip->dt.no_battery, 0);
-	vote(chg->dc_suspend_votable,
-		DEFAULT_VOTER, chip->dt.no_battery, 0);
-#endif
-	vote(chg->fcc_max_votable,
-=======
 	/* vote 0mA on usb_icl for non battery platforms */
 	vote(chg->usb_icl_votable,
 		DEFAULT_VOTER, chip->dt.no_battery, 0);
 	vote(chg->dc_suspend_votable,
 		DEFAULT_VOTER, chip->dt.no_battery, 0);
+#endif
 	vote(chg->fcc_votable,
->>>>>>> origin/qc8998
 		DEFAULT_VOTER, true, chip->dt.fcc_ua);
 	vote(chg->fv_votable,
 		DEFAULT_VOTER, true, chip->dt.fv_uv);
@@ -1675,7 +1662,6 @@ static int smb2_init_hw(struct smb2 *chip)
 	vote(chg->hvdcp_enable_votable, MICRO_USB_VOTER,
 			chg->micro_usb_mode, 0);
 
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 	/* disable HVDCP */
 	rc = smblib_masked_write(chg, USBIN_OPTIONS_1_CFG_REG,
@@ -1683,7 +1669,6 @@ static int smb2_init_hw(struct smb2 *chip)
 	if (rc < 0)
 		dev_err(chg->dev, "Couldn't disable HVDCP rc=%d\n", rc);
 #endif
-=======
 	/*
 	 * AICL configuration:
 	 * start from min and AICL ADC disable
@@ -1695,7 +1680,6 @@ static int smb2_init_hw(struct smb2 *chip)
 		dev_err(chg->dev, "Couldn't configure AICL rc=%d\n", rc);
 		return rc;
 	}
->>>>>>> origin/qc8998
 
 	/* Configure charge enable for software control; active high */
 	rc = smblib_masked_write(chg, CHGR_CFG2_REG,
@@ -1962,12 +1946,7 @@ static int smb2_determine_initial_status(struct smb2 *chip)
  * INTERRUPT REGISTRATION *
  **************************/
 
-<<<<<<< HEAD
-
-static struct smb_irq_info  smb2_irqs[] = {
-=======
 static struct smb_irq_info smb2_irqs[] = {
->>>>>>> origin/qc8998
 /* CHARGER IRQs */
 	[CHG_ERROR_IRQ] = {
 		.name		= "chg-error",
@@ -2115,7 +2094,6 @@ static struct smb_irq_info smb2_irqs[] = {
 		.name		= "aicl-fail",
 		.handler	= smblib_handle_debug,
 	},
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 	/* david.liu@bsp, 20161014 Add charging standard */
 	[AICL_DONE_IRQ] = {
@@ -2123,16 +2101,11 @@ static struct smb_irq_info smb2_irqs[] = {
 		.handler	= smblib_handle_aicl_done,
 	},
 #else
-=======
->>>>>>> origin/qc8998
 	[AICL_DONE_IRQ] = {
 		.name		= "aicl-done",
 		.handler	= smblib_handle_debug,
 	},
-<<<<<<< HEAD
 #endif
-=======
->>>>>>> origin/qc8998
 	[HIGH_DUTY_CYCLE_IRQ] = {
 		.name		= "high-duty-cycle",
 		.handler	= smblib_handle_high_duty_cycle,
