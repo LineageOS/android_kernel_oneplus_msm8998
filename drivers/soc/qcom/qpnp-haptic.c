@@ -1410,52 +1410,6 @@ static ssize_t qpnp_hap_ramp_test_data_show(struct device *dev,
 
 /* sysfs attributes */
 static struct device_attribute qpnp_hap_attrs[] = {
-<<<<<<< HEAD
-	__ATTR(wf_s0, (S_IRUGO | S_IWUSR | S_IWGRP),
-			qpnp_hap_wf_s0_show,
-			qpnp_hap_wf_s0_store),
-	__ATTR(wf_s1, (S_IRUGO | S_IWUSR | S_IWGRP),
-			qpnp_hap_wf_s1_show,
-			qpnp_hap_wf_s1_store),
-	__ATTR(wf_s2, (S_IRUGO | S_IWUSR | S_IWGRP),
-			qpnp_hap_wf_s2_show,
-			qpnp_hap_wf_s2_store),
-	__ATTR(wf_s3, (S_IRUGO | S_IWUSR | S_IWGRP),
-			qpnp_hap_wf_s3_show,
-			qpnp_hap_wf_s3_store),
-	__ATTR(wf_s4, (S_IRUGO | S_IWUSR | S_IWGRP),
-			qpnp_hap_wf_s4_show,
-			qpnp_hap_wf_s4_store),
-	__ATTR(wf_s5, (S_IRUGO | S_IWUSR | S_IWGRP),
-			qpnp_hap_wf_s5_show,
-			qpnp_hap_wf_s5_store),
-	__ATTR(wf_s6, (S_IRUGO | S_IWUSR | S_IWGRP),
-			qpnp_hap_wf_s6_show,
-			qpnp_hap_wf_s6_store),
-	__ATTR(wf_s7, (S_IRUGO | S_IWUSR | S_IWGRP),
-			qpnp_hap_wf_s7_show,
-			qpnp_hap_wf_s7_store),
-	__ATTR(wf_update, (S_IRUGO | S_IWUSR | S_IWGRP),
-			qpnp_hap_wf_update_show,
-			qpnp_hap_wf_update_store),
-	__ATTR(wf_rep, (S_IRUGO | S_IWUSR | S_IWGRP),
-			qpnp_hap_wf_rep_show,
-			qpnp_hap_wf_rep_store),
-	__ATTR(wf_s_rep, (S_IRUGO | S_IWUSR | S_IWGRP),
-			qpnp_hap_wf_s_rep_show,
-			qpnp_hap_wf_s_rep_store),
-	__ATTR(play_mode, (S_IRUGO | S_IWUSR | S_IWGRP),
-			qpnp_hap_play_mode_show,
-			qpnp_hap_play_mode_store),
-	__ATTR(dump_regs, (S_IRUGO | S_IWUSR | S_IWGRP),
-			qpnp_hap_dump_regs_show,
-			NULL),
-	__ATTR(ramp_test, (S_IRUGO | S_IWUSR | S_IWGRP),
-			qpnp_hap_ramp_test_data_show,
-			qpnp_hap_ramp_test_data_store),
-	__ATTR(min_max_test, (S_IRUGO | S_IWUSR | S_IWGRP),
-			qpnp_hap_min_max_test_data_show,
-			qpnp_hap_min_max_test_data_store),
 #ifdef VENDOR_EDIT /*wulaibin 2016-12-13 add for show vibrator resonant frequency*/
 	__ATTR(rf_hz, (S_IRUGO | S_IWUSR | S_IWGRP),
 			qpnp_hap_rf_hz_show,
@@ -1464,7 +1418,6 @@ static struct device_attribute qpnp_hap_attrs[] = {
 			qpnp_hap_vmax_show,
 			qpnp_hap_vmax_store),
 #endif /*VENDOR_EDIT*/
-=======
 	__ATTR(wf_s0, 0664, qpnp_hap_wf_s0_show, qpnp_hap_wf_s0_store),
 	__ATTR(wf_s1, 0664, qpnp_hap_wf_s1_show, qpnp_hap_wf_s1_store),
 	__ATTR(wf_s2, 0664, qpnp_hap_wf_s2_show, qpnp_hap_wf_s2_store),
@@ -1484,7 +1437,6 @@ static struct device_attribute qpnp_hap_attrs[] = {
 		qpnp_hap_ramp_test_data_store),
 	__ATTR(min_max_test, 0664, qpnp_hap_min_max_test_data_show,
 		qpnp_hap_min_max_test_data_store),
->>>>>>> origin/qc8998
 };
 
 static void calculate_lra_code(struct qpnp_hap *hap)

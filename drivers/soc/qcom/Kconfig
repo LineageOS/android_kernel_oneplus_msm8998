@@ -865,12 +865,10 @@ config QCOM_EARLY_RANDOM
 	  may not be truly random. Select this option to make an early call
 	  to get some random data to put in the pool. If unsure, say N.
 
-<<<<<<< HEAD
 config RF_CABLE_DETECT
 	bool "detect RF cable connection"
 	help
 	  detect RF cable connection for different RF configuration
-=======
 config QCOM_CX_IPEAK
 	bool "Common driver to handle Cx iPeak limitation"
 	help
@@ -879,6 +877,5 @@ config QCOM_CX_IPEAK
 	  bit in tcsr register if it is going to cross its own threshold. If all
 	  clients are going to cross their thresholds then Cx ipeak hw module will raise
 	  an interrupt to cDSP block to throttle cDSP fmax.
->>>>>>> origin/qc8998
 
 source "drivers/soc/qcom/memshare/Kconfig"

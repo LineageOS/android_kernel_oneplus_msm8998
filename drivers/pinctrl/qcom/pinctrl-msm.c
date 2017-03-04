@@ -955,7 +955,6 @@ static void msm_pinctrl_setup_pm_reset(struct msm_pinctrl *pctrl)
 		}
 }
 
-<<<<<<< HEAD
 static int pm_pm_event(struct notifier_block *notifier,
 		unsigned long pm_event, void *unused)
 {
@@ -975,7 +974,6 @@ static int pm_pm_event(struct notifier_block *notifier,
 static struct notifier_block pinctrl_pm_notifier_block = {
 	.notifier_call = pm_pm_event,
 };
-=======
 #ifdef CONFIG_PM
 static int msm_pinctrl_suspend(void)
 {
@@ -1022,7 +1020,6 @@ static struct syscore_ops msm_pinctrl_pm_ops = {
 	.resume = msm_pinctrl_resume,
 };
 
->>>>>>> origin/qc8998
 int msm_pinctrl_probe(struct platform_device *pdev,
 		      const struct msm_pinctrl_soc_data *soc_data)
 {
