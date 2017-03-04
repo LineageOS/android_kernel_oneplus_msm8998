@@ -143,6 +143,19 @@
 	};
 };
 
+&pmi8998_gpios {
+	/* GPIO 6 for the internal QNOVO discharge FET control signal */
+	gpio@c500 {
+		status = "okay";
+		qcom,mode = <1>;
+		qcom,pull = <5>;
+		qcom,vin-sel = <0>;
+		qcom,src-sel = <2>;
+		qcom,out-strength = <1>;
+		qcom,master-en = <1>;
+	};
+};
+
 &soc {
 	gpio_keys {
 		compatible = "gpio-keys";
@@ -434,4 +447,8 @@
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <255>;
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+};
+
+&wil6210 {
+	status = "ok";
 };

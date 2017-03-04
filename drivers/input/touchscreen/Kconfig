@@ -1234,4 +1234,15 @@ config TOUCHSCREEN_SYNAPTICS_S3320_I2C_RMI
 	  This enables support for Synaptics s1302 RMI over I2C based touch key.
 #endif
 source "drivers/input/touchscreen/gt9xx/Kconfig"
+
+config TOUCHSCREEN_ST
+	bool "STMicroelectronics Touchscreen Driver"
+	depends on I2C
+	help
+	  Say Y here if you have a STMicroelectronics Touchscreen.
+
+	  If unsure, say N.
+
+source "drivers/input/touchscreen/st/Kconfig"
+
 endif

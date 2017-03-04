@@ -53,6 +53,8 @@
 #define QCOM_SDCC_ICE_DEV	"icesdcc"
 #define QCOM_ICE_TYPE_NAME_LEN 8
 #define QCOM_ICE_MAX_BIST_CHECK_COUNT 100
+#define QCOM_ICE_UFS		10
+#define QCOM_ICE_SDCC		20
 
 struct ice_clk_info {
 	struct list_head list;
@@ -841,7 +843,7 @@ static int qcom_ice_restore_config(void)
 	return ret;
 }
 
-static int qcom_ice_restore_key_config(void)
+static int qcom_ice_restore_key_config(struct ice_device *ice_dev)
 {
 	struct scm_desc desc = {0};
 	int ret = -1;
@@ -849,7 +851,12 @@ static int qcom_ice_restore_key_config(void)
 	/* For ice 3, key configuration needs to be restored in case of reset */
 
 	desc.arginfo = TZ_OS_KS_RESTORE_KEY_CONFIG_ID_PARAM_ID;
-	desc.args[0] = 10; /* UFS_ICE */
+
+	if (!strcmp(ice_dev->ice_instance_type, "sdcc"))
+		desc.args[0] = QCOM_ICE_SDCC;
+
+	if (!strcmp(ice_dev->ice_instance_type, "ufs"))
+		desc.args[0] = QCOM_ICE_UFS;
 
 	ret = scm_call2(TZ_OS_KS_RESTORE_KEY_CONFIG_ID, &desc);
 
@@ -1138,7 +1145,7 @@ static int qcom_ice_finish_power_collapse(struct ice_device *ice_dev)
 		 * restore it
 		 */
 		} else if (ICE_REV(ice_dev->ice_hw_version, MAJOR) > 2) {
-			err = qcom_ice_restore_key_config();
+			err = qcom_ice_restore_key_config(ice_dev);
 			if (err)
 				goto out;
 

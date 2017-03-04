@@ -81,15 +81,6 @@ module_param(qmi_timeout, ulong, 0600);
 		ipc_log_string(icnss_ipc_log_context, _x);		\
 	} while (0)
 
-#ifdef CONFIG_ICNSS_DEBUG
-#define icnss_ipc_log_long_string(_x...) do {				\
-	if (icnss_ipc_log_long_context)					\
-		ipc_log_string(icnss_ipc_log_long_context, _x);		\
-	} while (0)
-#else
-#define icnss_ipc_log_long_string(_x...)
-#endif
-
 #define icnss_pr_err(_fmt, ...) do {					\
 		pr_err(_fmt, ##__VA_ARGS__);				\
 		icnss_ipc_log_string("ERR: " pr_fmt(_fmt),		\
@@ -111,12 +102,6 @@ module_param(qmi_timeout, ulong, 0600);
 #define icnss_pr_dbg(_fmt, ...) do {					\
 		pr_debug(_fmt, ##__VA_ARGS__);				\
 		icnss_ipc_log_string("DBG: " pr_fmt(_fmt),		\
-				     ##__VA_ARGS__);			\
-	} while (0)
-
-#define icnss_reg_dbg(_fmt, ...) do {				\
-		pr_debug(_fmt, ##__VA_ARGS__);				\
-		icnss_ipc_log_long_string("REG: " pr_fmt(_fmt),		\
 				     ##__VA_ARGS__);			\
 	} while (0)
 
@@ -160,10 +145,6 @@ uint64_t dynamic_feature_mask = QMI_WLFW_FW_REJUVENATE_V01;
 module_param(dynamic_feature_mask, ullong, 0600);
 
 void *icnss_ipc_log_context;
-
-#ifdef CONFIG_ICNSS_DEBUG
-void *icnss_ipc_log_long_context;
-#endif
 
 #define ICNSS_EVENT_PENDING			2989
 
@@ -340,6 +321,7 @@ static struct icnss_priv {
 	struct ramdump_device *msa0_dump_dev;
 	bool is_wlan_mac_set;
 	struct icnss_wlan_mac_addr wlan_mac_addr;
+	bool bypass_s1_smmu;
 } *penv;
 
 static void icnss_pm_stay_awake(struct icnss_priv *priv)
@@ -2980,13 +2962,15 @@ static int icnss_smmu_init(struct icnss_priv *priv)
 		goto map_fail;
 	}
 
-	ret = iommu_domain_set_attr(mapping->domain,
-				    DOMAIN_ATTR_ATOMIC,
-				    &atomic_ctx);
-	if (ret < 0) {
-		icnss_pr_err("Set atomic_ctx attribute failed, err = %d\n",
-			     ret);
-		goto set_attr_fail;
+	if (!priv->bypass_s1_smmu) {
+		ret = iommu_domain_set_attr(mapping->domain,
+					    DOMAIN_ATTR_ATOMIC,
+					    &atomic_ctx);
+		if (ret < 0) {
+			icnss_pr_err("Set atomic_ctx attribute failed, err = %d\n",
+				     ret);
+			goto set_attr_fail;
+		}
 	}
 
 	ret = iommu_domain_set_attr(mapping->domain,
@@ -3755,6 +3739,11 @@ static int icnss_probe(struct platform_device *pdev)
 	if (ret == -EPROBE_DEFER)
 		goto out;
 
+	if (of_property_read_bool(pdev->dev.of_node, "qcom,smmu-s1-bypass"))
+		priv->bypass_s1_smmu = true;
+
+	icnss_pr_dbg("SMMU S1 BYPASS = %d\n", priv->bypass_s1_smmu);
+
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "membase");
 	if (!res) {
 		icnss_pr_err("Memory base not found in DT\n");
@@ -4060,34 +4049,12 @@ static struct platform_driver icnss_driver = {
 	},
 };
 
-#ifdef CONFIG_ICNSS_DEBUG
-static void __init icnss_ipc_log_long_context_init(void)
-{
-	icnss_ipc_log_long_context = ipc_log_context_create(NUM_REG_LOG_PAGES,
-							   "icnss_long", 0);
-	if (!icnss_ipc_log_long_context)
-		icnss_pr_err("Unable to create register log context\n");
-}
-
-static void __exit icnss_ipc_log_long_context_destroy(void)
-{
-	ipc_log_context_destroy(icnss_ipc_log_long_context);
-	icnss_ipc_log_long_context = NULL;
-}
-#else
-
-static void __init icnss_ipc_log_long_context_init(void) { }
-static void __exit icnss_ipc_log_long_context_destroy(void) { }
-#endif
-
 static int __init icnss_initialize(void)
 {
 	icnss_ipc_log_context = ipc_log_context_create(NUM_LOG_PAGES,
 						       "icnss", 0);
 	if (!icnss_ipc_log_context)
 		icnss_pr_err("Unable to create log context\n");
-
-	icnss_ipc_log_long_context_init();
 
 	return platform_driver_register(&icnss_driver);
 }
@@ -4097,8 +4064,6 @@ static void __exit icnss_exit(void)
 	platform_driver_unregister(&icnss_driver);
 	ipc_log_context_destroy(icnss_ipc_log_context);
 	icnss_ipc_log_context = NULL;
-
-	icnss_ipc_log_long_context_destroy();
 }
 
 
