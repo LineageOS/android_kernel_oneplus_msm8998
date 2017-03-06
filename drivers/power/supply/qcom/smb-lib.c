@@ -51,6 +51,7 @@ static int op_charging_en(struct smb_charger *chg, bool en);
 bool op_set_fast_chg_allow(struct smb_charger *chg, bool enable);
 bool get_prop_fast_chg_started(struct smb_charger *chg);
 static bool set_prop_fast_switch_to_normal_false(struct smb_charger *chg);
+
 extern void mcu_en_gpio_set(int value);
 extern void usb_sw_gpio_set(int value);
 extern void set_mcu_en_gpio_value(int value);
@@ -4118,9 +4119,9 @@ int update_dash_unplug_status(void)
 
 int op_handle_switcher_power_ok(void)
 {
-	int rc,switch_to_normal;
+	int rc;
 	u8 stat;
-
+	union power_supply_propval vbus_val;
 	if(!g_chg)
 		return 0;
 	if (!(g_chg->wa_flags & BOOST_BACK_WA))
@@ -4139,24 +4140,27 @@ int op_handle_switcher_power_ok(void)
 
 	if (stat & USE_DCIN_BIT)
 		return 0;
-
+	usleep_range(50000, 50000);
+	rc = smblib_get_prop_usb_voltage_now(g_chg, &vbus_val);
+	if (rc < 0) {
+		pr_err("fail to read usb_voltage rc=%d\n", rc);
+	} else if(vbus_val.intval >= 2500) {
+		pr_err("vbus_val.intval=%d\n",vbus_val.intval);
 		smblib_err(g_chg, "OP Reverse boost detected: suspending input\n");
 		vote(g_chg->usb_icl_votable, BOOST_BACK_VOTER, true, 0);
 		g_chg->deal_vusbin_error_done = true;
-		switch_to_normal = get_prop_fast_switch_to_normal(g_chg);
-		if(switch_to_normal)
-		schedule_delayed_work(&g_chg->enable_usb_suspend_work,
-						msecs_to_jiffies(3000));
+	}
 
 	return 0;
 }
 
-int check_usb_suspend(int enable)
+int check_usb_suspend(int enable,bool check_power_ok)
 {
 	pr_err("%s,en=%d\n",__func__,enable);
 	if(!g_chg)
 		return 0;
 	if(enable){
+		if(check_power_ok)
 		op_handle_switcher_power_ok();
 		enable_irq(g_chg->irq_info[SWITCH_POWER_OK_IRQ].irq);
 	}
