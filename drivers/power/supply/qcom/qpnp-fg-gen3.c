@@ -900,6 +900,10 @@ static int fg_batt_missing_config(struct fg_chip *chip, bool enable)
 	return rc;
 }
 
+#ifdef VENDOR_EDIT
+	/* Yangfb@bsp, 20170110 Add OP	battery profile */
+#define OP_SW_DEFAULT_ID 200*1000
+#endif
 static int fg_get_batt_id(struct fg_chip *chip)
 {
 	int rc, ret, batt_id = 0;
@@ -923,7 +927,11 @@ static int fg_get_batt_id(struct fg_chip *chip)
 	msleep(200);
 
 	fg_dbg(chip, FG_STATUS, "batt_id: %d\n", batt_id);
+#ifdef VENDOR_EDIT
+	chip->batt_id_ohms = OP_SW_DEFAULT_ID;
+#else
 	chip->batt_id_ohms = batt_id;
+#endif
 out:
 	ret = fg_batt_missing_config(chip, true);
 	if (ret < 0) {
@@ -934,10 +942,6 @@ out:
 	return rc;
 }
 
-#ifdef VENDOR_EDIT
-	/* Yangfb@bsp, 20170110 Add OP	battery profile */
-#define OP_SW_DEFAULT_ID 200
-#endif
 static int fg_get_batt_profile(struct fg_chip *chip)
 {
 	struct device_node *node = chip->dev->of_node;
@@ -2886,11 +2890,7 @@ static int fg_psy_get_property(struct power_supply *psy,
 		pval->intval = chip->cl.nom_cap_uah;
 		break;
 	case POWER_SUPPLY_PROP_RESISTANCE_ID:
-#ifdef VENDOR_EDIT
-		pval->intval = OP_SW_DEFAULT_ID;
-#else
 		pval->intval = chip->batt_id_ohms;
-#endif
 		break;
 	case POWER_SUPPLY_PROP_BATTERY_TYPE:
 		pval->strval = fg_get_battery_type(chip);
