@@ -1087,6 +1087,582 @@ static ssize_t mdss_fb_set_night_mode(struct device *dev,
 static DEVICE_ATTR(night_mode, S_IRUGO | S_IWUSR,
 	mdss_fb_get_night_mode, mdss_fb_set_night_mode);
 
+/********************************************************************/
+static ssize_t mdss_fb_get_night_mode3500k(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int ret = 0;
+	int level = 0;
+
+	level = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_GET_NIGHT_MODE3500K,
+			NULL);
+	ret=scnprintf(buf, PAGE_SIZE, "mode = %d\n"
+					                        "0-->Night Mode OFF\n"
+											"1-->Night Mode 3500K ON\n",
+										    level);
+	return ret;
+}
+
+static ssize_t mdss_fb_set_night_mode3500k(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int rc = 0;
+	int level = 0;
+
+	rc = kstrtoint(buf, 10, &level);
+	if (rc) {
+		pr_err("kstrtoint failed. rc=%d\n", rc);
+		return rc;
+	}
+    rc = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_SET_NIGHT_MODE3500K,
+	    (void *)(unsigned long)level);
+	if (rc)
+		pr_err("Fail to set Night mode 3500K: %d\n", level);
+
+	return count;
+}
+
+static DEVICE_ATTR(night_mode3500k, S_IRUGO | S_IWUSR,
+	mdss_fb_get_night_mode3500k, mdss_fb_set_night_mode3500k);
+
+static ssize_t mdss_fb_get_night_mode3800k(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int ret = 0;
+	int level = 0;
+
+	level = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_GET_NIGHT_MODE3800K,
+			NULL);
+	ret=scnprintf(buf, PAGE_SIZE, "mode = %d\n"
+					                        "0-->Night Mode OFF\n"
+											"1-->Night Mode 3800K ON\n",
+										    level);
+	return ret;
+}
+
+static ssize_t mdss_fb_set_night_mode3800k(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int rc = 0;
+	int level = 0;
+
+	rc = kstrtoint(buf, 10, &level);
+	if (rc) {
+		pr_err("kstrtoint failed. rc=%d\n", rc);
+		return rc;
+	}
+    rc = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_SET_NIGHT_MODE3800K,
+	    (void *)(unsigned long)level);
+	if (rc)
+		pr_err("Fail to set Night mode 3800K: %d\n", level);
+
+	return count;
+}
+
+static DEVICE_ATTR(night_mode3800k, S_IRUGO | S_IWUSR,
+	mdss_fb_get_night_mode3800k, mdss_fb_set_night_mode3800k);
+
+static ssize_t mdss_fb_get_night_mode4000k(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int ret = 0;
+	int level = 0;
+
+	level = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_GET_NIGHT_MODE4000K,
+			NULL);
+	ret=scnprintf(buf, PAGE_SIZE, "mode = %d\n"
+					                        "0-->Night Mode OFF\n"
+											"1-->Night Mode 4000K ON\n",
+										    level);
+	return ret;
+}
+
+static ssize_t mdss_fb_set_night_mode4000k(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int rc = 0;
+	int level = 0;
+
+	rc = kstrtoint(buf, 10, &level);
+	if (rc) {
+		pr_err("kstrtoint failed. rc=%d\n", rc);
+		return rc;
+	}
+    rc = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_SET_NIGHT_MODE4000K,
+	    (void *)(unsigned long)level);
+	if (rc)
+		pr_err("Fail to set Night mode 4000K: %d\n", level);
+
+	return count;
+}
+
+static DEVICE_ATTR(night_mode4000k, S_IRUGO | S_IWUSR,
+	mdss_fb_get_night_mode4000k, mdss_fb_set_night_mode4000k);
+
+static ssize_t mdss_fb_get_night_mode4300k(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int ret = 0;
+	int level = 0;
+
+	level = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_GET_NIGHT_MODE4300K,
+			NULL);
+	ret=scnprintf(buf, PAGE_SIZE, "mode = %d\n"
+					                        "0-->Night Mode OFF\n"
+											"1-->Night Mode 4300K ON\n",
+										    level);
+	return ret;
+}
+
+static ssize_t mdss_fb_set_night_mode4300k(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int rc = 0;
+	int level = 0;
+
+	rc = kstrtoint(buf, 10, &level);
+	if (rc) {
+		pr_err("kstrtoint failed. rc=%d\n", rc);
+		return rc;
+	}
+    rc = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_SET_NIGHT_MODE4300K,
+	    (void *)(unsigned long)level);
+	if (rc)
+		pr_err("Fail to set Night mode 4300K: %d\n", level);
+
+	return count;
+}
+
+static DEVICE_ATTR(night_mode4300k, S_IRUGO | S_IWUSR,
+	mdss_fb_get_night_mode4300k, mdss_fb_set_night_mode4300k);
+
+static ssize_t mdss_fb_get_night_mode4500k(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int ret = 0;
+	int level = 0;
+
+	level = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_GET_NIGHT_MODE4500K,
+			NULL);
+	ret=scnprintf(buf, PAGE_SIZE, "mode = %d\n"
+					                        "0-->Night Mode OFF\n"
+											"1-->Night Mode 4500K ON\n",
+										    level);
+	return ret;
+}
+
+static ssize_t mdss_fb_set_night_mode4500k(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int rc = 0;
+	int level = 0;
+
+	rc = kstrtoint(buf, 10, &level);
+	if (rc) {
+		pr_err("kstrtoint failed. rc=%d\n", rc);
+		return rc;
+	}
+    rc = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_SET_NIGHT_MODE4500K,
+	    (void *)(unsigned long)level);
+	if (rc)
+		pr_err("Fail to set Night mode 4500K: %d\n", level);
+
+	return count;
+}
+
+static DEVICE_ATTR(night_mode4500k, S_IRUGO | S_IWUSR,
+	mdss_fb_get_night_mode4500k, mdss_fb_set_night_mode4500k);
+
+static ssize_t mdss_fb_get_night_mode3100k(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int ret = 0;
+	int level = 0;
+
+	level = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_GET_NIGHT_MODE3100K,
+			NULL);
+	ret=scnprintf(buf, PAGE_SIZE, "mode = %d\n"
+					                        "0-->Night Mode OFF\n"
+											"1-->Night Mode 3100K ON\n",
+										    level);
+	return ret;
+}
+
+static ssize_t mdss_fb_set_night_mode3100k(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int rc = 0;
+	int level = 0;
+
+	rc = kstrtoint(buf, 10, &level);
+	if (rc) {
+		pr_err("kstrtoint failed. rc=%d\n", rc);
+		return rc;
+	}
+    rc = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_SET_NIGHT_MODE3100K,
+	    (void *)(unsigned long)level);
+	if (rc)
+		pr_err("Fail to set Night mode 3100K: %d\n", level);
+
+	return count;
+}
+
+static DEVICE_ATTR(night_mode3100k, S_IRUGO | S_IWUSR,
+	mdss_fb_get_night_mode3100k, mdss_fb_set_night_mode3100k);
+
+static ssize_t mdss_fb_get_night_mode4800k(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int ret = 0;
+	int level = 0;
+
+	level = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_GET_NIGHT_MODE4800K,
+			NULL);
+	ret=scnprintf(buf, PAGE_SIZE, "mode = %d\n"
+					                        "0-->Night Mode OFF\n"
+											"1-->Night Mode 4800K ON\n",
+										    level);
+	return ret;
+}
+
+static ssize_t mdss_fb_set_night_mode4800k(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int rc = 0;
+	int level = 0;
+
+	rc = kstrtoint(buf, 10, &level);
+	if (rc) {
+		pr_err("kstrtoint failed. rc=%d\n", rc);
+		return rc;
+	}
+    rc = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_SET_NIGHT_MODE4800K,
+	    (void *)(unsigned long)level);
+	if (rc)
+		pr_err("Fail to set Night mode 4800K: %d\n", level);
+
+	return count;
+}
+
+static DEVICE_ATTR(night_mode4800k, S_IRUGO | S_IWUSR,
+	mdss_fb_get_night_mode4800k, mdss_fb_set_night_mode4800k);
+
+static ssize_t mdss_fb_get_night_mode2800k(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int ret = 0;
+	int level = 0;
+
+	level = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_GET_NIGHT_MODE2800K,
+			NULL);
+	ret=scnprintf(buf, PAGE_SIZE, "mode = %d\n"
+					                        "0-->Night Mode OFF\n"
+											"1-->Night Mode 2800K ON\n",
+										    level);
+	return ret;
+}
+
+static ssize_t mdss_fb_set_night_mode2800k(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int rc = 0;
+	int level = 0;
+
+	rc = kstrtoint(buf, 10, &level);
+	if (rc) {
+		pr_err("kstrtoint failed. rc=%d\n", rc);
+		return rc;
+	}
+    rc = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_SET_NIGHT_MODE2800K,
+	    (void *)(unsigned long)level);
+	if (rc)
+		pr_err("Fail to set Night mode 2800K: %d\n", level);
+
+	return count;
+}
+
+static DEVICE_ATTR(night_mode2800k, S_IRUGO | S_IWUSR,
+	mdss_fb_get_night_mode2800k, mdss_fb_set_night_mode2800k);
+
+static ssize_t mdss_fb_get_night_mode5000k(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int ret = 0;
+	int level = 0;
+
+	level = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_GET_NIGHT_MODE5000K,
+			NULL);
+	ret=scnprintf(buf, PAGE_SIZE, "mode = %d\n"
+					                        "0-->Night Mode OFF\n"
+											"1-->Night Mode 5000K ON\n",
+										    level);
+	return ret;
+}
+
+static ssize_t mdss_fb_set_night_mode5000k(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int rc = 0;
+	int level = 0;
+
+	rc = kstrtoint(buf, 10, &level);
+	if (rc) {
+		pr_err("kstrtoint failed. rc=%d\n", rc);
+		return rc;
+	}
+    rc = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_SET_NIGHT_MODE5000K,
+	    (void *)(unsigned long)level);
+	if (rc)
+		pr_err("Fail to set Night mode 5000K: %d\n", level);
+
+	return count;
+}
+
+static DEVICE_ATTR(night_mode5000k, S_IRUGO | S_IWUSR,
+	mdss_fb_get_night_mode5000k, mdss_fb_set_night_mode5000k);
+
+static ssize_t mdss_fb_get_night_mode5500k(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int ret = 0;
+	int level = 0;
+
+	level = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_GET_NIGHT_MODE5500K,
+			NULL);
+	ret=scnprintf(buf, PAGE_SIZE, "mode = %d\n"
+					                        "0-->Night Mode OFF\n"
+											"1-->Night Mode 5500K ON\n",
+										    level);
+	return ret;
+}
+
+static ssize_t mdss_fb_set_night_mode5500k(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int rc = 0;
+	int level = 0;
+
+	rc = kstrtoint(buf, 10, &level);
+	if (rc) {
+		pr_err("kstrtoint failed. rc=%d\n", rc);
+		return rc;
+	}
+    rc = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_SET_NIGHT_MODE5500K,
+	    (void *)(unsigned long)level);
+	if (rc)
+		pr_err("Fail to set Night mode 5500K: %d\n", level);
+
+	return count;
+}
+
+static DEVICE_ATTR(night_mode5500k, S_IRUGO | S_IWUSR,
+	mdss_fb_get_night_mode5500k, mdss_fb_set_night_mode5500k);
+
+static ssize_t mdss_fb_get_night_mode6000k(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int ret = 0;
+	int level = 0;
+
+	level = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_GET_NIGHT_MODE6000K,
+			NULL);
+	ret=scnprintf(buf, PAGE_SIZE, "mode = %d\n"
+					                        "0-->Night Mode OFF\n"
+											"1-->Night Mode 6000K ON\n",
+										    level);
+	return ret;
+}
+
+static ssize_t mdss_fb_set_night_mode6000k(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int rc = 0;
+	int level = 0;
+
+	rc = kstrtoint(buf, 10, &level);
+	if (rc) {
+		pr_err("kstrtoint failed. rc=%d\n", rc);
+		return rc;
+	}
+    rc = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_SET_NIGHT_MODE6000K,
+	    (void *)(unsigned long)level);
+	if (rc)
+		pr_err("Fail to set Night mode 6000K: %d\n", level);
+
+	return count;
+}
+
+static DEVICE_ATTR(night_mode6000k, S_IRUGO | S_IWUSR,
+	mdss_fb_get_night_mode6000k, mdss_fb_set_night_mode6000k);
+
+static ssize_t mdss_fb_get_night_mode6500k(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int ret = 0;
+	int level = 0;
+
+	level = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_GET_NIGHT_MODE6500K,
+			NULL);
+	ret=scnprintf(buf, PAGE_SIZE, "mode = %d\n"
+					                        "0-->Night Mode OFF\n"
+											"1-->Night Mode 6500K ON\n",
+										    level);
+	return ret;
+}
+
+static ssize_t mdss_fb_set_night_mode6500k(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int rc = 0;
+	int level = 0;
+
+	rc = kstrtoint(buf, 10, &level);
+	if (rc) {
+		pr_err("kstrtoint failed. rc=%d\n", rc);
+		return rc;
+	}
+    rc = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_SET_NIGHT_MODE6500K,
+	    (void *)(unsigned long)level);
+	if (rc)
+		pr_err("Fail to set Night mode 6500K: %d\n", level);
+
+	return count;
+}
+
+static DEVICE_ATTR(night_mode6500k, S_IRUGO | S_IWUSR,
+	mdss_fb_get_night_mode6500k, mdss_fb_set_night_mode6500k);
+
+static ssize_t mdss_fb_get_night_mode6800k(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int ret = 0;
+	int level = 0;
+
+	level = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_GET_NIGHT_MODE6800K,
+			NULL);
+	ret=scnprintf(buf, PAGE_SIZE, "mode = %d\n"
+					                        "0-->Night Mode OFF\n"
+											"1-->Night Mode 6800K ON\n",
+										    level);
+	return ret;
+}
+
+static ssize_t mdss_fb_set_night_mode6800k(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int rc = 0;
+	int level = 0;
+
+	rc = kstrtoint(buf, 10, &level);
+	if (rc) {
+		pr_err("kstrtoint failed. rc=%d\n", rc);
+		return rc;
+	}
+    rc = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_SET_NIGHT_MODE6800K,
+	    (void *)(unsigned long)level);
+	if (rc)
+		pr_err("Fail to set Night mode 6800K: %d\n", level);
+
+	return count;
+}
+
+static DEVICE_ATTR(night_mode6800k, S_IRUGO | S_IWUSR,
+	mdss_fb_get_night_mode6800k, mdss_fb_set_night_mode6800k);
+
+static ssize_t mdss_fb_get_night_mode7200k(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int ret = 0;
+	int level = 0;
+
+	level = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_GET_NIGHT_MODE7200K,
+			NULL);
+	ret=scnprintf(buf, PAGE_SIZE, "mode = %d\n"
+					                        "0-->Night Mode OFF\n"
+											"1-->Night Mode 7200K ON\n",
+										    level);
+	return ret;
+}
+
+static ssize_t mdss_fb_set_night_mode7200k(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int rc = 0;
+	int level = 0;
+
+	rc = kstrtoint(buf, 10, &level);
+	if (rc) {
+		pr_err("kstrtoint failed. rc=%d\n", rc);
+		return rc;
+	}
+    rc = mdss_fb_send_panel_event(mfd, MDSS_EVENT_PANEL_SET_NIGHT_MODE7200K,
+	    (void *)(unsigned long)level);
+	if (rc)
+		pr_err("Fail to set Night mode 7200K: %d\n", level);
+
+	return count;
+}
+
+static DEVICE_ATTR(night_mode7200k, S_IRUGO | S_IWUSR,
+	mdss_fb_get_night_mode7200k, mdss_fb_set_night_mode7200k);
+
+/********************************************************************/
 //#endif
 //#ifdef VENDOR_EDIT
 static ssize_t mdss_fb_get_reading_mode(struct device *dev,
@@ -1249,6 +1825,20 @@ static struct attribute *mdss_fb_attrs[] = {
 //#endif
 //#ifdef VENDOR_EDIT
 	&dev_attr_night_mode.attr,
+	&dev_attr_night_mode3500k.attr,
+	&dev_attr_night_mode3800k.attr,
+	&dev_attr_night_mode4000k.attr,
+	&dev_attr_night_mode4300k.attr,
+	&dev_attr_night_mode4500k.attr,
+	&dev_attr_night_mode3100k.attr,
+	&dev_attr_night_mode4800k.attr,
+	&dev_attr_night_mode2800k.attr,
+	&dev_attr_night_mode5000k.attr,
+	&dev_attr_night_mode5500k.attr,
+	&dev_attr_night_mode6000k.attr,
+	&dev_attr_night_mode6500k.attr,
+	&dev_attr_night_mode6800k.attr,
+	&dev_attr_night_mode7200k.attr,
 //#endif
 //#ifdef VENDOR_EDIT
 	&dev_attr_reading_mode.attr,

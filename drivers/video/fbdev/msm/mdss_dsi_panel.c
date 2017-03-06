@@ -1172,6 +1172,403 @@ int mdss_dsi_panel_get_night_mode(struct mdss_dsi_ctrl_pdata *ctrl)
 {
    return ctrl->night_mode;
 }
+int mdss_dsi_panel_set_night_mode3500k(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+{
+	struct dsi_panel_cmds *night_mode_on_cmds;
+	struct dsi_panel_cmds *night_mode_off_cmds;
+
+	night_mode_on_cmds = &ctrl->night_mode3500k_on_cmds;
+	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
+    if (level){
+        if (night_mode_on_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_on_cmds, CMD_REQ_COMMIT);
+            pr_err("Night  Mode 3500K On (night mode).\n");
+        } else{
+            pr_err("This panel not support Night mode 3500K on (night mode).\n");
+        }
+    } else{
+        if (night_mode_off_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_off_cmds, CMD_REQ_COMMIT);
+            pr_err("Night Mode off (night mode).\n");
+        } else{
+            pr_err("This panel not support night mode off (night mode).\n");
+        }
+    }
+	return 0;
+}
+int mdss_dsi_panel_get_night_mode3500k(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+   return ctrl->night_mode3500k;
+}
+int mdss_dsi_panel_set_night_mode3800k(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+{
+	struct dsi_panel_cmds *night_mode_on_cmds;
+	struct dsi_panel_cmds *night_mode_off_cmds;
+
+	night_mode_on_cmds = &ctrl->night_mode3800k_on_cmds;
+	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
+    if (level){
+        if (night_mode_on_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_on_cmds, CMD_REQ_COMMIT);
+            pr_err("Night  Mode 3800K On (night mode).\n");
+        } else{
+            pr_err("This panel not support Night mode 3800K on (night mode).\n");
+        }
+    } else{
+        if (night_mode_off_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_off_cmds, CMD_REQ_COMMIT);
+            pr_err("Night Mode off (night mode).\n");
+        } else{
+            pr_err("This panel not support night mode off (night mode).\n");
+        }
+    }
+	return 0;
+}
+int mdss_dsi_panel_get_night_mode3800k(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+   return ctrl->night_mode3800k;
+}
+int mdss_dsi_panel_set_night_mode4000k(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+{
+	struct dsi_panel_cmds *night_mode_on_cmds;
+	struct dsi_panel_cmds *night_mode_off_cmds;
+
+	night_mode_on_cmds = &ctrl->night_mode4000k_on_cmds;
+	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
+    if (level){
+        if (night_mode_on_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_on_cmds, CMD_REQ_COMMIT);
+            pr_err("Night  Mode 4000K On (night mode).\n");
+        } else{
+            pr_err("This panel not support Night mode 4000K on (night mode).\n");
+        }
+    } else{
+        if (night_mode_off_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_off_cmds, CMD_REQ_COMMIT);
+            pr_err("Night Mode off (night mode).\n");
+        } else{
+            pr_err("This panel not support night mode off (night mode).\n");
+        }
+    }
+	return 0;
+}
+int mdss_dsi_panel_get_night_mode4000k(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+   return ctrl->night_mode4000k;
+}
+int mdss_dsi_panel_set_night_mode4300k(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+{
+	struct dsi_panel_cmds *night_mode_on_cmds;
+	struct dsi_panel_cmds *night_mode_off_cmds;
+
+	night_mode_on_cmds = &ctrl->night_mode4300k_on_cmds;
+	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
+    if (level){
+        if (night_mode_on_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_on_cmds, CMD_REQ_COMMIT);
+            pr_err("Night  Mode 4300K On (night mode).\n");
+        } else{
+            pr_err("This panel not support Night mode 4300K on (night mode).\n");
+        }
+    } else{
+        if (night_mode_off_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_off_cmds, CMD_REQ_COMMIT);
+            pr_err("Night Mode off (night mode).\n");
+        } else{
+            pr_err("This panel not support night mode off (night mode).\n");
+        }
+    }
+	return 0;
+}
+int mdss_dsi_panel_get_night_mode4300k(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+   return ctrl->night_mode4300k;
+}
+int mdss_dsi_panel_set_night_mode4500k(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+{
+	struct dsi_panel_cmds *night_mode_on_cmds;
+	struct dsi_panel_cmds *night_mode_off_cmds;
+
+	night_mode_on_cmds = &ctrl->night_mode4500k_on_cmds;
+	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
+    if (level){
+        if (night_mode_on_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_on_cmds, CMD_REQ_COMMIT);
+            pr_err("Night  Mode 4500K On (night mode).\n");
+        } else{
+            pr_err("This panel not support Night mode 4500K on (night mode).\n");
+        }
+    } else{
+        if (night_mode_off_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_off_cmds, CMD_REQ_COMMIT);
+            pr_err("Night Mode off (night mode).\n");
+        } else{
+            pr_err("This panel not support night mode off (night mode).\n");
+        }
+    }
+	return 0;
+}
+int mdss_dsi_panel_get_night_mode4500k(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+   return ctrl->night_mode4500k;
+}
+int mdss_dsi_panel_set_night_mode3100k(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+{
+	struct dsi_panel_cmds *night_mode_on_cmds;
+	struct dsi_panel_cmds *night_mode_off_cmds;
+
+	night_mode_on_cmds = &ctrl->night_mode3100k_on_cmds;
+	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
+    if (level){
+        if (night_mode_on_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_on_cmds, CMD_REQ_COMMIT);
+            pr_err("Night  Mode 3100K On (night mode).\n");
+        } else{
+            pr_err("This panel not support Night mode 3100K on (night mode).\n");
+        }
+    } else{
+        if (night_mode_off_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_off_cmds, CMD_REQ_COMMIT);
+            pr_err("Night Mode off (night mode).\n");
+        } else{
+            pr_err("This panel not support night mode off (night mode).\n");
+        }
+    }
+	return 0;
+}
+int mdss_dsi_panel_get_night_mode3100k(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+   return ctrl->night_mode3100k;
+}
+int mdss_dsi_panel_set_night_mode4800k(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+{
+	struct dsi_panel_cmds *night_mode_on_cmds;
+	struct dsi_panel_cmds *night_mode_off_cmds;
+
+	night_mode_on_cmds = &ctrl->night_mode4800k_on_cmds;
+	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
+    if (level){
+        if (night_mode_on_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_on_cmds, CMD_REQ_COMMIT);
+            pr_err("Night  Mode 4800K On (night mode).\n");
+        } else{
+            pr_err("This panel not support Night mode 4800K on (night mode).\n");
+        }
+    } else{
+        if (night_mode_off_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_off_cmds, CMD_REQ_COMMIT);
+            pr_err("Night Mode off (night mode).\n");
+        } else{
+            pr_err("This panel not support night mode off (night mode).\n");
+        }
+    }
+	return 0;
+}
+int mdss_dsi_panel_get_night_mode4800k(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+   return ctrl->night_mode4800k;
+}
+
+int mdss_dsi_panel_set_night_mode2800k(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+{
+	struct dsi_panel_cmds *night_mode_on_cmds;
+	struct dsi_panel_cmds *night_mode_off_cmds;
+
+	night_mode_on_cmds = &ctrl->night_mode2800k_on_cmds;
+	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
+    if (level){
+        if (night_mode_on_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_on_cmds, CMD_REQ_COMMIT);
+            pr_err("Night  Mode 2800K On (night mode).\n");
+        } else{
+            pr_err("This panel not support Night mode 2800K on (night mode).\n");
+        }
+    } else{
+        if (night_mode_off_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_off_cmds, CMD_REQ_COMMIT);
+            pr_err("Night Mode off (night mode).\n");
+        } else{
+            pr_err("This panel not support night mode off (night mode).\n");
+        }
+    }
+	return 0;
+}
+int mdss_dsi_panel_get_night_mode2800k(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+   return ctrl->night_mode2800k;
+}
+
+int mdss_dsi_panel_set_night_mode5000k(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+{
+	struct dsi_panel_cmds *night_mode_on_cmds;
+	struct dsi_panel_cmds *night_mode_off_cmds;
+
+	night_mode_on_cmds = &ctrl->night_mode5000k_on_cmds;
+	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
+    if (level){
+        if (night_mode_on_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_on_cmds, CMD_REQ_COMMIT);
+            pr_err("Night  Mode 5000K On (night mode).\n");
+        } else{
+            pr_err("This panel not support Night mode 5000K on (night mode).\n");
+        }
+    } else{
+        if (night_mode_off_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_off_cmds, CMD_REQ_COMMIT);
+            pr_err("Night Mode off (night mode).\n");
+        } else{
+            pr_err("This panel not support night mode off (night mode).\n");
+        }
+    }
+	return 0;
+}
+int mdss_dsi_panel_get_night_mode5000k(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+   return ctrl->night_mode5000k;
+}
+
+int mdss_dsi_panel_set_night_mode5500k(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+{
+	struct dsi_panel_cmds *night_mode_on_cmds;
+	struct dsi_panel_cmds *night_mode_off_cmds;
+
+	night_mode_on_cmds = &ctrl->night_mode5500k_on_cmds;
+	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
+    if (level){
+        if (night_mode_on_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_on_cmds, CMD_REQ_COMMIT);
+            pr_err("Night  Mode 5500K On (night mode).\n");
+        } else{
+            pr_err("This panel not support Night mode 5500K on (night mode).\n");
+        }
+    } else{
+        if (night_mode_off_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_off_cmds, CMD_REQ_COMMIT);
+            pr_err("Night Mode off (night mode).\n");
+        } else{
+            pr_err("This panel not support night mode off (night mode).\n");
+        }
+    }
+	return 0;
+}
+int mdss_dsi_panel_get_night_mode5500k(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+   return ctrl->night_mode5500k;
+}
+
+int mdss_dsi_panel_set_night_mode6000k(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+{
+	struct dsi_panel_cmds *night_mode_on_cmds;
+	struct dsi_panel_cmds *night_mode_off_cmds;
+
+	night_mode_on_cmds = &ctrl->night_mode6000k_on_cmds;
+	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
+    if (level){
+        if (night_mode_on_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_on_cmds, CMD_REQ_COMMIT);
+            pr_err("Night  Mode 6000K On (night mode).\n");
+        } else{
+            pr_err("This panel not support Night mode 6000K on (night mode).\n");
+        }
+    } else{
+        if (night_mode_off_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_off_cmds, CMD_REQ_COMMIT);
+            pr_err("Night Mode off (night mode).\n");
+        } else{
+            pr_err("This panel not support night mode off (night mode).\n");
+        }
+    }
+	return 0;
+}
+int mdss_dsi_panel_get_night_mode6000k(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+   return ctrl->night_mode6000k;
+}
+int mdss_dsi_panel_set_night_mode6500k(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+{
+	struct dsi_panel_cmds *night_mode_on_cmds;
+	struct dsi_panel_cmds *night_mode_off_cmds;
+
+	night_mode_on_cmds = &ctrl->night_mode6500k_on_cmds;
+	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
+    if (level){
+        if (night_mode_on_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_on_cmds, CMD_REQ_COMMIT);
+            pr_err("Night  Mode 6500K On (night mode).\n");
+        } else{
+            pr_err("This panel not support Night mode 6500K on (night mode).\n");
+        }
+    } else{
+        if (night_mode_off_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_off_cmds, CMD_REQ_COMMIT);
+            pr_err("Night Mode off (night mode).\n");
+        } else{
+            pr_err("This panel not support night mode off (night mode).\n");
+        }
+    }
+	return 0;
+}
+int mdss_dsi_panel_get_night_mode6500k(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+   return ctrl->night_mode6500k;
+}
+int mdss_dsi_panel_set_night_mode6800k(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+{
+	struct dsi_panel_cmds *night_mode_on_cmds;
+	struct dsi_panel_cmds *night_mode_off_cmds;
+
+	night_mode_on_cmds = &ctrl->night_mode6800k_on_cmds;
+	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
+    if (level){
+        if (night_mode_on_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_on_cmds, CMD_REQ_COMMIT);
+            pr_err("Night  Mode 6800K On (night mode).\n");
+        } else{
+            pr_err("This panel not support Night mode 6800K on (night mode).\n");
+        }
+    } else{
+        if (night_mode_off_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_off_cmds, CMD_REQ_COMMIT);
+            pr_err("Night Mode off (night mode).\n");
+        } else{
+            pr_err("This panel not support night mode off (night mode).\n");
+        }
+    }
+	return 0;
+}
+int mdss_dsi_panel_get_night_mode6800k(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+   return ctrl->night_mode6800k;
+}
+int mdss_dsi_panel_set_night_mode7200k(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+{
+	struct dsi_panel_cmds *night_mode_on_cmds;
+	struct dsi_panel_cmds *night_mode_off_cmds;
+
+	night_mode_on_cmds = &ctrl->night_mode7200k_on_cmds;
+	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
+    if (level){
+        if (night_mode_on_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_on_cmds, CMD_REQ_COMMIT);
+            pr_err("Night  Mode 7200K On (night mode).\n");
+        } else{
+            pr_err("This panel not support Night mode 7200K on (night mode).\n");
+        }
+    } else{
+        if (night_mode_off_cmds->cmd_cnt){
+            mdss_dsi_panel_cmds_send(ctrl, night_mode_off_cmds, CMD_REQ_COMMIT);
+            pr_err("Night Mode off (night mode).\n");
+        } else{
+            pr_err("This panel not support night mode off (night mode).\n");
+        }
+    }
+	return 0;
+}
+int mdss_dsi_panel_get_night_mode7200k(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+   return ctrl->night_mode7200k;
+}
+
 //#endif
 //#ifdef VENDOR_EDIT
 int mdss_dsi_panel_set_reading_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
@@ -1269,6 +1666,10 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
     if (mdss_dsi_panel_get_night_mode(ctrl)){
         mdss_dsi_panel_set_night_mode(ctrl, mdss_dsi_panel_get_night_mode(ctrl));
     }
+/**************************************************************/
+
+
+/***************************************************************/
 //#endif
 //#ifdef VENDOR_EDIT
     if (mdss_dsi_panel_get_reading_mode(ctrl)){
@@ -3270,6 +3671,61 @@ static int mdss_panel_parse_dt(struct device_node *np,
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->read_mode_off_cmds,
 		"qcom,mdss-dsi-panel-read-mode-off-command",
 		"qcom,mdss-dsi-read-mode-command-state");
+	/*****************************************************************/
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->night_mode3500k_on_cmds,
+		"qcom,mdss-dsi-panel-night-mode3500k-on-command",
+		"qcom,mdss-dsi-night-mode-command-state");	
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->night_mode3800k_on_cmds,
+		"qcom,mdss-dsi-panel-night-mode3800k-on-command",
+		"qcom,mdss-dsi-night-mode-command-state");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->night_mode4000k_on_cmds,
+		"qcom,mdss-dsi-panel-night-mode4000k-on-command",
+		"qcom,mdss-dsi-night-mode-command-state");	
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->night_mode4300k_on_cmds,
+		"qcom,mdss-dsi-panel-night-mode4300k-on-command",
+		"qcom,mdss-dsi-night-mode-command-state");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->night_mode4500k_on_cmds,
+		"qcom,mdss-dsi-panel-night-mode4500k-on-command",
+		"qcom,mdss-dsi-night-mode-command-state");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->night_mode3100k_on_cmds,
+		"qcom,mdss-dsi-panel-night-mode3100k-on-command",
+		"qcom,mdss-dsi-night-mode-command-state");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->night_mode4800k_on_cmds,
+		"qcom,mdss-dsi-panel-night-mode4800k-on-command",
+		"qcom,mdss-dsi-night-mode-command-state");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->night_mode2800k_on_cmds,
+		"qcom,mdss-dsi-panel-night-mode2800k-on-command",
+		"qcom,mdss-dsi-night-mode-command-state");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->night_mode5000k_on_cmds,
+		"qcom,mdss-dsi-panel-night-mode5000k-on-command",
+		"qcom,mdss-dsi-night-mode-command-state");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->night_mode5500k_on_cmds,
+		"qcom,mdss-dsi-panel-night-mode5500k-on-command",
+		"qcom,mdss-dsi-night-mode-command-state");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->night_mode6000k_on_cmds,
+		"qcom,mdss-dsi-panel-night-mode6000k-on-command",
+		"qcom,mdss-dsi-night-mode-command-state");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->night_mode6500k_on_cmds,
+		"qcom,mdss-dsi-panel-night-mode6500k-on-command",
+		"qcom,mdss-dsi-night-mode-command-state");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->night_mode6800k_on_cmds,
+		"qcom,mdss-dsi-panel-night-mode6800k-on-command",
+		"qcom,mdss-dsi-night-mode-command-state");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->night_mode7200k_on_cmds,
+		"qcom,mdss-dsi-panel-night-mode7200k-on-command",
+		"qcom,mdss-dsi-night-mode-command-state");
+
+
+
+
+
+
+
+
+
+
+
+	/*****************************************************************/
 //#endif
 //#ifdef VENDOR_EDIT
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->Adobe_RGB_on_cmds,

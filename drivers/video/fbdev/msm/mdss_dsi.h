@@ -604,6 +604,37 @@ struct mdss_dsi_ctrl_pdata {
 	struct dsi_panel_cmds night_mode_on_cmds;
 	struct dsi_panel_cmds night_mode_off_cmds;
 
+	int night_mode3500k;
+	int night_mode3800k;
+	int night_mode4000k;
+	int night_mode4300k;
+	int night_mode4500k;
+	int night_mode3100k;
+	int night_mode4800k;
+	int night_mode2800k;
+	int night_mode5000k;
+	int night_mode5500k;
+	int night_mode6000k;
+	int night_mode6500k;
+	int night_mode6800k;
+	int night_mode7200k;
+
+	struct dsi_panel_cmds night_mode3500k_on_cmds;
+	struct dsi_panel_cmds night_mode3800k_on_cmds;
+	struct dsi_panel_cmds night_mode4000k_on_cmds;
+	struct dsi_panel_cmds night_mode4300k_on_cmds;
+	struct dsi_panel_cmds night_mode4500k_on_cmds;
+	struct dsi_panel_cmds night_mode3100k_on_cmds;
+	struct dsi_panel_cmds night_mode4800k_on_cmds;
+	struct dsi_panel_cmds night_mode2800k_on_cmds;
+	struct dsi_panel_cmds night_mode5000k_on_cmds;
+	struct dsi_panel_cmds night_mode5500k_on_cmds;
+	struct dsi_panel_cmds night_mode6000k_on_cmds;
+	struct dsi_panel_cmds night_mode6500k_on_cmds;
+	struct dsi_panel_cmds night_mode6800k_on_cmds;
+	struct dsi_panel_cmds night_mode7200k_on_cmds;
+
+
 //#endif
 //#ifdef VENDOR_EDIT
 	int reading_mode;
@@ -785,6 +816,35 @@ int mdss_dsi_panel_get_dci_p3_mode(struct mdss_dsi_ctrl_pdata *ctrl);
 //#ifdef VENDOR_EDIT
 int mdss_dsi_panel_set_night_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level);
 int mdss_dsi_panel_get_night_mode(struct mdss_dsi_ctrl_pdata *ctrl);
+int mdss_dsi_panel_set_night_mode3500k(struct mdss_dsi_ctrl_pdata *ctrl, int level);
+int mdss_dsi_panel_get_night_mode3500k(struct mdss_dsi_ctrl_pdata *ctrl);
+int mdss_dsi_panel_set_night_mode3800k(struct mdss_dsi_ctrl_pdata *ctrl, int level);
+int mdss_dsi_panel_get_night_mode3800k(struct mdss_dsi_ctrl_pdata *ctrl);
+int mdss_dsi_panel_set_night_mode4000k(struct mdss_dsi_ctrl_pdata *ctrl, int level);
+int mdss_dsi_panel_get_night_mode4000k(struct mdss_dsi_ctrl_pdata *ctrl);
+int mdss_dsi_panel_set_night_mode4300k(struct mdss_dsi_ctrl_pdata *ctrl, int level);
+int mdss_dsi_panel_get_night_mode4300k(struct mdss_dsi_ctrl_pdata *ctrl);
+int mdss_dsi_panel_set_night_mode4500k(struct mdss_dsi_ctrl_pdata *ctrl, int level);
+int mdss_dsi_panel_get_night_mode4500k(struct mdss_dsi_ctrl_pdata *ctrl);
+int mdss_dsi_panel_set_night_mode3100k(struct mdss_dsi_ctrl_pdata *ctrl, int level);
+int mdss_dsi_panel_get_night_mode3100k(struct mdss_dsi_ctrl_pdata *ctrl);
+int mdss_dsi_panel_set_night_mode4800k(struct mdss_dsi_ctrl_pdata *ctrl, int level);
+int mdss_dsi_panel_get_night_mode4800k(struct mdss_dsi_ctrl_pdata *ctrl);
+int mdss_dsi_panel_set_night_mode2800k(struct mdss_dsi_ctrl_pdata *ctrl, int level);
+int mdss_dsi_panel_get_night_mode2800k(struct mdss_dsi_ctrl_pdata *ctrl);
+int mdss_dsi_panel_set_night_mode5000k(struct mdss_dsi_ctrl_pdata *ctrl, int level);
+int mdss_dsi_panel_get_night_mode5000k(struct mdss_dsi_ctrl_pdata *ctrl);
+int mdss_dsi_panel_set_night_mode5500k(struct mdss_dsi_ctrl_pdata *ctrl, int level);
+int mdss_dsi_panel_get_night_mode5500k(struct mdss_dsi_ctrl_pdata *ctrl);
+int mdss_dsi_panel_set_night_mode6000k(struct mdss_dsi_ctrl_pdata *ctrl, int level);
+int mdss_dsi_panel_get_night_mode6000k(struct mdss_dsi_ctrl_pdata *ctrl);
+int mdss_dsi_panel_set_night_mode6500k(struct mdss_dsi_ctrl_pdata *ctrl, int level);
+int mdss_dsi_panel_get_night_mode6500k(struct mdss_dsi_ctrl_pdata *ctrl);
+int mdss_dsi_panel_set_night_mode6800k(struct mdss_dsi_ctrl_pdata *ctrl, int level);
+int mdss_dsi_panel_get_night_mode6800k(struct mdss_dsi_ctrl_pdata *ctrl);
+int mdss_dsi_panel_set_night_mode7200k(struct mdss_dsi_ctrl_pdata *ctrl, int level);
+int mdss_dsi_panel_get_night_mode7200k(struct mdss_dsi_ctrl_pdata *ctrl);
+
 //#endif
 //#ifdef VENDOR_EDIT
 int mdss_dsi_panel_set_reading_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level);
