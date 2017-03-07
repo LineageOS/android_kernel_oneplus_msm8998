@@ -2827,6 +2827,8 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
     //#ifdef VENDOR_EDIT
 	case MDSS_EVENT_PANEL_SET_SRGB_MODE:
 		ctrl_pdata->SRGB_mode= (int)(unsigned long) arg;
+		if(ctrl_pdata->SRGB_mode==1)
+			ctrl_pdata->dci_p3_mode=0;
 	    set_param_lcm_srgb_mode(&(ctrl_pdata->SRGB_mode));
 	    if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
 		    mdss_dsi_panel_set_srgb_mode(ctrl_pdata, (int)(unsigned long) ctrl_pdata->SRGB_mode);
@@ -2851,6 +2853,8 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
     //#ifdef VENDOR_EDIT
 	case MDSS_EVENT_PANEL_SET_DCI_P3_MODE:
 		ctrl_pdata->dci_p3_mode= (int)(unsigned long) arg;
+		if(ctrl_pdata->dci_p3_mode==1)
+		ctrl_pdata->SRGB_mode=0;
 		set_param_lcm_dci_p3_mode(&(ctrl_pdata->dci_p3_mode));
 		if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
 		    mdss_dsi_panel_set_dci_p3_mode(ctrl_pdata,(int)(unsigned long) ctrl_pdata->dci_p3_mode);
