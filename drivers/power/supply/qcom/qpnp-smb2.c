@@ -1636,17 +1636,21 @@ static int smb2_init_hw(struct smb2 *chip)
 		DEFAULT_VOTER, !chg->chg_enabled, 0);
 	vote(chg->dc_suspend_votable,
 		DEFAULT_VOTER, !chg->chg_enabled, 0);
+	smblib_set_charge_param(chg, &chg->param.fcc,
+			chg->ibatmax[BATT_TEMP_NORMAL] * 1000);
+	smblib_set_charge_param(chg, &chg->param.fv,
+			chg->vbatmax[BATT_TEMP_NORMAL] * 1000);
 #else
 	/* vote 0mA on usb_icl for non battery platforms */
 	vote(chg->usb_icl_votable,
 		DEFAULT_VOTER, chip->dt.no_battery, 0);
 	vote(chg->dc_suspend_votable,
 		DEFAULT_VOTER, chip->dt.no_battery, 0);
-#endif
 	vote(chg->fcc_votable,
 		DEFAULT_VOTER, true, chip->dt.fcc_ua);
 	vote(chg->fv_votable,
 		DEFAULT_VOTER, true, chip->dt.fv_uv);
+#endif
 	vote(chg->dc_icl_votable,
 		DEFAULT_VOTER, true, chip->dt.dc_icl_ua);
 	vote(chg->hvdcp_disable_votable_indirect, DEFAULT_VOTER,
