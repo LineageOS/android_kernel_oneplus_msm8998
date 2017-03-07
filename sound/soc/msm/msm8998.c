@@ -4069,6 +4069,13 @@ static int msm_set_pinctrl(struct msm_pinctrl_info *pinctrl_info,
 		ret = -EINVAL;
 		goto err;
 	}
+
+        if (pinctrl_info->pinctrl == NULL) {
+                pr_err("%s: pinctrl_info->pinctrl is NULL\n", __func__);
+                ret = -EINVAL;
+                goto err;
+        }
+
 	curr_state = pinctrl_info->curr_state;
 	pinctrl_info->curr_state = new_state;
 	pr_debug("%s: curr_state = %s new_state = %s\n", __func__,
@@ -4085,12 +4092,6 @@ static int msm_set_pinctrl(struct msm_pinctrl_info *pinctrl_info,
 		ret = -EIO;
 		goto err;
 	}
-
-#ifdef VENDOR_EDIT
-/*wangdongdong@MultiMeidaService,2017/03/04,add to avoid NULL pointer*/
-       if(!pinctrl_info->pinctrl)
-               goto err;
-#endif
 
 	switch (pinctrl_info->curr_state) {
 	case STATE_MI2S_ACTIVE:
@@ -4361,7 +4362,6 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 		if (ret) {
 			pr_err("%s: MI2S TLMM pinctrl set failed with %d\n",
 				__func__, ret);
-			goto done;
 		}
 	}
 
