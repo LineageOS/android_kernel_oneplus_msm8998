@@ -866,6 +866,9 @@ static int smblib_usb_icl_vote_callback(struct votable *votable, void *data,
 	int rc = 0;
 	bool override;
 	union power_supply_propval pval;
+#ifdef VENDOR_EDIT
+	pr_info("%s,icl_ua=%d\n",__func__,icl_ua);
+#endif
 
 	/* suspend and return if 25mA or less is requested */
 	if (client && (icl_ua < USBIN_25MA))
@@ -3701,6 +3704,9 @@ irqreturn_t smblib_handle_switcher_power_ok(int irq, void *data)
 	struct smb_charger *chg = irq_data->parent_data;
 	int rc;
 	u8 stat;
+#ifdef VENDOR_EDIT
+	smblib_dbg(chg, PR_INTERRUPT, "IRQ: %s\n", irq_data->name);
+#endif
 
 	if (!(chg->wa_flags & BOOST_BACK_WA))
 		return IRQ_HANDLED;

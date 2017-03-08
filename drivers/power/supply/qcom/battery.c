@@ -345,12 +345,17 @@ static int pl_fcc_vote_callback(struct votable *votable, void *data,
 		pr_err("Could not set main fcc, rc=%d\n", rc);
 		return rc;
 	}
-
+#ifdef VENDOR_EDIT
+	pr_info("master_fcc=%d slave_fcc=%d distribution=(%d/%d)\n",
+		   master_fcc_ua, slave_fcc_ua,
+		   (master_fcc_ua * 100) / total_fcc_ua,
+		   (slave_fcc_ua * 100) / total_fcc_ua);
+#else
 	pl_dbg(chip, PR_PARALLEL, "master_fcc=%d slave_fcc=%d distribution=(%d/%d)\n",
 		   master_fcc_ua, slave_fcc_ua,
 		   (master_fcc_ua * 100) / total_fcc_ua,
 		   (slave_fcc_ua * 100) / total_fcc_ua);
-
+#endif
 	return 0;
 }
 
@@ -362,6 +367,9 @@ static int pl_fv_vote_callback(struct votable *votable, void *data,
 	union power_supply_propval pval = {0, };
 	int rc = 0;
 	int effective_fv_uv = fv_uv;
+#ifdef VENDOR_EDIT
+	pr_info("%s,fv_uv=%d\n",__func__,fv_uv);
+#endif
 
 	if (fv_uv < 0)
 		return 0;
@@ -484,10 +492,13 @@ static int pl_disable_vote_callback(struct votable *votable,
 		rerun_election(chip->fcc_votable);
 		rerun_election(chip->fv_votable);
 	}
-
+#ifdef VENDOR_EDIT
+	pr_info("parallel charging %s\n",
+		   pl_disable ? "disabled" : "enabled");
+#else
 	pl_dbg(chip, PR_PARALLEL, "parallel charging %s\n",
 		   pl_disable ? "disabled" : "enabled");
-
+#endif
 	return 0;
 }
 
