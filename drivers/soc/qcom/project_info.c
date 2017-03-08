@@ -374,7 +374,7 @@ void get_cpu_type(void){
 	}
 }
 
-static char mainboard_version[8] = {0};
+static char mainboard_version[16] = {0};
 static char mainboard_manufacture[8] = {'O', 'N', 'E', 'P', 'L', 'U', 'S','\0'};
 extern unsigned long totalram_pages __read_mostly;
 static char Aboard_version[4] = {0};
@@ -436,26 +436,26 @@ int __init init_project_info(void)
 
 	switch(project_info_desc->hw_version) {
 		case 11:
-		    snprintf(mainboard_version, sizeof(mainboard_version), "%s","EVB");
+		    snprintf(mainboard_version, sizeof(mainboard_version), "%s %s", project_info_desc->project_name, "EVB");
 		    break;
 		case 12:
-		    snprintf(mainboard_version, sizeof(mainboard_version), "%s","T0");
+		    snprintf(mainboard_version, sizeof(mainboard_version), "%s %s", project_info_desc->project_name, "T0");
 		    break;
 		case 13:
-		    snprintf(mainboard_version, sizeof(mainboard_version), "%s","T1");
+		    snprintf(mainboard_version, sizeof(mainboard_version), "%s %s", project_info_desc->project_name, "T1");
 		    break;
 		case 14:
-		    snprintf(mainboard_version, sizeof(mainboard_version), "%s","EVT1");
+		    snprintf(mainboard_version, sizeof(mainboard_version), "%s %s", project_info_desc->project_name, "EVT1");
 		    break;
 		case 15:
-		    snprintf(mainboard_version, sizeof(mainboard_version), "%s","EVT2");
+		    snprintf(mainboard_version, sizeof(mainboard_version), "%s %s", project_info_desc->project_name, "EVT2");
 		    break;
 		default:
-		    snprintf(mainboard_version, sizeof(mainboard_version), "%d",project_info_desc->hw_version);
+		    snprintf(mainboard_version, sizeof(mainboard_version), "%d", project_info_desc->hw_version);
 		    break;
 	}
-	strcat(project_info_desc->project_name,mainboard_version);
-	push_component_info(MAINBOARD,project_info_desc->project_name, mainboard_manufacture);
+	//strcat(project_info_desc->project_name,mainboard_version);
+	push_component_info(MAINBOARD,mainboard_version, mainboard_manufacture);
 
     if(project_info_desc->hw_version <= 12)
     {
