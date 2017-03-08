@@ -1380,7 +1380,7 @@ void int_touch(void)
 		F12_2D_DATA15 = 0x000C;
 	ret = synaptics_rmi4_i2c_read_block(ts->client, F12_2D_DATA15, 2, object_attention);
     if (ret < 0) {
-        TPD_ERR("synaptics_int_touch: i2c_transfer failed\n");
+        TPD_ERR("synaptics_int_touch F12_2D_DATA15: i2c_transfer failed\n");
         goto INT_TOUCH_END;
     }
 	total_status = (object_attention[1] << 8) | object_attention[0];
@@ -1393,9 +1393,13 @@ void int_touch(void)
 	}else{
 		count_data = 0;
 	}
+        if(count_data > 10){
+            TPD_ERR("count_data is: %d\n", count_data);
+            panic("finger number wrong");
+        }
 	ret = synaptics_rmi4_i2c_read_block(ts->client, F12_2D_DATA_BASE, count_data*8+1, buf);
 	if (ret < 0) {
-		TPD_ERR("synaptics_int_touch: i2c_transfer failed\n");
+		TPD_ERR("synaptics_int_touch F12_2D_DATA_BASE: i2c_transfer failed\n");
 		goto INT_TOUCH_END;
 	}
 	for( i = 0; i < count_data; i++ ) {
