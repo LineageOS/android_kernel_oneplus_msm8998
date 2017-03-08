@@ -658,3 +658,8 @@ CONFIG_F2FS_FS_SECURITY=y
 #ifdef VENDOR_EDIT /*oneplus config field*/
 CONFIG_DEFRAG_HELPER=y
 #endif
+#ifdef VENDOR_EDIT
+#neiltsai add for debugging
+CONFIG_CORESIGHT_DBGUI=y
+CONFIG_MSM_DEBUG_LAR_UNLOCK=y
+#endif
