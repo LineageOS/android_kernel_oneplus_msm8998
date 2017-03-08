@@ -4123,6 +4123,28 @@ int update_dash_unplug_status(void)
 
 	return 0;
 }
+int op_set_collapse_fet(struct smb_charger *chg, bool on)
+{
+       int rc = 0;
+       u8 stat;
+       rc = smblib_masked_write(chg, USBIN_AICL_OPTIONS_CFG_REG, USBIN_HV_COLLAPSE_RESPONSE_BIT|USBIN_LV_COLLAPSE_RESPONSE_BIT,
+                                on ? 0: USBIN_HV_COLLAPSE_RESPONSE_BIT|USBIN_LV_COLLAPSE_RESPONSE_BIT);
+       if (rc < 0)
+               smblib_err(chg, "Couldn't write %s to USBIN_AICL_OPTIONS_CFG_REG rc=%d\n",
+                       on ? "on" : "off", rc);
+       rc = smblib_read(chg, USBIN_AICL_OPTIONS_CFG_REG, &stat);
+       pr_info("%s,USBIN_AICL_OPTIONS_CFG_REG=0x%x\n",__func__,stat);
+       rc = smblib_masked_write(chg, USBIN_LOAD_CFG_REG, BIT(0)|BIT(1),
+                               on ? 0: BIT(0)|BIT(1));
+       if (rc < 0)
+               smblib_err(chg, "Couldn't write %s to USBIN_LOAD_CFG_REG rc=%d\n",
+					   on ? "on" : "off", rc);
+       rc = smblib_read(chg, USBIN_LOAD_CFG_REG, &stat);
+       pr_info("%s,USBIN_LOAD_CFG_REG=0x%x\n",__func__,stat);
+
+       return rc;
+}
+
 
 int op_handle_switcher_power_ok(void)
 {
@@ -4172,6 +4194,7 @@ int check_usb_suspend(int enable,bool check_power_ok)
 		enable_irq(g_chg->irq_info[SWITCH_POWER_OK_IRQ].irq);
 	}
 	else{
+		op_set_collapse_fet(g_chg,enable);
 		disable_irq(g_chg->irq_info[SWITCH_POWER_OK_IRQ].irq);
 	}
 	return 0;
@@ -5703,7 +5726,9 @@ int smblib_init(struct smb_charger *chg)
 	INIT_WORK(&chg->vconn_oc_work, smblib_vconn_oc_work);
 	INIT_DELAYED_WORK(&chg->otg_ss_done_work, smblib_otg_ss_done_work);
 	chg->fake_capacity = -EINVAL;
-
+#ifdef VENDOR_EDIT
+	op_set_collapse_fet(chg,false);
+#endif
 	switch (chg->mode) {
 	case PARALLEL_MASTER:
 		chg->qnovo_fcc_ua = -EINVAL;
