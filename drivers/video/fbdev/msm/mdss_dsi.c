@@ -1623,6 +1623,9 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 //#ifdef VENDOR_EDIT
     if (!ctrl_pdata->setting_mode_loaded){
         ctrl_pdata->setting_mode_loaded = true;
+        mutex_lock(&ctrl_pdata->panel_mode_lock);
+        ctrl_pdata->is_panel_on = true;
+        mutex_unlock(&ctrl_pdata->panel_mode_lock);
         //sRGB
 		get_param_lcm_srgb_mode(&(ctrl_pdata->SRGB_mode));
 		if (1 == ctrl_pdata->SRGB_mode){
@@ -2805,20 +2808,16 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
     //#ifdef VENDOR_EDIT
 	case MDSS_EVENT_PANEL_SET_ACL:
 		ctrl_pdata->acl_mode = (int)(unsigned long) arg;
-		if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-		    mdss_dsi_panel_set_acl(ctrl_pdata, (int)(unsigned long) ctrl_pdata->acl_mode);
-		}
+		mdss_dsi_panel_set_acl(ctrl_pdata, (int)(unsigned long) ctrl_pdata->acl_mode);
 		break;
 	case MDSS_EVENT_PANEL_GET_ACL:
-		rc = ctrl_pdata->acl_mode;
+		rc = mdss_dsi_panel_get_acl_mode(ctrl_pdata);
 		break;
 	//#endif
     //#ifdef VENDOR_EDIT
 	case MDSS_EVENT_PANEL_SET_HBM_MODE:
 		ctrl_pdata->hbm_mode = (int)(unsigned long) arg;
-		if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-		    mdss_dsi_panel_set_hbm_mode(ctrl_pdata, (int)(unsigned long) ctrl_pdata->hbm_mode);
-		}
+		mdss_dsi_panel_set_hbm_mode(ctrl_pdata, (int)(unsigned long) ctrl_pdata->hbm_mode);
 		break;
 	case MDSS_EVENT_PANEL_GET_HBM_MODE:
 		rc = mdss_dsi_panel_get_hbm_mode(ctrl_pdata);
@@ -2830,9 +2829,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		if(ctrl_pdata->SRGB_mode==1)
 			ctrl_pdata->dci_p3_mode=0;
 	    set_param_lcm_srgb_mode(&(ctrl_pdata->SRGB_mode));
-	    if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-		    mdss_dsi_panel_set_srgb_mode(ctrl_pdata, (int)(unsigned long) ctrl_pdata->SRGB_mode);
-		}
+		mdss_dsi_panel_set_srgb_mode(ctrl_pdata, (int)(unsigned long) ctrl_pdata->SRGB_mode);
 		break;
 	case MDSS_EVENT_PANEL_GET_SRGB_MODE:
 		rc = mdss_dsi_panel_get_srgb_mode(ctrl_pdata);
@@ -2842,9 +2839,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 	case MDSS_EVENT_PANEL_SET_ADOBE_RGB_MODE:
 		ctrl_pdata->Adobe_RGB_mode= (int)(unsigned long) arg;
 		set_param_lcm_adobe_rgb_mode(&(ctrl_pdata->Adobe_RGB_mode));
-		if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-		    mdss_dsi_panel_set_adobe_rgb_mode(ctrl_pdata,(int)(unsigned long) ctrl_pdata->Adobe_RGB_mode);
-		}
+		mdss_dsi_panel_set_adobe_rgb_mode(ctrl_pdata,(int)(unsigned long) ctrl_pdata->Adobe_RGB_mode);
 		break;
 	case MDSS_EVENT_PANEL_GET_ADOBE_RGB_MODE:
 		rc = mdss_dsi_panel_get_adobe_rgb_mode(ctrl_pdata);
@@ -2856,9 +2851,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		if(ctrl_pdata->dci_p3_mode==1)
 		ctrl_pdata->SRGB_mode=0;
 		set_param_lcm_dci_p3_mode(&(ctrl_pdata->dci_p3_mode));
-		if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-		    mdss_dsi_panel_set_dci_p3_mode(ctrl_pdata,(int)(unsigned long) ctrl_pdata->dci_p3_mode);
-		}
+		mdss_dsi_panel_set_dci_p3_mode(ctrl_pdata,(int)(unsigned long) ctrl_pdata->dci_p3_mode);
 		break;
 	case MDSS_EVENT_PANEL_GET_DCI_P3_MODE:
 		rc = mdss_dsi_panel_get_dci_p3_mode(ctrl_pdata);
@@ -2868,47 +2861,37 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 	case MDSS_EVENT_PANEL_SET_NIGHT_MODE:
 		ctrl_pdata->night_mode= (int)(unsigned long) arg;
 	    set_param_lcm_night_mode(&(ctrl_pdata->night_mode));
-	    if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-		    mdss_dsi_panel_set_night_mode(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode);
-		}
+		mdss_dsi_panel_set_night_mode(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode);
 		break;
 	case MDSS_EVENT_PANEL_GET_NIGHT_MODE:
 		rc = mdss_dsi_panel_get_night_mode(ctrl_pdata);
 		break;
 		
 	case MDSS_EVENT_PANEL_SET_NIGHT_MODE3500K:
-			ctrl_pdata->night_mode3500k= (int)(unsigned long) arg;
-			if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-				mdss_dsi_panel_set_night_mode3500k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode3500k);
-			}
-			break;
+		ctrl_pdata->night_mode3500k= (int)(unsigned long) arg;
+		mdss_dsi_panel_set_night_mode3500k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode3500k);
+		break;
 	case MDSS_EVENT_PANEL_GET_NIGHT_MODE3500K:
 			rc = mdss_dsi_panel_get_night_mode3500k(ctrl_pdata);
 			break;
 
 	case MDSS_EVENT_PANEL_SET_NIGHT_MODE3800K:
 		ctrl_pdata->night_mode3800k= (int)(unsigned long) arg;
-	    if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-		    mdss_dsi_panel_set_night_mode3800k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode3800k);
-		}
+		mdss_dsi_panel_set_night_mode3800k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode3800k);
 		break;
 	case MDSS_EVENT_PANEL_GET_NIGHT_MODE3800K:
 		rc = mdss_dsi_panel_get_night_mode3800k(ctrl_pdata);
 		break;
 	case MDSS_EVENT_PANEL_SET_NIGHT_MODE4000K:
 		ctrl_pdata->night_mode4000k= (int)(unsigned long) arg;
-		if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-			mdss_dsi_panel_set_night_mode4000k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode4000k);
-		}
+	    mdss_dsi_panel_set_night_mode4000k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode4000k);
 		break;
 	case MDSS_EVENT_PANEL_GET_NIGHT_MODE4000K:
 		rc = mdss_dsi_panel_get_night_mode4000k(ctrl_pdata);
 		break;
 	case MDSS_EVENT_PANEL_SET_NIGHT_MODE4300K:
 		ctrl_pdata->night_mode4300k= (int)(unsigned long) arg;
-		if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-			mdss_dsi_panel_set_night_mode4300k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode4300k);
-		}
+	    mdss_dsi_panel_set_night_mode4300k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode4300k);
 		break;
 	case MDSS_EVENT_PANEL_GET_NIGHT_MODE4300K:
 		rc = mdss_dsi_panel_get_night_mode4300k(ctrl_pdata);
@@ -2916,9 +2899,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 
 	case MDSS_EVENT_PANEL_SET_NIGHT_MODE4500K:
 		ctrl_pdata->night_mode4500k= (int)(unsigned long) arg;
-	    if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-		    mdss_dsi_panel_set_night_mode4500k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode4500k);
-		}
+		mdss_dsi_panel_set_night_mode4500k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode4500k);
 		break;
 	case MDSS_EVENT_PANEL_GET_NIGHT_MODE4500K:
 		rc = mdss_dsi_panel_get_night_mode4500k(ctrl_pdata);
@@ -2926,9 +2907,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 
 	case MDSS_EVENT_PANEL_SET_NIGHT_MODE3100K:
 		ctrl_pdata->night_mode3100k= (int)(unsigned long) arg;
-	    if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-		    mdss_dsi_panel_set_night_mode3100k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode3100k);
-		}
+		mdss_dsi_panel_set_night_mode3100k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode3100k);
 		break;
 	case MDSS_EVENT_PANEL_GET_NIGHT_MODE3100K:
 		rc = mdss_dsi_panel_get_night_mode3100k(ctrl_pdata);
@@ -2936,9 +2915,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 
 	case MDSS_EVENT_PANEL_SET_NIGHT_MODE4800K:
 		ctrl_pdata->night_mode4800k= (int)(unsigned long) arg;
-	    if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-		    mdss_dsi_panel_set_night_mode4800k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode4800k);
-		}
+		mdss_dsi_panel_set_night_mode4800k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode4800k);
 		break;
 	case MDSS_EVENT_PANEL_GET_NIGHT_MODE4800K:
 		rc = mdss_dsi_panel_get_night_mode4800k(ctrl_pdata);
@@ -2946,9 +2923,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 
 	case MDSS_EVENT_PANEL_SET_NIGHT_MODE2800K:
 		ctrl_pdata->night_mode2800k= (int)(unsigned long) arg;
-	    if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-		    mdss_dsi_panel_set_night_mode2800k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode2800k);
-		}
+		mdss_dsi_panel_set_night_mode2800k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode2800k);
 		break;
 	case MDSS_EVENT_PANEL_GET_NIGHT_MODE2800K:
 		rc = mdss_dsi_panel_get_night_mode2800k(ctrl_pdata);
@@ -2956,9 +2931,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 
 	case MDSS_EVENT_PANEL_SET_NIGHT_MODE5000K:
 		ctrl_pdata->night_mode5000k= (int)(unsigned long) arg;
-	    if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-		    mdss_dsi_panel_set_night_mode5000k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode5000k);
-		}
+		mdss_dsi_panel_set_night_mode5000k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode5000k);
 		break;
 	case MDSS_EVENT_PANEL_GET_NIGHT_MODE5000K:
 		rc = mdss_dsi_panel_get_night_mode5000k(ctrl_pdata);
@@ -2966,9 +2939,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 
 	case MDSS_EVENT_PANEL_SET_NIGHT_MODE5500K:
 		ctrl_pdata->night_mode5500k= (int)(unsigned long) arg;
-	    if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-		    mdss_dsi_panel_set_night_mode5500k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode5500k);
-		}
+	    mdss_dsi_panel_set_night_mode5500k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode5500k);
 		break;
 	case MDSS_EVENT_PANEL_GET_NIGHT_MODE5500K:
 		rc = mdss_dsi_panel_get_night_mode5500k(ctrl_pdata);
@@ -2976,9 +2947,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 
 	case MDSS_EVENT_PANEL_SET_NIGHT_MODE6000K:
 		ctrl_pdata->night_mode6000k= (int)(unsigned long) arg;
-	    if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-		    mdss_dsi_panel_set_night_mode6000k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode6000k);
-		}
+		mdss_dsi_panel_set_night_mode6000k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode6000k);
 		break;
 	case MDSS_EVENT_PANEL_GET_NIGHT_MODE6000K:
 		rc = mdss_dsi_panel_get_night_mode6000k(ctrl_pdata);
@@ -2986,9 +2955,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 
 	case MDSS_EVENT_PANEL_SET_NIGHT_MODE6500K:
 		ctrl_pdata->night_mode6500k= (int)(unsigned long) arg;
-	    if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-		    mdss_dsi_panel_set_night_mode6500k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode6500k);
-		}
+		mdss_dsi_panel_set_night_mode6500k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode6500k);
 		break;
 	case MDSS_EVENT_PANEL_GET_NIGHT_MODE6500K:
 		rc = mdss_dsi_panel_get_night_mode6500k(ctrl_pdata);
@@ -2996,9 +2963,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 
 	case MDSS_EVENT_PANEL_SET_NIGHT_MODE6800K:
 		ctrl_pdata->night_mode6800k= (int)(unsigned long) arg;
-	    if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-		    mdss_dsi_panel_set_night_mode6800k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode6800k);
-		}
+		mdss_dsi_panel_set_night_mode6800k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode6800k);
 		break;
 	case MDSS_EVENT_PANEL_GET_NIGHT_MODE6800K:
 		rc = mdss_dsi_panel_get_night_mode6800k(ctrl_pdata);
@@ -3006,9 +2971,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 
 	case MDSS_EVENT_PANEL_SET_NIGHT_MODE7200K:
 		ctrl_pdata->night_mode7200k= (int)(unsigned long) arg;
-	    if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-		    mdss_dsi_panel_set_night_mode7200k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode7200k);
-		}
+		mdss_dsi_panel_set_night_mode7200k(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode7200k);
 		break;
 	case MDSS_EVENT_PANEL_GET_NIGHT_MODE7200K:
 		rc = mdss_dsi_panel_get_night_mode7200k(ctrl_pdata);
@@ -3019,9 +2982,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 	case MDSS_EVENT_PANEL_SET_READING_MODE:
 		ctrl_pdata->reading_mode= (int)(unsigned long) arg;
 	    set_param_lcm_reading_mode(&(ctrl_pdata->reading_mode));
-	    if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT){
-		    mdss_dsi_panel_set_reading_mode(ctrl_pdata, (int)(unsigned long) ctrl_pdata->reading_mode);
-		}
+		mdss_dsi_panel_set_reading_mode(ctrl_pdata, (int)(unsigned long) ctrl_pdata->reading_mode);
 		break;
 	case MDSS_EVENT_PANEL_GET_READING_MODE:
 		rc = mdss_dsi_panel_get_reading_mode(ctrl_pdata);

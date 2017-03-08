@@ -568,6 +568,12 @@ struct mdss_dsi_ctrl_pdata {
 
 	struct dsi_err_container err_cont;
 //#ifdef VENDOR_EDIT
+	struct mutex panel_mode_lock;
+//#endif
+//#ifdef VENDOR_EDIT
+    bool is_panel_on;
+//#endif
+//#ifdef VENDOR_EDIT
     bool high_brightness_panel;
 //#endif
 //#ifdef VENDOR_EDIT
