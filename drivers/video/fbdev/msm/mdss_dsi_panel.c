@@ -1007,6 +1007,11 @@ int mdss_dsi_panel_set_acl(struct mdss_dsi_ctrl_pdata *ctrl, int mode)
 {
 	struct dsi_panel_cmds *acl_cmds;
 
+	mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	acl_cmds = &ctrl->acl_cmds;
 	if (acl_cmds->cmd_cnt){
         acl_cmds->cmds[ctrl->acl_ncmds].payload[ctrl->acl_npayload] = mode;
@@ -1015,6 +1020,7 @@ int mdss_dsi_panel_set_acl(struct mdss_dsi_ctrl_pdata *ctrl, int mode)
 	} else{
         pr_err("This Panel does not support ACL");
 	}
+	mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 int mdss_dsi_panel_get_acl_mode(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1028,6 +1034,11 @@ int mdss_dsi_panel_set_hbm_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 {
 	struct dsi_panel_cmds *hbm_on_cmds,*hbm_off_cmds;
 
+	mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	hbm_on_cmds = &ctrl->hbm_on_cmds;
 	hbm_off_cmds = &ctrl->hbm_off_cmds;
     if (level){
@@ -1045,6 +1056,7 @@ int mdss_dsi_panel_set_hbm_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
             pr_err("This Panel not support HBM Mode Off.");
         }
     }
+    mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 
@@ -1059,6 +1071,11 @@ int mdss_dsi_panel_set_srgb_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	struct dsi_panel_cmds *srgb_on_cmds;
 	struct dsi_panel_cmds* srgb_off_cmds;
 
+    mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	srgb_on_cmds = &ctrl->srgb_on_cmds;
 	srgb_off_cmds = &ctrl->srgb_off_cmds;
 	if (level){
@@ -1076,6 +1093,7 @@ int mdss_dsi_panel_set_srgb_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
             pr_err("This panel not support sRGB mode off.\n");
         }
 	}
+	mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 int mdss_dsi_panel_get_srgb_mode(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1089,6 +1107,11 @@ int mdss_dsi_panel_set_adobe_rgb_mode(struct mdss_dsi_ctrl_pdata *ctrl, int leve
 	struct dsi_panel_cmds *adobe_rgb_on_cmds;
 	struct dsi_panel_cmds *adobe_rgb_off_cmds;
 
+    mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	adobe_rgb_on_cmds = &ctrl->Adobe_RGB_on_cmds;
 	adobe_rgb_off_cmds = &ctrl->Adobe_RGB_off_cmds;
 	if (level){
@@ -1106,6 +1129,7 @@ int mdss_dsi_panel_set_adobe_rgb_mode(struct mdss_dsi_ctrl_pdata *ctrl, int leve
             pr_err("This Panel not support Adobe RGB mode Off.\n");
         }
 	}
+	mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 int mdss_dsi_panel_get_adobe_rgb_mode(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1119,6 +1143,11 @@ int mdss_dsi_panel_set_dci_p3_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	struct dsi_panel_cmds *dci_p3_on_cmds;
 	struct dsi_panel_cmds *dci_p3_off_cmds;
 
+    mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	dci_p3_on_cmds = &ctrl->dci_p3_on_cmds;
 	dci_p3_off_cmds = &ctrl->dci_p3_off_cmds;
 	if (level){
@@ -1136,6 +1165,7 @@ int mdss_dsi_panel_set_dci_p3_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
             pr_err("This Panel not support DCI-P3 mode Off.\n");
         }
 	}
+	mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 int mdss_dsi_panel_get_dci_p3_mode(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1149,6 +1179,11 @@ int mdss_dsi_panel_set_night_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	struct dsi_panel_cmds *night_mode_on_cmds;
 	struct dsi_panel_cmds *night_mode_off_cmds;
 
+    mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	night_mode_on_cmds = &ctrl->night_mode_on_cmds; //night mode same as sRGB mode
 	night_mode_off_cmds = &ctrl->night_mode_off_cmds;//night mode same as sRGB mode
     if (level){
@@ -1166,6 +1201,7 @@ int mdss_dsi_panel_set_night_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
             pr_err("This panel not support night mode off (night mode).\n");
         }
     }
+    mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 int mdss_dsi_panel_get_night_mode(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1177,6 +1213,11 @@ int mdss_dsi_panel_set_night_mode3500k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
 	struct dsi_panel_cmds *night_mode_on_cmds;
 	struct dsi_panel_cmds *night_mode_off_cmds;
 
+    mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	night_mode_on_cmds = &ctrl->night_mode3500k_on_cmds;
 	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
     if (level){
@@ -1194,6 +1235,7 @@ int mdss_dsi_panel_set_night_mode3500k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
             pr_err("This panel not support night mode off (night mode).\n");
         }
     }
+    mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 int mdss_dsi_panel_get_night_mode3500k(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1205,6 +1247,11 @@ int mdss_dsi_panel_set_night_mode3800k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
 	struct dsi_panel_cmds *night_mode_on_cmds;
 	struct dsi_panel_cmds *night_mode_off_cmds;
 
+    mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	night_mode_on_cmds = &ctrl->night_mode3800k_on_cmds;
 	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
     if (level){
@@ -1222,6 +1269,7 @@ int mdss_dsi_panel_set_night_mode3800k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
             pr_err("This panel not support night mode off (night mode).\n");
         }
     }
+    mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 int mdss_dsi_panel_get_night_mode3800k(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1233,6 +1281,11 @@ int mdss_dsi_panel_set_night_mode4000k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
 	struct dsi_panel_cmds *night_mode_on_cmds;
 	struct dsi_panel_cmds *night_mode_off_cmds;
 
+    mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	night_mode_on_cmds = &ctrl->night_mode4000k_on_cmds;
 	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
     if (level){
@@ -1250,6 +1303,7 @@ int mdss_dsi_panel_set_night_mode4000k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
             pr_err("This panel not support night mode off (night mode).\n");
         }
     }
+    mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 int mdss_dsi_panel_get_night_mode4000k(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1261,6 +1315,11 @@ int mdss_dsi_panel_set_night_mode4300k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
 	struct dsi_panel_cmds *night_mode_on_cmds;
 	struct dsi_panel_cmds *night_mode_off_cmds;
 
+    mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	night_mode_on_cmds = &ctrl->night_mode4300k_on_cmds;
 	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
     if (level){
@@ -1278,6 +1337,7 @@ int mdss_dsi_panel_set_night_mode4300k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
             pr_err("This panel not support night mode off (night mode).\n");
         }
     }
+    mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 int mdss_dsi_panel_get_night_mode4300k(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1289,6 +1349,11 @@ int mdss_dsi_panel_set_night_mode4500k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
 	struct dsi_panel_cmds *night_mode_on_cmds;
 	struct dsi_panel_cmds *night_mode_off_cmds;
 
+    mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	night_mode_on_cmds = &ctrl->night_mode4500k_on_cmds;
 	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
     if (level){
@@ -1306,6 +1371,7 @@ int mdss_dsi_panel_set_night_mode4500k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
             pr_err("This panel not support night mode off (night mode).\n");
         }
     }
+    mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 int mdss_dsi_panel_get_night_mode4500k(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1317,6 +1383,11 @@ int mdss_dsi_panel_set_night_mode3100k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
 	struct dsi_panel_cmds *night_mode_on_cmds;
 	struct dsi_panel_cmds *night_mode_off_cmds;
 
+    mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	night_mode_on_cmds = &ctrl->night_mode3100k_on_cmds;
 	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
     if (level){
@@ -1334,6 +1405,7 @@ int mdss_dsi_panel_set_night_mode3100k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
             pr_err("This panel not support night mode off (night mode).\n");
         }
     }
+    mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 int mdss_dsi_panel_get_night_mode3100k(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1345,6 +1417,11 @@ int mdss_dsi_panel_set_night_mode4800k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
 	struct dsi_panel_cmds *night_mode_on_cmds;
 	struct dsi_panel_cmds *night_mode_off_cmds;
 
+    mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	night_mode_on_cmds = &ctrl->night_mode4800k_on_cmds;
 	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
     if (level){
@@ -1362,6 +1439,7 @@ int mdss_dsi_panel_set_night_mode4800k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
             pr_err("This panel not support night mode off (night mode).\n");
         }
     }
+    mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 int mdss_dsi_panel_get_night_mode4800k(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1374,6 +1452,11 @@ int mdss_dsi_panel_set_night_mode2800k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
 	struct dsi_panel_cmds *night_mode_on_cmds;
 	struct dsi_panel_cmds *night_mode_off_cmds;
 
+    mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	night_mode_on_cmds = &ctrl->night_mode2800k_on_cmds;
 	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
     if (level){
@@ -1391,6 +1474,7 @@ int mdss_dsi_panel_set_night_mode2800k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
             pr_err("This panel not support night mode off (night mode).\n");
         }
     }
+    mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 int mdss_dsi_panel_get_night_mode2800k(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1403,6 +1487,11 @@ int mdss_dsi_panel_set_night_mode5000k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
 	struct dsi_panel_cmds *night_mode_on_cmds;
 	struct dsi_panel_cmds *night_mode_off_cmds;
 
+    mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	night_mode_on_cmds = &ctrl->night_mode5000k_on_cmds;
 	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
     if (level){
@@ -1420,6 +1509,7 @@ int mdss_dsi_panel_set_night_mode5000k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
             pr_err("This panel not support night mode off (night mode).\n");
         }
     }
+    mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 int mdss_dsi_panel_get_night_mode5000k(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1432,6 +1522,11 @@ int mdss_dsi_panel_set_night_mode5500k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
 	struct dsi_panel_cmds *night_mode_on_cmds;
 	struct dsi_panel_cmds *night_mode_off_cmds;
 
+    mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	night_mode_on_cmds = &ctrl->night_mode5500k_on_cmds;
 	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
     if (level){
@@ -1449,6 +1544,7 @@ int mdss_dsi_panel_set_night_mode5500k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
             pr_err("This panel not support night mode off (night mode).\n");
         }
     }
+    mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 int mdss_dsi_panel_get_night_mode5500k(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1461,6 +1557,11 @@ int mdss_dsi_panel_set_night_mode6000k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
 	struct dsi_panel_cmds *night_mode_on_cmds;
 	struct dsi_panel_cmds *night_mode_off_cmds;
 
+    mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	night_mode_on_cmds = &ctrl->night_mode6000k_on_cmds;
 	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
     if (level){
@@ -1478,6 +1579,7 @@ int mdss_dsi_panel_set_night_mode6000k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
             pr_err("This panel not support night mode off (night mode).\n");
         }
     }
+    mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 int mdss_dsi_panel_get_night_mode6000k(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1489,6 +1591,11 @@ int mdss_dsi_panel_set_night_mode6500k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
 	struct dsi_panel_cmds *night_mode_on_cmds;
 	struct dsi_panel_cmds *night_mode_off_cmds;
 
+    mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	night_mode_on_cmds = &ctrl->night_mode6500k_on_cmds;
 	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
     if (level){
@@ -1506,6 +1613,7 @@ int mdss_dsi_panel_set_night_mode6500k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
             pr_err("This panel not support night mode off (night mode).\n");
         }
     }
+    mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 int mdss_dsi_panel_get_night_mode6500k(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1517,6 +1625,11 @@ int mdss_dsi_panel_set_night_mode6800k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
 	struct dsi_panel_cmds *night_mode_on_cmds;
 	struct dsi_panel_cmds *night_mode_off_cmds;
 
+    mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	night_mode_on_cmds = &ctrl->night_mode6800k_on_cmds;
 	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
     if (level){
@@ -1534,6 +1647,7 @@ int mdss_dsi_panel_set_night_mode6800k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
             pr_err("This panel not support night mode off (night mode).\n");
         }
     }
+    mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 int mdss_dsi_panel_get_night_mode6800k(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1545,6 +1659,11 @@ int mdss_dsi_panel_set_night_mode7200k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
 	struct dsi_panel_cmds *night_mode_on_cmds;
 	struct dsi_panel_cmds *night_mode_off_cmds;
 
+    mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	night_mode_on_cmds = &ctrl->night_mode7200k_on_cmds;
 	night_mode_off_cmds = &ctrl->night_mode_off_cmds;
     if (level){
@@ -1562,6 +1681,7 @@ int mdss_dsi_panel_set_night_mode7200k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
             pr_err("This panel not support night mode off (night mode).\n");
         }
     }
+    mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 int mdss_dsi_panel_get_night_mode7200k(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1576,6 +1696,11 @@ int mdss_dsi_panel_set_reading_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	struct dsi_panel_cmds *reading_mode_on_cmds;
 	struct dsi_panel_cmds *reading_mode_off_cmds;
 
+    mutex_lock(&ctrl->panel_mode_lock);
+    if (!ctrl->is_panel_on){
+        mutex_unlock(&ctrl->panel_mode_lock);
+        return 0;
+    }
 	reading_mode_on_cmds = &ctrl->read_mode_on_cmds; //reading mode same as sRGB mode
 	reading_mode_off_cmds = &ctrl->read_mode_off_cmds;//reading mode same as sRGB mode
     if (level){
@@ -1593,6 +1718,7 @@ int mdss_dsi_panel_set_reading_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
             pr_err("This panel not support Reading mode off (reading mode).\n");
         }
     }
+    mutex_unlock(&ctrl->panel_mode_lock);
 	return 0;
 }
 int mdss_dsi_panel_get_reading_mode(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1641,7 +1767,11 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	}else//#endif VENDOR_EDIT
 	if (on_cmds->cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, on_cmds, CMD_REQ_COMMIT);
-
+//#ifdef VENDOR_EDIT
+    mutex_lock(&ctrl->panel_mode_lock);
+    ctrl->is_panel_on = true;
+    mutex_unlock(&ctrl->panel_mode_lock);
+//#endif
 //#ifdef VENDOR_EDIT
 	if (mdss_dsi_panel_get_acl_mode(ctrl)){
 		mdss_dsi_panel_set_acl(ctrl, mdss_dsi_panel_get_acl_mode(ctrl));
@@ -1759,6 +1889,11 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		if (ctrl->ndx != DSI_CTRL_LEFT)
 			goto end;
 	}
+//#ifdef VENDOR_EDIT
+    mutex_lock(&ctrl->panel_mode_lock);
+    ctrl->is_panel_on = false;
+    mutex_unlock(&ctrl->panel_mode_lock);
+//#endif
     //#ifdef VENDOR_EDIT
     if (ctrl->iris_enabled){
         iris_lightoff(ctrl);
@@ -3798,6 +3933,7 @@ int mdss_dsi_panel_init(struct device_node *node,
 		strlcpy(&pinfo->panel_name[0], panel_name, MDSS_MAX_PANEL_LEN);
 	}
 //#ifdef VENDOR_EDIT
+	mutex_init(&ctrl_pdata->panel_mode_lock);
 	panel_manufacture = of_get_property(node, "qcom,mdss-dsi-panel-manufacture", NULL);
     if (!panel_manufacture)
 		pr_info("%s:%d, panel manufacture not specified\n", __func__, __LINE__);
