@@ -733,7 +733,10 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 			 */
 		}
 
+#ifndef VENDOR_EDIT
+/* david.liu@bsp, 20170308 block notification */
 		dual_role_instance_changed(pd->dual_role);
+#endif
 
 		/* Set CC back to DRP toggle for the next disconnect */
 		val.intval = POWER_SUPPLY_TYPEC_PR_DUAL;
@@ -849,7 +852,10 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 
 		kobject_uevent(&pd->dev.kobj, KOBJ_CHANGE);
 		complete(&pd->is_ready);
+#ifndef VENDOR_EDIT
+/* david.liu@bsp, 20170308 block notification */
 		dual_role_instance_changed(pd->dual_role);
+#endif
 		break;
 
 	case PE_SRC_HARD_RESET:
@@ -884,7 +890,10 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 				start_usb_peripheral(pd);
 		}
 
+#ifndef VENDOR_EDIT
+/* david.liu@bsp, 20170308 block notification */
 		dual_role_instance_changed(pd->dual_role);
+#endif
 
 		ret = power_supply_get_property(pd->usb_psy,
 				POWER_SUPPLY_PROP_PD_ALLOWED, &val);
@@ -984,7 +993,10 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 		pd->in_explicit_contract = true;
 		kobject_uevent(&pd->dev.kobj, KOBJ_CHANGE);
 		complete(&pd->is_ready);
+#ifndef VENDOR_EDIT
+/* david.liu@bsp, 20170308 block notification */
 		dual_role_instance_changed(pd->dual_role);
+#endif
 		break;
 
 	case PE_SNK_TRANSITION_TO_DEFAULT:
@@ -1608,7 +1620,10 @@ static void usbpd_sm(struct work_struct *w)
 		pd->current_state = PE_UNKNOWN;
 
 		kobject_uevent(&pd->dev.kobj, KOBJ_CHANGE);
+#ifndef VENDOR_EDIT
+/* david.liu@bsp, 20170308 block notification */
 		dual_role_instance_changed(pd->dual_role);
+#endif
 
 		goto sm_done;
 	}
