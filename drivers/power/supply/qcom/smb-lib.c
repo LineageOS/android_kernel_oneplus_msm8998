@@ -4129,26 +4129,86 @@ int update_dash_unplug_status(void)
 
 	return 0;
 }
+
 int op_set_collapse_fet(struct smb_charger *chg, bool on)
 {
-       int rc = 0;
-       u8 stat;
-       rc = smblib_masked_write(chg, USBIN_AICL_OPTIONS_CFG_REG, USBIN_HV_COLLAPSE_RESPONSE_BIT|USBIN_LV_COLLAPSE_RESPONSE_BIT,
-                                on ? 0: USBIN_HV_COLLAPSE_RESPONSE_BIT|USBIN_LV_COLLAPSE_RESPONSE_BIT);
-       if (rc < 0)
-               smblib_err(chg, "Couldn't write %s to USBIN_AICL_OPTIONS_CFG_REG rc=%d\n",
-                       on ? "on" : "off", rc);
-       rc = smblib_read(chg, USBIN_AICL_OPTIONS_CFG_REG, &stat);
-       pr_info("%s,USBIN_AICL_OPTIONS_CFG_REG=0x%x\n",__func__,stat);
-       rc = smblib_masked_write(chg, USBIN_LOAD_CFG_REG, BIT(0)|BIT(1),
-                               on ? 0: BIT(0)|BIT(1));
-       if (rc < 0)
-               smblib_err(chg, "Couldn't write %s to USBIN_LOAD_CFG_REG rc=%d\n",
-					   on ? "on" : "off", rc);
-       rc = smblib_read(chg, USBIN_LOAD_CFG_REG, &stat);
-       pr_info("%s,USBIN_LOAD_CFG_REG=0x%x\n",__func__,stat);
+	int rc = 0;
+	u8 stat;
 
-       return rc;
+	rc = smblib_masked_write(chg, USBIN_5V_AICL_THRESHOLD_CFG_REG,
+						BIT(0) | BIT(1), on ? 0 : BIT(0) | BIT(1));
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't write %s to 0x%x rc=%d\n",
+			on ? "on" : "off", USBIN_5V_AICL_THRESHOLD_CFG_REG, rc);
+		return rc;
+	}
+
+	rc = smblib_read(chg, USBIN_5V_AICL_THRESHOLD_CFG_REG, &stat);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't read 0x%x rc=%d\n",
+			USBIN_5V_AICL_THRESHOLD_CFG_REG, rc);
+		return rc;
+	}
+	pr_info("USBIN_5V_AICL_THRESHOLD_CFG_REG(0x%x)=0x%x\n",
+			USBIN_5V_AICL_THRESHOLD_CFG_REG, stat);
+
+	rc = smblib_masked_write(chg, USBIN_CONT_AICL_THRESHOLD_CFG_REG,
+						BIT(0) | BIT(1), on ? 0 : BIT(0) | BIT(1));
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't write %s to 0x%x rc=%d\n",
+			on ? "on" : "off", USBIN_CONT_AICL_THRESHOLD_CFG_REG,
+			rc);
+		return rc;
+	}
+
+	rc = smblib_read(chg, USBIN_CONT_AICL_THRESHOLD_CFG_REG, &stat);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't read 0x%x rc=%d\n",
+			USBIN_CONT_AICL_THRESHOLD_CFG_REG, rc);
+		return rc;
+	}
+	pr_info("USBIN_CONT_AICL_THRESHOLD_CFG_REG(0x%x)=0x%x\n",
+			USBIN_CONT_AICL_THRESHOLD_CFG_REG, stat);
+
+	rc = smblib_masked_write(chg, USBIN_AICL_OPTIONS_CFG_REG,
+						USBIN_HV_COLLAPSE_RESPONSE_BIT
+						| USBIN_LV_COLLAPSE_RESPONSE_BIT,
+						on ? 0 : USBIN_HV_COLLAPSE_RESPONSE_BIT
+						| USBIN_LV_COLLAPSE_RESPONSE_BIT);
+	if (rc < 0) {
+		smblib_err(chg,
+			"Couldn't write %s to 0x%x rc=%d\n",
+			on ? "on" : "off", USBIN_AICL_OPTIONS_CFG_REG, rc);
+		return rc;
+	}
+
+	rc = smblib_read(chg, USBIN_AICL_OPTIONS_CFG_REG, &stat);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't read 0x%x rc=%d\n",
+			USBIN_AICL_OPTIONS_CFG_REG, rc);
+		return rc;
+	}
+	pr_info("USBIN_AICL_OPTIONS_CFG_REG(0x%x)=0x%x\n",
+		USBIN_AICL_OPTIONS_CFG_REG, stat);
+
+	rc = smblib_masked_write(chg, USBIN_LOAD_CFG_REG, BIT(0)
+						| BIT(1), on ? 0 : BIT(0) | BIT(1));
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't write %s to 0x%x rc=%d\n",
+			on ? "on" : "off", USBIN_LOAD_CFG_REG, rc);
+		return rc;
+	}
+
+	rc = smblib_read(chg, USBIN_LOAD_CFG_REG, &stat);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't read 0x%x rc=%d\n",
+			USBIN_LOAD_CFG_REG, rc);
+		return rc;
+	}
+	pr_info("USBIN_LOAD_CFG_REG(0x%x)=0x%x\n",
+			USBIN_LOAD_CFG_REG, stat);
+
+	return rc;
 }
 
 
