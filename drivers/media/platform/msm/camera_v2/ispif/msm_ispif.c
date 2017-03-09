@@ -408,7 +408,7 @@ static int msm_ispif_reset_hw(struct ispif_device *ispif)
 {
 	int rc = 0;
 	long timeout = 0;
-	struct clk *reset_clk1[ARRAY_SIZE(ispif_8626_reset_clk_info)];
+	struct clk *reset_clk1[ARRAY_SIZE(ispif_8626_reset_clk_info)]={NULL};
 	ispif->clk_idx = 0;
 
 	/* Turn ON VFE regulators before enabling the vfe clocks */

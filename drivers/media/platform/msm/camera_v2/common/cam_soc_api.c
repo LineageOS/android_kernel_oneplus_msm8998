@@ -354,6 +354,10 @@ int msm_camera_clk_enable(struct device *dev,
 
 	if (enable) {
 		for (i = 0; i < num_clk; i++) {
+//likelong@camera 2017.3.9 to avoid kernel panic
+#ifdef VENDOR_EDIT
+			if (clk_ptr[i] != NULL) {
+#endif
 			CDBG("enable %s\n", clk_info[i].clk_name);
 			if (clk_info[i].clk_rate > 0) {
 				clk_rate = clk_round_rate(clk_ptr[i],
@@ -403,6 +407,10 @@ int msm_camera_clk_enable(struct device *dev,
 					(clk_info[i].delay * 1000) + 1000);
 			}
 		}
+//likelong@camera 2017.3.9 to avoid kernel panic
+#ifdef VENDOR_EDIT
+		}
+#endif
 	} else {
 		for (i = num_clk - 1; i >= 0; i--) {
 			if (clk_ptr[i] != NULL) {
