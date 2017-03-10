@@ -756,3 +756,8 @@ CONFIG_KSWAPD_CPU_AFFINITY_MASK="ff"
 # /* liochen@filesystem, 2017/01/25, Support sdcardfs filesystem in kernel */
 CONFIG_SDCARD_FS=y
 #endif
+#ifdef VENDOR_EDIT
+#neiltsai add for debugging
+CONFIG_CORESIGHT_DBGUI=y
+CONFIG_MSM_DEBUG_LAR_UNLOCK=y
+#endif
