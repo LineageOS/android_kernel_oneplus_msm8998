@@ -3013,6 +3013,9 @@ irqreturn_t smblib_handle_usbin_uv(int irq, void *data)
 
 	wdata = &chg->irq_info[SWITCH_POWER_OK_IRQ].irq_data->storm_data;
 	reset_storm_count(wdata);
+#ifdef VENDOR_EDIT
+	smblib_err(chg, "DEBUG: RESET STORM COUNT FOR POWER_OK\n");
+#endif
 	return IRQ_HANDLED;
 }
 
@@ -3708,25 +3711,41 @@ irqreturn_t smblib_handle_switcher_power_ok(int irq, void *data)
 	smblib_dbg(chg, PR_INTERRUPT, "IRQ: %s\n", irq_data->name);
 #endif
 
-	if (!(chg->wa_flags & BOOST_BACK_WA))
+	if (!(chg->wa_flags & BOOST_BACK_WA)) {
+#ifdef VENDOR_EDIT
+		smblib_err(chg, "DEBUG: no BOOST_BACK_WA\n");
+#endif
 		return IRQ_HANDLED;
-
+	}
 	rc = smblib_read(chg, POWER_PATH_STATUS_REG, &stat);
 	if (rc < 0) {
+#ifdef VENDOR_EDIT
 		smblib_err(chg, "Couldn't read POWER_PATH_STATUS rc=%d\n", rc);
+#endif
 		return IRQ_HANDLED;
 	}
 
 	if ((stat & USE_USBIN_BIT) &&
-			get_effective_result(chg->usb_icl_votable) < USBIN_25MA)
+			get_effective_result(chg->usb_icl_votable) < USBIN_25MA) {
+#ifdef VENDOR_EDIT
+		smblib_err(chg, "DEBUG: USE_USBIN_BIT and ICL<25mA\n");
+#endif
 		return IRQ_HANDLED;
+		}
 
-	if (stat & USE_DCIN_BIT)
+	if (stat & USE_DCIN_BIT) {
+#ifdef VENDOR_EDIT
+		smblib_err(chg, "DEBUG: USE_DCIN_BIT\n");
+#endif
 		return IRQ_HANDLED;
+	}
 	if (is_storming(&irq_data->storm_data)) {
 		smblib_err(chg, "Reverse boost detected: voting 0mA to suspend input\n");
 		vote(chg->usb_icl_votable, BOOST_BACK_VOTER, true, 0);
 	}
+#ifdef VENDOR_EDIT
+	smblib_err(chg, "DEBUG: End of Handler\n");
+#endif
 
 	return IRQ_HANDLED;
 }
