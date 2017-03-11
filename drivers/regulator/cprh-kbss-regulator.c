@@ -718,10 +718,6 @@ static int cprh_kbss_read_fuse_data(struct cpr3_regulator *vreg)
 static int cprh_kbss_parse_corner_data(struct cpr3_regulator *vreg)
 {
 	int rc;
-#ifdef VENDOR_EDIT
-    /*The modification is Just debug patch, is made a golden version*/
-    int i;
-#endif
 
 	rc = cpr3_parse_common_corner_data(vreg);
 	if (rc) {
@@ -739,22 +735,6 @@ static int cprh_kbss_parse_corner_data(struct cpr3_regulator *vreg)
 		 vreg->corner_count, CPRH_KBSS_MAX_CORNER_COUNT - 1);
 		return -EINVAL;
 	}
-
-#ifdef VENDOR_EDIT
-    /*The modification is Just debug patch, is made a golden version*/
-    if(!strncmp(vreg->name, "apc0", 4)){
-        for(i=0; i < vreg->corner_count; i++){
-            vreg->corner[i].ceiling_volt = 1056000;
-            vreg->corner[i].ceiling_volt = 1056000;
-        }
-    }
-    if(!strncmp(vreg->name, "apc1", 4)){
-        for(i=0; i < vreg->corner_count; i++){
-            vreg->corner[i].ceiling_volt = 1056000;
-            vreg->corner[i].ceiling_volt = 1056000;
-        }
-    }
-#endif
 
 	return rc;
 }
