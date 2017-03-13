@@ -781,8 +781,15 @@ int smblib_rerun_apsd_if_required(struct smb_charger *chg)
 		return 0;
 
 	apsd_result = smblib_get_apsd_result(chg);
+#ifdef VENDOR_EDIT
+	if ((apsd_result->pst == POWER_SUPPLY_TYPE_UNKNOWN)
+		|| (apsd_result->pst == POWER_SUPPLY_TYPE_USB)
+		|| (apsd_result->pst == POWER_SUPPLY_TYPE_USB_CDP)
+		|| (apsd_result->bit == FLOAT_CHARGER_BIT)) {
+#else
 	if ((apsd_result->pst == POWER_SUPPLY_TYPE_UNKNOWN)
 		|| (apsd_result->pst == POWER_SUPPLY_TYPE_USB)) {
+#endif
 		/* rerun APSD */
 		pr_info("Reruning APSD type = %s at bootup\n",
 				apsd_result->name);
@@ -1844,7 +1851,6 @@ int smblib_get_prop_usb_present(struct smb_charger *chg,
 		smblib_err(chg, "Couldn't read USBIN_RT_STS rc=%d\n", rc);
 		return rc;
 	}
-
 	val->intval = (bool)(stat & USBIN_PLUGIN_RT_STS_BIT);
 	return 0;
 }
