@@ -2926,7 +2926,7 @@ int icnss_trigger_recovery(struct device *dev)
 		goto out;
 	}
 
-	if (!priv->service_notifier[0].handle) {
+	if (!priv->service_notifier || !priv->service_notifier[0].handle) {
 		icnss_pr_err("Invalid handle during recovery\n");
 		ret = -EINVAL;
 		goto out;
