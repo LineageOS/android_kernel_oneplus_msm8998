@@ -882,6 +882,14 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 
 	/* Sink states */
 	case PE_SNK_STARTUP:
+#ifdef VENDOR_EDIT
+		if (pd->psy_type == 0) {
+			power_supply_get_property(pd->usb_psy,
+				POWER_SUPPLY_PROP_TYPE, &val);
+			pd->psy_type = val.intval;
+			usbpd_err(&pd->dev, "read USB TYPE: %d\n", pd->psy_type);
+		}
+#endif
 		if (pd->current_dr == DR_NONE || pd->current_dr == DR_UFP) {
 			pd->current_dr = DR_UFP;
 
@@ -2402,9 +2410,15 @@ static int psy_changed(struct notifier_block *nb, unsigned long evt, void *ptr)
 
 	pd->typec_mode = typec_mode;
 
+#if VENDOR_EDIT
+	usbpd_err(&pd->dev, "typec mode:%d present:%d type:%d orientation:%d\n",
+			typec_mode, pd->vbus_present, pd->psy_type,
+			usbpd_get_plug_orientation(pd));
+#else
 	usbpd_dbg(&pd->dev, "typec mode:%d present:%d type:%d orientation:%d\n",
 			typec_mode, pd->vbus_present, pd->psy_type,
 			usbpd_get_plug_orientation(pd));
+#endif
 
 	switch (typec_mode) {
 	/* Disconnect */
