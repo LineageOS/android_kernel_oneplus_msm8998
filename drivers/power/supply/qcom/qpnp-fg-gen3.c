@@ -4127,6 +4127,11 @@ static int fg_parse_dt(struct fg_chip *chip)
 
 static void fg_cleanup(struct fg_chip *chip)
 {
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20170314 Fix system crash */
+	if (chip->fg_psy)
+		power_supply_unregister(chip->fg_psy);
+#endif
 	power_supply_unreg_notifier(&chip->nb);
 	debugfs_remove_recursive(chip->dfs_root);
 	if (chip->awake_votable)
