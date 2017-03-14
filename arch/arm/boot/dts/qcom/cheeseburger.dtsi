@@ -26,6 +26,21 @@
 			reg = <0 0xAC400000 0 0x00B00000>;
 			label = "mtp_mem";
 		};
+        pil_ipa_gpu_mem: pil_ipa_gpu_region@95000000 {
+            reg = <0 0x95400000 0 0x100000>;//move start address +4M to match modem aligned
+        };
+        pil_slpi_mem: pil_slpi_region@94100000 {
+            reg = <0 0x94500000 0 0xf00000>;//move start address +4M to match modem aligned
+        };
+        pil_video_mem: pil_video_region@93c00000 {
+            reg = <0 0x94000000 0 0x500000>;//move start address +4M to match modem aligned
+        };
+        modem_mem: modem_region@8cc00000 {
+            reg = <0 0x8d000000 0 0x7000000>;//move start address +4M to match modem aligned
+        };
+        pil_adsp_mem: pil_adsp_region@0x8b200000 {
+            reg = <0 0x8b200000 0 0x1e00000>; //increae 4M size
+        };
 	};
 };
 
