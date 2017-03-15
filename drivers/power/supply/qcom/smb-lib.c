@@ -3143,9 +3143,6 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
-	if((apsd_result->bit)== SDP_CHARGER_BIT)
-		vote(chg->usb_icl_votable,
-		DCP_VOTER, true, USBIN_500MA);
 	temp_region = op_battery_temp_region_get(chg);
 	if (temp_region != BATT_TEMP_COLD
 		&& temp_region != BATT_TEMP_HOT) {
