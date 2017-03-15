@@ -3943,6 +3943,7 @@ static void op_handle_usb_removal(struct smb_charger *chg)
 	set_usb_switch(chg, false);
 	set_dash_charger_present(false);
 
+	chg->chg_ovp = false;
 	chg->dash_on = false;
 	chg->chg_done = false;
 	chg->time_out = false;
