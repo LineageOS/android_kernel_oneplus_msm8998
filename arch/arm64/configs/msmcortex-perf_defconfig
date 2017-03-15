@@ -691,3 +691,8 @@ CONFIG_SDCARD_FS=y
 # CONFIG_DEBUG_RODATA is not set
 # CONFIG_DEBUG_ALIGN_RODATA is not set
 #end
+
+#ifdef VENDOR_EDIT
+# waynechang,2017/3/15, add CONFIG_INPUT_KEYCHORD to enable keychord function for systrace service
+CONFIG_INPUT_KEYCHORD=y
+#endif
