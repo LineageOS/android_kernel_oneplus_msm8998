@@ -1611,7 +1611,9 @@ static struct ice_device *get_ice_device_from_storage_type
 
 	list_for_each_entry(ice_dev, &ice_devices, list) {
 		if (!strcmp(ice_dev->ice_instance_type, storage_type)) {
+			#ifndef VENDOR_EDIT
 			pr_info("%s: found ice device %p\n", __func__, ice_dev);
+			#endif
 			break;
 		}
 	}
