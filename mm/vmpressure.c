@@ -149,7 +149,10 @@ static unsigned long vmpressure_calc_pressure(unsigned long scanned,
 						    unsigned long reclaimed)
 {
 	unsigned long scale = scanned + reclaimed;
-	unsigned long pressure;
+	unsigned long pressure = 0;
+
+    if(scanned < reclaimed)
+        goto out;
 
 	/*
 	 * We calculate the ratio (in percents) of how many pages were
@@ -163,7 +166,7 @@ static unsigned long vmpressure_calc_pressure(unsigned long scanned,
 
 	pr_debug("%s: %3lu  (s: %lu  r: %lu)\n", __func__, pressure,
 		 scanned, reclaimed);
-
+out :
 	return pressure;
 }
 
