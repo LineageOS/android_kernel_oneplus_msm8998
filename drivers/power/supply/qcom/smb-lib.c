@@ -5236,6 +5236,11 @@ static void op_heartbeat_work(struct work_struct *work)
 		goto out;
 
 	/* charger present */
+	rc = smblib_get_prop_usb_voltage_now(chg, &vbus_val);
+	if (rc < 0) {
+		pr_err("failed to read usb_voltage rc=%d\n", rc);
+		vbus_val.intval = CHG_VOLTAGE_NORMAL;
+	}
 	power_supply_changed(chg->batt_psy);
 	chg->dash_on = get_prop_fast_chg_started(chg);
 	if (chg->dash_on) {
@@ -5257,12 +5262,6 @@ static void op_heartbeat_work(struct work_struct *work)
 		}
 		schedule_delayed_work(&chg->check_switch_dash_work,
 							msecs_to_jiffies(100));
-	}
-
-	rc = smblib_get_prop_usb_voltage_now(chg, &vbus_val);
-	if (rc < 0) {
-		pr_err("failed to read usb_voltage rc=%d\n", rc);
-		vbus_val.intval = CHG_VOLTAGE_NORMAL;
 	}
 
 	op_check_charger_uovp(chg, vbus_val.intval);
