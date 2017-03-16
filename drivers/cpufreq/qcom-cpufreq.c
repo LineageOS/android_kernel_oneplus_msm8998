@@ -43,7 +43,15 @@ struct cpufreq_suspend_t {
 
 static DEFINE_PER_CPU(struct cpufreq_suspend_t, suspend_data);
 #ifdef VENDOR_EDIT
+#define LITTLE_CPU_QOS_FREQ 1670400
+#define BIG_CPU_QOS_FREQ    2035200
+#define QOS_TIMEOUT 300000
+
 unsigned int cluster1_first_cpu = 0;
+static bool qos_cpufreq_flag = false;
+static void c0_cpufreq_limit(struct work_struct *work);
+static struct workqueue_struct *qos_cpufreq_work_queue = NULL;
+static DECLARE_WORK(c0_cpufreq_limit_work, c0_cpufreq_limit);
 struct qos_request_value {
 	bool flag;
 	unsigned int max_cpufreq;
@@ -99,10 +107,14 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 		goto done;
 
 	if (per_cpu(suspend_data, policy->cpu).device_suspended) {
-		pr_debug("cpufreq: cpu%d scheduling frequency change "
+		if (likely(qos_cpufreq_flag)) {
+			 qos_cpufreq_flag = false;
+		} else {
+			pr_debug("cpufreq: cpu%d scheduling frequency change "
 				"in suspend.\n", policy->cpu);
-		ret = -EFAULT;
-		goto done;
+			ret = -EFAULT;
+			goto done;
+		}
 	}
 
 	table = cpufreq_frequency_get_table(policy->cpu);
@@ -634,7 +646,6 @@ static int c1_cpufreq_qos_handler(struct notifier_block *b, unsigned long val, v
         struct cpufreq_policy *policy;
 	int ret = -1;
 
-	pr_info(":::update_policy\n");
 	/* in use, policy may be NULL, because hotplug can close first cpu core*/
 	//get_online_cpus();
         policy = cpufreq_cpu_get(cluster1_first_cpu);
@@ -659,6 +670,30 @@ static int c1_cpufreq_qos_handler(struct notifier_block *b, unsigned long val, v
 static struct notifier_block c1_cpufreq_qos_notifier = {
         .notifier_call = c1_cpufreq_qos_handler,
 };
+
+static void c0_cpufreq_limit(struct work_struct *work)
+{
+	struct cpufreq_policy *policy;
+
+	qos_cpufreq_flag = true;
+
+	policy = cpufreq_cpu_get(0);
+	if (policy)  {
+		cpufreq_driver_target(policy, LITTLE_CPU_QOS_FREQ, CPUFREQ_RELATION_H);
+	} else
+		goto policy_bad;
+	cpufreq_cpu_put(policy);
+
+policy_bad:
+	sched_set_boost(1);
+}
+
+void c0_cpufreq_limit_queue(void)
+{
+	if (qos_cpufreq_work_queue)
+		queue_work(qos_cpufreq_work_queue, &c0_cpufreq_limit_work);
+}
+EXPORT_SYMBOL_GPL(c0_cpufreq_limit_queue);
 #endif
 
 static int __init msm_cpufreq_register(void)
@@ -686,6 +721,10 @@ static int __init msm_cpufreq_register(void)
 	pm_qos_add_notifier(PM_QOS_C0_CPUFREQ_MIN, &c0_cpufreq_qos_notifier);
 	pm_qos_add_notifier(PM_QOS_C1_CPUFREQ_MAX, &c1_cpufreq_qos_notifier);
 	pm_qos_add_notifier(PM_QOS_C1_CPUFREQ_MIN, &c1_cpufreq_qos_notifier);
+
+	qos_cpufreq_work_queue = create_singlethread_workqueue("qos_cpufreq");
+	if (qos_cpufreq_work_queue == NULL)
+		pr_info("%s: failed to create work queue", __func__);
 #endif
 
 	register_pm_notifier(&msm_cpufreq_pm_notifier);

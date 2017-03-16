@@ -36,6 +36,9 @@
 #include "pinctrl-msm.h"
 #include "../pinctrl-utils.h"
 #include <linux/wakeup_reason.h>
+#ifdef VENDOR_EDIT
+#include <linux/cpufreq.h>
+#endif
 
 #define MAX_NR_GPIO 300
 #define PS_HOLD_OFFSET 0x820
@@ -842,6 +845,11 @@ static void msm_gpio_irq_handler(struct irq_desc *desc)
 			//++add by lyb@bsp for printk wakeup irqs
 			if(!!need_show_pinctrl_irq){
 				need_show_pinctrl_irq = false;
+#ifdef VENDOR_EDIT
+				if (strstr(irq_to_desc(irq_pin)->action->name, "soc:fpc_fpc1020") != NULL) { //it is fpc irq
+					c0_cpufreq_limit_queue();
+				}
+#endif
 				printk(KERN_ERR "hwirq %s [irq_num=%d ]triggered\n",irq_to_desc(irq_pin)->action->name,irq_pin);
 				log_wakeup_reason(irq_pin);
 			}
