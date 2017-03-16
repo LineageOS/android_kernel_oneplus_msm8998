@@ -2066,6 +2066,20 @@ static void checkCMD(void)
 	if( ret > 0x00 || flag_err >= 30)
 		TPD_ERR("checkCMD error ret is %x flag_err is %d\n", ret, flag_err);
 }
+static void checkCMD_RT133(void)
+{
+	int ret = 0;
+	int err_count = 0;
+	struct synaptics_ts_data *ts = ts_g;
+	do {
+		delay_qt_ms(10); //wait 10ms
+		ret = synaptics_rmi4_i2c_read_byte(ts->client, F54_ANALOG_COMMAND_BASE);
+		err_count++;
+	}while( (ret & 0x01) && (err_count < 30) );
+	if( ret & 0x01 || err_count >= 30)
+		TPD_ERR("%s line%d %x count %d\n", __func__, __LINE__, ret, err_count);
+}
+
 #endif
 
 static ssize_t tp_baseline_show(struct device_driver *ddri, char *buf)
@@ -2223,7 +2237,7 @@ static ssize_t synaptics_rmi4_baseline_show_s3508(struct device *dev, char *buf,
 	uint8_t tmp_l = 0,tmp_h = 0;
 	uint16_t count = 0;
 	int error_count = 0;
-	uint8_t buffer[9];
+	uint8_t buffer[9]={0};
 	int16_t *baseline_data_test;
 	int enable_cbc = 1;
 	int readdata_fail=0,first_check=0;
@@ -2339,7 +2353,7 @@ TEST_WITH_CBC_s3508:
 					left_ramdata = baseline_data;
 				else if (x == (TX_NUM-1) && y == (RX_NUM-2))
 					right_ramdata = baseline_data;
-				if(((baseline_data+60) < *(baseline_data_test+count*2)) || ((baseline_data-60) > *(baseline_data_test+count*2+1))){
+				if(((baseline_data+360) < *(baseline_data_test+count*2)) || ((baseline_data-60) > *(baseline_data_test+count*2+1))){
 					if((x == (TX_NUM-1) && (y != RX_NUM-1 || y != RX_NUM-2))||\
 						(x != (TX_NUM-1) && (y == RX_NUM-1 || y == RX_NUM-2)))//the last tx and rx last two line for touchkey,others no need take care
 						continue;
@@ -2379,49 +2393,103 @@ TEST_WITH_CBC_s3508:
 		TPD_ERR("test cbc baseline again\n");
 		goto TEST_WITH_CBC_s3508;
 	}
-	ret = i2c_smbus_write_word_data(ts->client, F54_ANALOG_COMMAND_BASE, 0x04);
-	checkCMD();
 
-	//step 2 :check tx-to-tx and tx-to-vdd
-	TPD_ERR("step 2:check TRx-TRx & TRx-Vdd short\n" );
-	ret = i2c_smbus_write_byte_data(ts->client, F01_RMI_CMD_BASE, 0x01);//software reset TP
-	ret = i2c_smbus_write_byte_data(ts->client, F54_ANALOG_DATA_BASE, 0x1A);//select report type 26
-	ret = i2c_smbus_write_word_data(ts->client, F54_ANALOG_DATA_BASE+1, 0x0);
-	ret = i2c_smbus_write_byte_data(ts->client, F54_ANALOG_COMMAND_BASE, 0x01);//get report
-	//msleep(100);
-	checkCMD();
-	tx_datal = i2c_smbus_read_i2c_block_data(ts->client, F54_ANALOG_DATA_BASE+3, 7, buffer);
-    buffer[0]&=0xfc;//no care 0,1 chanel
-    buffer[4]&=0xfc;//no care 32,33 chanel
-	for(x = 0;x < 7; x++)
-	{
-		if(buffer[x]){
-			error_count++;
-            TPD_ERR("step 2:error_count[%d] buff%d[0x%x] ERROR!\n",error_count,x,buffer[x]);
-			goto END;
-		}
+	ret = synaptics_rmi4_i2c_write_byte(ts->client, 0xff, 0x1);
+	if( ret < 0 ) {
+		TPD_ERR("%s line%d failed\n",__func__,__LINE__);
+		error_count++;
+		goto END;
 	}
-	num_read_chars += sprintf(buf, "1");
 
-	//Step3 : Check trx-to-ground
-	TPD_ERR("step 3:Check trx-to-ground\n" );
-	ret = i2c_smbus_write_byte_data(ts->client, F01_RMI_CMD_BASE, 0x01);//software reset TP
-	ret = i2c_smbus_write_byte_data(ts->client, F54_ANALOG_DATA_BASE, 0x1A);//select report type 26
+	//Step2 : Check trx-to-ground
+	TPD_ERR("step 2:Check trx-to-ground\n" );
+	ret = i2c_smbus_write_byte_data(ts->client, F54_ANALOG_DATA_BASE, 0x19);//select report type 25
 	ret = i2c_smbus_write_word_data(ts->client, F54_ANALOG_DATA_BASE+1, 0x0);
 	ret = i2c_smbus_write_byte_data(ts->client, F54_ANALOG_COMMAND_BASE, 0x01);//get report
 	checkCMD();
 	tx_datal = i2c_smbus_read_i2c_block_data(ts->client, F54_ANALOG_DATA_BASE+3, 7, buffer);
-    buffer[0]&=0xfc;//no care 0,1 chanel
-    buffer[4]&=0xfc;//no care 32,33 chanel
+    buffer[0]|=0x10;//no care 4 31 32 40 50 51 52chanel
+    buffer[3]|=0x80;
+    buffer[5]|=0x01;
+    buffer[6]|=0xc0;
 	for(x = 0;x < 7; x++)
 	{
-		if(buffer[x]){
+		if(0xff != buffer[x]){
 			error_count++;
             TPD_ERR("step 2:error_count[%d] buff%d[0x%x] ERROR!\n",error_count,x,buffer[x]);
 			goto END;
 		}
 	}
 
+	ret = synaptics_rmi4_i2c_write_byte(ts->client, 0xff, 0x0);
+	if( ret < 0 ) {
+		TPD_ERR("%s line%d failed\n",__func__,__LINE__);
+		error_count++;
+		goto END;
+	}
+
+	ret = i2c_smbus_write_byte_data(ts->client, F01_RMI_CMD_BASE, 0x01);//software reset TP
+	msleep(50);
+	ret = synaptics_rmi4_i2c_write_byte(ts->client, 0xff, 0x1);
+	if( ret < 0 ) {
+		TPD_ERR("%s line%d failed\n",__func__,__LINE__);
+		error_count++;
+		goto END;
+	}
+
+	//step 3 :check tx-to-tx and tx-to-vdd
+	TPD_ERR("step 3:check TRx-TRx & TRx-Vdd short\n" );
+	ret = i2c_smbus_write_byte_data(ts->client, F54_ANALOG_DATA_BASE, 0x1A);//select report type 26
+	ret = i2c_smbus_write_word_data(ts->client, F54_ANALOG_DATA_BASE+1, 0x0);
+	ret = i2c_smbus_write_byte_data(ts->client, F54_ANALOG_COMMAND_BASE, 0x01);//get report
+	checkCMD();
+	tx_datal = i2c_smbus_read_i2c_block_data(ts->client, F54_ANALOG_DATA_BASE+3, 7, buffer);
+    buffer[0]&=0xef;//no care 4 31 32 40 50 51 52chanel
+    buffer[3]&=0x7f;
+    buffer[5]&=0xfe;
+    buffer[6]&=0x3f;
+	for(x = 0;x < 7; x++)
+	{
+		if(buffer[x]){
+			error_count++;
+	        TPD_ERR("step 3:error_count[%d] buff%d[0x%x] ERROR!\n",error_count,x,buffer[x]);
+			goto END;
+		}
+	}
+
+	ret = synaptics_rmi4_i2c_write_byte(ts->client, 0xff, 0x0);
+	if( ret < 0 ) {
+		TPD_ERR("%s line%d failed\n",__func__,__LINE__);
+		error_count++;
+		goto END;
+	}
+
+	ret = i2c_smbus_write_byte_data(ts->client, F01_RMI_CMD_BASE, 0x01);//software reset TP
+	msleep(50);
+	ret = synaptics_rmi4_i2c_write_byte(ts->client, 0xff, 0x1);
+	if( ret < 0 ) {
+		TPD_ERR("%s line%d failed\n",__func__,__LINE__);
+		error_count++;
+		goto END;
+	}
+	//Step4 : Check RT133
+	TPD_ERR("step 4:Check RT133\n" );
+	ret = i2c_smbus_write_byte_data(ts->client, F54_ANALOG_DATA_BASE, 0x85);//select report type 133
+	ret = i2c_smbus_write_word_data(ts->client, F54_ANALOG_DATA_BASE+1, 0x0);//set fifo 0
+	ret = i2c_smbus_write_byte_data(ts->client, F54_ANALOG_COMMAND_BASE, 0x01);//get report
+	checkCMD_RT133();
+	for( y = 0; y < RX_NUM; y++ ){
+		ret = i2c_smbus_read_byte_data(ts->client, F54_ANALOG_DATA_BASE+3);
+		tmp_l = ret&0xff;
+		ret = i2c_smbus_read_byte_data(ts->client, F54_ANALOG_DATA_BASE+3);
+		tmp_h = ret&0xff;
+		baseline_data = (tmp_h<<8)|tmp_l;
+		if(baseline_data > 100){
+			error_count++;
+            TPD_ERR("step 4:error_count[%d] baseline_data%d[0x%x] ERROR!\n",error_count,y,baseline_data);
+			goto END;
+		}
+	}
 END:
 	if (fd >= 0) {
 		sys_close(fd);
@@ -3567,7 +3635,7 @@ static int synaptics_fw_check(struct synaptics_ts_data *ts )
 		}
 	}
 
-	i2c_smbus_read_i2c_block_data(ts->client, F12_2D_CTRL08, 14, buf);
+	i2c_smbus_read_i2c_block_data(ts->client, F12_2D_CTRL08, 4, buf);
 	max_x_ic = ( (buf[1]<<8)&0xffff ) | (buf[0]&0xffff);
 	max_y_ic = ( (buf[3]<<8)&0xffff ) | (buf[2]&0xffff);
 
@@ -4270,8 +4338,8 @@ static int synaptics_ts_probe(struct i2c_client *client, const struct i2c_device
 	TP_FW = CURRENT_FIRMWARE_ID;
 	sprintf(ts->fw_id,"0x%x",TP_FW);
 
-	memset(ts->fw_name,TP_FW_NAME_MAX_LEN,0);
-	memset(ts->test_limit_name,TP_FW_NAME_MAX_LEN,0);
+	memset(ts->fw_name, 0, TP_FW_NAME_MAX_LEN);
+	memset(ts->test_limit_name, 0, TP_FW_NAME_MAX_LEN);
 
 	//sprintf(ts->manu_name, "TP_SYNAPTICS");
 	synaptics_rmi4_i2c_read_block(ts->client, F01_RMI_QUERY11,\
