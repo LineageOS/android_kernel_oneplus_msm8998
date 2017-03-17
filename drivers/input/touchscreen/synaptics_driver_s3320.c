@@ -3165,8 +3165,10 @@ static ssize_t touch_press_status_read(struct file *file, char __user *user_buf,
 	}
 	TPD_ERR("%s",__func__);
 
-	for (x = 0; x < TX_NUM; x++){
-		for (y = 0; y < RX_NUM; y++){
+	for (x = 0; x < TX_NUMBER; x++){
+		for (y = 0; y < RX_NUMBER; y++){
+			if (x > (TX_NUMBER-1) || y < (RX_NUMBER-12) )//exclude the key tx and upper part
+				continue;
 			if ((delta[x][y] < -30) && (delta[x][y] > -250))
 			{
 				//str_n += sprintf(&page[str_n],"x%d,y%d = %4d\n", x, y, delta[x][y]);
