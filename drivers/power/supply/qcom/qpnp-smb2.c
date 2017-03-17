@@ -1921,6 +1921,10 @@ static int smb2_chg_config_init(struct smb2 *chip)
 		return -EINVAL;
 	}
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20170317 Improve coldboot time */
+	pr_info("PMI8998 Revision=0x%x\n", pmic_rev_id->rev4);
+#endif
 	return 0;
 }
 
