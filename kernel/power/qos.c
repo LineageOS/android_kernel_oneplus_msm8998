@@ -195,6 +195,38 @@ static struct pm_qos_object c1_cpufreq_min_pm_qos = {
         .constraints = &c1_cpufreq_min_constraints,
         .name = "c1_cpufreq_min",
 };
+
+static BLOCKING_NOTIFIER_HEAD(devfreq_max_notifier);
+static struct pm_qos_constraints devfreq_max_constraints = {
+        .list = PLIST_HEAD_INIT(devfreq_max_constraints.list),
+        .target_value = PM_QOS_DEVFREQ_MAX_DEFAULT_VALUE,
+        .target_per_cpu = { [0 ... (NR_CPUS - 1)] =
+                                PM_QOS_DEVFREQ_MAX_DEFAULT_VALUE },
+        .default_value = PM_QOS_DEVFREQ_MAX_DEFAULT_VALUE,
+        .no_constraint_value = PM_QOS_DEVFREQ_MAX_DEFAULT_VALUE,
+        .type = PM_QOS_MIN,
+        .notifiers = &devfreq_max_notifier,
+};
+static struct pm_qos_object devfreq_max_pm_qos = {
+        .constraints = &devfreq_max_constraints,
+        .name = "devfreq_max",
+};
+
+static BLOCKING_NOTIFIER_HEAD(devfreq_min_notifier);
+static struct pm_qos_constraints devfreq_min_constraints = {
+        .list = PLIST_HEAD_INIT(devfreq_min_constraints.list),
+        .target_value = PM_QOS_DEVFREQ_MIN_DEFAULT_VALUE,
+        .target_per_cpu = { [0 ... (NR_CPUS - 1)] =
+                                PM_QOS_DEVFREQ_MIN_DEFAULT_VALUE },
+        .default_value = PM_QOS_DEVFREQ_MIN_DEFAULT_VALUE,
+        .no_constraint_value = PM_QOS_DEVFREQ_MIN_DEFAULT_VALUE,
+        .type = PM_QOS_MAX,
+        .notifiers = &devfreq_min_notifier,
+};
+static struct pm_qos_object devfreq_min_pm_qos = {
+        .constraints = &devfreq_min_constraints,
+        .name = "devfreq_min",
+};
 #endif
 
 static struct pm_qos_object *pm_qos_array[] = {
@@ -208,6 +240,8 @@ static struct pm_qos_object *pm_qos_array[] = {
 	&c0_cpufreq_min_pm_qos,
 	&c1_cpufreq_max_pm_qos,
 	&c1_cpufreq_min_pm_qos,
+	&devfreq_max_pm_qos,
+	&devfreq_min_pm_qos,
 #endif
 };
 

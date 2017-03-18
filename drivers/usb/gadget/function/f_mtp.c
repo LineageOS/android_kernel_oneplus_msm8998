@@ -125,6 +125,7 @@ module_param(mtp_tx_reqs, uint, S_IRUGO | S_IWUSR);
 static const char mtp_shortname[] = DRIVER_NAME "_usb";
 #ifdef VENDOR_EDIT
 static struct pm_qos_request little_cpu_mtp_freq;
+static struct pm_qos_request devfreq_mtp_request;
 //static struct pm_qos_request big_cpu_mtp_freq;
 static struct delayed_work cpu_freq_qos_work;
 static struct workqueue_struct *cpu_freq_qos_queue;
@@ -1076,6 +1077,7 @@ static void receive_file_work(struct work_struct *data)
 	if (delayed_work_pending(&cpu_freq_qos_work))
 		cancel_delayed_work(&cpu_freq_qos_work);
 	pm_qos_update_request(&little_cpu_mtp_freq, MAX_CPUFREQ);
+	pm_qos_update_request(&devfreq_mtp_request, MAX_CPUFREQ);
 	//pm_qos_update_request(&big_cpu_mtp_freq, MAX_CPUFREQ - 1);
 #endif
 
@@ -1169,6 +1171,7 @@ static void receive_file_work(struct work_struct *data)
 static void update_qos_request(struct work_struct *data)
 {
 	pm_qos_update_request(&little_cpu_mtp_freq, MIN_CPUFREQ);
+	pm_qos_update_request(&devfreq_mtp_request, MIN_CPUFREQ);
 	//pm_qos_update_request(&big_cpu_mtp_freq, MIN_CPUFREQ);
 }
 #endif
@@ -1845,6 +1848,7 @@ static int __mtp_setup(struct mtp_instance *fi_mtp)
 	cpu_freq_qos_queue = create_singlethread_workqueue("f_mtp_qos");
 	INIT_DELAYED_WORK(&cpu_freq_qos_work, update_qos_request);
 	pm_qos_add_request(&little_cpu_mtp_freq, PM_QOS_C0_CPUFREQ_MIN, MIN_CPUFREQ);
+	pm_qos_add_request(&devfreq_mtp_request, PM_QOS_DEVFREQ_MIN, MIN_CPUFREQ);
 	//pm_qos_add_request(&big_cpu_mtp_freq, PM_QOS_C1_CPUFREQ_MIN, MIN_CPUFREQ);
 #endif
 	_mtp_dev = dev;
@@ -1860,6 +1864,7 @@ err2:
 #ifdef VENDOR_EDIT
 	//pm_qos_remove_request(&big_cpu_mtp_freq);
 	pm_qos_remove_request(&little_cpu_mtp_freq);
+	pm_qos_remove_request(&devfreq_mtp_request);
 	destroy_workqueue(cpu_freq_qos_queue);
 #endif
 	destroy_workqueue(dev->wq);
@@ -1887,6 +1892,7 @@ static void mtp_cleanup(void)
 #ifdef VENDOR_EDIT
 	//pm_qos_remove_request(&big_cpu_mtp_freq);
 	pm_qos_remove_request(&little_cpu_mtp_freq);
+	pm_qos_remove_request(&devfreq_mtp_request);
 	destroy_workqueue(cpu_freq_qos_queue);
 #endif
 	misc_deregister(&mtp_device);
