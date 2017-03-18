@@ -4572,6 +4572,12 @@ static int synaptics_ts_suspend(struct device *dev)
 			TPD_ERR("enter gesture mode\n");
 		}
 	}
+	else{
+		ret = synaptics_mode_change(0x01);//when gesture disable TP sleep eary
+		if (ret < 0){
+			TPD_ERR("%s line%d ERROR %d!\n",__func__, __LINE__, ret);
+		}
+	}
 #endif
 	TPD_DEBUG("%s normal end\n", __func__);
 	return 0;
@@ -4696,7 +4702,7 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 {
 	struct fb_event *evdata = data;
 	int *blank;
-	//int ret;
+	int ret;
 
 	struct synaptics_ts_data *ts = container_of(self, struct synaptics_ts_data, fb_notif);
 
@@ -4715,6 +4721,12 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 			{
 				TPD_DEBUG("%s going TP resume start\n", __func__);
 				ts->is_suspended = 0;
+				if (0 == ts->gesture_enable){
+						ret = synaptics_mode_change(0x00);//when gesture disable TP wakeup eary
+						if (ret < 0){
+							TPD_ERR("%s line%d ERROR %d!\n",__func__, __LINE__, ret);
+					}
+				}
 				queue_delayed_work(get_base_report, &ts->base_work,msecs_to_jiffies(1));
 				synaptics_ts_resume(&ts->client->dev);
 				//atomic_set(&ts->is_stop,0);
