@@ -270,7 +270,12 @@
 			};
 		};
 	};
-
+	//shankai@bsp, add debounce time 2017-3-18
+	qcom,pm8998@0{
+		qcom,power-on@800 {
+		    qcom,pon-dbc-delay = <31250>;
+	    };
+	};
 	qcom,pmi8998@3 {
 		/* RGB LED blink */
 		#address-cells = <1>;
