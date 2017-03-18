@@ -1166,13 +1166,6 @@ int do_send_sig_info(int sig, struct siginfo *info, struct task_struct *p,
 {
 	unsigned long flags;
 	int ret = -ESRCH;
-    #ifdef VENDOR_EDIT
-    //yuanweihang add for skip signal 33
-    if(sig == 33){
-        printk("proc %d receivee Signal 33, skip this", p->pid);
-        return 0;
-    }
-    #endif
          #ifdef VENDOR_EDIT
         //huruihuan add for kill task in D status
         if(sig == SIGKILL){
