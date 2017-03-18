@@ -30,9 +30,11 @@
 
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
-#include "oem_external_fg.h"
+#include <linux/power/oem_external_fg.h>
 #include <linux/gpio.h>
 #include <linux/delay.h>
+#include <linux/input/qpnp-power-on.h>
+#include <linux/spmi.h>
 
 #define SOC_INVALID                   0x7E
 #define SOC_DATA_REG_0                0x88D
@@ -46,6 +48,8 @@
 #define BATT_TEMP_HYST                20
 
 struct smb_charger *g_chg;
+struct qpnp_pon *pm_pon;
+
 static struct external_battery_gauge *fast_charger = NULL;
 static int op_charging_en(struct smb_charger *chg, bool en);
 bool op_set_fast_chg_allow(struct smb_charger *chg, bool enable);
@@ -4158,6 +4162,8 @@ int update_dash_unplug_status(void)
 
 	return 0;
 }
+void op_write_backup_flag(struct smb_charger *chg,bool bk_flag);
+int op_read_backup_flag(struct smb_charger *chg);
 
 int op_set_collapse_fet(struct smb_charger *chg, bool on)
 {
@@ -5321,13 +5327,69 @@ out:
 				(HEARTBEAT_INTERVAL_MS)));
 }
 
+
+static int op_read(struct smb_charger *chg, u16 addr, u8 *val)
+{
+	unsigned int temp;
+	int rc = 0;
+	if (pm_pon && pm_pon->regmap){
+		rc = regmap_read(pm_pon->regmap, addr, &temp);
+		if (rc >= 0)
+			*val = (u8)temp;
+	}
+	return rc;
+}
+
+int op_read_backup_flag(struct smb_charger *chg)
+{
+	u8 flag;
+	int rc = 0;
+
+	rc = op_read(chg, SOC_DATA_REG_0, &flag);
+	if (rc) {
+		pr_err("failed to read PM addr[0x%x], rc=%d\n", SOC_DATA_REG_0, rc);
+		return 0;
+	}
+	flag = flag & BIT(7);
+	return flag;
+}
+
+int op_masked_write(struct smb_charger *chg, u16 addr, u8 mask, u8 val)
+{
+	int rc = 0;
+	if (pm_pon && pm_pon->regmap){
+		mutex_lock(&chg->write_lock);
+		rc = regmap_update_bits(pm_pon->regmap, addr, mask, val);
+		mutex_unlock(&chg->write_lock);
+	}else{
+		pr_err("pm_pon is NULL\n");
+	}
+	return rc;
+}
+
+void op_write_backup_flag(struct smb_charger *chg,bool bk_flag)
+{
+	int rc = 0;
+
+	rc = op_masked_write(chg, SOC_DATA_REG_0,
+		BIT(7), bk_flag ? BIT(7):0);
+	if (rc) {
+		pr_err("failed to clean PM addr[0x%x], rc=%d\n", SOC_DATA_REG_0, rc);
+	}
+}
+
+
 static int load_data(struct smb_charger *chg)
 {
-	u8 stored_soc = 0;
+	u8 stored_soc = 0,flag;
 	int rc = 0, shutdown_soc = 0;
 
 	if (!chg) {
 		pr_err("chg is NULL !\n");
+		return SOC_INVALID;
+	}
+	flag = op_read_backup_flag(chg);
+	if(!flag){
 		return SOC_INVALID;
 	}
 
@@ -5337,8 +5399,8 @@ static int load_data(struct smb_charger *chg)
 		return SOC_INVALID;
 	}
 
-	/* the fist time connect battery, the reg 0x88d is 0x0, we do not need load this data.*/
-	if ((stored_soc % 2) == 1)
+	/* the fist time connect battery, the PM 0x88d bit7 is 0, we do not need load this data.*/
+	if (flag)
 		shutdown_soc = (stored_soc >> 1 ); /* get data from bit1~bit7 */
 	else
 		shutdown_soc = SOC_INVALID;
@@ -5360,12 +5422,19 @@ int load_soc(void)
 static void clear_backup_soc(struct smb_charger *chg)
 {
 	int rc = 0;
-	u8 soc_temp = 0;
-
-	rc = smblib_write(chg, SOC_DATA_REG_0, soc_temp);
+	u8 invalid_soc = SOC_INVALID;
+	op_write_backup_flag(chg,false);
+	rc = smblib_masked_write(chg, SOC_DATA_REG_0,
+				BIT(7)| BIT(6)| BIT(5)| BIT(4)| BIT(3)| BIT(2)| BIT(1),
+				(BIT(7) & invalid_soc) | (BIT(6) & invalid_soc) | (BIT(5) & invalid_soc) |
+				(BIT(4) & invalid_soc) | (BIT(3) & invalid_soc) | (BIT(2) & invalid_soc) |
+				(BIT(1) & invalid_soc));
 	if (rc)
-		pr_err("failed to clean addr[0x%x], rc=%d\n",
-				SOC_DATA_REG_0, rc);
+		pr_err("failed to write addr[0x%x], rc=%d\n",
+						SOC_DATA_REG_0, rc);
+	if (rc){
+		pr_err("failed to clean PM addr[0x%x], rc=%d\n", SOC_DATA_REG_0, rc);
+	}
 }
 
 void clean_backup_soc_ex(void)
@@ -5377,24 +5446,32 @@ void clean_backup_soc_ex(void)
 static void backup_soc(struct smb_charger *chg, int soc)
 {
 	int rc = 0;
-	u8 invalid_soc = SOC_INVALID;
-	u8 soc_temp = (soc << 1) + 1; /* store data in bit1~bit7 */
+
 	if (!chg || soc < 0 || soc > 100) {
 		pr_err("chg or soc invalid, store an invalid soc\n");
 		if (chg) {
-			rc = smblib_write(chg, SOC_DATA_REG_0, invalid_soc);
+			rc = smblib_masked_write(chg, SOC_DATA_REG_0,
+				BIT(7)| BIT(6)| BIT(5)| BIT(4)| BIT(3)| BIT(2)| BIT(1),
+				BIT(7)| BIT(6)| BIT(5)| BIT(4)| BIT(3)| BIT(2)| BIT(1));
 			if (rc)
 				pr_err("failed to write addr[0x%x], rc=%d\n",
 						SOC_DATA_REG_0, rc);
+			op_write_backup_flag(chg,false);
 		}
 		return;
 	}
 
 	pr_err("backup_soc[%d]\n", soc);
-	rc = smblib_write(chg, SOC_DATA_REG_0, soc_temp);
+	soc = soc*2;
+	rc = smblib_masked_write(chg, SOC_DATA_REG_0,
+				BIT(7)| BIT(6)| BIT(5)| BIT(4)| BIT(3)| BIT(2)| BIT(1),
+				(BIT(7) & soc) | (BIT(6) & soc) | (BIT(5) & soc) |
+				(BIT(4) & soc) | (BIT(3) & soc) | (BIT(2) & soc) |
+				(BIT(1) & soc));
 	if (rc)
 		pr_err("failed to write addr[0x%x], rc=%d\n",
 				SOC_DATA_REG_0, rc);
+	op_write_backup_flag(chg,true);
 }
 
 void backup_soc_ex(int soc)
@@ -5480,6 +5557,15 @@ static struct notify_dash_event notify_unplug_event  = {
 	.check_usb_suspend				= check_usb_suspend,
 	.notify_dash_charger_present	= set_dash_charger_present,
 };
+void op_pm8998_regmap_register(struct qpnp_pon *pon)
+{
+	if (pm_pon) {
+		pm_pon = pon;
+		pr_err("multiple battery gauge called\n");
+	} else {
+		pm_pon = pon;
+	}
+}
 
 void fastcharge_information_register(struct external_battery_gauge *fast_chg)
 {
