@@ -1968,29 +1968,20 @@ static int fb_state_change(struct notifier_block *nb,
 	case FB_BLANK_UNBLANK:
 		if (val == FB_EARLY_EVENT_BLANK) {
 			struct cpufreq_policy *policy;
-			 /* Speed up LCD on */
-			pr_debug("::: LCD start on :::\n");
+			/* Speed up LCD on */
 			/* Fetch little cpu policy and drive the CPU towards target frequency */
-			policy = cpufreq_cpu_get(0);
-			if (policy)  {
-				cpufreq_driver_target(policy, LCDSPEEDUP_LITTLE_CPU_QOS_FREQ, CPUFREQ_RELATION_H);
-				pm_qos_update_request_timeout(&lcdspeedup_little_cpu_qos, MAX_CPUFREQ, LCD_QOS_TIMEOUT);
-			} else
-				return NOTIFY_OK;
-			cpufreq_cpu_put(policy);
-
+			pm_qos_update_request_timeout(&lcdspeedup_little_cpu_qos, MAX_CPUFREQ, LCD_QOS_TIMEOUT);
 			/* Fetch big cpu policy and drive big cpu towards target frequency */
 			policy = cpufreq_cpu_get(cluster1_first_cpu);
 			if (policy)  {
 				cpufreq_driver_target(policy, LCDSPEEDUP_BIG_CPU_QOS_FREQ, CPUFREQ_RELATION_H);
-				pm_qos_update_request_timeout(&lcdspeedup_big_cpu_qos, MAX_CPUFREQ, LCD_QOS_TIMEOUT);
+				pm_qos_update_request_timeout(&lcdspeedup_big_cpu_qos, (MAX_CPUFREQ-4), LCD_QOS_TIMEOUT);
 			} else
 				return NOTIFY_OK;
 			cpufreq_cpu_put(policy);
 		}
 
 		if (val == FB_EVENT_BLANK) {
-			//Wujialong 20160314 enable sched_boost when wakeup and disable sched_boost when screen on
 			sched_set_boost(NO_BOOST);
 			/* remove print actvie ws */
 			pm_print_active_wakeup_sources_queue(false);
