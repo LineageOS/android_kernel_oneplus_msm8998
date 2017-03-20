@@ -453,6 +453,7 @@
 
 &pmi8998_fg {
 	oem,use_external_fg;
+	qcom,fg-rsense-sel = <0>;
 };
 
  &i2c_5 {
