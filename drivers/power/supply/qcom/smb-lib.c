@@ -3324,11 +3324,16 @@ static void smblib_handle_hvdcp_detect_done(struct smb_charger *chg,
 }
 
 #define HVDCP_DET_MS 2500
+#ifdef VENDOR_EDIT
+#define DEFAULT_SDP_MA		500
+#define DEFAULT_CDP_MA		1500
+#define DEFAULT_DCP_MA		1800
+#endif
 static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 {
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161109 Charging porting */
-	int temp_region;
+	int temp_region,current_limit_ua;
 #endif
 	const struct apsd_result *apsd_result;
 
@@ -3363,6 +3368,19 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
+	if((apsd_result->bit)== SDP_CHARGER_BIT)
+		current_limit_ua = DEFAULT_SDP_MA*1000;
+	else if ((apsd_result->bit) == CDP_CHARGER_BIT)
+		current_limit_ua = DEFAULT_CDP_MA*1000;
+	else if ((apsd_result->bit) == DCP_CHARGER_BIT)
+		current_limit_ua = DEFAULT_DCP_MA*1000;
+	else if ((apsd_result->bit) == FLOAT_CHARGER_BIT)
+		current_limit_ua = DEFAULT_CDP_MA*1000;
+	else if ((apsd_result->bit) == OCP_CHARGER_BIT)
+		current_limit_ua = DEFAULT_DCP_MA*1000;
+	vote(chg->usb_icl_votable,
+		DCP_VOTER, true, current_limit_ua);
+
 	temp_region = op_battery_temp_region_get(chg);
 	if (temp_region != BATT_TEMP_COLD
 		&& temp_region != BATT_TEMP_HOT) {
