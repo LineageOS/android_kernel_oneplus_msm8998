@@ -343,7 +343,6 @@ static void soc_mitigate(struct work_struct *work)
 
 static int get_and_evaluate_battery_soc(void)
 {
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 	/* david.liu@bsp, 20161021 Fix system crash */
 	struct power_supply *psy = data;
@@ -361,8 +360,6 @@ static int get_and_evaluate_battery_soc(void)
 	return NOTIFY_OK;
 #else
 	struct power_supply *psy = data;
-=======
->>>>>>> origin/qc8998
 	static struct power_supply *batt_psy;
 	union power_supply_propval ret = {0,};
 	int battery_percentage;

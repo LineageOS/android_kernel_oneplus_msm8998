@@ -4446,8 +4446,6 @@ static void smblib_otg_ss_done_work(struct work_struct *work)
 	mutex_unlock(&chg->otg_oc_lock);
 }
 
-<<<<<<< HEAD
-
 int update_dash_unplug_status(void)
 {
 	int rc;
@@ -4468,8 +4466,6 @@ int update_dash_unplug_status(void)
 void op_write_backup_flag(struct smb_charger *chg,bool bk_flag);
 int op_read_backup_flag(struct smb_charger *chg);
 
-int op_set_collapse_fet(struct smb_charger *chg, bool on)
-=======
 static void smblib_icl_change_work(struct work_struct *work)
 {
 	struct smb_charger *chg = container_of(work, struct smb_charger,
@@ -4488,9 +4484,7 @@ static void smblib_icl_change_work(struct work_struct *work)
 
 	smblib_dbg(chg, PR_INTERRUPT, "icl_settled=%d\n", settled_ua);
 }
-
-static int smblib_create_votables(struct smb_charger *chg)
->>>>>>> origin/qc8998
+int op_set_collapse_fet(struct smb_charger *chg, bool on)
 {
 	int rc = 0;
 	u8 stat;
