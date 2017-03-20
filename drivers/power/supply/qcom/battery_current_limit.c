@@ -345,21 +345,9 @@ static int get_and_evaluate_battery_soc(void)
 {
 #ifdef VENDOR_EDIT
 	/* david.liu@bsp, 20161021 Fix system crash */
-	struct power_supply *psy = data;
-
-	if (gbcl->bcl_mode != BCL_DEVICE_ENABLED) {
-		pr_debug("BCL is not enabled\n");
-		return NOTIFY_OK;
-	}
-
-	if (strcmp(psy->desc->name, "battery"))
-		return NOTIFY_OK;
-
 	schedule_work(&gbcl->soc_mitig_work);
-
 	return NOTIFY_OK;
 #else
-	struct power_supply *psy = data;
 	static struct power_supply *batt_psy;
 	union power_supply_propval ret = {0,};
 	int battery_percentage;
