@@ -3141,10 +3141,6 @@ int icnss_trigger_recovery(struct device *dev)
 		goto out;
 	}
 
-<<<<<<< HEAD
-	if (!priv->service_notifier || !priv->service_notifier[0].handle) {
-		icnss_pr_err("Invalid handle during recovery\n");
-=======
 	if (test_bit(ICNSS_PDR_ENABLED, &priv->state)) {
 		icnss_pr_err("PD restart not enabled: state: 0x%lx\n",
 			     priv->state);
@@ -3155,7 +3151,6 @@ int icnss_trigger_recovery(struct device *dev)
 	if (!priv->service_notifier[0].handle) {
 		icnss_pr_err("Invalid handle during recovery, state: 0x%lx\n",
 			     priv->state);
->>>>>>> origin/qc8998
 		ret = -EINVAL;
 		goto out;
 	}
