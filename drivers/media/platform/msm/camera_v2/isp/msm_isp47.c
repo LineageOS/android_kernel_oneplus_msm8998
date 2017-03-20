@@ -2571,6 +2571,9 @@ int msm_vfe47_set_clk_rate(struct vfe_device *vfe_dev, long *rate)
 	if (rc < 0)
 		return rc;
 	*rate = clk_round_rate(vfe_dev->vfe_clk[clk_idx], *rate);
+#ifdef VENDOR_EDIT //upgrade: need to check
+	vfe_dev->vfe_clk_info[clk_idx].clk_rate = *rate;
+#else
 	vfe_dev->msm_isp_vfe_clk_rate = *rate;
 	if (vfe_dev->vfe_cx_ipeak) {
 		if (vfe_dev->msm_isp_vfe_clk_rate >=
@@ -2592,6 +2595,7 @@ int msm_vfe47_set_clk_rate(struct vfe_device *vfe_dev, long *rate)
 				vfe_dev->turbo_vote = 0;
 		}
 	}
+#endif
 	if (vfe_dev->hw_info->vfe_ops.core_ops.ahb_clk_cfg)
 		vfe_dev->hw_info->vfe_ops.core_ops.ahb_clk_cfg(vfe_dev, NULL);
 	return 0;
