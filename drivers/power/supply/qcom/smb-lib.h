@@ -19,7 +19,7 @@
 #include <linux/regulator/consumer.h>
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161014 Add charging standard */
-#include "oem_external_fg.h"
+#include <linux/power/oem_external_fg.h>
 #include <linux/wakelock.h>
 #endif
 #include <linux/extcon.h>

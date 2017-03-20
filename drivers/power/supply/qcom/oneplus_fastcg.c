@@ -17,7 +17,7 @@
 #include <linux/power_supply.h>
 #include <linux/wakelock.h>
 #include <linux/interrupt.h>
-#include "oem_external_fg.h"
+#include <linux/power/oem_external_fg.h>
 
 #define BYTE_OFFSET			2
 #define BYTES_TO_WRITE		16

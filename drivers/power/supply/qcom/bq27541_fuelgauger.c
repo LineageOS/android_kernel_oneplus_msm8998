@@ -38,7 +38,8 @@
 #include <linux/of_gpio.h>
 #endif
 #include <linux/wakelock.h>
-#include "oem_external_fg.h"
+#include <linux/power/oem_external_fg.h>
+
 
 /* david@bsp mark temp */
 //#ifdef VENDOR_EDIT

@@ -32,6 +32,7 @@
 #include <linux/regulator/of_regulator.h>
 #ifdef VENDOR_EDIT
 #include <linux/syscalls.h>
+#include <linux/power/oem_external_fg.h>
 #endif
 #ifdef VENDOR_EDIT
 //hefaxi@filesystems, 2015/12/07, add for force dump function
@@ -201,35 +202,6 @@ struct pon_regulator {
 	bool			enabled;
 };
 
-struct qpnp_pon {
-	struct platform_device	*pdev;
-	struct regmap		*regmap;
-	struct input_dev	*pon_input;
-	struct qpnp_pon_config	*pon_cfg;
-	struct pon_regulator	*pon_reg_cfg;
-	struct list_head	list;
-	struct delayed_work	bark_work;
-	#ifdef VENDOR_EDIT
-	struct delayed_work	press_work;
-	#endif
-	struct dentry		*debugfs;
-	int			pon_trigger_reason;
-	int			pon_power_off_reason;
-	int			num_pon_reg;
-	int			num_pon_config;
-	u32			dbc;
-	u32			uvlo;
-	int			warm_reset_poff_type;
-	int			hard_reset_poff_type;
-	int			shutdown_poff_type;
-	u16			base;
-	u8			subtype;
-	u8			pon_ver;
-	u8			warm_reset_reason1;
-	u8			warm_reset_reason2;
-	bool			is_spon;
-	bool			store_hard_reset_reason;
-};
 
 static int pon_ship_mode_en;
 module_param_named(
@@ -2414,6 +2386,9 @@ static int qpnp_pon_probe(struct platform_device *pdev)
     if(to_spmi_device(pon->pdev->dev.parent)->usid>=0 && to_spmi_device(pon->pdev->dev.parent)->usid<PMIC_SID_NUM){
         g_pon[to_spmi_device(pon->pdev->dev.parent)->usid] = pon;
         g_is_cold_boot[to_spmi_device(pon->pdev->dev.parent)->usid] = cold_boot;
+        if(!to_spmi_device(pon->pdev->dev.parent)->usid){
+           op_pm8998_regmap_register(pon);/*yangfb@BSP ,20170316,to get pm8998 regmap pointer*/
+        }
     }
 #endif
 

@@ -24,7 +24,7 @@
 #include "fg-reg.h"
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
-#include "oem_external_fg.h"
+#include <linux/power/oem_external_fg.h>
 #endif
 
 #define FG_GEN3_DEV_NAME	"qcom,fg-gen3"

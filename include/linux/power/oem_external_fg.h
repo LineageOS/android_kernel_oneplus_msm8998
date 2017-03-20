@@ -1,5 +1,7 @@
 #ifndef	__OEM_EXTERNAL_FG_H__
 #define __OEM_EXTERNAL_FG_H__
+#include <linux/regmap.h>
+#include <linux/input/qpnp-power-on.h>
 
 struct external_battery_gauge {
 	int (*get_battery_mvolts) (void);
@@ -62,6 +64,7 @@ enum batt_status_type {
 	BATT_STATUS_INVALID_v1 = BATT_STATUS_REMOVED,
 	BATT_STATUS_INVALID
 };
+void op_pm8998_regmap_register(struct qpnp_pon *pon);
 
 void regsister_notify_usb_enumeration_status(struct notify_usb_enumeration_status *event);
 void notify_dash_unplug_register(struct notify_dash_event *event);
