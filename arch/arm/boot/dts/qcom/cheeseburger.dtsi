@@ -41,6 +41,10 @@
         pil_adsp_mem: pil_adsp_region@0x8b200000 {
             reg = <0 0x8b200000 0 0x1e00000>; //increae 4M size
         };
+        bootloader_log_mem: bootloader_log_mem@9fff7000 {
+            reg = <0 0x9FFF7000 0 0x00100000>;
+            label = "bootloader_log_mem";
+        };
 	};
 };
 
@@ -207,6 +211,11 @@
 
    force_enable_serial {
         compatible = "oem,force_serial";
+   };
+
+   bootloader_log {
+     compatible = "bootloader_log";
+     linux,contiguous-region = <&bootloader_log_mem>;
    };
 
 };
