@@ -894,13 +894,13 @@ static int cam_smmu_attach_sec_cpp(int idx)
 	rc = msm_camera_tz_set_mode(MSM_CAMERA_TZ_MODE_SECURE,
 		MSM_CAMERA_TZ_HW_BLOCK_CPP);
 	if (rc != 0) {
-            pr_err("secure mode TA notification for cpp unsuccessful, rc %d\n",
-                    rc);
-            /*
-             * Although the TA notification failed, the flow should proceed
-             * without returning an error as at this point cpp had already
-             * entered the secure mode.
-             */
+		pr_err("secure mode TA notification for cpp unsuccessful, rc %d\n",
+			rc);
+		/*
+		 * Although the TA notification failed, the flow should proceed
+		 * without returning an error as at this point cpp had already
+		 * entered the secure mode.
+		 */
 	}
 
 	iommu_cb_set.cb_info[idx].state = CAM_SMMU_ATTACH;
@@ -915,13 +915,13 @@ static int cam_smmu_detach_sec_cpp(int idx)
 	rc = msm_camera_tz_set_mode(MSM_CAMERA_TZ_MODE_NON_SECURE,
 		MSM_CAMERA_TZ_HW_BLOCK_CPP);
 	if (rc != 0) {
-            pr_err("secure mode TA notification for cpp unsuccessful, rc %d\n",
-                    rc);
-            /*
-             * Although the TA notification failed, the flow should proceed
-             * without returning an error, as at this point cpp is in secure
-             * mode and should be switched to non-secure regardless
-             */
+		pr_err("secure mode TA notification for cpp unsuccessful, rc %d\n",
+			rc);
+		/*
+		 * Although the TA notification failed, the flow should proceed
+		 * without returning an error, as at this point cpp is in secure
+		 * mode and should be switched to non-secure regardless
+		 */
 	}
 
 	iommu_cb_set.cb_info[idx].state = CAM_SMMU_DETACH;
@@ -960,13 +960,13 @@ static int cam_smmu_attach_sec_vfe_ns_stats(int idx)
 	rc = msm_camera_tz_set_mode(MSM_CAMERA_TZ_MODE_SECURE,
 		MSM_CAMERA_TZ_HW_BLOCK_ISP);
 	if (rc != 0) {
-            pr_err("secure mode TA notification for vfe unsuccessful, rc %d\n",
-                    rc);
-            /*
-             * Although the TA notification failed, the flow should proceed
-             * without returning an error as at this point vfe had already
-             * entered the secure mode
-             */
+		pr_err("secure mode TA notification for vfe unsuccessful, rc %d\n",
+			rc);
+		/*
+		 * Although the TA notification failed, the flow should proceed
+		 * without returning an error as at this point vfe had already
+		 * entered the secure mode
+		 */
 	}
 
 	return 0;
@@ -979,13 +979,13 @@ static int cam_smmu_detach_sec_vfe_ns_stats(int idx)
 	rc = msm_camera_tz_set_mode(MSM_CAMERA_TZ_MODE_NON_SECURE,
 		MSM_CAMERA_TZ_HW_BLOCK_ISP);
 	if (rc != 0) {
-            pr_err("secure mode TA notification for vfe unsuccessful, rc %d\n",
-                    rc);
-            /*
-             * Although the TA notification failed, the flow should proceed
-             * without returning an error, as at this point vfe is in secure
-             * mode and should be switched to non-secure regardless
-             */
+		pr_err("secure mode TA notification for vfe unsuccessful, rc %d\n",
+			rc);
+		/*
+		 * Although the TA notification failed, the flow should proceed
+		 * without returning an error, as at this point vfe is in secure
+		 * mode and should be switched to non-secure regardless
+		 */
 	}
 
 	/*

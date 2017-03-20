@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -204,6 +204,7 @@ static uint32_t bcl_hotplug_request, bcl_hotplug_mask, bcl_soc_hotplug_mask;
 static uint32_t bcl_frequency_mask;
 static struct work_struct bcl_hotplug_work;
 static DEFINE_MUTEX(bcl_hotplug_mutex);
+static DEFINE_MUTEX(bcl_cpufreq_mutex);
 static bool bcl_hotplug_enabled;
 static uint32_t battery_soc_val = 100;
 static uint32_t soc_low_threshold;
@@ -251,6 +252,7 @@ static void update_cpu_freq(void)
 	union device_request cpufreq_req;
 
 	trace_bcl_sw_mitigation_event("Start Frequency Mitigate");
+	mutex_lock(&bcl_cpufreq_mutex);
 	cpufreq_req.freq.max_freq = UINT_MAX;
 	cpufreq_req.freq.min_freq = CPUFREQ_MIN_NO_MITIGATION;
 
@@ -275,6 +277,7 @@ static void update_cpu_freq(void)
 			pr_err("Error updating freq for CPU%d. ret:%d\n",
 				cpu, ret);
 	}
+	mutex_unlock(&bcl_cpufreq_mutex);
 	trace_bcl_sw_mitigation_event("End Frequency Mitigation");
 }
 
@@ -338,38 +341,17 @@ static void soc_mitigate(struct work_struct *work)
 #endif
 }
 
-static int power_supply_callback(struct notifier_block *nb,
-				  unsigned long event, void *data)
+static int get_and_evaluate_battery_soc(void)
 {
 #ifdef VENDOR_EDIT
 	/* david.liu@bsp, 20161021 Fix system crash */
-	struct power_supply *psy = data;
-
-	if (gbcl->bcl_mode != BCL_DEVICE_ENABLED) {
-		pr_debug("BCL is not enabled\n");
-		return NOTIFY_OK;
-	}
-
-	if (strcmp(psy->desc->name, "battery"))
-		return NOTIFY_OK;
-
 	schedule_work(&gbcl->soc_mitig_work);
-
 	return NOTIFY_OK;
 #else
-	struct power_supply *psy = data;
 	static struct power_supply *batt_psy;
 	union power_supply_propval ret = {0,};
 	int battery_percentage;
 	enum bcl_threshold_state prev_soc_state;
-
-	if (gbcl->bcl_mode != BCL_DEVICE_ENABLED) {
-		pr_debug("BCL is not enabled\n");
-		return NOTIFY_OK;
-	}
-
-	if (strcmp(psy->desc->name, "battery"))
-		return NOTIFY_OK;
 
 	if (!batt_psy)
 		batt_psy = power_supply_get_by_name("battery");
@@ -393,6 +375,22 @@ static int power_supply_callback(struct notifier_block *nb,
 	}
 	return NOTIFY_OK;
 #endif
+}
+
+static int power_supply_callback(struct notifier_block *nb,
+				  unsigned long event, void *data)
+{
+	struct power_supply *psy = data;
+
+	if (gbcl->bcl_mode != BCL_DEVICE_ENABLED) {
+		pr_debug("BCL is not enabled\n");
+		return NOTIFY_OK;
+	}
+
+	if (strcmp(psy->desc->name, "battery"))
+		return NOTIFY_OK;
+
+	return get_and_evaluate_battery_soc();
 }
 
 static int bcl_get_battery_voltage(int *vbatt_mv)
@@ -713,7 +711,7 @@ static void bcl_periph_mode_set(enum bcl_device_mode mode)
 		 * power state changes. Make sure we read the current SoC
 		 * and mitigate.
 		 */
-		power_supply_callback(&gbcl->psy_nb, 1, gbcl);
+		get_and_evaluate_battery_soc();
 		ret = power_supply_reg_notifier(&gbcl->psy_nb);
 		if (ret < 0) {
 			pr_err("Unable to register soc notifier rc = %d\n",
