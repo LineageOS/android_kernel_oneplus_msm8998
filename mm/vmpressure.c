@@ -150,12 +150,6 @@ static unsigned long vmpressure_calc_pressure(unsigned long scanned,
 {
 	unsigned long scale = scanned + reclaimed;
 	unsigned long pressure = 0;
-<<<<<<< HEAD
-
-    if(scanned < reclaimed)
-        goto out;
-=======
->>>>>>> origin/qc8998
 
 	/*
 	 * reclaimed can be greater than scanned in cases

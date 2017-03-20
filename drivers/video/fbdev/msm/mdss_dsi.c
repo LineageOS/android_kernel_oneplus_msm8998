@@ -649,13 +649,10 @@ struct buf_data {
 	char *string_buf; /* cmd buf as string, 3 bytes per number */
 	int sblen; /* string buffer length */
 	int sync_flag;
-<<<<<<< HEAD
 //#ifdef VENDOR_EDIT
     struct mdss_dsi_ctrl_pdata *ctrl;
 //#endif
-=======
 	struct mutex dbg_mutex; /* mutex to synchronize read/write/flush */
->>>>>>> origin/qc8998
 };
 
 struct mdss_dsi_debugfs_info {
@@ -849,18 +846,13 @@ static int mdss_dsi_cmd_flush(struct file *file, fl_owner_t id)
 	int blen, len, i;
 	char *buf, *bufp, *bp;
 	struct dsi_ctrl_hdr *dchdr;
-<<<<<<< HEAD
-//#ifdef VENDOR_EDIT
-    struct mdss_dsi_ctrl_pdata * ctrl_data = pcmds->ctrl;
-//#endif
-	if (!pcmds->string_buf)
-=======
+	//#ifdef VENDOR_EDIT
+	struct mdss_dsi_ctrl_pdata * ctrl_data = pcmds->ctrl;
+	//#endif
 
 	mutex_lock(&pcmds->dbg_mutex);
-
 	if (!pcmds->string_buf) {
 		mutex_unlock(&pcmds->dbg_mutex);
->>>>>>> origin/qc8998
 		return 0;
 	}
 
@@ -925,15 +917,12 @@ static int mdss_dsi_cmd_flush(struct file *file, fl_owner_t id)
 		pcmds->buf = buf;
 		pcmds->blen = blen;
 	}
-<<<<<<< HEAD
 //#ifdef VENDOR_EDIT
 	if ((ctrl_data != NULL) && (ctrl_data->debugfs_info != NULL)){
         ctrl_data->debugfs_info->override_flag = 1;
     }
 //#endif
-=======
 	mutex_unlock(&pcmds->dbg_mutex);
->>>>>>> origin/qc8998
 	return 0;
 }
 
