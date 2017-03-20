@@ -2792,12 +2792,10 @@ out:
 	return rc;
 }
 
-<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 #define DEFALUT_BATT_TEMP	250
 #endif
-=======
 static int fg_esr_validate(struct fg_chip *chip)
 {
 	int rc, esr_uohms;
@@ -2831,7 +2829,6 @@ static int fg_esr_validate(struct fg_chip *chip)
 	return 0;
 }
 
->>>>>>> origin/qc8998
 /* PSY CALLBACKS STAY HERE */
 static int fg_psy_get_property(struct power_supply *psy,
 				       enum power_supply_property psp,
