@@ -5401,7 +5401,7 @@ err:
 static int __mdss_fb_copy_destscaler_data(struct fb_info *info,
 		struct mdp_layer_commit *commit)
 {
-	int    i;
+	int    i = 0;
 	int    ret = 0;
 	u32    data_size;
 	struct mdp_destination_scaler_data __user *ds_data_user;
@@ -5474,6 +5474,7 @@ static int __mdss_fb_copy_destscaler_data(struct fb_info *info,
 					data_size);
 			if (ret) {
 				pr_err("scale data copy from user failed\n");
+				kfree(scale_data);
 				goto err;
 			}
 		}
@@ -5483,7 +5484,7 @@ static int __mdss_fb_copy_destscaler_data(struct fb_info *info,
 
 err:
 	if (ds_data) {
-		for (i = 0; i < commit->commit_v1.dest_scaler_cnt; i++) {
+		for (i--; i >= 0; i--) {
 			scale_data = to_user_ptr(ds_data[i].scale);
 			kfree(scale_data);
 		}
