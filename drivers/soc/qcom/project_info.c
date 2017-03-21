@@ -450,6 +450,10 @@ int __init init_project_info(void)
 		case 15:
 		    snprintf(mainboard_version, sizeof(mainboard_version), "%s %s", project_info_desc->project_name, "EVT2");
 		    break;
+		case 16:
+			snprintf(mainboard_version, sizeof(mainboard_version), "%s %s", project_info_desc->project_name, "DVT1");
+			break;
+
 		default:
 		    snprintf(mainboard_version, sizeof(mainboard_version), "%d", project_info_desc->hw_version);
 		    break;
@@ -457,20 +461,10 @@ int __init init_project_info(void)
 	//strcat(project_info_desc->project_name,mainboard_version);
 	push_component_info(MAINBOARD,mainboard_version, mainboard_manufacture);
 
-    if(project_info_desc->hw_version <= 12)
-    {
-        init_a_board_gpio();
-        snprintf(Aboard_version, sizeof(Aboard_version), "%d",gpio_get_value(Aboard_gpio));
-        push_component_info(ABOARD,Aboard_version, mainboard_manufacture);
-        pr_err("%s: Aboard_gpio(%d) value(%d)\n",__func__,Aboard_gpio,gpio_get_value(Aboard_gpio));
-    }
-    else//start from EVT2 use MPP07
-    {
-        pr_err("%s: aboard_version: %d \n",
-						__func__, project_info_desc->rf_v2);
-		snprintf(Aboard_version, sizeof(Aboard_version), "%d",project_info_desc->rf_v2);
-		push_component_info(ABOARD,Aboard_version, mainboard_manufacture);
-    }
+    init_a_board_gpio();
+    snprintf(Aboard_version, sizeof(Aboard_version), "%d",gpio_get_value(Aboard_gpio));
+    push_component_info(ABOARD,Aboard_version, mainboard_manufacture);
+    pr_err("%s: Aboard_gpio(%d) value(%d)\n",__func__,Aboard_gpio,gpio_get_value(Aboard_gpio));
 
 	//add ddr row, column information and manufacture name information
 	get_ddr_manufacture_name();
