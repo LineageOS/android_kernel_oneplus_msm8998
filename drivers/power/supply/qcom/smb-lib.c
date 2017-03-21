@@ -3016,7 +3016,98 @@ irqreturn_t smblib_handle_usb_psy_changed(int irq, void *data)
 	power_supply_changed(chg->usb_psy);
 	return IRQ_HANDLED;
 }
+#ifdef VENDOR_EDIT
+void op_handle_usb_plugin(struct smb_charger *chg)
+{
+	int rc;
+	u8 stat;
+	bool vbus_rising;
+	bool last_vbus_present;
+	int is_usb_supend;
+	last_vbus_present = chg->vbus_present;
+	chg->dash_on = get_prop_fast_chg_started(chg);
+	if (chg->dash_on) {
+		pr_err("return directly because dash is online\n");
+		return ;
+	}
 
+	rc = smblib_read(chg, USBIN_BASE + INT_RT_STS_OFFSET, &stat);
+	if (rc < 0) {
+		dev_err(chg->dev, "Couldn't read USB_INT_RT_STS rc=%d\n", rc);
+		return ;
+	}
+
+	vbus_rising = (bool)(stat & USBIN_PLUGIN_RT_STS_BIT);
+	smblib_set_opt_freq_buck(chg,
+		vbus_rising ? chg->chg_freq.freq_5V :
+			chg->chg_freq.freq_removal);
+
+	/* fetch the DPDM regulator */
+	if (!chg->dpdm_reg && of_get_property(chg->dev->of_node,
+						"dpdm-supply", NULL)) {
+		chg->dpdm_reg = devm_regulator_get(chg->dev, "dpdm");
+		if (IS_ERR(chg->dpdm_reg)) {
+			smblib_err(chg, "Couldn't get dpdm regulator rc=%ld\n",
+				PTR_ERR(chg->dpdm_reg));
+			chg->dpdm_reg = NULL;
+		}
+	}
+
+	chg->vbus_present = vbus_rising;
+	if (last_vbus_present != chg->vbus_present) {
+		if (chg->vbus_present) {
+			pr_info("acquire chg_wake_lock\n");
+			wake_lock(&chg->chg_wake_lock);
+			smblib_get_usb_suspend(chg,&is_usb_supend);
+			if(is_usb_supend && chg->deal_vusbin_error_done){
+			vote(chg->usb_icl_votable,
+                                   BOOST_BACK_VOTER, false, 0);
+			chg->deal_vusbin_error_done = false;
+                   }
+		} else {
+			pr_info("release chg_wake_lock\n");
+			wake_unlock(&chg->chg_wake_lock);
+		}
+	}
+
+	if (vbus_rising) {
+		if (chg->dpdm_reg && !regulator_is_enabled(g_chg->dpdm_reg)) {
+			smblib_dbg(chg, PR_MISC, "enabling DPDM regulator\n");
+			rc = regulator_enable(chg->dpdm_reg);
+			if (rc < 0)
+				smblib_err(chg, "Couldn't enable dpdm regulator rc=%d\n",
+					rc);
+		}
+	} else {
+		if (chg->wa_flags & BOOST_BACK_WA)
+			vote(chg->usb_icl_votable, BOOST_BACK_VOTER, false, 0);
+
+		if (chg->dpdm_reg && regulator_is_enabled(chg->dpdm_reg)) {
+			smblib_dbg(chg, PR_MISC, "disabling DPDM regulator\n");
+			rc = regulator_disable(chg->dpdm_reg);
+			if (rc < 0)
+				smblib_err(chg, "Couldn't disable dpdm regulator rc=%d\n",
+					rc);
+		}
+
+		if (last_vbus_present != chg->vbus_present)
+			op_handle_usb_removal(chg);
+
+		if (chg->micro_usb_mode) {
+			smblib_update_usb_type(chg);
+			extcon_set_cable_state_(chg->extcon, EXTCON_USB, false);
+			smblib_uusb_removal(chg);
+		}
+	}
+
+	power_supply_changed(chg->usb_psy);
+
+	pr_err("IRQ: %s %s\n",
+		__func__, vbus_rising ? "attached" : "detached");
+	return ;
+}
+
+#endif
 irqreturn_t smblib_handle_usbin_uv(int irq, void *data)
 {
 	struct smb_irq_data *irq_data = data;
@@ -4172,7 +4263,7 @@ int update_dash_unplug_status(void)
 	if (rc < 0) {
 		pr_err("failed to read usb_voltage rc=%d\n", rc);
 	} else if (vbus_val.intval <= 2500) {
-		op_handle_usb_removal(g_chg);
+		op_handle_usb_plugin(g_chg);
 	}
 
 	smblib_update_usb_type(g_chg);
