@@ -418,7 +418,7 @@
 	qcom,usb-icl-ua = <1800000>;
 	qcom,fv-max-uv = <4365000>;
 	/* ibatmax setting for different temp regions */
-	ibatmax-little-cold-ma = <350>;
+	ibatmax-little-cold-ma = <325>;
 	ibatmax-cool-ma = <450>;
 	ibatmax-little-cool-ma = <775>;
 	ibatmax-pre-normal-ma = <1425>;
@@ -426,10 +426,10 @@
 	ibatmax-warm-ma = <750>;
 	/* vbatmax setting for different temp regions */
 	vbatmax-little-cold-mv = <3975>; //3980
-	vbatmax-cool-mv = <4365>;
-	vbatmax-little-cool-mv = <4365>;
-	vbatmax-pre-normal-mv = <4365>;
-	vbatmax-normal-mv = <4365>;
+	vbatmax-cool-mv = <4380>;
+	vbatmax-little-cool-mv = <4380>;
+	vbatmax-pre-normal-mv = <4380>;
+	vbatmax-normal-mv = <4380>;
 	vbatmax-warm-mv = <4080>;
 	/* vbatdet setting for different temp regions */
 	vbatdet-little-cold-mv = <3700>;
