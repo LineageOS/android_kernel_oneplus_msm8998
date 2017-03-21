@@ -2239,7 +2239,7 @@ static ssize_t synaptics_rmi4_baseline_show_s3508(struct device *dev, char *buf,
 	int error_count = 0;
 	uint8_t buffer[9]={0};
 	int16_t *baseline_data_test;
-	int enable_cbc = 1;
+	int enable_cbc = 0;
 	int readdata_fail=0,first_check=0;
 	int16_t left_ramdata=0,right_ramdata=0;
 	int fd = -1;
@@ -2287,6 +2287,8 @@ READDATA_AGAIN:
 			TPD_ERR("Open log file '%s' failed.\n", data_buf);
 			set_fs(old_fs);
 		}
+		sys_write(fd, "disable cbc", sizeof("disable cbc"));
+		sys_write(fd, "\n", 1);
 	}
 
 	//step 1:check raw capacitance.
@@ -2389,8 +2391,12 @@ TEST_WITH_CBC_s3508:
 	}
 
 	if(!enable_cbc){
-		enable_cbc = 0;
-		TPD_ERR("test cbc baseline again\n");
+		enable_cbc = 1;
+		if (fd >= 0){
+			sys_write(fd, "enable cbc", sizeof("enable cbc"));
+			sys_write(fd, "\n", 1);
+		}
+		TPD_ERR("enable cbc baseline test again\n");
 		goto TEST_WITH_CBC_s3508;
 	}
 
