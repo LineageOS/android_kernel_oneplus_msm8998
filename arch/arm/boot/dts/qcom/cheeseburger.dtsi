@@ -581,7 +581,7 @@
 
 &i2c_9 { /* BLSP2 QUP9 for Audio Speaker */
 	qcom,master-id = <86>;
-	qcom,clk-freq-out = <100000>;
+	qcom,clk-freq-out = <400000>;
 	status = "ok";
 };
 
