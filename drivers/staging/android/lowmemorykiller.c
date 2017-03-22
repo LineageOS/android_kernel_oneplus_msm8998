@@ -412,6 +412,12 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 	int other_free;
 	int other_file;
 
+#ifdef VENDOR_EDIT
+/* KennethWang 2017/03/22 kill all the children process */
+    struct task_struct *child_task;
+    struct list_head *list;
+    /* KennethWang 2017/03/22 kill all the children process */
+#endif
 	if (mutex_lock_interruptible(&scan_mutex) < 0)
 		return 0;
 
@@ -510,6 +516,16 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 	if (selected) {
 		long cache_size, cache_limit, free;
 		task_lock(selected);
+
+        #ifdef VENDOR_EDIT
+        /* KennethWang 2017/03/22 kill all the children process */
+        list_for_each(list, &selected->children) {
+            child_task = list_entry(list, struct task_struct, sibling);
+            lowmem_print(1, "Killing children process (%s), pid : (%d)", child_task->comm, child_task->pid);
+            send_sig(SIGKILL, child_task, 0);
+        }
+        /* KennethWang 2017/03/22 kill all the children process */
+        #endif
 		send_sig(SIGKILL, selected, 0);
 		/*
 		 * FIXME: lowmemorykiller shouldn't abuse global OOM killer
