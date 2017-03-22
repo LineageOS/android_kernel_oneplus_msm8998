@@ -2197,7 +2197,9 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 	u8 s3_src_reg;
 	unsigned long flags;
 	uint temp = 0;
-
+	#ifdef VENDOR_EDIT
+	int i, reg;
+	#endif
 	pon = devm_kzalloc(&pdev->dev, sizeof(struct qpnp_pon), GFP_KERNEL);
 	if (!pon)
 		return -ENOMEM;
@@ -2259,6 +2261,19 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 		pon->pon_cfg = devm_kzalloc(&pdev->dev,
 				sizeof(struct qpnp_pon_config) *
 				pon->num_pon_config, GFP_KERNEL);
+
+#ifdef VENDOR_EDIT
+	for(i=0;i<16;i++)
+	{
+		rc = regmap_read(pon->regmap,((pon)->base + 0xC0+i),&reg);
+		dev_info(&pdev->dev, "(0x%x:0x%x)\n",((pon)->base + 0xC0+i),reg);
+		if (rc) {
+			dev_err(&pon->pdev->dev,"Unable to read addr=0x%x, rc(%d)\n",
+			((pon)->base + 0xC0+i), rc);
+			return rc;
+		}
+	}
+#endif
 
 	/* Read PON_PERPH_SUBTYPE register to get PON type */
 	rc = regmap_read(pon->regmap,
