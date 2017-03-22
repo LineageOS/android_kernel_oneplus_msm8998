@@ -23,7 +23,7 @@
 #include "mdss_debug.h"
 
 #ifdef CONFIG_FB_MSM_MDSS_XLOG_DEBUG
-#define XLOG_DEFAULT_ENABLE 0 //VENDOR_EDIT 1
+#define XLOG_DEFAULT_ENABLE 1
 #else
 #define XLOG_DEFAULT_ENABLE 0
 #endif
