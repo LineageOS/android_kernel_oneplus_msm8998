@@ -16,6 +16,7 @@
 #include <linux/syscalls.h>
 #include <linux/syscore_ops.h>
 #include <linux/uaccess.h>
+#include <linux/delay.h>
 
 /*
  * this indicates whether you can reboot with ctrl-alt-del: the default is yes
@@ -220,6 +221,16 @@ void kernel_restart(char *cmd)
 		pr_emerg("Restarting system\n");
 	else
 		pr_emerg("Restarting system with command '%s'\n", cmd);
+
+	#ifdef VENDOR_EDIT
+	if(!strcmp(cmd,"dm-verity device corrupted"))
+	{
+	   panic("dm-verity device corrupted Force Dump");
+	   pr_emerg("Restarting system painc \n");
+	   msleep(10000);
+	}
+	#endif
+
 	kmsg_dump(KMSG_DUMP_RESTART);
 	machine_restart(cmd);
 }
