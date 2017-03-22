@@ -66,7 +66,7 @@ module_param(qmi_timeout, ulong, 0600);
 #define WLFW_CLIENT_ID			0x4b4e454c
 #define MAX_PROP_SIZE			32
 #define NUM_LOG_PAGES			10
-#define NUM_REG_LOG_PAGES		4
+#define NUM_LOG_LONG_PAGES		4
 #define ICNSS_MAGIC			0x5abc5abc
 
 #define ICNSS_SERVICE_LOCATION_CLIENT_NAME			"ICNSS-WLAN"
@@ -79,6 +79,11 @@ module_param(qmi_timeout, ulong, 0600);
 #define icnss_ipc_log_string(_x...) do {				\
 	if (icnss_ipc_log_context)					\
 		ipc_log_string(icnss_ipc_log_context, _x);		\
+	} while (0)
+
+#define icnss_ipc_log_long_string(_x...) do {				\
+	if (icnss_ipc_log_long_context)					\
+		ipc_log_string(icnss_ipc_log_long_context, _x);		\
 	} while (0)
 
 #define icnss_pr_err(_fmt, ...) do {					\
@@ -102,6 +107,12 @@ module_param(qmi_timeout, ulong, 0600);
 #define icnss_pr_dbg(_fmt, ...) do {					\
 		pr_debug(_fmt, ##__VA_ARGS__);				\
 		icnss_ipc_log_string("DBG: " pr_fmt(_fmt),		\
+				     ##__VA_ARGS__);			\
+	} while (0)
+
+#define icnss_pr_vdbg(_fmt, ...) do {					\
+		pr_debug(_fmt, ##__VA_ARGS__);				\
+		icnss_ipc_log_long_string("DBG: " pr_fmt(_fmt),		\
 				     ##__VA_ARGS__);			\
 	} while (0)
 
@@ -142,6 +153,7 @@ uint64_t dynamic_feature_mask = QMI_WLFW_FW_REJUVENATE_V01;
 module_param(dynamic_feature_mask, ullong, 0600);
 
 void *icnss_ipc_log_context;
+void *icnss_ipc_log_long_context;
 
 #define ICNSS_EVENT_PENDING			2989
 
@@ -371,7 +383,7 @@ static void icnss_pm_stay_awake(struct icnss_priv *priv)
 	if (atomic_inc_return(&priv->pm_count) != 1)
 		return;
 
-	icnss_pr_dbg("PM stay awake, state: 0x%lx, count: %d\n", priv->state,
+	icnss_pr_vdbg("PM stay awake, state: 0x%lx, count: %d\n", priv->state,
 		     atomic_read(&priv->pm_count));
 
 	pm_stay_awake(&priv->pdev->dev);
@@ -388,7 +400,7 @@ static void icnss_pm_relax(struct icnss_priv *priv)
 	if (r != 0)
 		return;
 
-	icnss_pr_dbg("PM relax, state: 0x%lx, count: %d\n", priv->state,
+	icnss_pr_vdbg("PM relax, state: 0x%lx, count: %d\n", priv->state,
 		     atomic_read(&priv->pm_count));
 
 	pm_relax(&priv->pdev->dev);
@@ -722,7 +734,7 @@ static int icnss_vreg_on(struct icnss_priv *priv)
 		if (!vreg_info->reg)
 			continue;
 
-		icnss_pr_dbg("Regulator %s being enabled\n", vreg_info->name);
+		icnss_pr_vdbg("Regulator %s being enabled\n", vreg_info->name);
 
 		ret = regulator_set_voltage(vreg_info->reg, vreg_info->min_v,
 					    vreg_info->max_v);
@@ -784,7 +796,7 @@ static int icnss_vreg_off(struct icnss_priv *priv)
 		if (!vreg_info->reg)
 			continue;
 
-		icnss_pr_dbg("Regulator %s being disabled\n", vreg_info->name);
+		icnss_pr_vdbg("Regulator %s being disabled\n", vreg_info->name);
 
 		ret = regulator_disable(vreg_info->reg);
 		if (ret)
@@ -818,7 +830,7 @@ static int icnss_clk_init(struct icnss_priv *priv)
 		if (!clk_info->handle)
 			continue;
 
-		icnss_pr_dbg("Clock %s being enabled\n", clk_info->name);
+		icnss_pr_vdbg("Clock %s being enabled\n", clk_info->name);
 
 		if (clk_info->freq) {
 			ret = clk_set_rate(clk_info->handle, clk_info->freq);
@@ -865,7 +877,7 @@ static int icnss_clk_deinit(struct icnss_priv *priv)
 		if (!clk_info->handle)
 			continue;
 
-		icnss_pr_dbg("Clock %s being disabled\n", clk_info->name);
+		icnss_pr_vdbg("Clock %s being disabled\n", clk_info->name);
 
 		clk_disable_unprepare(clk_info->handle);
 	}
@@ -1738,7 +1750,7 @@ static void icnss_qmi_wlfw_clnt_notify_work(struct work_struct *work)
 	if (!penv || !penv->wlfw_clnt)
 		return;
 
-	icnss_pr_dbg("Receiving Event in work queue context\n");
+	icnss_pr_vdbg("Receiving Event in work queue context\n");
 
 	do {
 	} while ((ret = qmi_recv_msg(penv->wlfw_clnt)) == 0);
@@ -1746,13 +1758,13 @@ static void icnss_qmi_wlfw_clnt_notify_work(struct work_struct *work)
 	if (ret != -ENOMSG)
 		icnss_pr_err("Error receiving message: %d\n", ret);
 
-	icnss_pr_dbg("Receiving Event completed\n");
+	icnss_pr_vdbg("Receiving Event completed\n");
 }
 
 static void icnss_qmi_wlfw_clnt_notify(struct qmi_handle *handle,
 			     enum qmi_event_type event, void *notify_priv)
 {
-	icnss_pr_dbg("QMI client notify: %d\n", event);
+	icnss_pr_vdbg("QMI client notify: %d\n", event);
 
 	if (!penv || !penv->wlfw_clnt)
 		return;
@@ -2313,7 +2325,7 @@ static int icnss_modem_notifier_nb(struct notifier_block *nb,
 	struct icnss_priv *priv = container_of(nb, struct icnss_priv,
 					       modem_ssr_nb);
 
-	icnss_pr_dbg("Modem-Notify: event %lu\n", code);
+	icnss_pr_vdbg("Modem-Notify: event %lu\n", code);
 
 	if (code == SUBSYS_AFTER_SHUTDOWN &&
 		notif->crashed == CRASH_STATUS_ERR_FATAL) {
@@ -2660,7 +2672,7 @@ int icnss_ce_request_irq(unsigned int ce_id,
 		goto out;
 	}
 
-	icnss_pr_dbg("CE request IRQ: %d, state: 0x%lx\n", ce_id, penv->state);
+	icnss_pr_vdbg("CE request IRQ: %d, state: 0x%lx\n", ce_id, penv->state);
 
 	if (ce_id >= ICNSS_MAX_IRQ_REGISTRATIONS) {
 		icnss_pr_err("Invalid CE ID, ce_id: %d\n", ce_id);
@@ -2686,7 +2698,7 @@ int icnss_ce_request_irq(unsigned int ce_id,
 	irq_entry->irq = irq;
 	irq_entry->handler = handler;
 
-	icnss_pr_dbg("IRQ requested: %d, ce_id: %d\n", irq, ce_id);
+	icnss_pr_vdbg("IRQ requested: %d, ce_id: %d\n", irq, ce_id);
 
 	penv->stats.ce_irqs[ce_id].request++;
 out:
@@ -2705,7 +2717,7 @@ int icnss_ce_free_irq(unsigned int ce_id, void *ctx)
 		goto out;
 	}
 
-	icnss_pr_dbg("CE free IRQ: %d, state: 0x%lx\n", ce_id, penv->state);
+	icnss_pr_vdbg("CE free IRQ: %d, state: 0x%lx\n", ce_id, penv->state);
 
 	if (ce_id >= ICNSS_MAX_IRQ_REGISTRATIONS) {
 		icnss_pr_err("Invalid CE ID to free, ce_id: %d\n", ce_id);
@@ -2739,7 +2751,7 @@ void icnss_enable_irq(unsigned int ce_id)
 		return;
 	}
 
-	icnss_pr_dbg("Enable IRQ: ce_id: %d, state: 0x%lx\n", ce_id,
+	icnss_pr_vdbg("Enable IRQ: ce_id: %d, state: 0x%lx\n", ce_id,
 		     penv->state);
 
 	if (ce_id >= ICNSS_MAX_IRQ_REGISTRATIONS) {
@@ -2763,7 +2775,7 @@ void icnss_disable_irq(unsigned int ce_id)
 		return;
 	}
 
-	icnss_pr_dbg("Disable IRQ: ce_id: %d, state: 0x%lx\n", ce_id,
+	icnss_pr_vdbg("Disable IRQ: ce_id: %d, state: 0x%lx\n", ce_id,
 		     penv->state);
 
 	if (ce_id >= ICNSS_MAX_IRQ_REGISTRATIONS) {
@@ -4293,7 +4305,7 @@ static int icnss_pm_suspend(struct device *dev)
 		return -EINVAL;
 	}
 
-	icnss_pr_dbg("PM Suspend, state: 0x%lx\n", priv->state);
+	icnss_pr_vdbg("PM Suspend, state: 0x%lx\n", priv->state);
 
 	if (!priv->ops || !priv->ops->pm_suspend ||
 	    !test_bit(ICNSS_DRIVER_PROBED, &priv->state))
@@ -4322,7 +4334,7 @@ static int icnss_pm_resume(struct device *dev)
 		return -EINVAL;
 	}
 
-	icnss_pr_dbg("PM resume, state: 0x%lx\n", priv->state);
+	icnss_pr_vdbg("PM resume, state: 0x%lx\n", priv->state);
 
 	if (!priv->ops || !priv->ops->pm_resume ||
 	    !test_bit(ICNSS_DRIVER_PROBED, &priv->state))
@@ -4351,7 +4363,7 @@ static int icnss_pm_suspend_noirq(struct device *dev)
 		return -EINVAL;
 	}
 
-	icnss_pr_dbg("PM suspend_noirq, state: 0x%lx\n", priv->state);
+	icnss_pr_vdbg("PM suspend_noirq, state: 0x%lx\n", priv->state);
 
 	if (!priv->ops || !priv->ops->suspend_noirq ||
 	    !test_bit(ICNSS_DRIVER_PROBED, &priv->state))
@@ -4380,7 +4392,7 @@ static int icnss_pm_resume_noirq(struct device *dev)
 		return -EINVAL;
 	}
 
-	icnss_pr_dbg("PM resume_noirq, state: 0x%lx\n", priv->state);
+	icnss_pr_vdbg("PM resume_noirq, state: 0x%lx\n", priv->state);
 
 	if (!priv->ops || !priv->ops->resume_noirq ||
 	    !test_bit(ICNSS_DRIVER_PROBED, &priv->state))
@@ -4431,6 +4443,11 @@ static int __init icnss_initialize(void)
 	if (!icnss_ipc_log_context)
 		icnss_pr_err("Unable to create log context\n");
 
+	icnss_ipc_log_long_context = ipc_log_context_create(NUM_LOG_LONG_PAGES,
+						       "icnss_long", 0);
+	if (!icnss_ipc_log_long_context)
+		icnss_pr_err("Unable to create log long context\n");
+
 	return platform_driver_register(&icnss_driver);
 }
 
@@ -4439,6 +4456,8 @@ static void __exit icnss_exit(void)
 	platform_driver_unregister(&icnss_driver);
 	ipc_log_context_destroy(icnss_ipc_log_context);
 	icnss_ipc_log_context = NULL;
+	ipc_log_context_destroy(icnss_ipc_log_long_context);
+	icnss_ipc_log_long_context = NULL;
 }
 
 
