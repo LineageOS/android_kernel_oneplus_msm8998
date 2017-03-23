@@ -223,7 +223,7 @@ void kernel_restart(char *cmd)
 		pr_emerg("Restarting system with command '%s'\n", cmd);
 
 	#ifdef VENDOR_EDIT
-	if(!strcmp(cmd,"dm-verity device corrupted"))
+	if (((cmd != NULL && cmd[0] != '\0') && !strcmp(cmd, "dm-verity device corrupted")))
 	{
 	   panic("dm-verity device corrupted Force Dump");
 	   pr_emerg("Restarting system painc \n");
