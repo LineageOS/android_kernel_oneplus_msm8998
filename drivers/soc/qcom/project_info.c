@@ -450,7 +450,7 @@ int __init init_project_info(void)
 		case 15:
 		    snprintf(mainboard_version, sizeof(mainboard_version), "%s %s", project_info_desc->project_name, "EVT2");
 		    break;
-		case 16:
+		case 21:
 			snprintf(mainboard_version, sizeof(mainboard_version), "%s %s", project_info_desc->project_name, "DVT1");
 			break;
 
