@@ -1540,12 +1540,18 @@ static int fg_charge_full_update(struct fg_chip *chip)
 
 	mutex_lock(&chip->charge_full_lock);
 	if (!chip->charge_done && chip->bsoc_delta_irq_en) {
+#ifndef VENDOR_EDIT
+/* david.liu@bsp, 20170323 Fix warning message */
 		disable_irq_wake(fg_irqs[BSOC_DELTA_IRQ].irq);
+#endif
 		disable_irq_nosync(fg_irqs[BSOC_DELTA_IRQ].irq);
 		chip->bsoc_delta_irq_en = false;
 	} else if (chip->charge_done && !chip->bsoc_delta_irq_en) {
 		enable_irq(fg_irqs[BSOC_DELTA_IRQ].irq);
+#ifndef VENDOR_EDIT
+/* david.liu@bsp, 20170323 Fix warning message */
 		enable_irq_wake(fg_irqs[BSOC_DELTA_IRQ].irq);
+#endif
 		chip->bsoc_delta_irq_en = true;
 	}
 
@@ -4323,7 +4329,10 @@ static int fg_gen3_probe(struct platform_device *pdev)
 
 	/* Keep BSOC_DELTA_IRQ irq disabled until we require it */
 	if (fg_irqs[BSOC_DELTA_IRQ].irq) {
+#ifndef VENDOR_EDIT
+/* david.liu@bsp, 20170323 Fix warning message */
 		disable_irq_wake(fg_irqs[BSOC_DELTA_IRQ].irq);
+#endif
 		disable_irq_nosync(fg_irqs[BSOC_DELTA_IRQ].irq);
 		chip->bsoc_delta_irq_en = false;
 	}
