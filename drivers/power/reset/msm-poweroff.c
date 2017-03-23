@@ -306,12 +306,16 @@ static void msm_restart_prepare(const char *cmd)
 	}
 
 	/* Hard reset the PMIC unless memory contents must be maintained. */
+	/*shankai@bsp , add for debug temporary  ,2017-3-23 */
+#ifdef VENDOR_EDIT
+	qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
+#else
 	if (need_warm_reset) {
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
 	} else {
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
 	}
-
+#endif
 	if (cmd != NULL) {
 #ifdef VENDOR_EDIT
 		if (!strncmp(cmd, "rf", 2)) {
