@@ -1383,8 +1383,7 @@ static int wlfw_wlan_mode_send_sync_msg(enum wlfw_driver_mode_enum_v01 mode)
 
 out:
 	penv->stats.mode_req_err++;
-	//ICNSS_ASSERT(false);
-	BUG_ON(1);   // For wifi enable/disable debug
+	ICNSS_ASSERT(false);
 	return ret;
 }
 
