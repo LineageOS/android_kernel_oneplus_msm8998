@@ -4556,6 +4556,16 @@ static int synaptics_ts_suspend(struct device *dev)
 		return -1;
 	}
 	TPD_DEBUG("%s enter\n", __func__);
+
+	if (ts->pre_btn_state & 0x01){//if press key and suspend release key
+		ts->pre_btn_state &= 0x02;//clear bit0
+		input_report_key(ts->input_dev, OEM_KEY_BACK, 0);
+		input_sync(ts->input_dev);
+	}else if (ts->pre_btn_state & 0x02){
+		ts->pre_btn_state &= 0x01;//clear bit1
+		input_report_key(ts->input_dev, OEM_KEY_APPSELECT, 0);
+		input_sync(ts->input_dev);
+	}
 	for (i = 0; i < ts->max_num; i++)
 	{
 		input_mt_slot(ts->input_dev, i);
