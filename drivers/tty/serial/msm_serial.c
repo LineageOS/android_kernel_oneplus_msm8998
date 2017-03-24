@@ -1948,12 +1948,13 @@ static int __init msm_serial_init(void)
 	   pr_err("msm_serial: driver already initialized %s int=%d\n",__func__,oem_console.console_initialized);
 	   return 0;
 	}
-
+    /*
 	if(!oem_console.default_console && !oem_console.force_console)
 	{
 	   pr_err("msm_serial: don't allow init serial %s force_console=%d default_console=%d\n",__func__,oem_console.force_console,oem_console.default_console );
 	   return 0;
 	}
+    */
 	#endif
 	ret = uart_register_driver(&msm_uart_driver);
 	if (unlikely(ret))
