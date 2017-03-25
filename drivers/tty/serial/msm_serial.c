@@ -1893,6 +1893,9 @@ static int msm_serial_remove(struct platform_device *pdev)
 {
 	struct uart_port *port = platform_get_drvdata(pdev);
 
+	#ifdef VENDOR_EDIT /*zyh we should disable clk when we remove serial*/
+	msm_power(port,3,0);
+	#endif
 	uart_remove_one_port(&msm_uart_driver, port);
 
 	return 0;
