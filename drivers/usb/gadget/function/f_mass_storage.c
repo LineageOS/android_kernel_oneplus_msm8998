@@ -3120,7 +3120,9 @@ int fsg_common_set_cdev(struct fsg_common *common,
 				 ARRAY_SIZE(fsg_strings));
 	if (IS_ERR(us))
 		return PTR_ERR(us);
-
+	#ifdef VENDOR_EDIT
+	us[FSG_STRING_INTERFACE].id = usb_string_id(cdev);
+	#endif
 	fsg_intf_desc.iInterface = us[FSG_STRING_INTERFACE].id;
 
 	/*
