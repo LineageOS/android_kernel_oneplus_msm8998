@@ -1620,10 +1620,7 @@ static void usbpd_sm(struct work_struct *w)
 		pd->current_state = PE_UNKNOWN;
 
 		kobject_uevent(&pd->dev.kobj, KOBJ_CHANGE);
-#ifndef VENDOR_EDIT
-/* david.liu@bsp, 20170308 block notification */
 		dual_role_instance_changed(pd->dual_role);
-#endif
 
 		goto sm_done;
 	}
