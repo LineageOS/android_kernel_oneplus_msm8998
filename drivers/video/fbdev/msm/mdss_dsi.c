@@ -2845,7 +2845,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		ctrl_pdata->SRGB_mode= (int)(unsigned long) arg;
 		if(ctrl_pdata->SRGB_mode==1)
 			ctrl_pdata->dci_p3_mode=0;
-	    set_param_lcm_srgb_mode(&(ctrl_pdata->SRGB_mode));
 		mdss_dsi_panel_set_srgb_mode(ctrl_pdata, (int)(unsigned long) ctrl_pdata->SRGB_mode);
 		break;
 	case MDSS_EVENT_PANEL_GET_SRGB_MODE:
@@ -2855,7 +2854,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
     //#ifdef VENDOR_EDIT
 	case MDSS_EVENT_PANEL_SET_ADOBE_RGB_MODE:
 		ctrl_pdata->Adobe_RGB_mode= (int)(unsigned long) arg;
-		set_param_lcm_adobe_rgb_mode(&(ctrl_pdata->Adobe_RGB_mode));
 		mdss_dsi_panel_set_adobe_rgb_mode(ctrl_pdata,(int)(unsigned long) ctrl_pdata->Adobe_RGB_mode);
 		break;
 	case MDSS_EVENT_PANEL_GET_ADOBE_RGB_MODE:
@@ -2867,7 +2865,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		ctrl_pdata->dci_p3_mode= (int)(unsigned long) arg;
 		if(ctrl_pdata->dci_p3_mode==1)
 		ctrl_pdata->SRGB_mode=0;
-		set_param_lcm_dci_p3_mode(&(ctrl_pdata->dci_p3_mode));
 		mdss_dsi_panel_set_dci_p3_mode(ctrl_pdata,(int)(unsigned long) ctrl_pdata->dci_p3_mode);
 		break;
 	case MDSS_EVENT_PANEL_GET_DCI_P3_MODE:
@@ -2877,7 +2874,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
     //#ifdef VENDOR_EDIT
 	case MDSS_EVENT_PANEL_SET_NIGHT_MODE:
 		ctrl_pdata->night_mode= (int)(unsigned long) arg;
-	    set_param_lcm_night_mode(&(ctrl_pdata->night_mode));
 		mdss_dsi_panel_set_night_mode(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode);
 		break;
 	case MDSS_EVENT_PANEL_GET_NIGHT_MODE:
@@ -2998,7 +2994,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 	//#ifdef VENDOR_EDIT
 	case MDSS_EVENT_PANEL_SET_READING_MODE:
 		ctrl_pdata->reading_mode= (int)(unsigned long) arg;
-	    set_param_lcm_reading_mode(&(ctrl_pdata->reading_mode));
 		mdss_dsi_panel_set_reading_mode(ctrl_pdata, (int)(unsigned long) ctrl_pdata->reading_mode);
 		break;
 	case MDSS_EVENT_PANEL_GET_READING_MODE:
