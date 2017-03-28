@@ -1344,7 +1344,7 @@ static int sealed(void)
 	usleep_range(10000, 10000);
 	bq27541_read_i2c(CONTROL_STATUS, &value,0, bq27541_di);
 
-	pr_err(" REG_CNTL: 0x%x\n", value);
+	pr_debug(" REG_CNTL: 0x%x\n", value);
 
 	if (bq27541_di->device_type == DEVICE_BQ27541)
 		return value & BIT(14);

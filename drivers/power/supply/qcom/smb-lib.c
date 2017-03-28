@@ -4164,8 +4164,11 @@ irqreturn_t smblib_handle_switcher_power_ok(int irq, void *data)
 		return IRQ_HANDLED;
 	}
 	if (is_storming(&irq_data->storm_data)) {
+#ifndef VENDOR_EDIT
+	/*Use the setting of 0x1380 and 0x1365 is useful*/
 		smblib_err(chg, "Reverse boost detected: voting 0mA to suspend input\n");
 		vote(chg->usb_icl_votable, BOOST_BACK_VOTER, true, 0);
+#endif
 	}
 #ifdef VENDOR_EDIT
 	smblib_err(chg, "DEBUG: End of Handler\n");
@@ -4684,7 +4687,7 @@ int op_handle_switcher_power_ok(void)
 		return 0;
 	if (!(g_chg->wa_flags & BOOST_BACK_WA))
 		return 0;
-
+	return 0;/*Use the setting of 0x1380 and 0x1365 is useful*/
 	rc = smblib_read(g_chg, POWER_PATH_STATUS_REG, &stat);
 	if (rc < 0) {
 		smblib_err(g_chg, "Couldn't read POWER_PATH_STATUS rc=%d\n", rc);
