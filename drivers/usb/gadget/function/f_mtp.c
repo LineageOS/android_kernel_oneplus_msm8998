@@ -2044,6 +2044,11 @@ static int mtp_ctrlreq_configfs(struct usb_function *f,
 static void mtp_free(struct usb_function *f)
 {
 	/*NO-OP: no function specific resource allocation in mtp_alloc*/
+#ifdef VENDOR_EDIT
+	struct mtp_instance *fi_mtp;
+	fi_mtp = container_of(f->fi, struct mtp_instance, func_inst);
+	fi_mtp->func_inst.f = NULL;
+#endif
 }
 
 struct usb_function *function_alloc_mtp_ptp(struct usb_function_instance *fi,
