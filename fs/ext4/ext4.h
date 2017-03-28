@@ -2571,7 +2571,13 @@ extern int ext4_search_dir(struct buffer_head *bh,
 			   struct ext4_filename *fname,
 			   const struct qstr *d_name,
 			   unsigned int offset,
+#ifdef VENDOR_EDIT
+			   struct ext4_dir_entry_2 **res_dir,
+			   char *ci_name_buf);
+#else
 			   struct ext4_dir_entry_2 **res_dir);
+#endif
+
 extern int ext4_generic_delete_entry(handle_t *handle,
 				     struct inode *dir,
 				     struct ext4_dir_entry_2 *de_del,
