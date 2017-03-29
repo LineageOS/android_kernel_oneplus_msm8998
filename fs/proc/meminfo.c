@@ -88,10 +88,6 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 	seq_printf(m,
 		"MemTotal:       %8lu kB\n"
 		"MemFree:        %8lu kB\n"
-#ifdef VENDOR_EDIT
-		"DefragPoolFree: %8lu kB\n"
-		"RealMemFree:    %8lu kB\n"
-#endif
 		"MemAvailable:   %8lu kB\n"
 		"Buffers:        %8lu kB\n"
 		"Cached:         %8lu kB\n"
@@ -146,13 +142,13 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 		"CmaTotal:       %8lu kB\n"
 		"CmaFree:        %8lu kB\n"
 #endif
+#ifdef VENDOR_EDIT
+		"DefragPoolFree: %8lu kB\n"
+		"RealMemFree:    %8lu kB\n"
+#endif
 		,
 		K(i.totalram),
 		K(i.freeram),
-#ifdef VENDOR_EDIT
-		K(global_page_state(NR_FREE_DEFRAG_POOL)),
-		K(i.freeram - global_page_state(NR_FREE_DEFRAG_POOL)),
-#endif
 		K(available),
 		K(i.bufferram),
 		K(cached),
@@ -208,6 +204,10 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 #ifdef CONFIG_CMA
 		, K(totalcma_pages)
 		, K(global_page_state(NR_FREE_CMA_PAGES))
+#endif
+#ifdef VENDOR_EDIT
+		, K(global_page_state(NR_FREE_DEFRAG_POOL))
+		, K(i.freeram - global_page_state(NR_FREE_DEFRAG_POOL))
 #endif
 		);
 
