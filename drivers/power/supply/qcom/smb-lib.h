@@ -31,6 +31,9 @@ enum print_reason {
 	PR_MISC		= BIT(2),
 	PR_PARALLEL	= BIT(3),
 	PR_OTG		= BIT(4),
+#ifdef VENDOR_EDIT
+	PR_OP_DEBUG	= BIT(5),
+#endif
 };
 
 #ifdef VENDOR_EDIT

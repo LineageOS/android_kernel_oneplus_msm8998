@@ -5739,8 +5739,7 @@ static void op_heartbeat_work(struct work_struct *work)
 	}
 
 out:
-	if (charger_present) {
-		pr_info("CAP=%d (Q:%d), VBAT=%d (Q:%d), IBAT=%d (Q:%d), BAT_TEMP=%d, CHG_TYPE=%d, VBUS=%d\n",
+		smblib_dbg(chg, PR_OP_DEBUG, "CAP=%d (Q:%d), VBAT=%d (Q:%d), IBAT=%d (Q:%d), BAT_TEMP=%d, CHG_TYPE=%d, VBUS=%d\n",
 				get_prop_batt_capacity(chg),
 				get_prop_fg_capacity(chg),
 				get_prop_batt_voltage_now(chg) / 1000,
@@ -5750,7 +5749,6 @@ out:
 				get_prop_batt_temp(chg),
 				chg->usb_psy_desc.type,
 				vbus_val.intval);
-	}
 
 	/*update time 6s*/
 	schedule_delayed_work(&chg->heartbeat_work,
