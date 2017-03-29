@@ -2807,6 +2807,7 @@ static int synatpitcs_fw_update(struct device *dev, bool force)
 	CURRENT_FIRMWARE_ID = (buf[0]<<24)|(buf[1]<<16)|(buf[2]<<8)|buf[3];
 	sprintf(fw_id_temp,"0x%x",CURRENT_FIRMWARE_ID);
 	strcpy(ts->fw_id,fw_id_temp);
+	TP_FW = CURRENT_FIRMWARE_ID;
 	report_key_point_y = ts->max_y*button_map[2]/LCD_HEIGHT;
 #ifdef SUPPORT_GLOVES_MODE
 	synaptics_glove_mode_enable(ts);
@@ -3939,9 +3940,17 @@ static void synaptics_tpedge_limitfunc(void)
 	int ret;
 
 	if(version_is_s3508)
-		F51_CUSTOM_CTRL74 = 0x0437;
+	{
+		if (TP_FW > 0xeb101014)
+			F51_CUSTOM_CTRL74 = 0x0435;
+		else
+			F51_CUSTOM_CTRL74 = 0x0437;
+	}
 	else
+	{
 		F51_CUSTOM_CTRL74 = 0x044D;
+	}
+	TPD_DEBUG("%s line%d F51_CUSTOM_CTRL74 = 0x%x\n", __func__,__LINE__,F51_CUSTOM_CTRL74);
 	msleep(60);
         ret = i2c_smbus_write_byte_data(ts_g->client, 0xff, 0x4);
         limit_mode = i2c_smbus_read_byte_data(ts_g->client, F51_CUSTOM_CTRL74);
