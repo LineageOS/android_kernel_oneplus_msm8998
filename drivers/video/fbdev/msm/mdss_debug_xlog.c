@@ -29,7 +29,7 @@
 #endif
 
 #define XLOG_DEFAULT_PANIC 0 //VENDOR_EDIT 1
-#define XLOG_DEFAULT_REGDUMP 0x2 /* dump in RAM */
+#define XLOG_DEFAULT_REGDUMP 0x3 /*0x2 VENDOR_EDIT*//* dump in RAM */
 #define XLOG_DEFAULT_DBGBUSDUMP 0x2 /* dump in RAM */
 #define XLOG_DEFAULT_VBIF_DBGBUSDUMP 0x2 /* dump in RAM */
 
@@ -38,7 +38,7 @@
  * sysfs node or panic. This prevents kernel log from xlog message
  * flood.
  */
-#define MDSS_XLOG_PRINT_ENTRY	256
+#define MDSS_XLOG_PRINT_ENTRY	1024 /*VENDOR_EDIT 256*/
 
 /*
  * xlog keeps this number of entries in memory for debug purpose. This
