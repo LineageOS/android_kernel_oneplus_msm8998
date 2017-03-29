@@ -722,30 +722,7 @@ static int show_smap(struct seq_file *m, void *v, int is_pid)
 	memset(&mss, 0, sizeof mss);
 	/* mmap_sem is held in m_start */
 	walk_page_vma(vma, &smaps_walk);
-    if (strcmp(current->comm, "android.bg") == 0) {
-        if ((unsigned long)(mss.pss >> (10 + PSS_SHIFT)) > 0) {
-            seq_printf(m,
-            "Pss:            %8lu kB\n",
-            (unsigned long)(mss.pss >> (10 + PSS_SHIFT)));
-        }
-        if ((mss.private_clean >> 10) > 0) {
-            seq_printf(m,
-            "Private_Clean:  %8lu kB\n",
-            mss.private_clean >> 10);
-        }
-        if ((mss.private_dirty >> 10) > 0) {
-            seq_printf(m,
-            "Private_Dirty:  %8lu kB\n",
-            mss.private_dirty >> 10);
-        }
-        if ((unsigned long)(mss.swap_pss >> (10 + PSS_SHIFT)) > 0) {
-            seq_printf(m,
-            "SwapPss:        %8lu kB\n",
-            (unsigned long)(mss.swap_pss >> (10 + PSS_SHIFT)));
-        }
-        m_cache_vma(m, vma);
-        return 0;
-    }
+
 	show_map_vma(m, vma, is_pid);
 
 	if (vma_get_anon_name(vma)) {
