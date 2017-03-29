@@ -2219,13 +2219,7 @@ int smblib_get_prop_charger_temp(struct smb_charger *chg,
 				 union power_supply_propval *val)
 {
 	int rc;
-#ifdef VENDOR_EDIT
-/* david.liu@bsp, 20170317 Improve coldboot time */
-	rc = 0;
-	val->intval = 250;
 
-	return rc;
-#endif
 	if (!chg->iio.temp_chan ||
 		PTR_ERR(chg->iio.temp_chan) == -EPROBE_DEFER)
 		chg->iio.temp_chan = iio_channel_get(chg->dev, "charger_temp");
