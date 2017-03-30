@@ -252,6 +252,8 @@
 	qcom,wave-samp-rep-cnt = <1>;
 	qcom,vmax-mv = <2088>;
 	qcom,wave-play-rate-us = <4255>;
+	qcom,lra-auto-res-mode = "zxd-eop";
+	qcom,lra-res-cal-period = <32>;
 };
 
 &spmi_bus {
