@@ -2495,6 +2495,11 @@ static int smb2_probe(struct platform_device *pdev)
 	pr_err("Failed to register proc interface\n");
 #endif
 #endif
+#ifdef VENDOR_EDIT
+	if (usb_present)
+		schedule_delayed_work(&chg->non_standard_charger_check_work,
+		msecs_to_jiffies(NON_STANDARD_CHARGER_CHECK_MS));
+#endif
 
 	pr_info("QPNP SMB2 probed successfully usb:present=%d type=%d batt:present = %d health = %d charge = %d\n",
 		usb_present, chg->usb_psy_desc.type,

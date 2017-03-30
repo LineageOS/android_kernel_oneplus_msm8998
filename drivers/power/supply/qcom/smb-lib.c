@@ -3714,6 +3714,34 @@ static void smblib_handle_hvdcp_detect_done(struct smb_charger *chg,
 #define DEFAULT_CDP_MA		1500
 #define DEFAULT_DCP_MA		1800
 #endif
+
+#ifdef VENDOR_EDIT
+int op_rerun_apsd(struct smb_charger *chg)
+{
+	union power_supply_propval val;
+	int rc;
+
+	rc = smblib_get_prop_usb_present(chg, &val);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't get usb present rc = %d\n", rc);
+		return rc;
+	}
+
+	if (!val.intval)
+		return 0;
+		/* rerun APSD */
+		pr_info("OP Reruning APSD type\n");
+		rc = smblib_masked_write(chg, CMD_APSD_REG,
+					APSD_RERUN_BIT,
+					APSD_RERUN_BIT);
+		if (rc < 0) {
+			smblib_err(chg, "Couldn't rerun APSD rc = %d\n", rc);
+			return rc;
+		}
+	chg->usb_type_redet_done = true;
+	return 0;
+}
+#endif
 static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 {
 #ifdef VENDOR_EDIT
@@ -3760,8 +3788,10 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 	else if ((apsd_result->bit) == DCP_CHARGER_BIT)
 		current_limit_ua = DEFAULT_DCP_MA*1000;
 	else if ((apsd_result->bit) == FLOAT_CHARGER_BIT)
-		current_limit_ua = DEFAULT_CDP_MA*1000;
+		current_limit_ua = DEFAULT_SDP_MA*1000;
 	else if ((apsd_result->bit) == OCP_CHARGER_BIT)
+		current_limit_ua = DEFAULT_DCP_MA*1000;
+	if (chg->non_std_chg_present)
 		current_limit_ua = DEFAULT_DCP_MA*1000;
 	vote(chg->usb_icl_votable,
 		DCP_VOTER, true, current_limit_ua);
@@ -3774,9 +3804,13 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 
 	pr_info("apsd result=0x%x, name=%s, psy_type=%d\n",
 		apsd_result->bit, apsd_result->name, apsd_result->pst);
-	if (apsd_result->bit != SDP_CHARGER_BIT) {
+	if (apsd_result->bit == DCP_CHARGER_BIT
+		|| apsd_result->bit == OCP_CHARGER_BIT) {
 		schedule_delayed_work(&chg->check_switch_dash_work,
 					msecs_to_jiffies(500));
+	} else {
+		schedule_delayed_work(&chg->non_standard_charger_check_work,
+		msecs_to_jiffies(NON_STANDARD_CHARGER_CHECK_MS));
 	}
 
 	/* set allow read extern fg IIC */
@@ -4202,6 +4236,20 @@ irqreturn_t smblib_handle_aicl_done(int irq, void *data)
 	pr_info("IRQ: %s AICL result=%d\n", irq_data->name, icl_ma);
 	return IRQ_HANDLED;
 }
+int op_get_aicl_result(struct smb_charger *chg)
+{
+	int icl_ma, rc;
+
+	rc = smblib_get_charge_param(chg,
+				&chg->param.icl_stat, &icl_ma);
+	if (rc < 0) {
+		pr_err("Couldn't get ICL status rc=%d\n", rc);
+		return IRQ_HANDLED;
+	}
+
+	pr_info("AICL result=%d\n", icl_ma);
+	return icl_ma;
+}
 
 static int get_property_from_fg(struct smb_charger *chg,
 		enum power_supply_property prop, int *val)
@@ -4365,6 +4413,7 @@ static void op_handle_usb_removal(struct smb_charger *chg)
 	chg->recharge_status = false;
 	chg->usb_enum_status = false;
 	chg->non_std_chg_present = false;
+	chg->usb_type_redet_done = false;
 	op_battery_temp_region_set(chg, BATT_TEMP_INVALID);
 }
 
@@ -4916,7 +4965,10 @@ static void op_check_allow_switch_dash_work(struct work_struct *work)
 		return;
 
 	apsd_result = smblib_get_apsd_result(chg);
-	if ((apsd_result->bit != SDP_CHARGER_BIT && apsd_result->bit != CDP_CHARGER_BIT) && apsd_result->bit)
+	if (((apsd_result->bit != SDP_CHARGER_BIT
+		&& apsd_result->bit != CDP_CHARGER_BIT)
+		&& apsd_result->bit)
+		|| chg->non_std_chg_present)
 		switch_fast_chg(chg);
 }
 
@@ -5650,6 +5702,29 @@ void checkout_term_current(struct smb_charger *chg, int batt_temp)
 		op_charging_en(chg, false);
 	}
 }
+static void check_non_standard_charger_work(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct smb_charger *chg = container_of(dwork,
+	struct smb_charger, non_standard_charger_check_work);
+	bool charger_present;
+	const struct apsd_result *apsd_result;
+
+	charger_present = is_usb_present(chg);
+	if (!charger_present)
+		return;
+	apsd_result = smblib_update_usb_type(chg);
+	if (apsd_result->bit == DCP_CHARGER_BIT
+		|| apsd_result->bit == OCP_CHARGER_BIT)
+		return;
+	if (chg->usb_enum_status)
+		return;
+	op_rerun_apsd(chg);
+	power_supply_changed(chg->batt_psy);
+	chg->is_power_changed = true;
+	chg->non_std_chg_present = true;
+	pr_err("non-standard_charger detected\n");
+}
 
 static void op_heartbeat_work(struct work_struct *work)
 {
@@ -6326,6 +6401,8 @@ int smblib_init(struct smb_charger *chg)
 			op_check_allow_switch_dash_work);
 	INIT_DELAYED_WORK(&chg->heartbeat_work,
 			op_heartbeat_work);
+	INIT_DELAYED_WORK(&chg->non_standard_charger_check_work,
+		check_non_standard_charger_work);
 	schedule_delayed_work(&chg->heartbeat_work,
 			msecs_to_jiffies(HEARTBEAT_INTERVAL_MS));
 	notify_dash_unplug_register(&notify_unplug_event);

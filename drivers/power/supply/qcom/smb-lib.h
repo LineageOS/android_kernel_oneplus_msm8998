@@ -41,6 +41,7 @@ enum print_reason {
 #define BATT_TYPE_FCC_VOTER "BATT_TYPE_FCC_VOTER"
 #define PSY_ICL_VOTER		"PSY_ICL_VOTER"
 #define TEMP_REGION_MAX               9
+#define NON_STANDARD_CHARGER_CHECK_MS 30000
 #endif
 #define DEFAULT_VOTER			"DEFAULT_VOTER"
 #define USER_VOTER			"USER_VOTER"
@@ -299,6 +300,7 @@ struct smb_charger {
 	struct delayed_work	re_kick_work;
 	struct delayed_work	enable_usb_suspend_work;
 	struct delayed_work	check_switch_dash_work;
+	struct delayed_work non_standard_charger_check_work;
 	struct delayed_work heartbeat_work;
 	struct wake_lock	chg_wake_lock;
 #endif
@@ -334,6 +336,7 @@ struct smb_charger {
 	bool				dash_present;
 	bool				usb_enum_status;
 	bool				non_std_chg_present;
+	bool				usb_type_redet_done;
 	bool				time_out;
 	bool				disable_normal_chg_for_dash;
 	bool				ship_mode;
