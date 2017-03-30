@@ -941,7 +941,47 @@ static int set_sdp_current(struct smb_charger *chg, int icl_ua)
 
 	return rc;
 }
+#ifdef VENDOR_EDIT
+int op_usb_icl_set(struct smb_charger *chg, int icl_ua)
+{
+	int rc = 0;
+	bool override;
+#ifdef VENDOR_EDIT
+	pr_info("%s,icl_ua=%d\n", __func__, icl_ua);
+#endif
+	disable_irq_nosync(chg->irq_info[USBIN_ICL_CHANGE_IRQ].irq);
+	rc = smblib_set_charge_param(chg, &chg->param.usb_icl,
+			icl_ua - chg->icl_reduction_ua);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't set HC ICL rc=%d\n", rc);
+		goto enable_icl_changed_interrupt;
+	}
 
+	/* determine if override needs to be enforced */
+	override = true;
+	/* enforce override */
+	rc = smblib_masked_write(chg, USBIN_ICL_OPTIONS_REG,
+		USBIN_MODE_CHG_BIT, override ? USBIN_MODE_CHG_BIT : 0);
+
+	rc = smblib_icl_override(chg, override);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't set ICL override rc=%d\n", rc);
+		goto enable_icl_changed_interrupt;
+	}
+
+	/* unsuspend after configuring current and override */
+	rc = smblib_set_usb_suspend(chg, false);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't resume input rc=%d\n", rc);
+		goto enable_icl_changed_interrupt;
+	}
+
+enable_icl_changed_interrupt:
+	enable_irq(chg->irq_info[USBIN_ICL_CHANGE_IRQ].irq);
+	return rc;
+}
+
+#endif
 static int smblib_usb_icl_vote_callback(struct votable *votable, void *data,
 			int icl_ua, const char *client)
 {
@@ -970,11 +1010,29 @@ static int smblib_usb_icl_vote_callback(struct votable *votable, void *data,
 	/* configure current */
 	if (pval.intval == POWER_SUPPLY_TYPEC_SOURCE_DEFAULT
 		&& (chg->usb_psy_desc.type == POWER_SUPPLY_TYPE_USB)) {
+#ifdef VENDOR_EDIT
+		if (icl_ua == 900000) {
+		rc = smblib_set_charge_param(chg, &chg->param.usb_icl,
+				icl_ua - chg->icl_reduction_ua);
+		if (rc < 0) {
+			smblib_err(chg, "Couldn't set HC ICL rc=%d\n", rc);
+			goto enable_icl_changed_interrupt;
+		}
+		override = false;
+	} else {
 		rc = set_sdp_current(chg, icl_ua);
 		if (rc < 0) {
 			smblib_err(chg, "Couldn't set SDP ICL rc=%d\n", rc);
 			goto enable_icl_changed_interrupt;
 		}
+	}
+#else
+		rc = set_sdp_current(chg, icl_ua);
+		if (rc < 0) {
+			smblib_err(chg, "Couldn't set SDP ICL rc=%d\n", rc);
+			goto enable_icl_changed_interrupt;
+		}
+#endif
 	} else {
 		rc = smblib_set_charge_param(chg, &chg->param.usb_icl,
 				icl_ua - chg->icl_reduction_ua);

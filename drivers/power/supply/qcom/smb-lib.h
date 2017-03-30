@@ -502,6 +502,7 @@ int smblib_set_prop_chg_protect_status(struct smb_charger *chg,
 				  const union power_supply_propval *val);
 bool op_get_fastchg_ing(struct smb_charger *chg);
 bool get_prop_fastchg_status(struct smb_charger *chg);
+int op_usb_icl_set(struct smb_charger *chg, int icl_ua);
 #endif
 int smblib_get_prop_dc_present(struct smb_charger *chg,
 				union power_supply_propval *val);
