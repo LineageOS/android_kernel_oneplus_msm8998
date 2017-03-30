@@ -1664,7 +1664,10 @@ int smblib_get_prop_batt_charge_type(struct smb_charger *chg,
 int smblib_get_prop_batt_health(struct smb_charger *chg,
 				union power_supply_propval *val)
 {
+#ifndef VENDOR_EDIT
 	union power_supply_propval pval;
+#endif
+
 	int rc;
 	u8 stat;
 
@@ -1678,7 +1681,11 @@ int smblib_get_prop_batt_health(struct smb_charger *chg,
 		   stat);
 
 	if (stat & CHARGER_ERROR_STATUS_BAT_OV_BIT) {
+#ifdef VENDOR_EDIT
+	val->intval = POWER_SUPPLY_HEALTH_OVERVOLTAGE;
+#else
 		rc = smblib_get_prop_batt_voltage_now(chg, &pval);
+
 		if (!rc) {
 			/*
 			 * If Vbatt is within 40mV above Vfloat, then don't
@@ -1691,7 +1698,10 @@ int smblib_get_prop_batt_health(struct smb_charger *chg,
 				goto done;
 			}
 		}
+#endif
+
 	}
+
 
 	if (stat & BAT_TEMP_STATUS_TOO_COLD_BIT)
 		val->intval = POWER_SUPPLY_HEALTH_COLD;
@@ -1703,8 +1713,9 @@ int smblib_get_prop_batt_health(struct smb_charger *chg,
 		val->intval = POWER_SUPPLY_HEALTH_WARM;
 	else
 		val->intval = POWER_SUPPLY_HEALTH_GOOD;
-
+#ifndef VENDOR_EDIT
 done:
+#endif
 	return rc;
 }
 
