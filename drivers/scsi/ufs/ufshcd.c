@@ -286,41 +286,6 @@ enum {
 };
 
 
-#define UFS_VS_STATUS_HIST_MAX 10
-typedef struct ufshcd_pa_vs_status_reg1_hist {
-	u32 val[3];
-	ktime_t tstamp;
-} ufshcd_pa_vs_status_reg1_hist_t;
-
-static ufshcd_pa_vs_status_reg1_hist_t ufs_vs_status_hist[UFS_VS_STATUS_HIST_MAX];
-static int ufs_vs_status_hist_counter = 0;
-
-static void ufshcd_read_save_pa_vs_status_reg1(struct ufs_hba *hba, int index)
-{
-	int err;
-	u32 pa_vs_config_reg1;
-
-	err = ufshcd_dme_get(hba, UIC_ARG_MIB(0x9001),
-			     &pa_vs_config_reg1);
-
-	/* clear the current value of status register */
-	if (!err)
-		ufshcd_dme_set(hba, UIC_ARG_MIB(0x9001),
-			     pa_vs_config_reg1);
-	else
-		pa_vs_config_reg1 = (u32)-1;
-
-	if (index < 3)
-		ufs_vs_status_hist[ufs_vs_status_hist_counter].val[index] = pa_vs_config_reg1;
-
-	if (index == 2) {
-		ufs_vs_status_hist[ufs_vs_status_hist_counter].tstamp = ktime_get();
-		ufs_vs_status_hist_counter++;
-		ufs_vs_status_hist_counter %= UFS_VS_STATUS_HIST_MAX;
-	}
-	pr_err("%s: index %d ufs_vs_status_hist_counter %d pa_vs_config_reg1 0x%x\n", __func__, index, ufs_vs_status_hist_counter, pa_vs_config_reg1);
-}
-
 #define DEFAULT_UFSHCD_DBG_PRINT_EN	UFSHCD_DBG_PRINT_ALL
 
 #define ufshcd_set_eh_in_progress(h) \
@@ -9351,12 +9316,10 @@ static int ufshcd_devfreq_scale(struct ufs_hba *hba, bool scale_up)
 	if (ret)
 		/* link will be bad state so no need to scale_up_gear */
 		return ret;
-	ufshcd_read_save_pa_vs_status_reg1(hba, 0);
 
 	ret = ufshcd_scale_clks(hba, scale_up);
 	if (ret)
 		goto scale_up_gear;
-	ufshcd_read_save_pa_vs_status_reg1(hba, 1);
 
 	ret = ufshcd_uic_hibern8_exit(hba);
 	if (ret)
@@ -9371,7 +9334,6 @@ static int ufshcd_devfreq_scale(struct ufs_hba *hba, bool scale_up)
 			goto clk_scaling_unprepare;
 		}
 	}
-	ufshcd_read_save_pa_vs_status_reg1(hba, 2);
 
 	if (!ret) {
 		hba->clk_scaling.is_scaled_up = scale_up;
