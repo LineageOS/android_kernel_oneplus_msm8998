@@ -3809,8 +3809,10 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 		schedule_delayed_work(&chg->check_switch_dash_work,
 					msecs_to_jiffies(500));
 	} else {
-		schedule_delayed_work(&chg->non_standard_charger_check_work,
-		msecs_to_jiffies(NON_STANDARD_CHARGER_CHECK_MS));
+		if (!chg->non_std_chg_present)
+			schedule_delayed_work(
+			&chg->non_standard_charger_check_work,
+			msecs_to_jiffies(NON_STANDARD_CHARGER_CHECK_MS));
 	}
 
 	/* set allow read extern fg IIC */
