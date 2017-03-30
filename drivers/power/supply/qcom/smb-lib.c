@@ -6516,7 +6516,13 @@ int smblib_deinit(struct smb_charger *chg)
 {
 	switch (chg->mode) {
 	case PARALLEL_MASTER:
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20170330 Fix system crash */
+		if (chg->nb.notifier_call)
+			power_supply_unreg_notifier(&chg->nb);
+#else
 		power_supply_unreg_notifier(&chg->nb);
+#endif
 		smblib_destroy_votables(chg);
 		break;
 	case PARALLEL_SLAVE:
