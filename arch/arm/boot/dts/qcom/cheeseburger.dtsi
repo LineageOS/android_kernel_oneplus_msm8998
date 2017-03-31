@@ -240,8 +240,14 @@
 &pmi8998_gpios {
 	/* button-backlight */
 	gpio@c400 {
+		qcom,mode = <1>;		/* Output */
+		qcom,pull = <4>;		/* Pull Down*/
+		qcom,master-en = <1>;		/* Enable GPIO */
+		qcom,invert = <1>;
+		qcom,out-strength = <1>;
 		status = "okay";
 	};
+
 };
 
 &sdhc_2 {
@@ -278,6 +284,7 @@
 				gpios = <&pmi8998_gpios 5 0>; //here maybe pm8998_gpios, depends on what you use.
 				label = "button-backlight";
 				linux,default-trigger = "none";
+				default-state = "off";
 			};
 		};
 	};
