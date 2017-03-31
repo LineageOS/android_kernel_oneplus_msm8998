@@ -1427,6 +1427,7 @@ fail:
 }
 #endif
 
+extern void oem_set_sleep_disable(bool disable);
 static int mtp_open(struct inode *ip, struct file *fp)
 {
 	printk(KERN_INFO "mtp_open\n");
@@ -1435,6 +1436,7 @@ static int mtp_open(struct inode *ip, struct file *fp)
 		return -EBUSY;
 	}
 
+	oem_set_sleep_disable(true);
 	/* clear any error condition */
 	if (_mtp_dev->state != STATE_OFFLINE)
 		_mtp_dev->state = STATE_READY;
@@ -1447,6 +1449,7 @@ static int mtp_release(struct inode *ip, struct file *fp)
 {
 	printk(KERN_INFO "mtp_release\n");
 
+	oem_set_sleep_disable(false);
 	mtp_unlock(&_mtp_dev->open_excl);
 	return 0;
 }
