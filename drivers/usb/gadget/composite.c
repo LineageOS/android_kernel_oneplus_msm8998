@@ -2474,6 +2474,11 @@ void usb_composite_setup_continue(struct usb_composite_dev *cdev)
 		}
 		spin_unlock_irqrestore(&cdev->lock, flags);
 		WARN(cdev, "%s: Unexpected call\n", __func__);
+		/* neiltsai, 20170331, add qualcomm patch */
+		#ifdef VENDOR_EDIT
+		return;
+		#endif
+		/* neiltsai, 20170331, add qualcomm patch */
 
 	} else if (--cdev->delayed_status == 0) {
 		DBG(cdev, "%s: Completing delayed status\n", __func__);

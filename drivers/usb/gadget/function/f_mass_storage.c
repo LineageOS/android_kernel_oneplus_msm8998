@@ -2555,6 +2555,12 @@ reset:
 			}
 		}
 
+		/* neiltsai, 20170331, add qualcomm patch */
+		#ifdef VENDOR_EDIT
+		pr_err("%s:disable endpoints\n", __func__);
+		#endif
+		/* neiltsai, 20170331, add qualcomm patch */
+
 		/* Disable the endpoints */
 		if (fsg->bulk_in_enabled) {
 			usb_ep_disable(fsg->bulk_in);
@@ -2564,13 +2570,22 @@ reset:
 			usb_ep_disable(fsg->bulk_out);
 			fsg->bulk_out_enabled = 0;
 		}
-
+		/* neiltsai, 20170331, add qualcomm patch */
+		#ifdef VENDOR_EDIT
+		pr_err("%s:eps are disabled\n", __func__);
+		#endif
+		/* neiltsai, 20170331, add qualcomm patch */
 		common->fsg = NULL;
 		wake_up(&common->fsg_wait);
 	}
 
 	common->running = 0;
 	if (!new_fsg || rc) {
+		/* neiltsai, 20170331, add qualcomm patch */
+		#ifdef VENDOR_EDIT
+		pr_err("%s:decrement pm_usage count\n", __func__);
+		#endif
+		/* neiltsai, 20170331, add qualcomm patch */
 		/* allow usb LPM after eps are disabled */
 		usb_gadget_autopm_put_async(common->gadget);
 		return rc;
@@ -2616,9 +2631,19 @@ reset:
 		bh->inreq->complete = bulk_in_complete;
 		bh->outreq->complete = bulk_out_complete;
 	}
+	/* neiltsai, 20170331, add qualcomm patch */
+	#ifdef VENDOR_EDIT
+	pr_err("%s:increment pm_usage count num_buffers=%d\n", __func__
+			, common->fsg_num_buffers);
+	#endif
+	/* neiltsai, 20170331, add qualcomm patch */
 
+	/* neiltsai, 20170331, add qualcomm patch */
+	#ifndef VENDOR_EDIT
 	/* prevents usb LPM until thread runs to completion */
 	usb_gadget_autopm_get_noresume(common->gadget);
+	#endif
+	/* neiltsai, 20170331, add qualcomm patch */
 
 	common->running = 1;
 	for (i = 0; i < ARRAY_SIZE(common->luns); ++i)
@@ -2635,7 +2660,18 @@ static int fsg_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
 {
 	struct fsg_dev *fsg = fsg_from_func(f);
 	fsg->common->new_fsg = fsg;
+
+	/* neiltsai, 20170331, add qualcomm patch */
+	#ifdef VENDOR_EDIT
+	/* prevents usb LPM until thread runs to completion */
+	usb_gadget_autopm_get_async(fsg->common->gadget);
+	#endif
+	/* neiltsai, 20170331, add qualcomm patch */
+
+	pr_err("%s:\n", __func__);
 	raise_exception(fsg->common, FSG_STATE_CONFIG_CHANGE);
+	pr_err("%s: end\n", __func__);
+
 	return USB_GADGET_DELAYED_STATUS;
 }
 
@@ -2644,6 +2680,11 @@ static void fsg_disable(struct usb_function *f)
 	struct fsg_dev *fsg = fsg_from_func(f);
 	fsg->common->new_fsg = NULL;
 	raise_exception(fsg->common, FSG_STATE_CONFIG_CHANGE);
+	/* neiltsai, 20170331, add qualcomm patch */
+	#ifdef VENDOR_EDIT
+	pr_err("%s:\n", __func__);
+	#endif
+	/* neiltsai, 20170331, add qualcomm patch */
 }
 
 
@@ -2676,6 +2717,11 @@ static void handle_exception(struct fsg_common *common)
 	if (likely(common->fsg)) {
 		for (i = 0; i < common->fsg_num_buffers; ++i) {
 			bh = &common->buffhds[i];
+			/* neiltsai, 20170331, add qualcomm patch */
+			#ifdef VENDOR_EDIT
+			pr_err("%s:dequeue reqs %d\n", __func__, i);
+			#endif
+			/* neiltsai, 20170331, add qualcomm patch */
 			if (bh->inreq_busy)
 				usb_ep_dequeue(common->fsg->bulk_in, bh->inreq);
 			if (bh->outreq_busy)
@@ -2776,8 +2822,18 @@ static void handle_exception(struct fsg_common *common)
 		break;
 
 	case FSG_STATE_CONFIG_CHANGE:
+		/* neiltsai, 20170331, add qualcomm patch */
+		#ifdef VENDOR_EDIT
+		pr_err("%s:status change disable/enable ep\n", __func__);
+		#endif
+		/* neiltsai, 20170331, add qualcomm patch */
 		do_set_interface(common, common->new_fsg);
 		if (common->new_fsg) {
+			/* neiltsai, 20170331, add qualcomm patch */
+			#ifdef VENDOR_EDIT
+			pr_err("%s:setup continue call\n", __func__);
+			#endif
+			/* neiltsai, 20170331, add qualcomm patch */
 			/*
 			 * make sure delayed_status flag updated when set_alt
 			 * returned.
@@ -3339,6 +3395,11 @@ static int fsg_bind(struct usb_configuration *c, struct usb_function *f)
 	int			ret;
 	struct fsg_opts		*opts;
 
+	/* neiltsai, 20170331, add qualcomm patch */
+	#ifdef VENDOR_EDIT
+	pr_err("%s:\n", __func__);
+	#endif
+	/* neiltsai, 20170331, add qualcomm patch */
 	/* Don't allow to bind if we don't have at least one LUN */
 	ret = _fsg_common_get_max_lun(common);
 	if (ret < 0) {
@@ -3412,6 +3473,11 @@ static int fsg_bind(struct usb_configuration *c, struct usb_function *f)
 	if (ret)
 		goto autoconf_fail;
 
+	/* neiltsai, 20170331, add qualcomm patch */
+	#ifdef VENDOR_EDIT
+	pr_err("%s: done\n", __func__);
+	#endif
+	/* neiltsai, 20170331, add qualcomm patch */
 	return 0;
 
 autoconf_fail:
@@ -3434,6 +3500,11 @@ static void fsg_unbind(struct usb_configuration *c, struct usb_function *f)
 	struct fsg_common	*common = fsg->common;
 
 	DBG(fsg, "unbind\n");
+	/* neiltsai, 20170331, add qualcomm patch */
+	#ifdef VENDOR_EDIT
+	pr_err("%s:\n", __func__);
+	#endif
+	/* neiltsai, 20170331, add qualcomm patch */
 	if (fsg->common->fsg == fsg) {
 		fsg->common->new_fsg = NULL;
 		raise_exception(fsg->common, FSG_STATE_CONFIG_CHANGE);
@@ -3442,6 +3513,11 @@ static void fsg_unbind(struct usb_configuration *c, struct usb_function *f)
 	}
 
 	usb_free_all_descriptors(&fsg->function);
+	/* neiltsai, 20170331, add qualcomm patch */
+	#ifdef VENDOR_EDIT
+	pr_err("%s: done\n", __func__);
+	#endif
+	/* neiltsai, 20170331, add qualcomm patch */
 }
 
 static inline struct fsg_lun_opts *to_fsg_lun_opts(struct config_item *item)
