@@ -5722,7 +5722,7 @@ static void op_check_charger_uovp(struct smb_charger *chg, int vchg_mv)
 				op_charging_en(chg, true);
 				chg->chg_ovp = false;
 				op_check_battery_temp(chg);
-				//smbchg_rerun_aicl(chg);
+				smblib_rerun_aicl(chg);
 			}
 		}
 	}
