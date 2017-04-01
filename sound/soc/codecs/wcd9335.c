@@ -51,12 +51,6 @@
 #include <sound/sounddebug.h>
 #endif
 
-#ifdef VENDOR_EDIT
-/*zhiguang.su@MultiMedia.AudioDrv, 2017-03-27, add for debug*/
-#undef pr_debug
-#define pr_debug pr_err
-#endif
-
 #define TASHA_RX_PORT_START_NUMBER  16
 
 #define WCD9335_RATES_MASK (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |\
