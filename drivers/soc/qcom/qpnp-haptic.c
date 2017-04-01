@@ -1026,21 +1026,17 @@ static ssize_t qpnp_hap_rf_hz_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
     u8 lra_auto_res_lo = 0, lra_auto_res_hi = 0;
-    u32 temp = 0;
+    int temp;
 	struct timed_output_dev *timed_dev = dev_get_drvdata(dev);
 	struct qpnp_hap *hap = container_of(timed_dev, struct qpnp_hap,
 					 timed_dev);
 
 	qpnp_hap_read_reg(hap, &lra_auto_res_lo,
-				QPNP_HAP_LRA_AUTO_RES_LO(hap->base));
+				QPNP_HAP_RATE_CFG1_REG(hap->base));
 	qpnp_hap_read_reg(hap, &lra_auto_res_hi,
-				QPNP_HAP_LRA_AUTO_RES_HI(hap->base));
-	lra_auto_res_hi = lra_auto_res_hi >> 4;
+				QPNP_HAP_RATE_CFG2_REG(hap->base));
 
-    pr_debug("bean set %s,%d,lo = ox%x,hi = ox%x\n",__func__,__LINE__,lra_auto_res_lo,lra_auto_res_hi);
-    temp |= lra_auto_res_hi;
-    temp = temp << 8;
-    temp |= lra_auto_res_lo;
+    temp = (lra_auto_res_hi << 8) | (lra_auto_res_lo & 0xff);
 
 	hap->resonant_frequency = ((19200/96)*1000)/temp;
 
@@ -1454,6 +1450,8 @@ static void calculate_lra_code(struct qpnp_hap *hap)
 
 	lra_init_freq = 200000 / play_rate_code;
 
+	lra_init_freq = ((abs(lra_init_freq-235)*100/235) < 15) ? lra_init_freq : 235;
+
 	while (start_variation >= AUTO_RES_ERR_CAPTURE_RES) {
 		freq_variation = (lra_init_freq * start_variation) / 100;
 		lra_play_rate_code[neg_idx++] = 200000 / (lra_init_freq -
@@ -1494,17 +1492,33 @@ static int qpnp_hap_auto_res_enable(struct qpnp_hap *hap, int enable)
 static void update_lra_frequency(struct qpnp_hap *hap)
 {
 	u8 lra_auto_res_lo = 0, lra_auto_res_hi = 0;
+	u32 temp = 0;
+	int lra_init_freq;
 
 	qpnp_hap_read_reg(hap, &lra_auto_res_lo,
 				QPNP_HAP_LRA_AUTO_RES_LO(hap->base));
 	qpnp_hap_read_reg(hap, &lra_auto_res_hi,
 				QPNP_HAP_LRA_AUTO_RES_HI(hap->base));
 
+    lra_auto_res_hi = lra_auto_res_hi >> 4;
+	temp |= lra_auto_res_hi;
+    temp = temp << 8;
+    temp |= lra_auto_res_lo;
+
+    lra_init_freq = 200000/temp;
+
+    if ((abs(lra_init_freq-235)*100/235) < 15){
+        lra_auto_res_lo = lra_auto_res_lo;
+        lra_auto_res_hi = lra_auto_res_hi;
+    }else{
+        lra_auto_res_lo = 0x53;
+        lra_auto_res_hi = 0x3;
+    }
+
 	if (lra_auto_res_lo && lra_auto_res_hi) {
 		qpnp_hap_write_reg(hap, &lra_auto_res_lo,
 				QPNP_HAP_RATE_CFG1_REG(hap->base));
 
-		lra_auto_res_hi = lra_auto_res_hi >> 4;
 		qpnp_hap_write_reg(hap, &lra_auto_res_hi,
 				QPNP_HAP_RATE_CFG2_REG(hap->base));
 	}
@@ -1551,6 +1565,7 @@ static void correct_auto_res_error(struct work_struct *auto_res_err_work)
 				QPNP_HAP_EN_CTL_REG(hap->base));
 
 	lra_code_lo = lra_play_rate_code[index] & QPNP_HAP_RATE_CFG1_MASK;
+
 	qpnp_hap_write_reg(hap, &lra_code_lo,
 				QPNP_HAP_RATE_CFG1_REG(hap->base));
 
@@ -2000,6 +2015,7 @@ static int qpnp_hap_config(struct qpnp_hap *hap)
 	}
 
 	reg = temp & QPNP_HAP_RATE_CFG1_MASK;
+
 	rc = qpnp_hap_write_reg(hap, &reg,
 			QPNP_HAP_RATE_CFG1_REG(hap->base));
 	if (rc)
@@ -2012,6 +2028,7 @@ static int qpnp_hap_config(struct qpnp_hap *hap)
 	reg &= QPNP_HAP_RATE_CFG2_MASK;
 	temp = temp >> QPNP_HAP_RATE_CFG2_SHFT;
 	reg |= temp;
+
 	rc = qpnp_hap_write_reg(hap, &reg,
 			QPNP_HAP_RATE_CFG2_REG(hap->base));
 	if (rc)
