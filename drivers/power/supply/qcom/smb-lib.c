@@ -577,33 +577,6 @@ static int smblib_set_usb_pd_allowed_voltage(struct smb_charger *chg,
  * HELPER FUNCTIONS *
  ********************/
 
-static int try_rerun_apsd_for_hvdcp(struct smb_charger *chg)
-{
-	const struct apsd_result *apsd_result;
-
-	/*
-	 * PD_INACTIVE_VOTER on hvdcp_disable_votable indicates whether
-	 * apsd rerun was tried earlier
-	 */
-	if (get_client_vote(chg->hvdcp_disable_votable_indirect,
-						PD_INACTIVE_VOTER)) {
-		vote(chg->hvdcp_disable_votable_indirect,
-				PD_INACTIVE_VOTER, false, 0);
-		/* ensure hvdcp is enabled */
-		if (!get_effective_result(
-				chg->hvdcp_disable_votable_indirect)) {
-			apsd_result = smblib_get_apsd_result(chg);
-			if (apsd_result->bit & (QC_2P0_BIT | QC_3P0_BIT)) {
-				/* rerun APSD */
-				smblib_dbg(chg, PR_MISC, "rerun APSD\n");
-				smblib_masked_write(chg, CMD_APSD_REG,
-						APSD_RERUN_BIT,
-						APSD_RERUN_BIT);
-			}
-		}
-	}
-	return 0;
-}
 
 static const struct apsd_result *smblib_update_usb_type(struct smb_charger *chg)
 {
@@ -1144,7 +1117,7 @@ static int smblib_hvdcp_enable_vote_callback(struct votable *votable,
 	struct smb_charger *chg = data;
 	int rc;
 	u8 val = HVDCP_AUTH_ALG_EN_CFG_BIT | HVDCP_EN_BIT;
-
+	u8 stat;
 	/* vote to enable/disable HW autonomous INOV */
 	vote(chg->hvdcp_hw_inov_dis_votable, client, !hvdcp_enable, 0);
 
@@ -1164,6 +1137,14 @@ static int smblib_hvdcp_enable_vote_callback(struct votable *votable,
 			hvdcp_enable ? "enable" : "disable", rc);
 		return rc;
 	}
+	rc = smblib_read(chg, APSD_STATUS_REG, &stat);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't read APSD status rc=%d\n", rc);
+		return rc;
+	} /* re-run APSD if HVDCP was detected */
+	if (stat & QC_CHARGER_BIT)
+		op_rerun_apsd(chg);
+	/*May change to the API of QCOM*/
 
 	return 0;
 }
@@ -2619,8 +2600,9 @@ int smblib_set_prop_pd_active(struct smb_charger *chg,
 			      const union power_supply_propval *val)
 {
 	int rc;
-	bool cc_debounced;
-	bool orientation;
+	bool orientation, cc_debounced, sink_attached, hvdcp;
+	u8 stat;
+
 	bool pd_active = val->intval;
 
 #ifdef VENDOR_EDIT
@@ -2634,6 +2616,16 @@ int smblib_set_prop_pd_active(struct smb_charger *chg,
 		smblib_err(chg, "PD is not allowed\n");
 		return -EINVAL;
 	}
+	rc = smblib_read(chg, APSD_STATUS_REG, &stat);
+	 if (rc < 0) {
+		smblib_err(chg, "Couldn't read APSD status rc=%d\n", rc);
+		return rc;
+		}
+	cc_debounced = (bool)
+		(chg->typec_status[3] & TYPEC_DEBOUNCE_DONE_STATUS_BIT);
+	sink_attached = (bool)
+		(chg->typec_status[3] & UFP_DFP_MODE_STATUS_BIT);
+	hvdcp = stat & QC_CHARGER_BIT;
 
 	vote(chg->apsd_disable_votable, PD_VOTER, pd_active, 0);
 	vote(chg->pd_allowed_votable, PD_VOTER, pd_active, 0);
@@ -2708,8 +2700,6 @@ int smblib_set_prop_pd_active(struct smb_charger *chg,
 
 	cc_debounced = (bool)
 		(chg->typec_status[3] & TYPEC_DEBOUNCE_DONE_STATUS_BIT);
-	if (!pd_active && cc_debounced)
-		try_rerun_apsd_for_hvdcp(chg);
 
 	chg->pd_active = pd_active;
 	smblib_update_usb_type(chg);
@@ -3614,9 +3604,6 @@ static void smblib_handle_hvdcp_check_timeout(struct smb_charger *chg,
 	if (rising) {
 		vote(chg->pd_disallowed_votable_indirect, HVDCP_TIMEOUT_VOTER,
 								false, 0);
-		if (get_effective_result(chg->pd_disallowed_votable_indirect))
-			/* could be a legacy cable, try doing hvdcp */
-			try_rerun_apsd_for_hvdcp(chg);
 
 		/*
 		 * HVDCP detection timeout done
@@ -3915,15 +3902,22 @@ static void typec_source_removal(struct smb_charger *chg)
 
 static void typec_source_insertion(struct smb_charger *chg)
 {
-	/*
-	 * at any time we want LEGACY_UNKNOWN, PD, or USB_PSY to be voting for
-	 * ICL, so vote LEGACY_UNKNOWN here if none of the above three have
-	 * casted their votes
-	 */
-	if (!is_client_vote_enabled(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER)
-		&& !is_client_vote_enabled(chg->usb_icl_votable, PD_VOTER)
-		&& !is_client_vote_enabled(chg->usb_icl_votable, USB_PSY_VOTER))
-		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 100000);
+	bool legacy, rp_high;
+
+	if (chg->typec_legacy_valid) {
+		legacy = chg->typec_status[4] & TYPEC_LEGACY_CABLE_STATUS_BIT;
+		rp_high = smblib_get_prop_ufp_mode(chg)
+			== POWER_SUPPLY_TYPEC_SOURCE_HIGH;
+		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, false, 0);
+		if (legacy && rp_high) {
+			vote(chg->pl_disable_votable,
+			 PL_DELAY_HVDCP_VOTER, false, 0);
+		} else {
+			vote(chg->hvdcp_disable_votable_indirect,
+			VBUS_CC_SHORT_VOTER, false, 0);
+		}
+	}
+
 }
 
 static void typec_sink_insertion(struct smb_charger *chg)
@@ -3965,6 +3959,7 @@ static void smblib_handle_typec_removal(struct smb_charger *chg)
 	chg->otg_attempts = 0;
 	chg->pulse_cnt = 0;
 	chg->usb_icl_delta_ua = 0;
+	chg->typec_legacy_valid = false;
 	/* enable APSD CC trigger for next insertion */
 	rc = smblib_masked_write(chg, TYPE_C_CFG_REG,
 	APSD_START_ON_CC_BIT, APSD_START_ON_CC_BIT);
@@ -3978,9 +3973,9 @@ static void smblib_handle_typec_removal(struct smb_charger *chg)
 }
 
 static void smblib_handle_typec_insertion(struct smb_charger *chg,
-		bool sink_attached, bool legacy_cable)
+		bool sink_attached)
 {
-	int rp, rc;
+	int rc;
 
 	vote(chg->pd_disallowed_votable_indirect, CC_DETACHED_VOTER, false, 0);
 	/* disable APSD CC trigger since CC is attached */
@@ -3997,28 +3992,16 @@ static void smblib_handle_typec_insertion(struct smb_charger *chg,
 		typec_sink_removal(chg);
 	}
 
-	rp = smblib_get_prop_ufp_mode(chg);
-	if (rp == POWER_SUPPLY_TYPEC_SOURCE_HIGH
-			|| rp == POWER_SUPPLY_TYPEC_NON_COMPLIANT) {
-		smblib_dbg(chg, PR_MISC, "VBUS & CC could be shorted; keeping HVDCP disabled\n");
-		/* HVDCP is not going to be enabled; enable parallel */
-		vote(chg->pl_disable_votable, PL_DELAY_HVDCP_VOTER, false, 0);
-		vote(chg->hvdcp_disable_votable_indirect, VBUS_CC_SHORT_VOTER,
-								true, 0);
-	} else {
-		vote(chg->hvdcp_disable_votable_indirect, VBUS_CC_SHORT_VOTER,
-								false, 0);
-	}
 }
 
 static void smblib_handle_typec_debounce_done(struct smb_charger *chg,
-			bool rising, bool sink_attached, bool legacy_cable)
+			bool rising, bool sink_attached)
 {
 	int rc;
 	union power_supply_propval pval = {0, };
 
 	if (rising)
-		smblib_handle_typec_insertion(chg, sink_attached, legacy_cable);
+		smblib_handle_typec_insertion(chg, sink_attached);
 	else
 		smblib_handle_typec_removal(chg);
 
@@ -4079,7 +4062,7 @@ irqreturn_t smblib_handle_usb_typec_change(int irq, void *data)
 	struct smb_irq_data *irq_data = data;
 	struct smb_charger *chg = irq_data->parent_data;
 	int rc;
-	bool debounce_done, sink_attached, legacy_cable;
+	bool debounce_done, sink_attached;
 
 	if (chg->micro_usb_mode)
 		return smblib_handle_usb_typec_change_for_uusb(chg);
@@ -4100,12 +4083,7 @@ irqreturn_t smblib_handle_usb_typec_change(int irq, void *data)
 		(bool)(chg->typec_status[3] & TYPEC_DEBOUNCE_DONE_STATUS_BIT);
 	sink_attached =
 		(bool)(chg->typec_status[3] & UFP_DFP_MODE_STATUS_BIT);
-	legacy_cable =
-		(bool)(chg->typec_status[4] & TYPEC_LEGACY_CABLE_STATUS_BIT);
-
-	smblib_handle_typec_debounce_done(chg,
-			debounce_done, sink_attached, legacy_cable);
-
+	smblib_handle_typec_debounce_done(chg, debounce_done, sink_attached);
 	if (chg->typec_status[3] & TYPEC_VBUS_ERROR_STATUS_BIT)
 		smblib_dbg(chg, PR_INTERRUPT, "IRQ: %s vbus-error\n",
 			irq_data->name);
@@ -6090,12 +6068,7 @@ static void smblib_hvdcp_detect_work(struct work_struct *work)
 
 	vote(chg->pd_disallowed_votable_indirect, HVDCP_TIMEOUT_VOTER,
 				false, 0);
-	if (get_effective_result(chg->pd_disallowed_votable_indirect))
-		/* pd is still disabled, try hvdcp */
-		try_rerun_apsd_for_hvdcp(chg);
-	else
-		/* notify pd now that pd is allowed */
-		power_supply_changed(chg->usb_psy);
+	power_supply_changed(chg->usb_psy);
 }
 
 static void bms_update_work(struct work_struct *work)
@@ -6199,6 +6172,39 @@ static void rdstd_cc2_detach_work(struct work_struct *work)
 
 rerun:
 	schedule_work(&chg->rdstd_cc2_detach_work);
+}
+static void smblib_legacy_detection_work(struct work_struct *work)
+{
+	struct smb_charger *chg = container_of(work, struct smb_charger,
+							legacy_detection_work);
+	struct smb_irq_data irq_data = {NULL, "legacy-unknown-workaround"};
+	int rc;
+
+	smblib_dbg(chg, PR_MISC, "running legacy unknown workaround\n");
+	disable_irq(chg->irq_info[TYPE_C_CHANGE_IRQ].irq);
+	rc = smblib_masked_write(chg,
+				TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
+				TYPEC_DISABLE_CMD_BIT,
+				TYPEC_DISABLE_CMD_BIT);
+	if (rc < 0)
+		smblib_err(chg, "Couldn't disable type-c rc=%d\n", rc);
+
+	/* wait for the adapter to turn off VBUS */
+	msleep(500);
+
+	rc = smblib_masked_write(chg,
+				TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
+				TYPEC_DISABLE_CMD_BIT, 0);
+	if (rc < 0)
+		smblib_err(chg, "Couldn't enable type-c rc=%d\n", rc);
+
+	/* wait for type-c detection to complete */
+	msleep(100);
+
+	chg->typec_legacy_valid = true;
+	irq_data.parent_data = chg;
+	smblib_handle_usb_typec_change(0, &irq_data);
+	enable_irq(chg->irq_info[TYPE_C_CHANGE_IRQ].irq);
 }
 
 static int smblib_create_votables(struct smb_charger *chg)
@@ -6401,6 +6407,7 @@ int smblib_init(struct smb_charger *chg)
 	INIT_WORK(&chg->vconn_oc_work, smblib_vconn_oc_work);
 	INIT_DELAYED_WORK(&chg->otg_ss_done_work, smblib_otg_ss_done_work);
 	INIT_DELAYED_WORK(&chg->icl_change_work, smblib_icl_change_work);
+	INIT_WORK(&chg->legacy_detection_work, smblib_legacy_detection_work);
 	chg->fake_capacity = -EINVAL;
 #ifdef VENDOR_EDIT
 	op_set_collapse_fet(chg,false);

@@ -309,7 +309,7 @@ struct smb_charger {
 	struct work_struct	vconn_oc_work;
 	struct delayed_work	otg_ss_done_work;
 	struct delayed_work	icl_change_work;
-
+	struct work_struct	legacy_detection_work;
 	/* cached status */
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
@@ -383,6 +383,7 @@ struct smb_charger {
 	int			default_icl_ua;
 	int			otg_cl_ua;
 	u8			typec_status[5];
+	bool		typec_legacy_valid;
 	/* workaround flag */
 	u32			wa_flags;
 	enum cc2_sink_type	cc2_sink_detach_flag;
@@ -486,6 +487,7 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
+int op_rerun_apsd(struct smb_charger *chg);
 irqreturn_t smblib_handle_aicl_done(int irq, void *data);
 void op_charge_info_init(struct smb_charger *chg);
 int update_dash_unplug_status(void);
