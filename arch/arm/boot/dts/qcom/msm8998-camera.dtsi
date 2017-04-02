@@ -535,15 +535,9 @@
 			"NO_SET_RATE", "NO_SET_RATE",
 			"NO_SET_RATE", "NO_SET_RATE",
 			"INIT_RATE",
-<<<<<<< HEAD
 			"INIT_RATE", "NO_SET_RATE",
 			"INIT_RATE",
 			"INIT_RATE", "NO_SET_RATE";
-=======
-			"NO_SET_RATE", "NO_SET_RATE",
-			"INIT_RATE",
-			"NO_SET_RATE", "NO_SET_RATE";
->>>>>>> origin/qc8998
 		status = "ok";
 	};
 

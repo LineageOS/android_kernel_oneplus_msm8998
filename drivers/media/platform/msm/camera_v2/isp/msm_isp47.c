@@ -2581,35 +2581,6 @@ int msm_vfe47_set_clk_rate(struct vfe_device *vfe_dev, long *rate)
 	int rc = 0;
 	int clk_idx = vfe_dev->hw_info->vfe_clk_idx;
 	int ret;
-<<<<<<< HEAD
-        long clk_rate, prev_clk_rate;
-
-        clk_rate = clk_round_rate(vfe_dev->vfe_clk[clk_idx], *rate);
-        if (vfe_dev->vfe_clk_info[clk_idx].clk_rate == clk_rate)
-                return rc;
-
-        prev_clk_rate = vfe_dev->vfe_clk_info[clk_idx].clk_rate;
-        vfe_dev->vfe_clk_info[clk_idx].clk_rate = clk_rate;
-        /*
-         * if cx_ipeak is supported vote first so that dsp throttling is
-         * reduced before we go to turbo
-         */
-        if ((vfe_dev->vfe_cx_ipeak) &&
-                (vfe_dev->vfe_clk_info[clk_idx].clk_rate >=
-                vfe_dev->vfe_clk_rates[MSM_VFE_CLK_RATE_TURBO]
-                [vfe_dev->hw_info->vfe_clk_idx]) &&
-                prev_clk_rate <
-                vfe_dev->vfe_clk_rates[MSM_VFE_CLK_RATE_TURBO]
-                [vfe_dev->hw_info->vfe_clk_idx]) {
-                ret = cx_ipeak_update(vfe_dev->vfe_cx_ipeak, true);
-                if (ret) {
-                        pr_err("%s: cx_ipeak_update failed %d\n",
-                                __func__, ret);
-                        return ret;
-                }
-        }
-        /*set vfe clock*/
-=======
 	long clk_rate, prev_clk_rate;
 
 	clk_rate = clk_round_rate(vfe_dev->vfe_clk[clk_idx], *rate);
@@ -2639,29 +2610,11 @@ int msm_vfe47_set_clk_rate(struct vfe_device *vfe_dev, long *rate)
 		}
 	}
 	/*set vfe clock*/
->>>>>>> origin/qc8998
+
 	rc = msm_camera_clk_set_rate(&vfe_dev->pdev->dev,
 				vfe_dev->vfe_clk[clk_idx], *rate);
 	if (rc < 0)
 		return rc;
-<<<<<<< HEAD
-        /*
-         * if cx_ipeak is supported remove the vote for non-turbo clock and
-         * if voting done earlier
-         */
-        if ((vfe_dev->vfe_cx_ipeak) &&
-                (vfe_dev->vfe_clk_info[clk_idx].clk_rate <
-                vfe_dev->vfe_clk_rates[MSM_VFE_CLK_RATE_TURBO]
-                [vfe_dev->hw_info->vfe_clk_idx]) &&
-                prev_clk_rate >=
-                vfe_dev->vfe_clk_rates[MSM_VFE_CLK_RATE_TURBO]
-                [vfe_dev->hw_info->vfe_clk_idx]) {
-                ret = cx_ipeak_update(vfe_dev->vfe_cx_ipeak, false);
-                if (ret) {
-                        pr_err("%s: cx_ipeak_update failed %d\n",
-                                __func__, ret);
-                        return ret;
-=======
 	/*
 	 * if cx_ipeak is supported remove the vote for non-turbo clock and
 	 * if voting done earlier
@@ -2678,7 +2631,6 @@ int msm_vfe47_set_clk_rate(struct vfe_device *vfe_dev, long *rate)
 			pr_err("%s: cx_ipeak_update failed %d\n",
 				__func__, ret);
 			return ret;
->>>>>>> origin/qc8998
 		}
 	 }
 
