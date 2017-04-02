@@ -1927,11 +1927,16 @@ static int ffs_epfiles_create(struct ffs_data *ffs)
 
 	ffs->epfiles = epfiles;
 
+<<<<<<< HEAD
 #ifdef VENDOR_EDIT
 	pm_qos_add_request(&adb_little_cpu_qos, PM_QOS_C0_CPUFREQ_MIN, MIN_CPUFREQ);
 #endif
 	ffs_log("exit: epfile name %s state %d setup_state %d flag %lu",
 		epfile->name, ffs->state, ffs->setup_state, ffs->flags);
+=======
+	ffs_log("exit: eps_count %u state %d setup_state %d flag %lu",
+		count, ffs->state, ffs->setup_state, ffs->flags);
+>>>>>>> origin/qc8998
 
 	return 0;
 }
@@ -1942,7 +1947,7 @@ static void ffs_epfiles_destroy(struct ffs_epfile *epfiles, unsigned count)
 
 	ENTER();
 
-	ffs_log("enter: epfilename %s", epfile->name);
+	ffs_log("enter: count %u", count);
 
 	for (; count; --count, ++epfile) {
 		BUG_ON(mutex_is_locked(&epfile->mutex) ||
