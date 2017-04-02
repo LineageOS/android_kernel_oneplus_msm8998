@@ -249,6 +249,7 @@ struct smb_charger {
 	int			smb_version;
 
 	/* locks */
+	struct mutex		lock;
 	struct mutex		write_lock;
 	struct mutex		ps_change_lock;
 	struct mutex		otg_oc_lock;
@@ -382,6 +383,7 @@ struct smb_charger {
 	int			vconn_attempts;
 	int			default_icl_ua;
 	int			otg_cl_ua;
+	int			usb_present;
 	u8			typec_status[5];
 	bool		typec_legacy_valid;
 	/* workaround flag */

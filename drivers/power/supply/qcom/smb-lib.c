@@ -2843,10 +2843,8 @@ static int smblib_cc2_sink_removal_exit(struct smb_charger *chg)
 	if ((chg->wa_flags & TYPEC_CC2_REMOVAL_WA_BIT) == 0)
 		return rc;
 
-	if (chg->cc2_sink_detach_flag == CC2_SINK_STD) {
-		cancel_work_sync(&chg->rdstd_cc2_detach_work);
+	if (chg->cc2_sink_detach_flag == CC2_SINK_STD)
 		smblib_reg_block_restore(chg, cc2_detach_settings);
-	}
 
 	chg->cc2_sink_detach_flag = CC2_SINK_NONE;
 
@@ -3211,98 +3209,6 @@ irqreturn_t smblib_handle_usb_psy_changed(int irq, void *data)
 	power_supply_changed(chg->usb_psy);
 	return IRQ_HANDLED;
 }
-#ifdef VENDOR_EDIT
-void op_handle_usb_plugin(struct smb_charger *chg)
-{
-	int rc;
-	u8 stat;
-	bool vbus_rising;
-	bool last_vbus_present;
-	int is_usb_supend;
-	last_vbus_present = chg->vbus_present;
-	chg->dash_on = get_prop_fast_chg_started(chg);
-	if (chg->dash_on) {
-		pr_err("return directly because dash is online\n");
-		return ;
-	}
-
-	rc = smblib_read(chg, USBIN_BASE + INT_RT_STS_OFFSET, &stat);
-	if (rc < 0) {
-		dev_err(chg->dev, "Couldn't read USB_INT_RT_STS rc=%d\n", rc);
-		return ;
-	}
-
-	vbus_rising = (bool)(stat & USBIN_PLUGIN_RT_STS_BIT);
-	smblib_set_opt_freq_buck(chg,
-		vbus_rising ? chg->chg_freq.freq_5V :
-			chg->chg_freq.freq_removal);
-
-	/* fetch the DPDM regulator */
-	if (!chg->dpdm_reg && of_get_property(chg->dev->of_node,
-						"dpdm-supply", NULL)) {
-		chg->dpdm_reg = devm_regulator_get(chg->dev, "dpdm");
-		if (IS_ERR(chg->dpdm_reg)) {
-			smblib_err(chg, "Couldn't get dpdm regulator rc=%ld\n",
-				PTR_ERR(chg->dpdm_reg));
-			chg->dpdm_reg = NULL;
-		}
-	}
-
-	chg->vbus_present = vbus_rising;
-	if (last_vbus_present != chg->vbus_present) {
-		if (chg->vbus_present) {
-			pr_info("acquire chg_wake_lock\n");
-			wake_lock(&chg->chg_wake_lock);
-			smblib_get_usb_suspend(chg,&is_usb_supend);
-			if(is_usb_supend && chg->deal_vusbin_error_done){
-			vote(chg->usb_icl_votable,
-                                   BOOST_BACK_VOTER, false, 0);
-			chg->deal_vusbin_error_done = false;
-                   }
-		} else {
-			pr_info("release chg_wake_lock\n");
-			wake_unlock(&chg->chg_wake_lock);
-		}
-	}
-
-	if (vbus_rising) {
-		if (chg->dpdm_reg && !regulator_is_enabled(g_chg->dpdm_reg)) {
-			smblib_dbg(chg, PR_MISC, "enabling DPDM regulator\n");
-			rc = regulator_enable(chg->dpdm_reg);
-			if (rc < 0)
-				smblib_err(chg, "Couldn't enable dpdm regulator rc=%d\n",
-					rc);
-		}
-	} else {
-		if (chg->wa_flags & BOOST_BACK_WA)
-			vote(chg->usb_icl_votable, BOOST_BACK_VOTER, false, 0);
-
-		if (chg->dpdm_reg && regulator_is_enabled(chg->dpdm_reg)) {
-			smblib_dbg(chg, PR_MISC, "disabling DPDM regulator\n");
-			rc = regulator_disable(chg->dpdm_reg);
-			if (rc < 0)
-				smblib_err(chg, "Couldn't disable dpdm regulator rc=%d\n",
-					rc);
-		}
-
-		if (last_vbus_present != chg->vbus_present)
-			op_handle_usb_removal(chg);
-
-		if (chg->micro_usb_mode) {
-			smblib_update_usb_type(chg);
-			extcon_set_cable_state_(chg->extcon, EXTCON_USB, false);
-			smblib_uusb_removal(chg);
-		}
-	}
-
-	power_supply_changed(chg->usb_psy);
-
-	pr_err("IRQ: %s %s\n",
-		__func__, vbus_rising ? "attached" : "detached");
-	return ;
-}
-
-#endif
 irqreturn_t smblib_handle_usbin_uv(int irq, void *data)
 {
 	struct smb_irq_data *irq_data = data;
@@ -3321,10 +3227,8 @@ irqreturn_t smblib_handle_usbin_uv(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
+void smblib_usb_plugin(struct smb_charger *chg)
 {
-	struct smb_irq_data *irq_data = data;
-	struct smb_charger *chg = irq_data->parent_data;
 	int rc;
 	u8 stat;
 	bool vbus_rising;
@@ -3336,13 +3240,13 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 	chg->dash_on = get_prop_fast_chg_started(chg);
 	if (chg->dash_on) {
 		pr_err("return directly because dash is online\n");
-		return IRQ_HANDLED;
+		return;
 	}
 #endif
 	rc = smblib_read(chg, USBIN_BASE + INT_RT_STS_OFFSET, &stat);
 	if (rc < 0) {
-		dev_err(chg->dev, "Couldn't read USB_INT_RT_STS rc=%d\n", rc);
-		return IRQ_HANDLED;
+		smblib_err(chg, "Couldn't read USB_INT_RT_STS rc=%d\n", rc);
+		return;
 	}
 
 	vbus_rising = (bool)(stat & USBIN_PLUGIN_RT_STS_BIT);
@@ -3389,6 +3293,9 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 				smblib_err(chg, "Couldn't enable dpdm regulator rc=%d\n",
 					rc);
 		}
+		if (chg->micro_usb_mode)
+			chg->usb_present = 1;
+
 	} else {
 		if (chg->wa_flags & BOOST_BACK_WA)
 			vote(chg->usb_icl_votable, BOOST_BACK_VOTER, false, 0);
@@ -3408,6 +3315,7 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 #endif
 
 		if (chg->micro_usb_mode) {
+			chg->usb_present = 0;
 			smblib_update_usb_type(chg);
 			extcon_set_cable_state_(chg->extcon, EXTCON_USB, false);
 			smblib_uusb_removal(chg);
@@ -3415,15 +3323,32 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 	}
 
 	power_supply_changed(chg->usb_psy);
-	smblib_dbg(chg, PR_INTERRUPT, "IRQ: %s %s\n",
-		irq_data->name, vbus_rising ? "attached" : "detached");
+	smblib_dbg(chg, PR_INTERRUPT, "IRQ: usbin-plugin %s\n",
+		vbus_rising ? "attached" : "detached");
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 	pr_err("IRQ: %s %s\n",
-		irq_data->name, vbus_rising ? "attached" : "detached");
+		__func__, vbus_rising ? "attached" : "detached");
 #endif
+}
+irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
+{
+	struct smb_irq_data *irq_data = data;
+	struct smb_charger *chg = irq_data->parent_data;
+
+	mutex_lock(&chg->lock);
+	smblib_usb_plugin(chg);
+	mutex_unlock(&chg->lock);
 	return IRQ_HANDLED;
 }
+#ifdef VENDOR_EDIT
+void op_handle_usb_plugin(struct smb_charger *chg)
+{
+	mutex_lock(&chg->lock);
+	smblib_usb_plugin(chg);
+	mutex_unlock(&chg->lock);
+}
+#endif
 
 #define USB_WEAK_INPUT_UA	1400000
 #define ICL_CHANGE_DELAY_MS	1000
@@ -3871,9 +3796,10 @@ static void typec_sink_removal(struct smb_charger *chg)
 static void smblib_handle_typec_removal(struct smb_charger *chg)
 {
 	int rc;
+	chg->usb_present = 0;
 	cancel_delayed_work_sync(&chg->hvdcp_detect_work);
 	/* reset input current limit voters */
-	 vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 100000);
+	vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 100000);
 	vote(chg->usb_icl_votable, PD_VOTER, false, 0);
 	vote(chg->usb_icl_votable, USB_PSY_VOTER, false, 0);
 	vote(chg->usb_icl_votable, DCP_VOTER, false, 0);
@@ -3949,6 +3875,7 @@ static void smblib_handle_typec_insertion(struct smb_charger *chg,
 {
 	int rc;
 
+	chg->usb_present = 1;
 	vote(chg->pd_disallowed_votable_indirect, CC_DETACHED_VOTER, false, 0);
 	/* disable APSD CC trigger since CC is attached */
 	rc = smblib_masked_write(chg, TYPE_C_CFG_REG, APSD_START_ON_CC_BIT, 0);
@@ -4029,26 +3956,17 @@ irqreturn_t smblib_handle_usb_typec_change_for_uusb(struct smb_charger *chg)
 	return IRQ_HANDLED;
 }
 
-irqreturn_t smblib_handle_usb_typec_change(int irq, void *data)
+static void smblib_usb_typec_change(struct smb_charger *chg)
 {
-	struct smb_irq_data *irq_data = data;
-	struct smb_charger *chg = irq_data->parent_data;
 	int rc;
 	bool debounce_done, sink_attached;
-
-	if (chg->micro_usb_mode)
-		return smblib_handle_usb_typec_change_for_uusb(chg);
-
-	/* WA - not when PD hard_reset WIP on cc2 in sink mode */
-	if (chg->cc2_sink_detach_flag == CC2_SINK_STD)
-		return IRQ_HANDLED;
 
 	rc = smblib_multibyte_read(chg, TYPE_C_STATUS_1_REG,
 		chg->typec_status, 5);
 	 if (rc) {
 		smblib_err(chg, "failed to cache USB Type-C status rc=%d\n",
 						rc);
-		return IRQ_HANDLED;
+		return;
 	}
 
 	debounce_done =
@@ -4057,13 +3975,29 @@ irqreturn_t smblib_handle_usb_typec_change(int irq, void *data)
 		(bool)(chg->typec_status[3] & UFP_DFP_MODE_STATUS_BIT);
 	smblib_handle_typec_debounce_done(chg, debounce_done, sink_attached);
 	if (chg->typec_status[3] & TYPEC_VBUS_ERROR_STATUS_BIT)
-		smblib_dbg(chg, PR_INTERRUPT, "IRQ: %s vbus-error\n",
-			irq_data->name);
+		smblib_dbg(chg, PR_INTERRUPT, "IRQ: vbus-error\n");
 
 	if (chg->typec_status[3] & TYPEC_VCONN_OVERCURR_STATUS_BIT)
 		schedule_work(&chg->vconn_oc_work);
 
 	power_supply_changed(chg->usb_psy);
+}
+irqreturn_t smblib_handle_usb_typec_change(int irq, void *data)
+{
+	struct smb_irq_data *irq_data = data;
+	struct smb_charger *chg = irq_data->parent_data;
+
+	if (chg->micro_usb_mode) {
+		smblib_handle_usb_typec_change_for_uusb(chg);
+		goto unlock;
+	}
+	mutex_lock(&chg->lock);
+	/* WA - not when PD hard_reset WIP on cc2 in sink mode */
+	if (chg->cc2_sink_detach_flag == CC2_SINK_STD)
+		goto unlock;
+	smblib_usb_typec_change(chg);
+unlock:
+	mutex_unlock(&chg->lock);
 	return IRQ_HANDLED;
 }
 
@@ -6080,11 +6014,14 @@ static void clear_hdc_work(struct work_struct *work)
 
 static void rdstd_cc2_detach_work(struct work_struct *work)
 {
-	int rc;
-	u8 stat;
-	struct smb_irq_data irq_data = {NULL, "cc2-removal-workaround"};
 	struct smb_charger *chg = container_of(work, struct smb_charger,
 						rdstd_cc2_detach_work);
+	int rc;
+	u8 stat;
+
+	mutex_lock(&chg->lock);
+	if (chg->cc2_sink_detach_flag != CC2_SINK_STD)
+		goto unlock;
 
 	/*
 	 * WA steps -
@@ -6101,7 +6038,7 @@ static void rdstd_cc2_detach_work(struct work_struct *work)
 				 UFP_EN_CMD_BIT | DFP_EN_CMD_BIT);
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't write TYPE_C_CTRL_REG rc=%d\n", rc);
-		return;
+		goto unlock;
 	}
 
 	usleep_range(10000, 11000);
@@ -6111,7 +6048,7 @@ static void rdstd_cc2_detach_work(struct work_struct *work)
 				 UFP_EN_CMD_BIT);
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't write TYPE_C_CTRL_REG rc=%d\n", rc);
-		return;
+		goto unlock;
 	}
 
 	usleep_range(30000, 31000);
@@ -6120,7 +6057,7 @@ static void rdstd_cc2_detach_work(struct work_struct *work)
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't read TYPE_C_STATUS_4 rc=%d\n",
 			rc);
-		return;
+		goto unlock;
 	}
 	if (stat & TYPEC_DEBOUNCE_DONE_STATUS_BIT)
 		goto rerun;
@@ -6129,7 +6066,7 @@ static void rdstd_cc2_detach_work(struct work_struct *work)
 	if (rc < 0) {
 		smblib_err(chg,
 			"Couldn't read TYPE_C_STATUS_5_REG rc=%d\n", rc);
-		return;
+		goto unlock;
 	}
 	if (stat & TIMER_STAGE_2_BIT)
 		goto rerun;
@@ -6137,13 +6074,13 @@ static void rdstd_cc2_detach_work(struct work_struct *work)
 	/* Bingo, cc2 removal detected */
 	smblib_reg_block_restore(chg, cc2_detach_settings);
 	chg->cc2_sink_detach_flag = CC2_SINK_WA_DONE;
-	irq_data.parent_data = chg;
-	smblib_handle_usb_typec_change(0, &irq_data);
-
-	return;
+	smblib_usb_typec_change(chg);
+	goto unlock;
 
 rerun:
 	schedule_work(&chg->rdstd_cc2_detach_work);
+unlock:
+	mutex_unlock(&chg->lock);
 }
 static void smblib_legacy_detection_work(struct work_struct *work)
 {
@@ -6349,6 +6286,7 @@ int smblib_init(struct smb_charger *chg)
 {
 	int rc = 0;
 
+	mutex_init(&chg->lock);
 	mutex_init(&chg->write_lock);
 	mutex_init(&chg->otg_oc_lock);
 	INIT_WORK(&chg->bms_update_work, bms_update_work);
