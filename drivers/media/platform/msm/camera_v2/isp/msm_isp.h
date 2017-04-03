@@ -494,6 +494,7 @@ struct msm_vfe_src_info {
 	struct timeval time_stamp;
 	enum msm_vfe_dual_hw_type dual_hw_type;
 	struct msm_vfe_dual_hw_ms_info dual_hw_ms_info;
+	uint32_t lpm;
 };
 
 struct msm_vfe_fetch_engine_info {
