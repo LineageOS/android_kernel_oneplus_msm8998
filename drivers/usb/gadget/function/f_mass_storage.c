@@ -2542,6 +2542,7 @@ reset:
 	if (common->fsg) {
 		fsg = common->fsg;
 
+		pr_err("%s:disable endpoints here \n", __func__);
 		for (i = 0; i < common->fsg_num_buffers; ++i) {
 			struct fsg_buffhd *bh = &common->buffhds[i];
 
@@ -2573,21 +2574,17 @@ reset:
 		/* neiltsai, 20170331, add qualcomm patch */
 		#ifdef VENDOR_EDIT
 		pr_err("%s:eps are disabled\n", __func__);
-		#endif
+		pr_err("%s:disabled endpoints\n", __func__);
 		/* neiltsai, 20170331, add qualcomm patch */
 		common->fsg = NULL;
+		/* allow usb LPM after eps are disabled */
+		usb_gadget_autopm_put_async(common->gadget);
+		#endif
 		wake_up(&common->fsg_wait);
 	}
 
 	common->running = 0;
 	if (!new_fsg || rc) {
-		/* neiltsai, 20170331, add qualcomm patch */
-		#ifdef VENDOR_EDIT
-		pr_err("%s:decrement pm_usage count\n", __func__);
-		#endif
-		/* neiltsai, 20170331, add qualcomm patch */
-		/* allow usb LPM after eps are disabled */
-		usb_gadget_autopm_put_async(common->gadget);
 		return rc;
 	}
 
@@ -2661,6 +2658,11 @@ static int fsg_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
 	struct fsg_dev *fsg = fsg_from_func(f);
 	fsg->common->new_fsg = fsg;
 
+
+	pr_err("%s:increment pm_usage counter\n", __func__);
+	if (!fsg->common || !fsg->common->gadget)
+		pr_err("%s: NULL here\n", __func__);
+
 	/* neiltsai, 20170331, add qualcomm patch */
 	#ifdef VENDOR_EDIT
 	/* prevents usb LPM until thread runs to completion */
@@ -2679,6 +2681,7 @@ static void fsg_disable(struct usb_function *f)
 {
 	struct fsg_dev *fsg = fsg_from_func(f);
 	fsg->common->new_fsg = NULL;
+	pr_err("%s:cur_state=%d\n", __func__, fsg->common->state);
 	raise_exception(fsg->common, FSG_STATE_CONFIG_CHANGE);
 	/* neiltsai, 20170331, add qualcomm patch */
 	#ifdef VENDOR_EDIT
@@ -2698,6 +2701,7 @@ static void handle_exception(struct fsg_common *common)
 	struct fsg_lun		*curlun;
 	unsigned int		exception_req_tag;
 
+	pr_err("%s:current_state= %d\n", __func__, common->state);
 	/*
 	 * Clear the existing signals.  Anything but SIGUSR1 is converted
 	 * into a high-priority EXIT exception.
@@ -2719,7 +2723,7 @@ static void handle_exception(struct fsg_common *common)
 			bh = &common->buffhds[i];
 			/* neiltsai, 20170331, add qualcomm patch */
 			#ifdef VENDOR_EDIT
-			pr_err("%s:dequeue reqs %d\n", __func__, i);
+			pr_err("%s:dequeue reqs %d inreq_busy=%d outreq_busy=%d\n", __func__, i, bh->inreq_busy, bh->outreq_busy);
 			#endif
 			/* neiltsai, 20170331, add qualcomm patch */
 			if (bh->inreq_busy)
@@ -2781,6 +2785,7 @@ static void handle_exception(struct fsg_common *common)
 	}
 	spin_unlock_irq(&common->lock);
 
+	pr_err("%s:cur_state2=%d\n", __func__, old_state);
 	/* Carry out any extra actions required for the exception */
 	switch (old_state) {
 	case FSG_STATE_ABORT_BULK_OUT:
@@ -2840,6 +2845,7 @@ static void handle_exception(struct fsg_common *common)
 			 */
 			msleep(200);
 			usb_composite_setup_continue(common->cdev);
+			pr_err("%s:setup continue call done\n", __func__);
 		}
 		break;
 
@@ -3326,6 +3332,7 @@ int fsg_common_create_luns(struct fsg_common *common, struct fsg_config *cfg)
 
 	pr_info("Number of LUNs=%d\n", cfg->nluns);
 
+	pr_err("%s:done\n", __func__);
 	return 0;
 
 fail:
@@ -3502,7 +3509,7 @@ static void fsg_unbind(struct usb_configuration *c, struct usb_function *f)
 	DBG(fsg, "unbind\n");
 	/* neiltsai, 20170331, add qualcomm patch */
 	#ifdef VENDOR_EDIT
-	pr_err("%s:\n", __func__);
+	pr_err("%s:current_state= %d\n", __func__, common->state);
 	#endif
 	/* neiltsai, 20170331, add qualcomm patch */
 	if (fsg->common->fsg == fsg) {
