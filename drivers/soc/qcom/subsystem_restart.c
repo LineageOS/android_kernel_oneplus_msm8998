@@ -697,7 +697,7 @@ static ssize_t proc_restart_level_all_read(struct file *p_file, char __user *pus
 static ssize_t proc_restart_level_all_write(struct file *p_file, const char __user *puser_buf,
 			   size_t count, loff_t *p_offset)
 {
-	char temp[1] = {0};
+	char temp[2] = {0};
 	struct subsys_device *subsys;
 
 	if (copy_from_user(temp, puser_buf, 1))
