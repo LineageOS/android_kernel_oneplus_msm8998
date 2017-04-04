@@ -195,7 +195,6 @@ module_param(sido_buck_svs_voltage, int,
 		S_IRUGO | S_IWUSR | S_IWGRP);
 MODULE_PARM_DESC(sido_buck_svs_voltage,
 			"setting for SVS voltage for SIDO BUCK");
-
 #ifndef VENDOR_EDIT
 /*wangdongdong@MultiMediaService,2017/03/03,modify delay time to avoid pop when route to new path*/
 #define TASHA_TX_UNMUTE_DELAY_MS	25

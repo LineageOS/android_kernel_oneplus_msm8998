@@ -102,6 +102,7 @@ dtb-$(CONFIG_ARCH_MSM8996) += msm8996-v2-pmi8994-cdp.dtb \
 	apq8096-v3-pmi8996-mdm9x55-slimbus-mtp.dtb \
 	apq8096-v3-pmi8996-dragonboard.dtb
 
+
 #ifndef VENDOR_EDIT
 #dtb-$(CONFIG_ARCH_MSM8998) += msm8998-sim.dtb \
 #	msm8998-rumi.dtb \
