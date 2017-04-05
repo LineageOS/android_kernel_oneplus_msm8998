@@ -42,6 +42,7 @@ enum print_reason {
 #define PSY_ICL_VOTER		"PSY_ICL_VOTER"
 #define TEMP_REGION_MAX               9
 #define NON_STANDARD_CHARGER_CHECK_MS 90000
+#define REDET_DELAY_MS 5000
 #endif
 #define DEFAULT_VOTER			"DEFAULT_VOTER"
 #define USER_VOTER			"USER_VOTER"
@@ -305,6 +306,7 @@ struct smb_charger {
 	struct delayed_work	check_switch_dash_work;
 	struct delayed_work non_standard_charger_check_work;
 	struct delayed_work heartbeat_work;
+	struct delayed_work re_det_work;
 	struct wake_lock	chg_wake_lock;
 #endif
 	struct delayed_work	clear_hdc_work;
@@ -330,6 +332,7 @@ struct smb_charger {
 	int				fake_chgvol;
 	int				fake_temp;
 	int				fake_protect_sts;
+	int				non_stand_chg_current;
 
 	bool				use_fake_chgvol;
 	bool				use_fake_temp;

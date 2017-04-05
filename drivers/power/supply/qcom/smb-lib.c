@@ -944,7 +944,7 @@ static int smblib_usb_icl_vote_callback(struct votable *votable, void *data,
 	if (pval.intval == POWER_SUPPLY_TYPEC_SOURCE_DEFAULT
 		&& (chg->usb_psy_desc.type == POWER_SUPPLY_TYPE_USB)) {
 #ifdef VENDOR_EDIT
-		if (icl_ua == 900000) {
+		if (chg->non_std_chg_present) {
 		rc = smblib_set_charge_param(chg, &chg->param.usb_icl,
 				icl_ua - chg->icl_reduction_ua);
 		if (rc < 0) {
@@ -3641,7 +3641,6 @@ int op_rerun_apsd(struct smb_charger *chg)
 			smblib_err(chg, "Couldn't rerun APSD rc = %d\n", rc);
 			return rc;
 		}
-	chg->usb_type_redet_done = true;
 	return 0;
 }
 #endif
@@ -3698,8 +3697,6 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 		current_limit_ua = DEFAULT_SDP_MA*1000;
 	else if ((apsd_result->bit) == OCP_CHARGER_BIT)
 		current_limit_ua = DEFAULT_DCP_MA*1000;
-	if (chg->non_std_chg_present)
-		current_limit_ua = DEFAULT_DCP_MA*1000;
 	vote(chg->usb_icl_votable,
 		DCP_VOTER, true, current_limit_ua);
 
@@ -3711,12 +3708,18 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 
 	pr_info("apsd result=0x%x, name=%s, psy_type=%d\n",
 		apsd_result->bit, apsd_result->name, apsd_result->pst);
+	pr_info("apsd done,current_now=%d\n",
+		(get_prop_batt_current_now(chg) / 1000));
 	if (apsd_result->bit == DCP_CHARGER_BIT
 		|| apsd_result->bit == OCP_CHARGER_BIT) {
 		schedule_delayed_work(&chg->check_switch_dash_work,
 					msecs_to_jiffies(500));
 	} else {
-		if (!chg->non_std_chg_present)
+		if (!chg->usb_type_redet_done) {
+			schedule_delayed_work(&chg->re_det_work,
+				msecs_to_jiffies(REDET_DELAY_MS));
+		}
+		if (chg->usb_type_redet_done)
 			schedule_delayed_work(
 			&chg->non_standard_charger_check_work,
 			msecs_to_jiffies(NON_STANDARD_CHARGER_CHECK_MS));
@@ -4309,6 +4312,7 @@ static void op_handle_usb_removal(struct smb_charger *chg)
 	chg->usb_enum_status = false;
 	chg->non_std_chg_present = false;
 	chg->usb_type_redet_done = false;
+	chg->non_stand_chg_current = 0;
 	op_battery_temp_region_set(chg, BATT_TEMP_INVALID);
 }
 
@@ -4861,7 +4865,8 @@ static void op_check_allow_switch_dash_work(struct work_struct *work)
 
 	apsd_result = smblib_get_apsd_result(chg);
 	if (((apsd_result->bit != SDP_CHARGER_BIT
-		&& apsd_result->bit != CDP_CHARGER_BIT)
+		&& apsd_result->bit != CDP_CHARGER_BIT
+		&& apsd_result->bit != FLOAT_CHARGER_BIT)
 		&& apsd_result->bit)
 		|| chg->non_std_chg_present)
 		switch_fast_chg(chg);
@@ -5604,21 +5609,40 @@ static void check_non_standard_charger_work(struct work_struct *work)
 	struct smb_charger, non_standard_charger_check_work);
 	bool charger_present;
 	const struct apsd_result *apsd_result;
+	int aicl_result, rc;
 
 	charger_present = is_usb_present(chg);
 	if (!charger_present)
+		return;
+	if (chg->usb_enum_status)
 		return;
 	apsd_result = smblib_update_usb_type(chg);
 	if (apsd_result->bit == DCP_CHARGER_BIT
 		|| apsd_result->bit == OCP_CHARGER_BIT)
 		return;
-	if (chg->usb_enum_status)
-		return;
-	op_rerun_apsd(chg);
+	rc = smblib_rerun_aicl(chg);
+	if (rc < 0)
+		smblib_err(chg, "Couldn't re-run AICL rc=%d\n", rc);
+	aicl_result = op_get_aicl_result(chg);
+	chg->non_stand_chg_current = aicl_result;
+	op_usb_icl_set(chg, chg->non_stand_chg_current);
 	power_supply_changed(chg->batt_psy);
 	chg->is_power_changed = true;
 	chg->non_std_chg_present = true;
-	pr_err("non-standard_charger detected\n");
+	pr_err("non-standard_charger detected,aicl_result=%d\n", aicl_result);
+}
+static void smbchg_re_det_work(struct work_struct *work)
+{
+	struct smb_charger *chg = container_of(work,
+			struct smb_charger,
+			re_det_work.work);
+	if (chg->usb_enum_status)
+		return;
+
+	if (chg->vbus_present) {
+		op_rerun_apsd(chg);
+		chg->usb_type_redet_done = true;
+	}
 }
 
 static void op_heartbeat_work(struct work_struct *work)
@@ -6339,6 +6363,7 @@ int smblib_init(struct smb_charger *chg)
 			op_heartbeat_work);
 	INIT_DELAYED_WORK(&chg->non_standard_charger_check_work,
 		check_non_standard_charger_work);
+	INIT_DELAYED_WORK(&chg->re_det_work, smbchg_re_det_work);
 	schedule_delayed_work(&chg->heartbeat_work,
 			msecs_to_jiffies(HEARTBEAT_INTERVAL_MS));
 	notify_dash_unplug_register(&notify_unplug_event);
