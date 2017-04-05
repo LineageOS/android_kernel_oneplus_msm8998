@@ -489,6 +489,20 @@ static const struct wcd9xxx_ch tasha_tx_chs[TASHA_TX_MAX] = {
 	WCD9XXX_CH(15, 15),
 };
 
+static const u16 hphl_comp[] = {
+	0x40, 0x4C, 0x5A, 0x6B, 0x80, 0x98,
+	0xB4, 0xD6, 0xFF, 0x12F, 0x168, 0x1AC,
+	0x1FC, 0x25C, 0x2CE, 0x355, 0x3F6,
+	0x4B6, 0x599, 0x6A7, 0x7E8
+};
+
+static const u16 hphr_comp[] = {
+	0x40, 0x4C, 0x5A, 0x6B, 0x80, 0x98,
+	0xB4, 0xD6, 0xFF, 0x12F, 0x168, 0x1AC,
+	0x1FC, 0x25C, 0x2CE, 0x355, 0x3F6,
+	0x4B6, 0x599, 0x6A7, 0x7E8
+};
+
 static const u32 vport_slim_check_table[NUM_CODEC_DAIS] = {
 	/* Needs to define in the same order of DAI enum definitions */
 	0,
@@ -12113,6 +12127,36 @@ static void tasha_codec_power_gate_work(struct work_struct *work)
 	tasha_codec_power_gate_digital_core(tasha);
 }
 
+static void tasha_hph_comp_init(struct wcd9xxx *wcd9xxx)
+{
+	int i, j;
+	struct wcd9xxx_reg_val *bulk_reg;
+
+	bulk_reg = kzalloc(((ARRAY_SIZE(hphl_comp) + ARRAY_SIZE(hphr_comp)) *
+			   sizeof(struct wcd9xxx_reg_val)),
+			   GFP_KERNEL);
+	if (!bulk_reg)
+		return;
+
+	for (i = 0; i < ARRAY_SIZE(hphl_comp); i++) {
+		bulk_reg[i].reg = WCD9335_CDC_TOP_HPHL_COMP_WR_LSB;
+		bulk_reg[i].buf = (u8 *)(&hphl_comp[i]);
+		bulk_reg[i].bytes = 2;
+	}
+	for (j = 0; j < ARRAY_SIZE(hphr_comp); j++, i++) {
+		bulk_reg[i].reg = WCD9335_CDC_TOP_HPHR_COMP_WR_LSB;
+		bulk_reg[i].buf = (u8 *)(&hphr_comp[j]);
+		bulk_reg[i].bytes = 2;
+	}
+	wcd9xxx_slim_bulk_write(wcd9xxx, bulk_reg,
+				ARRAY_SIZE(hphl_comp) + ARRAY_SIZE(hphr_comp),
+				false);
+	regmap_write(wcd9xxx->regmap, WCD9335_CDC_TOP_HPHL_COMP_LUT, 0x80);
+	regmap_write(wcd9xxx->regmap, WCD9335_CDC_TOP_HPHR_COMP_LUT, 0x80);
+
+	kfree(bulk_reg);
+}
+
 /* called under power_lock acquisition */
 static int tasha_dig_core_remove_power_collapse(struct snd_soc_codec *codec)
 {
@@ -12131,6 +12175,7 @@ static int tasha_dig_core_remove_power_collapse(struct snd_soc_codec *codec)
 	regcache_mark_dirty(codec->component.regmap);
 	regcache_sync_region(codec->component.regmap,
 			     TASHA_DIG_CORE_REG_MIN, TASHA_DIG_CORE_REG_MAX);
+	tasha_hph_comp_init(tasha->wcd9xxx);
 	tasha_codec_vote_max_bw(codec, false);
 
 	return 0;
@@ -12698,6 +12743,7 @@ static void tasha_codec_init_reg(struct snd_soc_codec *codec)
 					tasha_codec_reg_init_val_2_0[i].reg,
 					tasha_codec_reg_init_val_2_0[i].mask,
 					tasha_codec_reg_init_val_2_0[i].val);
+		tasha_hph_comp_init(wcd9xxx);
 	}
 }
 
