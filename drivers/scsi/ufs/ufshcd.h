@@ -588,6 +588,41 @@ struct ufshcd_req_stat {
 };
 #endif
 
+/* neiltsai, 20170406, for NOC error */
+#ifdef VENDOR_EDIT
+enum h_ctx {
+    QUEUE_CMD = 10,
+    ERR_HNDL,
+    H8_EXIT,
+    SCALE_SYSFS,
+    HSEND_UIC_CMD,
+    HSEND_PWRCTL_CMD,
+    HSEND_TM_CMD,
+};
+
+enum r_ctx {
+    Q_CMD = 100,
+    REL_CTX,
+    RH8_EXIT,
+    XFR_REQ_COMP,
+    ERR_HNDLR,
+    RSEND_UIC_CMD,
+    RSEND_PWRCTL_CMD,
+    RSEND_TM_CMD,
+};
+
+struct clk_hold_ctx {
+    ktime_t ts;
+    enum h_ctx hold_ctx;
+};
+
+struct clk_rel_ctx {
+    ktime_t ts;
+    enum r_ctx rel_ctx;
+};
+#endif
+/* neiltsai, 20170406, for NOC error */
+
 /**
  * struct ufs_stats - keeps usage/err statistics
  * @enabled: enable tag stats for debugfs
@@ -616,6 +651,17 @@ struct ufs_stats {
 	int query_stats_arr[UPIU_QUERY_OPCODE_MAX][MAX_QUERY_IDN];
 
 #endif
+/* neiltsai, 20170406, for NOC error */
+#ifdef VENDOR_EDIT
+    u32 last_devcmd_type;
+    ktime_t last_devcmd_ts;
+    u32 last_intr_status;
+    ktime_t last_intr_ts;
+    ktime_t last_scaling_freq_update;
+    struct clk_hold_ctx chc;
+    struct clk_rel_ctx crc;
+#endif
+/* neiltsai, 20170406, for NOC error */
 	u32 hibern8_exit_cnt;
 	ktime_t last_hibern8_exit_tstamp;
 	struct ufs_uic_err_reg_hist pa_err;
@@ -856,6 +902,25 @@ struct ufs_hba {
 
 	struct ufs_clk_gating clk_gating;
 	struct ufs_hibern8_on_idle hibern8_on_idle;
+	/* neiltsai, 20170329, for AHB_TIMEOUT debug */
+	#ifdef VENDOR_EDIT
+	ktime_t h8_enter_issue_time;
+	ktime_t h8_enter_cmpl_time;
+	ktime_t h8_exit_issue_time;
+	ktime_t h8_exit_cmpl_time;
+	ktime_t clk_gating_issue_time;
+	ktime_t clk_gating_cmpl_time;
+	ktime_t clk_ungating_issue_time;
+	ktime_t clk_ungating_cmpl_time;
+	ktime_t clk_scaling_issue_time;
+	ktime_t clk_scaling_cmpl_time;
+	ktime_t gear_scale_start_time;
+	ktime_t gear_scale_cmpl_time;
+	ktime_t link_startup_issue_time;
+	ktime_t link_startup_cmpl_time;
+	bool cmd_between_gear_scale_and_hibern8_enter;
+	#endif
+	/* neiltsai, 20170329, for AHB_TIMEOUT debug */
 
 	/* Control to enable/disable host capabilities */
 	u32 caps;

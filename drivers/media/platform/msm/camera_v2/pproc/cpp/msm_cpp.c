@@ -3883,6 +3883,11 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 	struct msm_cpp_stream_buff_info_t k_cpp_buff_info;
 	struct msm_cpp_frame_info32_t k32_frame_info;
 	struct msm_cpp_frame_info_t k64_frame_info;
+    /*neiltsai, 20170406, for Fix iommu_attach/detach compat_ioctl issue */
+    #ifdef VENDOR_EDIT
+    struct msm_camera_smmu_attach_type kb_cpp_smmu_attach_info;
+    #endif
+    /*neiltsai, 20170406, for Fix iommu_attach/detach compat_ioctl issue */
 	uint32_t identity_k = 0;
 	bool is_copytouser_req = true;
 	void __user *up = (void __user *)arg;
@@ -4187,10 +4192,33 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 		break;
 	}
 	case VIDIOC_MSM_CPP_IOMMU_ATTACH32:
+        /* neiltsai, 20170406, for Fix iommu_attach/detach compat_ioctl issue */
+        #ifndef VENDOR_EDIT
 		cmd = VIDIOC_MSM_CPP_IOMMU_ATTACH;
 		break;
+        #endif
+        /* neiltsai, 20170406, for Fix iommu_attach/detach compat_ioctl issue */
 	case VIDIOC_MSM_CPP_IOMMU_DETACH32:
+        /* neiltsai, 20170406, for Fix iommu_attach/detach compat_ioctl issue */
+        #ifndef VENDOR_EDIT
 		cmd = VIDIOC_MSM_CPP_IOMMU_DETACH;
+        #else
+        {
+            if ((kp_ioctl.len != sizeof(struct msm_camera_smmu_attach_type))
+                    || (copy_from_user(&kb_cpp_smmu_attach_info,
+                            (void __user *)kp_ioctl.ioctl_ptr,
+                            sizeof(kb_cpp_smmu_attach_info)))) {
+                    mutex_unlock(&cpp_dev->mutex);
+                    return -EINVAL;
+            }
+            kp_ioctl.ioctl_ptr = (void *)&kb_cpp_smmu_attach_info;
+            is_copytouser_req = false;
+            cmd = (cmd == VIDIOC_MSM_CPP_IOMMU_ATTACH32) ?
+                          VIDIOC_MSM_CPP_IOMMU_ATTACH :
+                          VIDIOC_MSM_CPP_IOMMU_DETACH;
+        }
+        #endif
+        /* neiltsai, 20170406, for Fix iommu_attach/detach compat_ioctl issue */
 		break;
 	case MSM_SD_NOTIFY_FREEZE:
 		break;
@@ -4200,9 +4228,18 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 		cmd = MSM_SD_SHUTDOWN;
 		break;
 	default:
+        /* neiltsai, 20170406, for Fix iommu_attach/detach compat_ioctl issue */
+        #ifndef VENDOR_EDIT
 		pr_err_ratelimited("%s: unsupported compat type :%x LOAD %lu\n",
 				__func__, cmd, VIDIOC_MSM_CPP_LOAD_FIRMWARE);
 		break;
+        #else
+        pr_err_ratelimited("%s: unsupported compat type :%x\n",
+                __func__, cmd);
+        mutex_unlock(&cpp_dev->mutex);
+        return -EINVAL;
+        #endif
+        /* neiltsai, 20170406, for Fix iommu_attach/detach compat_ioctl issue */
 	}
 
 	mutex_unlock(&cpp_dev->mutex);
@@ -4231,9 +4268,17 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 	case MSM_SD_UNNOTIFY_FREEZE:
 		break;
 	default:
+        /* neiltsai, 20170406, for Fix iommu_attach/detach compat_ioctl issue */
+        #ifndef VENDOR_EDIT
 		pr_err_ratelimited("%s: unsupported compat type :%d\n",
 				__func__, cmd);
 		break;
+        #else
+        pr_err_ratelimited("%s: unsupported compat type :%x\n",
+                __func__, cmd);
+        return -EINVAL;
+        #endif
+        /* neiltsai, 20170406, for Fix iommu_attach/detach compat_ioctl issue */
 	}
 
 	if (is_copytouser_req) {
