@@ -1675,7 +1675,13 @@ static void ufshcd_gate_work(struct work_struct *work)
 	 * state to CLKS_ON.
 	 */
 	if (hba->clk_gating.is_suspended ||
+        /* neiltsai, 20170406, for NOC error */
+        #ifndef VENDOR_EDIT
 		(hba->clk_gating.state == REQ_CLKS_ON)) {
+        #else
+        (hba->clk_gating.state != REQ_CLKS_OFF)) {
+        #endif
+        /* neiltsai, 20170406, for NOC error */
 		hba->clk_gating.state = CLKS_ON;
 		trace_ufshcd_clk_gating(dev_name(hba->dev),
 			hba->clk_gating.state);
@@ -2244,8 +2250,20 @@ static void ufshcd_hibern8_exit_work(struct work_struct *work)
 
 	/* Exit from hibern8 */
 	if (ufshcd_is_link_hibern8(hba)) {
+        /* neiltsai, 20170406, for NOC error */
+        #ifdef VENDOR_EDIT
+        hba->ufs_stats.chc.ts = ktime_get();
+        hba->ufs_stats.chc.hold_ctx = H8_EXIT;
+        #endif
+        /* neiltsai, 20170406, for NOC error */
 		ufshcd_hold(hba, false);
 		ret = ufshcd_uic_hibern8_exit(hba);
+        /* neiltsai, 20170406, for NOC error */
+        #ifdef VENDOR_EDIT
+        hba->ufs_stats.crc.ts = ktime_get();
+        hba->ufs_stats.crc.rel_ctx = RH8_EXIT;
+        #endif
+        /* neiltsai, 20170406, for NOC error */
 		ufshcd_release(hba, false);
 		if (!ret) {
 			spin_lock_irqsave(hba->host->host_lock, flags);
@@ -2687,6 +2705,13 @@ ufshcd_send_uic_cmd(struct ufs_hba *hba, struct uic_command *uic_cmd)
 	int ret;
 	unsigned long flags;
 
+    /* neiltsai, 20170406 for NOC error */
+    #ifdef VENDOR_EDIT
+    hba->ufs_stats.chc.ts = ktime_get();
+    hba->ufs_stats.chc.hold_ctx = HSEND_UIC_CMD;
+    #endif
+    /* neiltsai, 20170406 for NOC error */
+
 	ufshcd_hold_all(hba);
 	mutex_lock(&hba->uic_cmd_mutex);
 	ufshcd_add_delay_before_dme_cmd(hba);
@@ -2700,6 +2725,13 @@ ufshcd_send_uic_cmd(struct ufs_hba *hba, struct uic_command *uic_cmd)
 	ufshcd_save_tstamp_of_last_dme_cmd(hba);
 	mutex_unlock(&hba->uic_cmd_mutex);
 	ufshcd_release_all(hba);
+
+    /* neiltsai, 20170406 for NOC error */
+    #ifdef VENDOR_EDIT
+    hba->ufs_stats.crc.ts = ktime_get();
+    hba->ufs_stats.crc.rel_ctx = RSEND_UIC_CMD;
+    #endif
+    /* neiltsai, 20170406 for NOC error */
 
 	ufsdbg_error_inject_dispatcher(hba,
 		ERR_INJECT_UIC, 0, &ret);
@@ -3190,6 +3222,12 @@ static int ufshcd_queuecommand(struct Scsi_Host *host, struct scsi_cmnd *cmd)
 	if (err) {
 		clear_bit_unlock(tag, &hba->lrb_in_use);
 		err = SCSI_MLQUEUE_HOST_BUSY;
+        /* neiltsai, 20170406, for NOC error */
+        #ifdef VENDOR_EDIT
+        hba->ufs_stats.crc.ts = ktime_get();
+        hba->ufs_stats.crc.rel_ctx = Q_CMD;
+        #endif
+        /* neiltsai, 20170406, for NOC error */
 		ufshcd_release(hba, true);
 		goto out;
 	}
@@ -3512,6 +3550,12 @@ static int ufshcd_exec_dev_cmd(struct ufs_hba *hba,
 
 	/* Make sure descriptors are ready before ringing the doorbell */
 	wmb();
+    /* neiltsai, 20170406, for NOC error */
+    #ifdef VENDOR_EDIT
+    hba->ufs_stats.last_devcmd_type = cmd_type;
+    hba->ufs_stats.last_devcmd_ts = ktime_get();
+    #endif
+    /* neiltsai, 20170406, for NOC error */
 	spin_lock_irqsave(hba->host->host_lock, flags);
 	err = ufshcd_send_command(hba, tag);
 	spin_unlock_irqrestore(hba->host->host_lock, flags);
@@ -4615,6 +4659,13 @@ static int ufshcd_uic_change_pwr_mode(struct ufs_hba *hba, u8 mode)
 	uic_cmd.command = UIC_CMD_DME_SET;
 	uic_cmd.argument1 = UIC_ARG_MIB(PA_PWRMODE);
 	uic_cmd.argument3 = mode;
+    /* neiltsai, 20170406, for NOC error */
+    #ifdef VENDOR_EDIT
+    hba->ufs_stats.chc.ts = ktime_get();
+    hba->ufs_stats.chc.hold_ctx = HSEND_PWRCTL_CMD;
+    #endif
+    /* neiltsai, 20170406, for NOC error */
+
 	ufshcd_hold_all(hba);
 	ret = ufshcd_uic_pwr_ctrl(hba, &uic_cmd);
 	/* neiltsai, 20170329, for AHB_TIMEOUT debug */
@@ -4622,6 +4673,12 @@ static int ufshcd_uic_change_pwr_mode(struct ufs_hba *hba, u8 mode)
 	hba->gear_scale_cmpl_time = ktime_get();
 	#endif
 	/* neiltsai, 20170329, for AHB_TIMEOUT debug */
+    /* neiltsai, 20170406, for NOC error */
+    #ifdef VENDOR_EDIT
+    hba->ufs_stats.chc.ts = ktime_get();
+    hba->ufs_stats.chc.hold_ctx = RSEND_PWRCTL_CMD;
+    #endif
+    /* neiltsai, 20170406, for NOC error */
 	ufshcd_release_all(hba);
 out:
 	return ret;
@@ -6351,6 +6408,12 @@ static void ufshcd_err_handler(struct work_struct *work)
 	if (unlikely((hba->clk_gating.state != CLKS_ON) &&
 	    ufshcd_is_auto_hibern8_supported(hba))) {
 		spin_unlock_irqrestore(hba->host->host_lock, flags);
+        /* neiltsai, 20170406, for NOC error */
+        #ifdef VENDOR_EDIT
+        hba->ufs_stats.chc.ts = ktime_get();
+        hba->ufs_stats.chc.hold_ctx = ERR_HNDL;
+        #endif
+        /* neiltsai, 20170406, for NOC error */
 		ufshcd_hold(hba, false);
 		spin_lock_irqsave(hba->host->host_lock, flags);
 		clks_enabled = true;
@@ -6500,8 +6563,22 @@ skip_err_handling:
 
 	hba->silence_err_logs = false;
 
+    /* neiltsai, 20170406, for NOC error */
+    #ifdef VENDOR_EDIT
+    if (clks_enabled) {
+    #else
 	if (clks_enabled)
+    #endif
+    /* neiltsai, 20170406, for NOC error */
 		__ufshcd_release(hba, false);
+    /* neiltsai, 20170406, for NOC error */
+    #ifdef VENDOR_EDIT
+        hba->ufs_stats.crc.ts = ktime_get();
+        hba->ufs_stats.crc.rel_ctx = ERR_HNDLR;
+    }
+    #endif
+    /* neiltsai, 20170406, for NOC error */
+
 out:
 	ufshcd_clear_eh_in_progress(hba);
 	spin_unlock_irqrestore(hba->host->host_lock, flags);
@@ -6738,6 +6815,12 @@ static irqreturn_t ufshcd_intr(int irq, void *__hba)
 	spin_lock(hba->host->host_lock);
 	intr_status = ufshcd_readl(hba, REG_INTERRUPT_STATUS);
 
+    /* neiltsai, 20170406, for NOC error */
+    #ifdef VENDOR_EDIT
+    hba->ufs_stats.last_intr_status = intr_status;
+    hba->ufs_stats.last_intr_ts = ktime_get();
+    #endif
+    /* neiltsai, 20170406, for NOC error */
 	/*
 	 * There could be max of hba->nutrs reqs in flight and in worst case
 	 * if the reqs get finished 1 by 1 after the interrupt status is
@@ -6753,6 +6836,16 @@ static irqreturn_t ufshcd_intr(int irq, void *__hba)
 			retval |= ufshcd_sl_intr(hba, enabled_intr_status);
 
 		intr_status = ufshcd_readl(hba, REG_INTERRUPT_STATUS);
+
+        /* neiltsai, 20170406, for NOC error */
+        #ifdef VENDOR_EDIT
+        if (intr_status == 0x80004000) {
+                dev_err(hba->dev, "Reserved INT(0x%08x) set!!\n",
+                        intr_status);
+                break;
+        }
+        #endif
+        /* neiltsai, 20170406, for NOC error */
 	} while (intr_status && --retries);
 
 	if (retval == IRQ_NONE) {
@@ -6816,7 +6909,13 @@ static int ufshcd_issue_tm_cmd(struct ufs_hba *hba, int lun_id, int task_id,
 	 * the maximum wait time is bounded by %TM_CMD_TIMEOUT.
 	 */
 	wait_event(hba->tm_tag_wq, ufshcd_get_tm_free_slot(hba, &free_slot));
-	ufshcd_hold_all(hba);
+    /* neiltsai, 20170406, for NOC error */
+    #ifdef VENDOR_EDIT
+    hba->ufs_stats.chc.ts = ktime_get();
+    hba->ufs_stats.chc.hold_ctx = HSEND_TM_CMD;
+    #endif
+    /* neiltsai, 20170406, for NOC error */
+    ufshcd_hold_all(hba);
 
 	spin_lock_irqsave(host->host_lock, flags);
 	task_req_descp = hba->utmrdl_base_addr;
@@ -6873,7 +6972,12 @@ static int ufshcd_issue_tm_cmd(struct ufs_hba *hba, int lun_id, int task_id,
 	clear_bit(free_slot, &hba->tm_condition);
 	ufshcd_put_tm_slot(hba, free_slot);
 	wake_up(&hba->tm_tag_wq);
-
+    /* neiltsai, 20170406, for NOC error */
+    #ifdef VENDOR_EDIT
+    hba->ufs_stats.crc.ts = ktime_get();
+    hba->ufs_stats.crc.rel_ctx = RSEND_TM_CMD;
+    #endif
+    /* neiltsai, 20170406, for NOC error */
 	ufshcd_release_all(hba);
 	return err;
 }
@@ -9851,6 +9955,11 @@ scale_up_gear:
 clk_scaling_unprepare:
 	ufshcd_clock_scaling_unprepare(hba);
 out:
+    /* neiltsai, 20170406, for NOC error */
+    #ifdef VENDOR_EDIT
+    hba->ufs_stats.last_scaling_freq_update = ktime_get();
+    #endif
+    /* neiltsai, 20170406, for NOC error */
 	ufshcd_release_all(hba);
 	return ret;
 }
