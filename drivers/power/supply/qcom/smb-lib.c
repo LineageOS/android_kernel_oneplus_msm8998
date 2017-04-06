@@ -4265,6 +4265,7 @@ bool is_fastchg_allowed(struct smb_charger *chg)
 {
 	int temp;
 	static int pre_temp = 0;
+	static bool pre_switch_to_normal;
 	bool low_temp_full, switch_to_normal, fw_updated;
 
 	temp = get_prop_batt_temp(chg);
@@ -4283,6 +4284,8 @@ bool is_fastchg_allowed(struct smb_charger *chg)
 	}
 
 	switch_to_normal = get_prop_fast_switch_to_normal(chg);
+	if (pre_switch_to_normal != switch_to_normal)
+		pr_info("switch_to_normal =%d\n", switch_to_normal);
 	if (switch_to_normal)
 		return false;
 
@@ -4794,15 +4797,23 @@ static void set_usb_switch(struct smb_charger *chg, bool enable)
 static void switch_fast_chg(struct smb_charger *chg)
 {
 	bool fastchg_allowed, is_allowed;
-
+	static bool pre_fastchg_allowed, pre_is_allowed;
 	if (op_is_usb_switch_on(chg))
 		return;
 	if (!is_usb_present(chg))
 		return;
 
 	fastchg_allowed = op_get_fast_chg_allow(chg);
+	if (pre_fastchg_allowed != fastchg_allowed) {
+		pre_fastchg_allowed = fastchg_allowed;
+		pr_info("fastchg_allowed = %d\n", fastchg_allowed);
+	}
 	if (!fastchg_allowed) {
 		is_allowed = is_fastchg_allowed(chg);
+	if (pre_is_allowed != is_allowed) {
+		pre_is_allowed = is_allowed;
+		pr_info("is_allowed = %d\n", fastchg_allowed);
+	}
 		if (is_allowed) {
 			set_usb_switch(chg, true);
 			op_set_fast_chg_allow(chg, true);
@@ -4862,7 +4873,7 @@ static void op_check_allow_switch_dash_work(struct work_struct *work)
 
 	if (!is_usb_present(chg))
 		return;
-
+	pr_info("switch_dash_work\n");
 	apsd_result = smblib_get_apsd_result(chg);
 	if (((apsd_result->bit != SDP_CHARGER_BIT
 		&& apsd_result->bit != CDP_CHARGER_BIT
