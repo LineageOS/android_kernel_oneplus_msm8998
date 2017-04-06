@@ -761,3 +761,6 @@ CONFIG_SDCARD_FS=y
 CONFIG_CORESIGHT_DBGUI=y
 CONFIG_MSM_DEBUG_LAR_UNLOCK=y
 #endif
+#neiltsai, 20170406, for Enable EL2 tlb handler
+CONFIG_QCOM_TLB_EL2_HANDLER=y
+#neiltsai, 20170406, for Enable EL2 tlb handler
