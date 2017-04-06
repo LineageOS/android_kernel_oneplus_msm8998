@@ -789,9 +789,15 @@ struct vfe_device {
 	struct mutex core_mutex;
 	spinlock_t shared_data_lock;
 	spinlock_t reg_update_lock;
+	spinlock_t tasklet_lock;
 
 	/* Tasklet info */
 	atomic_t irq_cnt;
+	uint8_t taskletq_idx;
+	struct list_head tasklet_q;
+	struct tasklet_struct vfe_tasklet;
+	struct msm_vfe_tasklet_queue_cmd
+		tasklet_queue_cmd[MSM_VFE_TASKLETQ_SIZE];
 
 	/* Data structures */
 	struct msm_vfe_hardware_info *hw_info;
@@ -804,6 +810,7 @@ struct vfe_device {
 
 	/* State variables */
 	uint32_t vfe_hw_version;
+	int vfe_clk_idx;
 	uint32_t vfe_open_cnt;
 	uint8_t vt_enable;
 	uint32_t vfe_ub_policy;
@@ -820,6 +827,7 @@ struct vfe_device {
 	struct msm_isp_statistics *stats;
 	uint64_t msm_isp_last_overflow_ab;
 	uint64_t msm_isp_last_overflow_ib;
+	uint32_t msm_isp_vfe_clk_rate;
 	struct msm_isp_ub_info *ub_info;
 	uint32_t isp_sof_debug;
 	uint32_t isp_raw0_debug;

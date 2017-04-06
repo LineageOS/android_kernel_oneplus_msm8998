@@ -1512,7 +1512,15 @@ void msm_vfe47_configure_hvx(struct vfe_device *vfe_dev,
 		pr_err("%s: no stream_clk\n", __func__);
 		return;
 	}
-	if (is_stream_on) {
+	rc = msm_camera_clk_enable(&vfe_dev->pdev->dev, vfe_dev->hvx_clk_info,
+			vfe_dev->hvx_clk, vfe_dev->num_hvx_clk, is_stream_on);
+	if (rc) {
+		pr_err("%s: stream_clk enable failed, enable: %u\n",
+			__func__,
+			is_stream_on);
+		return;
+	}
+	if (is_stream_on == 1) {
 		/* Enable HVX */
 		if (!vfe_dev->hvx_clk_state) {
 			rc = msm_camera_clk_enable(&vfe_dev->pdev->dev,
