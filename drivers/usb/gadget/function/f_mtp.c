@@ -110,7 +110,7 @@ enum buf_type {
 #ifdef VENDOR_EDIT
 /* values for qos requests */
 #define FILE_LENGTH	10 * 1024 * 1024
-#define PM_QOS_TIMEOUT	200000
+#define PM_QOS_TIMEOUT	2000000
 #endif
 
 unsigned int mtp_rx_req_len = MTP_RX_BUFFER_INIT_SIZE;
@@ -1084,6 +1084,18 @@ static void receive_file_work(struct work_struct *data)
 						count, dev->ep_out->maxpacket);
 
 #ifdef VENDOR_EDIT
+	if (count >= FILE_LENGTH) {
+		if (delayed_work_pending(&cpu_freq_qos_work))
+			cancel_delayed_work(&cpu_freq_qos_work);
+		pm_qos_update_request(&little_cpu_mtp_freq, MAX_CPUFREQ);
+		pm_qos_update_request(&devfreq_mtp_request, MAX_CPUFREQ);
+		//pm_qos_update_request(&big_cpu_mtp_freq, MAX_CPUFREQ - 1);
+	} else {
+		pm_qos_update_request_timeout(&little_cpu_mtp_freq, MAX_CPUFREQ, PM_QOS_TIMEOUT);
+                pm_qos_update_request_timeout(&devfreq_mtp_request, MAX_CPUFREQ, PM_QOS_TIMEOUT);
+	}
+# endif
+#if 0
 	if (delayed_work_pending(&cpu_freq_qos_work))
 		cancel_delayed_work(&cpu_freq_qos_work);
 	pm_qos_update_request(&little_cpu_mtp_freq, MAX_CPUFREQ);
@@ -1191,6 +1203,13 @@ static void receive_file_work(struct work_struct *data)
 	}
 
 #ifdef VENDOR_EDIT
+	if (count >= FILE_LENGTH) {
+		queue_delayed_work(cpu_freq_qos_queue, &cpu_freq_qos_work, msecs_to_jiffies(1000)*3);
+		//pm_qos_update_request(&little_cpu_mtp_freq, MIN_CPUFREQ);
+		//pm_qos_update_request(&big_cpu_mtp_freq, MIN_CPUFREQ);
+	}
+#endif
+# if 0
 	queue_delayed_work(cpu_freq_qos_queue, &cpu_freq_qos_work, msecs_to_jiffies(1000)*3);
 #endif
 	DBG(cdev, "receive_file_work returning %d\n", r);
@@ -1427,7 +1446,6 @@ fail:
 }
 #endif
 
-extern void oem_set_sleep_disable(bool disable);
 static int mtp_open(struct inode *ip, struct file *fp)
 {
 	printk(KERN_INFO "mtp_open\n");
@@ -1436,7 +1454,6 @@ static int mtp_open(struct inode *ip, struct file *fp)
 		return -EBUSY;
 	}
 
-	oem_set_sleep_disable(true);
 	/* clear any error condition */
 	if (_mtp_dev->state != STATE_OFFLINE)
 		_mtp_dev->state = STATE_READY;
@@ -1449,7 +1466,6 @@ static int mtp_release(struct inode *ip, struct file *fp)
 {
 	printk(KERN_INFO "mtp_release\n");
 
-	oem_set_sleep_disable(false);
 	mtp_unlock(&_mtp_dev->open_excl);
 	return 0;
 }
