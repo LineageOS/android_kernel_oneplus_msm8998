@@ -138,7 +138,7 @@
 
             };
         };
-
+    /* shankai@bsp ,comment out for do not use it,2017-4-7
         oem_at_cable_mux {
             at_cable_default: at_cable_default {
                 mux {
@@ -153,6 +153,7 @@
                 };
             };
          };
+        */
 	};
 
 	/* Tri-state key */
@@ -173,11 +174,12 @@
 		compatible = "oem,rf_cable";
 		interrupt-parent = <&tlmm>;
 		rf,cable-gpio    = <&tlmm 36 0>;
-		at,cable-gpio  = <&tlmm 7 0>;
-		pinctrl-names = "oem_rf_cable_active", "oem_rf_cable_suspend", "default";
+		//at,cable-gpio  = <&tlmm 7 0>;
+		//pinctrl-names = "oem_rf_cable_active", "oem_rf_cable_suspend", "default";
+		pinctrl-names = "oem_rf_cable_active", "oem_rf_cable_suspend";
 		pinctrl-0 = <&oem_rf_cable_active >;
 		pinctrl-1 = <&oem_rf_cable_suspend>;
-		pinctrl-2 = <&at_cable_default>;
+		//pinctrl-2 = <&at_cable_default>;
     };
 
 	/* Fingerprint */
