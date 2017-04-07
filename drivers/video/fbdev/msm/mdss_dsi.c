@@ -1644,41 +1644,6 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
         mutex_lock(&ctrl_pdata->panel_mode_lock);
         ctrl_pdata->is_panel_on = true;
         mutex_unlock(&ctrl_pdata->panel_mode_lock);
-        //sRGB
-		get_param_lcm_srgb_mode(&(ctrl_pdata->SRGB_mode));
-		if (1 == ctrl_pdata->SRGB_mode){
-			mdss_dsi_panel_set_srgb_mode(ctrl_pdata,ctrl_pdata->SRGB_mode);
-		} else{
-		    pr_err("sRGB mode %d\n", ctrl_pdata->SRGB_mode);
-		}
-		//Adobe RGB
-		get_param_lcm_adobe_rgb_mode(&(ctrl_pdata->Adobe_RGB_mode));
-		if (1 == ctrl_pdata->Adobe_RGB_mode){
-			mdss_dsi_panel_set_adobe_rgb_mode(ctrl_pdata,ctrl_pdata->Adobe_RGB_mode);
-		} else{
-		    pr_err("Adobe RGB mode %d\n", ctrl_pdata->Adobe_RGB_mode);
-		}
-		//DCI-P3
-		get_param_lcm_dci_p3_mode(&(ctrl_pdata->dci_p3_mode));
-		if (1 == ctrl_pdata->dci_p3_mode){
-			mdss_dsi_panel_set_dci_p3_mode(ctrl_pdata,ctrl_pdata->dci_p3_mode);
-		} else{
-		    pr_err("DCI-P3 mode %d\n", ctrl_pdata->dci_p3_mode);
-		}
-		//Nihgt mode(sRGB)
-		get_param_lcm_night_mode(&(ctrl_pdata->night_mode));
-		if (1 == ctrl_pdata->night_mode){
-			mdss_dsi_panel_set_night_mode(ctrl_pdata,ctrl_pdata->night_mode);
-		} else{
-		    pr_err("sRGB mode(night mode) %d\n", ctrl_pdata->night_mode);
-		}
-		//Reading mode(sRGB)
-		get_param_lcm_reading_mode(&(ctrl_pdata->reading_mode));
-		if (1 == ctrl_pdata->reading_mode){
-			mdss_dsi_panel_set_reading_mode(ctrl_pdata,ctrl_pdata->reading_mode);
-		} else{
-		    pr_err("sRGB mode(reading mode) %d\n", ctrl_pdata->reading_mode);
-		}
     }
 //#endif
 	if ((pdata->panel_info.type == MIPI_CMD_PANEL) &&
