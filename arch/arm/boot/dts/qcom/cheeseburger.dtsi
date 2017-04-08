@@ -222,6 +222,12 @@
    force_enable_serial {
         compatible = "oem,force_serial";
    };
+   oem_serial_pinctrl {
+        compatible = "oem,oem_serial_pinctrl";
+        pinctrl-names = "uart_pinctrl_active", "uart_pinctrl_deactive";
+	    pinctrl-0 = <&uart_console_active>;
+	    pinctrl-1 = <&uart_console_deactive>;
+   };
 
    bootloader_log {
      compatible = "bootloader_log";
