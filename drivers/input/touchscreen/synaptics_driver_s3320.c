@@ -3312,13 +3312,18 @@ static ssize_t key_switch_read_func(struct file *file, char __user *user_buf, si
 
 static ssize_t key_switch_write_func(struct file *file, const char __user *buffer, size_t count, loff_t *ppos)
 {
+	char buf[4] = {0};
 	struct synaptics_ts_data *ts = ts_g;
 	if(!ts)
 		return count;
-	if( count > 2)
+	if(count > 2)
 		return count;
-
-	sscanf(&buffer[0], "%d", &key_switch);
+	if(copy_from_user(buf, buffer, count))
+	{
+		TPD_ERR("%s copy error\n", __func__);
+		return count;
+	}
+	sscanf(&buf[0], "%d", &key_switch);
 	TPD_ERR("%s write [%d]\n",__func__,key_switch);
 	TPD_ERR("lift:%s right:%s\n",key_switch?"key_appselect":"key_back",key_switch?"key_back":"key_appselect");
 	return count;
