@@ -762,7 +762,7 @@
 			config {
 				pins = "gpio4", "gpio5";
 				drive-strength = <2>;
-				bias-disable;
+				bias-pull-down;
 			};
 		};
 	};
