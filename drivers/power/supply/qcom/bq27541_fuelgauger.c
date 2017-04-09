@@ -595,11 +595,8 @@ static int fg_soc_calibrate(struct  bq27541_device_info *di, int soc)
 					|| temp_region == BATT_TEMP_NORMAL
 					|| temp_region == BATT_TEMP_PRE_NORMAL
 					|| temp_region == BATT_TEMP_COOL)) {
-				if (di->saltate_counter < CAPACITY_SALTATE_COUNTER_CHARGING_TERM) {
-					di->saltate_counter++;
-				} else {
+				if (time_last > FIVE_MINUTES) {
 					soc_calib = di->soc_pre + 1;
-					di->saltate_counter = 0;
 				}
 			}
 		} else {
