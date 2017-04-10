@@ -705,7 +705,9 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 		.spec_rev		= USBPD_REV_20,
 	};
 	union power_supply_propval val = {0};
+#ifndef VENDOR_EDIT
 	unsigned long flags;
+#endif
 	int ret;
 
 	usbpd_dbg(&pd->dev, "%s -> %s\n",
@@ -886,8 +888,10 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 			pd->current_dr = DR_UFP;
 
 			if (pd->psy_type == POWER_SUPPLY_TYPE_USB ||
-				pd->psy_type == POWER_SUPPLY_TYPE_USB_CDP)
+				pd->psy_type == POWER_SUPPLY_TYPE_USB_CDP) {
+				usbpd_err(&pd->dev, "sink start:pd start peripheral\n");
 				start_usb_peripheral(pd);
+			}
 		}
 
 #ifndef VENDOR_EDIT
@@ -953,10 +957,12 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 		/* fall-through */
 
 	case PE_SNK_WAIT_FOR_CAPABILITIES:
+#ifndef VENDOR_EDIT
 		spin_lock_irqsave(&pd->rx_lock, flags);
 		if (list_empty(&pd->rx_q))
 			kick_sm(pd, SINK_WAIT_CAP_TIME);
 		spin_unlock_irqrestore(&pd->rx_lock, flags);
+#endif
 		break;
 
 	case PE_SNK_EVALUATE_CAPABILITY:
@@ -1001,6 +1007,7 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 
 	case PE_SNK_TRANSITION_TO_DEFAULT:
 		if (pd->current_dr != DR_UFP) {
+			usbpd_err(&pd->dev, "to default:pd start peripheral\n");
 			stop_usb_host(pd);
 			start_usb_peripheral(pd);
 			pd->current_dr = DR_UFP;
@@ -1687,6 +1694,7 @@ static void usbpd_sm(struct work_struct *w)
 		break;
 
 	case PE_SRC_SEND_CAPABILITIES:
+#ifndef VENDOR_EDIT
 		ret = pd_send_msg(pd, MSG_SOURCE_CAPABILITIES, default_src_caps,
 				ARRAY_SIZE(default_src_caps), SOP_MSG);
 		if (ret) {
@@ -1718,8 +1726,12 @@ static void usbpd_sm(struct work_struct *w)
 		/* wait for REQUEST */
 		pd->current_state = PE_SRC_SEND_CAPABILITIES_WAIT;
 		kick_sm(pd, SENDER_RESPONSE_TIME);
-
 		val.intval = 1;
+#else
+		usbpd_err(&pd->dev, "Src start host\n");
+		start_usb_host(pd, true);
+		val.intval = 0;
+#endif
 		power_supply_set_property(pd->usb_psy,
 				POWER_SUPPLY_PROP_PD_ACTIVE, &val);
 		break;
@@ -2137,6 +2149,7 @@ static void usbpd_sm(struct work_struct *w)
 		break;
 
 	case PE_SNK_TRANSITION_TO_DEFAULT:
+		usbpd_err(&pd->dev, "default: sink startup\n");
 		usbpd_set_state(pd, PE_SNK_STARTUP);
 		break;
 
