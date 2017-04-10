@@ -43,15 +43,16 @@ struct cpufreq_suspend_t {
 
 static DEFINE_PER_CPU(struct cpufreq_suspend_t, suspend_data);
 #ifdef VENDOR_EDIT
-#define LITTLE_CPU_QOS_FREQ 1670400
-#define BIG_CPU_QOS_FREQ    2035200
-#define QOS_TIMEOUT 300000
+#define LITTLE_CPU_QOS_FREQ 1900800
+#define BIG_CPU_QOS_FREQ    2361600
 
 unsigned int cluster1_first_cpu = 0;
 static bool qos_cpufreq_flag = false;
 static void c0_cpufreq_limit(struct work_struct *work);
+static void c1_cpufreq_limit(struct work_struct *work);
 static struct workqueue_struct *qos_cpufreq_work_queue = NULL;
 static DECLARE_WORK(c0_cpufreq_limit_work, c0_cpufreq_limit);
+static DECLARE_WORK(c1_cpufreq_limit_work, c1_cpufreq_limit);
 struct qos_request_value {
 	bool flag;
 	unsigned int max_cpufreq;
@@ -102,7 +103,6 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 	struct cpufreq_frequency_table *table;
 
 	mutex_lock(&per_cpu(suspend_data, policy->cpu).suspend_mutex);
-
 	if (target_freq == policy->cur)
 		goto done;
 
@@ -675,16 +675,12 @@ static void c0_cpufreq_limit(struct work_struct *work)
 {
 	struct cpufreq_policy *policy;
 
-	qos_cpufreq_flag = true;
-
 	policy = cpufreq_cpu_get(0);
 	if (policy)  {
+		qos_cpufreq_flag = true;
 		cpufreq_driver_target(policy, LITTLE_CPU_QOS_FREQ, CPUFREQ_RELATION_H);
-	} else
-		goto policy_bad;
-	cpufreq_cpu_put(policy);
-
-policy_bad:
+		cpufreq_cpu_put(policy);
+	}
 	sched_set_boost(1);
 }
 
@@ -694,6 +690,26 @@ void c0_cpufreq_limit_queue(void)
 		queue_work(qos_cpufreq_work_queue, &c0_cpufreq_limit_work);
 }
 EXPORT_SYMBOL_GPL(c0_cpufreq_limit_queue);
+
+static void c1_cpufreq_limit(struct work_struct *work)
+{
+	struct cpufreq_policy *policy;
+
+	policy = cpufreq_cpu_get(cluster1_first_cpu);
+	if (policy)  {
+		qos_cpufreq_flag = true;
+		cpufreq_driver_target(policy, BIG_CPU_QOS_FREQ, CPUFREQ_RELATION_H);
+		cpufreq_cpu_put(policy);
+	}
+
+}
+
+void c1_cpufreq_limit_queue(void)
+{
+	if (qos_cpufreq_work_queue)
+		queue_work(qos_cpufreq_work_queue, &c1_cpufreq_limit_work);
+}
+EXPORT_SYMBOL_GPL(c1_cpufreq_limit_queue);
 #endif
 
 static int __init msm_cpufreq_register(void)
