@@ -41,8 +41,9 @@ enum print_reason {
 #define BATT_TYPE_FCC_VOTER "BATT_TYPE_FCC_VOTER"
 #define PSY_ICL_VOTER		"PSY_ICL_VOTER"
 #define TEMP_REGION_MAX               9
-#define NON_STANDARD_CHARGER_CHECK_MS 90000
-#define REDET_DELAY_MS 5000
+#define NON_STANDARD_CHARGER_CHECK_S 90
+#define TIME_1000MS 1000
+#define REDET_COUTNT 5
 #endif
 #define DEFAULT_VOTER			"DEFAULT_VOTER"
 #define USER_VOTER			"USER_VOTER"
@@ -333,6 +334,8 @@ struct smb_charger {
 	int				fake_temp;
 	int				fake_protect_sts;
 	int				non_stand_chg_current;
+	int				non_stand_chg_count;
+	int				redet_count;
 
 	bool				use_fake_chgvol;
 	bool				use_fake_temp;

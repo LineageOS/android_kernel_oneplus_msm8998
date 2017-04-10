@@ -2574,7 +2574,7 @@ static int smb2_probe(struct platform_device *pdev)
 #ifdef VENDOR_EDIT
 	if (usb_present)
 		schedule_delayed_work(&chg->non_standard_charger_check_work,
-		msecs_to_jiffies(NON_STANDARD_CHARGER_CHECK_MS));
+		msecs_to_jiffies(TIME_1000MS));
 #endif
 
 	pr_info("QPNP SMB2 probed successfully usb:present=%d type=%d batt:present = %d health = %d charge = %d\n",

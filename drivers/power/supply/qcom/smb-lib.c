@@ -3722,12 +3722,12 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 	} else {
 		if (!chg->usb_type_redet_done) {
 			schedule_delayed_work(&chg->re_det_work,
-				msecs_to_jiffies(REDET_DELAY_MS));
+				msecs_to_jiffies(TIME_1000MS));
 		}
 		if (chg->usb_type_redet_done)
 			schedule_delayed_work(
 			&chg->non_standard_charger_check_work,
-			msecs_to_jiffies(NON_STANDARD_CHARGER_CHECK_MS));
+			msecs_to_jiffies(TIME_1000MS));
 	}
 
 	/* set allow read extern fg IIC */
@@ -4321,6 +4321,8 @@ static void op_handle_usb_removal(struct smb_charger *chg)
 	chg->non_std_chg_present = false;
 	chg->usb_type_redet_done = false;
 	chg->non_stand_chg_current = 0;
+	chg->non_stand_chg_count = 0;
+	chg->redet_count = 0;
 	op_battery_temp_region_set(chg, BATT_TEMP_INVALID);
 }
 
@@ -5625,38 +5627,68 @@ static void check_non_standard_charger_work(struct work_struct *work)
 	bool charger_present;
 	const struct apsd_result *apsd_result;
 	int aicl_result, rc;
+	pr_debug("chg->non_stand_chg_count=%d\n", chg->non_stand_chg_count);
 
 	charger_present = is_usb_present(chg);
-	if (!charger_present)
+	if (!charger_present) {
+		pr_info("chk_non_std_chger,charger_present\n");
+		chg->non_stand_chg_count = 0;
 		return;
-	if (chg->usb_enum_status)
+	}
+	if (chg->usb_enum_status) {
+		pr_info("chk_non_std_chger,usb_enum_status\n");
+		chg->non_stand_chg_count = 0;
 		return;
-	apsd_result = smblib_update_usb_type(chg);
-	if (apsd_result->bit == DCP_CHARGER_BIT
-		|| apsd_result->bit == OCP_CHARGER_BIT)
-		return;
-	rc = smblib_rerun_aicl(chg);
-	if (rc < 0)
-		smblib_err(chg, "Couldn't re-run AICL rc=%d\n", rc);
-	aicl_result = op_get_aicl_result(chg);
-	chg->non_stand_chg_current = aicl_result;
-	op_usb_icl_set(chg, chg->non_stand_chg_current);
-	power_supply_changed(chg->batt_psy);
-	chg->is_power_changed = true;
-	chg->non_std_chg_present = true;
-	pr_err("non-standard_charger detected,aicl_result=%d\n", aicl_result);
+	}
+	if (chg->non_stand_chg_count
+		>= NON_STANDARD_CHARGER_CHECK_S) {
+		apsd_result = smblib_update_usb_type(chg);
+		if (apsd_result->bit == DCP_CHARGER_BIT
+			|| apsd_result->bit == OCP_CHARGER_BIT)
+			return;
+		rc = smblib_rerun_aicl(chg);
+		if (rc < 0)
+			smblib_err(chg, "Couldn't re-run AICL rc=%d\n", rc);
+		aicl_result = op_get_aicl_result(chg);
+		chg->non_stand_chg_current = aicl_result;
+		op_usb_icl_set(chg, chg->non_stand_chg_current);
+		power_supply_changed(chg->batt_psy);
+		chg->is_power_changed = true;
+		chg->non_std_chg_present = true;
+		pr_err("non-standard_charger detected,aicl_result=%d\n",
+			aicl_result);
+	} else {
+		chg->non_stand_chg_count++;
+		schedule_delayed_work(
+			&chg->non_standard_charger_check_work,
+			msecs_to_jiffies(TIME_1000MS));
+	}
 }
 static void smbchg_re_det_work(struct work_struct *work)
 {
 	struct smb_charger *chg = container_of(work,
 			struct smb_charger,
 			re_det_work.work);
-	if (chg->usb_enum_status)
-		return;
 
-	if (chg->vbus_present) {
+	pr_debug("chg->redet_count=%d\n", chg->redet_count);
+	if (chg->usb_enum_status) {
+		pr_info("re_det, usb_enum_status\n");
+		chg->redet_count = 0;
+		return;
+	}
+	if (!chg->vbus_present) {
+		pr_info("re_det, vbus_no_present\n");
+		chg->redet_count = 0;
+		return;
+	}
+
+	if (chg->redet_count >= REDET_COUTNT) {
 		op_rerun_apsd(chg);
 		chg->usb_type_redet_done = true;
+	} else {
+		chg->redet_count++;
+		schedule_delayed_work(&chg->re_det_work,
+				msecs_to_jiffies(TIME_1000MS));
 	}
 }
 
