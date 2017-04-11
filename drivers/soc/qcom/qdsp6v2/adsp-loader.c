@@ -146,6 +146,7 @@ load_adsp:
 	}
 fail:
 	dev_err(&pdev->dev, "%s: Q6 image loading failed\n", __func__);
+	panic("Q6 image loading failed crash");
 	return;
 }
 
