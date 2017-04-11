@@ -4063,19 +4063,21 @@ irqreturn_t smblib_handle_switcher_power_ok(int irq, void *data)
 	int rc;
 	u8 stat;
 #ifdef VENDOR_EDIT
+	union power_supply_propval vbus_val;
 	smblib_dbg(chg, PR_INTERRUPT, "IRQ: %s\n", irq_data->name);
 #endif
 
 	if (!(chg->wa_flags & BOOST_BACK_WA)) {
 #ifdef VENDOR_EDIT
-		smblib_err(chg, "DEBUG: no BOOST_BACK_WA\n");
+		smblib_dbg(chg, PR_INTERRUPT, "DEBUG: no BOOST_BACK_WA\n");
 #endif
 		return IRQ_HANDLED;
 	}
 	rc = smblib_read(chg, POWER_PATH_STATUS_REG, &stat);
 	if (rc < 0) {
 #ifdef VENDOR_EDIT
-		smblib_err(chg, "Couldn't read POWER_PATH_STATUS rc=%d\n", rc);
+		smblib_dbg(chg, PR_INTERRUPT,
+		"Couldn't read POWER_PATH_STATUS rc=%d\n", rc);
 #endif
 		return IRQ_HANDLED;
 	}
@@ -4083,26 +4085,33 @@ irqreturn_t smblib_handle_switcher_power_ok(int irq, void *data)
 	if ((stat & USE_USBIN_BIT) &&
 			get_effective_result(chg->usb_icl_votable) < USBIN_25MA) {
 #ifdef VENDOR_EDIT
-		smblib_err(chg, "DEBUG: USE_USBIN_BIT and ICL<25mA\n");
+		smblib_dbg(chg, PR_INTERRUPT, "DEBUG: USE_USBIN_BIT and ICL<25mA\n");
 #endif
 		return IRQ_HANDLED;
 		}
 
 	if (stat & USE_DCIN_BIT) {
 #ifdef VENDOR_EDIT
-		smblib_err(chg, "DEBUG: USE_DCIN_BIT\n");
+		smblib_dbg(chg, PR_INTERRUPT, "DEBUG: USE_DCIN_BIT\n");
 #endif
 		return IRQ_HANDLED;
 	}
 	if (is_storming(&irq_data->storm_data)) {
-#ifndef VENDOR_EDIT
-	/*Use the setting of 0x1380 and 0x1365 is useful*/
+#ifdef VENDOR_EDIT
+		/*Use the setting of 0x1380 and 0x1365 is useful*/
+		smblib_err(chg, "Reverse boost detected\n");
+		rc = smblib_get_prop_usb_voltage_now(g_chg, &vbus_val);
+		if (rc < 0)
+			pr_err("fail to read usb_voltage rc=%d\n", rc);
+		else if (vbus_val.intval >= 2500)
+			pr_err("vbus_val.intval=%d\n", vbus_val.intval);
+#else
 		smblib_err(chg, "Reverse boost detected: voting 0mA to suspend input\n");
 		vote(chg->usb_icl_votable, BOOST_BACK_VOTER, true, 0);
 #endif
 	}
 #ifdef VENDOR_EDIT
-	smblib_err(chg, "DEBUG: End of Handler\n");
+	smblib_dbg(chg, PR_INTERRUPT, "DEBUG: End of Handler\n");
 #endif
 
 	return IRQ_HANDLED;
@@ -4639,7 +4648,6 @@ int op_handle_switcher_power_ok(void)
 		return 0;
 	if (!(g_chg->wa_flags & BOOST_BACK_WA))
 		return 0;
-	return 0;/*Use the setting of 0x1380 and 0x1365 is useful*/
 	rc = smblib_read(g_chg, POWER_PATH_STATUS_REG, &stat);
 	if (rc < 0) {
 		smblib_err(g_chg, "Couldn't read POWER_PATH_STATUS rc=%d\n", rc);
@@ -4659,8 +4667,7 @@ int op_handle_switcher_power_ok(void)
 		pr_err("fail to read usb_voltage rc=%d\n", rc);
 	} else if(vbus_val.intval >= 2500) {
 		pr_err("vbus_val.intval=%d\n",vbus_val.intval);
-		smblib_err(g_chg, "OP Reverse boost detected: suspending input\n");
-		vote(g_chg->usb_icl_votable, BOOST_BACK_VOTER, true, 0);
+		smblib_err(g_chg, "OP Reverse boost detected\n");
 		g_chg->deal_vusbin_error_done = true;
 	}
 
