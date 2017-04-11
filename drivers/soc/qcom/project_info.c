@@ -472,7 +472,9 @@ int __init init_project_info(void)
 	//add ddr row, column information and manufacture name information
 	get_ddr_manufacture_name();
 
-	if(totalram_pages > 5*(1<<18)){
+	if(totalram_pages > 6*(1<<18)){
+		ddr_size = 8;
+	}else if(totalram_pages > 5*(1<<18)){
 		ddr_size = 6;
 	}else if(totalram_pages > 4*(1<<18)){
 		ddr_size = 5;
