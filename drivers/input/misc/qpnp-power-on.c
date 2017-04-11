@@ -1041,12 +1041,14 @@ err_exit:
 static int qpnp_config_reset(struct qpnp_pon *pon, struct qpnp_pon_config *cfg);
 
 static unsigned int pwr_dump_enabled = 0;
+static unsigned int long_pwr_dump_enabled = 0;
+
 static int param_set_pwr_dump_enabled(const char *val, struct kernel_param *kp)
 {
 	unsigned long enable;
-        struct qpnp_pon *pon = sys_reset_dev;
-        struct qpnp_pon_config *cfg = NULL;
-        int rc;
+	struct qpnp_pon *pon = sys_reset_dev;
+	struct qpnp_pon_config *cfg = NULL;
+	int rc;
 
 	if (!val || kstrtoul(val, 0, &enable) || enable > 1)
 		return -EINVAL;
@@ -1055,24 +1057,65 @@ static int param_set_pwr_dump_enabled(const char *val, struct kernel_param *kp)
 	if (!cfg)
 		return -EINVAL;
 
-        pr_info("pwr_dump_enabled = %d and request enable = %d\n", pwr_dump_enabled, (unsigned int)enable);
-        if(pwr_dump_enabled !=enable){
-            cfg->s1_timer = 1352;//reduce this time
-            cfg->s2_type = 1;//change s2 type to warm reset
-            rc = qpnp_config_reset(pon, cfg);
-	    //if (rc)
-                //dev_err(&pon->spmi->dev,"Unable to config pon reset\n");
+	pr_info("pwr_dump_enabled = %d and request enable = %d\n", pwr_dump_enabled, (unsigned int)enable);
+	if(pwr_dump_enabled !=enable){
+		cfg->s1_timer = 1352;//reduce this time
+		cfg->s2_type = 1;//change s2 type to warm reset
+		rc = qpnp_config_reset(pon, cfg);
 
-            if(enable)//if we need enable this feature, we should diable wakeup capability
-                disable_irq_wake(cfg->state_irq);
-            else
-                enable_irq_wake(cfg->state_irq);
-            pwr_dump_enabled = enable;
-        }
+		if(enable)//if we need enable this feature, we should diable wakeup capability
+			disable_irq_wake(cfg->state_irq);
+		else
+			enable_irq_wake(cfg->state_irq);
+		pwr_dump_enabled = enable;
+	}
+	return 0;
+}
+
+static int param_set_long_press_pwr_dump_enabled(const char *val, struct kernel_param *kp)
+{
+	unsigned long enable;
+	struct qpnp_pon *pon = sys_reset_dev;
+	struct qpnp_pon_config *cfg = NULL;
+	int rc;
+	u32 s1_timer_bak;
+	u32 s2_type_bak;
+
+	if (!val || kstrtoul(val, 0, &enable) || enable > 1)
+		return -EINVAL;
+
+	cfg = qpnp_get_cfg(pon, PON_KPDPWR); //0 means pwr key
+	if (!cfg)
+		return -EINVAL;
+
+	pr_info("long_pwr_dump_enabled = %d and request enable = %d cfg->s1_timer =%d \n", long_pwr_dump_enabled, (unsigned int)enable,cfg->s1_timer );
+	if(long_pwr_dump_enabled !=enable){
+
+		if(enable)
+		{
+			s1_timer_bak = cfg->s1_timer;
+			s2_type_bak  = cfg->s2_type;
+
+			cfg->s1_timer = 1352;//reduce this time
+			cfg->s2_type = 1;//change s2 type to warm reset
+
+			rc = qpnp_config_reset(pon, cfg);
+
+			cfg->s1_timer = s1_timer_bak;
+			cfg->s2_type  = s2_type_bak;
+		}
+		else
+		{
+			rc = qpnp_config_reset(pon, cfg);
+		}
+		long_pwr_dump_enabled = enable;
+	}
 	return 0;
 }
 
 module_param_call(pwr_dump_enabled, param_set_pwr_dump_enabled, param_get_uint, &pwr_dump_enabled, 0644);
+module_param_call(long_pwr_dump_enabled, param_set_long_press_pwr_dump_enabled, param_get_uint, &long_pwr_dump_enabled, 0644);
+
 /*20151106,wujialong add for power dump capture*/
 
 static int
