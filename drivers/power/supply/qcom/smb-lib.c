@@ -4812,10 +4812,16 @@ static void switch_fast_chg(struct smb_charger *chg)
 {
 	bool fastchg_allowed, is_allowed;
 	static bool pre_fastchg_allowed, pre_is_allowed;
-	if (op_is_usb_switch_on(chg))
+
+	mutex_lock(&chg->sw_dash_lock);
+	if (op_is_usb_switch_on(chg)) {
+		mutex_unlock(&chg->sw_dash_lock);
 		return;
-	if (!is_usb_present(chg))
+	}
+	if (!is_usb_present(chg)) {
+		mutex_unlock(&chg->sw_dash_lock);
 		return;
+	}
 
 	fastchg_allowed = op_get_fast_chg_allow(chg);
 	if (pre_fastchg_allowed != fastchg_allowed) {
@@ -4826,13 +4832,14 @@ static void switch_fast_chg(struct smb_charger *chg)
 		is_allowed = is_fastchg_allowed(chg);
 	if (pre_is_allowed != is_allowed) {
 		pre_is_allowed = is_allowed;
-		pr_info("is_allowed = %d\n", fastchg_allowed);
+		pr_info("is_allowed = %d\n", is_allowed);
 	}
 		if (is_allowed) {
 			set_usb_switch(chg, true);
 			op_set_fast_chg_allow(chg, true);
 		}
 	}
+	mutex_unlock(&chg->sw_dash_lock);
 }
 
 static void op_re_kick_allowed_voltage(struct smb_charger  *chg)
@@ -6403,6 +6410,9 @@ int smblib_init(struct smb_charger *chg)
 	mutex_init(&chg->lock);
 	mutex_init(&chg->write_lock);
 	mutex_init(&chg->otg_oc_lock);
+#ifdef VENDOR_EDIT
+	mutex_init(&chg->sw_dash_lock);
+#endif
 	INIT_WORK(&chg->bms_update_work, bms_update_work);
 	INIT_WORK(&chg->rdstd_cc2_detach_work, rdstd_cc2_detach_work);
 	INIT_DELAYED_WORK(&chg->hvdcp_detect_work, smblib_hvdcp_detect_work);

@@ -256,6 +256,9 @@ struct smb_charger {
 	struct mutex		write_lock;
 	struct mutex		ps_change_lock;
 	struct mutex		otg_oc_lock;
+#ifdef VENDOR_EDIT
+	struct mutex		sw_dash_lock;
+#endif
 
 	/* power supplies */
 	struct power_supply		*batt_psy;
