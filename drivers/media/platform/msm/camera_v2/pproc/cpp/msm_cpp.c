@@ -2953,8 +2953,16 @@ static int msm_cpp_validate_input(unsigned int cmd, void *arg,
 		}
 
 		*ioctl_ptr = arg;
+		/* neiltsai, 20170411, for CR#2025367 iommu fix */
+		#ifdef VENDOR_EDIT
+		if (((*ioctl_ptr) == NULL) ||
+			((*ioctl_ptr)->ioctl_ptr == NULL) ||
+			((*ioctl_ptr)->len == 0)) {
+		#else
 		if ((*ioctl_ptr == NULL) ||
 			((*ioctl_ptr)->ioctl_ptr == NULL)) {
+		#endif
+		/* neiltsai, 20170411, for CR#2025367 iommu fix */
 			pr_err("Error invalid ioctl argument cmd %u", cmd);
 			return -EINVAL;
 		}
@@ -3002,6 +3010,9 @@ long msm_cpp_subdev_ioctl(struct v4l2_subdev *sd,
 	struct cpp_device *cpp_dev = NULL;
 	struct msm_camera_v4l2_ioctl_t *ioctl_ptr = NULL;
 	int rc = 0;
+	/* neiltsai, 20170411, for CR#2025367 iommu fix */
+	CPP_DBG("E\n");
+	/* neiltsai, 20170411, for CR#2025367 iommu fix */
 
 	if (sd == NULL) {
 		pr_err("sd %pK\n", sd);
@@ -3025,7 +3036,13 @@ long msm_cpp_subdev_ioctl(struct v4l2_subdev *sd,
 	}
 	mutex_lock(&cpp_dev->mutex);
 
+	/* neiltsai, 20170411, for CR#2025367 iommu fix */
+	#ifdef VENDOR_EDIT
+	CPP_DBG("cmd: 0x%x\n", cmd);
+	#else
 	CPP_DBG("E cmd: 0x%x\n", cmd);
+	#endif
+	/* neiltsai, 20170411, for CR#2025367 iommu fix */
 	switch (cmd) {
 	case VIDIOC_MSM_CPP_GET_HW_INFO: {
 		CPP_DBG("VIDIOC_MSM_CPP_GET_HW_INFO\n");
@@ -3496,20 +3513,40 @@ STREAM_BUFF_END:
 		}
 		break;
 	}
+	/* neiltsai, 20170411, for CR#2025367 iommu fix */
+	#ifndef VENDOR_EDIT
 	default:
 		pr_err_ratelimited("invalid value: cmd=0x%x\n", cmd);
 		break;
+	#endif
+	/* neiltsai, 20170411, for CR#2025367 iommu fix */
 	case VIDIOC_MSM_CPP_IOMMU_ATTACH: {
 		if (cpp_dev->iommu_state == CPP_IOMMU_STATE_DETACHED) {
 			struct msm_camera_smmu_attach_type cpp_attach_info;
 
+			/* neiltsai, 20170411, for CR#2025367 iommu fix */
+			#ifdef VENDOR_EDIT
+			if (ioctl_ptr->len !=
+				sizeof(struct msm_camera_smmu_attach_type)) {
+				rc = -EINVAL;
+				break;
+			}
+			#endif
+			/* neiltsai, 20170411, for CR#2025367 iommu fix */
 			memset(&cpp_attach_info, 0, sizeof(cpp_attach_info));
 			rc = msm_cpp_copy_from_ioctl_ptr(&cpp_attach_info,
 				ioctl_ptr);
 			if (rc < 0) {
 				pr_err("CPP_IOMMU_ATTACH copy from user fail");
+				/* neiltsai, 20170411, for CR#2025367 iommu fix */
+				#ifdef VENDOR_EDIT
+				rc = -EINVAL;
+				break;
+				#else
 				ERR_COPY_FROM_USER();
 				return -EINVAL;
+				#endif
+				/* neiltsai, 20170411, for CR#2025367 iommu fix */
 			}
 
 			cpp_dev->security_mode = cpp_attach_info.attach;
@@ -3522,7 +3559,13 @@ STREAM_BUFF_END:
 					CAM_SMMU_ATTACH);
 			}
 			if (rc < 0) {
+				/* neiltsai, 20170411, for CR#2025367 iommu fix */
+				#ifdef VENDOR_EDIT
+				pr_err("%s:%d iommu attach failed\n",
+				#else
 				pr_err("%s:%diommu_attach_device failed\n",
+				#endif
+				/* neiltsai, 20170411, for CR#2025367 iommu fix */
 					__func__, __LINE__);
 				rc = -EINVAL;
 				break;
@@ -3541,25 +3584,48 @@ STREAM_BUFF_END:
 
 			struct msm_camera_smmu_attach_type cpp_attach_info;
 
+			/* neiltsai, 20170411, for CR#2025367 iommu fix */
+			#ifdef VENDOR_EDIT
+			if (ioctl_ptr->len !=
+				sizeof(struct msm_camera_smmu_attach_type)) {
+				rc = -EINVAL;
+				break;
+			}
+			#endif
+			/* neiltsai, 20170411, for CR#2025367 iommu fix */
 			memset(&cpp_attach_info, 0, sizeof(cpp_attach_info));
 			rc = msm_cpp_copy_from_ioctl_ptr(&cpp_attach_info,
 				ioctl_ptr);
 			if (rc < 0) {
 				pr_err("CPP_IOMMU_DETTACH copy from user fail");
+				/* neiltsai, 20170411, for CR#2025367 iommu fix */
+				#ifdef VENDOR_EDIT
+				rc = -EINVAL;
+				break;
+				#else
 				ERR_COPY_FROM_USER();
 				return -EINVAL;
+				#endif
+				/* neiltsai, 20170411, for CR#2025367 iommu fix */
 			}
 
 			cpp_dev->security_mode = cpp_attach_info.attach;
 
-			if (cpp_dev->security_mode == SECURE_MODE)
+			if (cpp_dev->security_mode == SECURE_MODE) {
 				rc = cam_smmu_ops(cpp_dev->iommu_hdl,
 					CAM_SMMU_DETACH_SEC_CPP);
-			else
+			} else {
 				rc = cam_smmu_ops(cpp_dev->iommu_hdl,
 					CAM_SMMU_DETACH);
+			}
 			if (rc < 0) {
+				/* neiltsai, 20170411, for CR#2025367 iommu fix */
+				#ifdef VENDOR_EDIT
+				pr_err("%s:%d iommu detach failed\n", __func__,
+				#else
 				pr_err("%s:%diommu detach failed\n", __func__,
+				#endif
+				/* neiltsai, 20170411, for CR#2025367 iommu fix */
 					__LINE__);
 				rc = -EINVAL;
 				break;
@@ -3568,9 +3634,21 @@ STREAM_BUFF_END:
 		} else {
 			pr_err("%s:%d IOMMMU attach triggered in invalid state\n",
 				__func__, __LINE__);
+			/* neiltsai, 20170411, for CR#2025367 iommu fix */
+			#ifdef VENDOR_EDIT
+			rc = -EINVAL;
+			#endif
+			/* neiltsai, 20170411, for CR#2025367 iommu fix */
 		}
 		break;
 	}
+	/* neiltsai, 20170411, for CR#2025367 iommu fix */
+	#ifdef VENDOR_EDIT
+	default:
+           pr_err_ratelimited("invalid value: cmd=0x%x\n", cmd);
+           break;
+	#endif
+	/* neiltsai, 20170411, for CR#2025367 iommu fix */
 	}
 	mutex_unlock(&cpp_dev->mutex);
 	CPP_DBG("X\n");
