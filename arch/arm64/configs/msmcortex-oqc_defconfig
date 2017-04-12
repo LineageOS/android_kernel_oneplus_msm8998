@@ -765,3 +765,9 @@ CONFIG_MSM_DEBUG_LAR_UNLOCK=y
 #neiltsai, 20170406, for Enable EL2 tlb handler
 CONFIG_QCOM_TLB_EL2_HANDLER=y
 #neiltsai, 20170406, for Enable EL2 tlb handler
+
+#ifdef VENDOR_EDIT
+#collins add for virtual memory debug
+CONFIG_DEBUG_KERNEL=y
+CONFIG_DEBUG_VM=y
+#endif
