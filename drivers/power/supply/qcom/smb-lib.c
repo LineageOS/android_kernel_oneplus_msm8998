@@ -3698,8 +3698,12 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 		current_limit_ua = DEFAULT_CDP_MA*1000;
 	else if ((apsd_result->bit) == DCP_CHARGER_BIT)
 		current_limit_ua = DEFAULT_DCP_MA*1000;
-	else if ((apsd_result->bit) == FLOAT_CHARGER_BIT)
-		current_limit_ua = DEFAULT_SDP_MA*1000;
+	else if ((apsd_result->bit) == FLOAT_CHARGER_BIT) {
+		if (chg->usb_type_redet_done)
+			current_limit_ua = DEFAULT_DCP_MA*1000;
+		else
+			current_limit_ua = DEFAULT_SDP_MA*1000;
+	}
 	else if ((apsd_result->bit) == OCP_CHARGER_BIT)
 		current_limit_ua = DEFAULT_DCP_MA*1000;
 	vote(chg->usb_icl_votable,
@@ -3723,11 +3727,11 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 		if (!chg->usb_type_redet_done) {
 			schedule_delayed_work(&chg->re_det_work,
 				msecs_to_jiffies(TIME_1000MS));
-		}
-		if (chg->usb_type_redet_done)
+		} else {
 			schedule_delayed_work(
 			&chg->non_standard_charger_check_work,
 			msecs_to_jiffies(TIME_1000MS));
+		}
 	}
 
 	/* set allow read extern fg IIC */
@@ -5663,8 +5667,10 @@ static void check_non_standard_charger_work(struct work_struct *work)
 		rc = smblib_rerun_aicl(chg);
 		if (rc < 0)
 			smblib_err(chg, "Couldn't re-run AICL rc=%d\n", rc);
+		msleep(500);
 		aicl_result = op_get_aicl_result(chg);
 		chg->non_stand_chg_current = aicl_result;
+		chg->usb_psy_desc.type = POWER_SUPPLY_TYPE_USB_DCP;
 		op_usb_icl_set(chg, chg->non_stand_chg_current);
 		power_supply_changed(chg->batt_psy);
 		chg->is_power_changed = true;
