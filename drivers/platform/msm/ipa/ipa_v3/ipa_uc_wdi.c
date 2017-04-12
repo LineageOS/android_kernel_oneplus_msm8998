@@ -791,6 +791,7 @@ int ipa3_connect_wdi_pipe(struct ipa_wdi_in_params *in,
 	if (ep->valid) {
 		IPAERR("EP %d already allocated!!!\n", ipa_ep_idx);
 		/* goto fail; delete by xcb */
+		ipa3_disconnect_wdi_pipe(ipa_ep_idx);
 	}
 
 	memset(&ipa3_ctx->ep[ipa_ep_idx], 0, sizeof(struct ipa3_ep_context));
