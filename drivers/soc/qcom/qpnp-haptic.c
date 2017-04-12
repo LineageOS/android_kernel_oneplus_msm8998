@@ -410,6 +410,7 @@ static void qpnp_handle_sc_irq(struct work_struct *work)
 static int qpnp_hap_mod_enable(struct qpnp_hap *hap, int on)
 {
 	u8 val;
+	u8 data;
 	int rc, i;
 
 	val = hap->reg_en_ctl;
@@ -421,13 +422,13 @@ static int qpnp_hap_mod_enable(struct qpnp_hap *hap, int on)
 			unsigned long sleep_time =
 				QPNP_HAP_CYCLS * hap->wave_play_rate_us;
 
-			rc = qpnp_hap_read_reg(hap, &val,
+			rc = qpnp_hap_read_reg(hap, &data,
 				QPNP_HAP_STATUS(hap->base));
 
-			dev_dbg(&hap->pdev->dev, "HAP_STATUS=0x%x\n", val);
+			dev_dbg(&hap->pdev->dev, "HAP_STATUS=0x%x\n", data);
 
 			/* wait for QPNP_HAP_CYCLS cycles of play rate */
-			if (val & QPNP_HAP_STATUS_BUSY) {
+			if (data & QPNP_HAP_STATUS_BUSY) {
 				usleep_range(sleep_time, sleep_time + 1);
 				if (hap->play_mode == QPNP_HAP_DIRECT ||
 					hap->play_mode == QPNP_HAP_PWM)
