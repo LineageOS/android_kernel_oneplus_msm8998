@@ -337,8 +337,11 @@ static void unfreeze_cgroup(struct freezer *freezer)
 	struct task_struct *task;
 
 	css_task_iter_start(&freezer->css, &it);
-	while ((task = css_task_iter_next(&it)))
+	while ((task = css_task_iter_next(&it))){
+		printk("thaw_task pid:%d   comm %s:%s\n", task->pid, task->group_leader->comm, task->comm);
 		__thaw_task(task);
+		printk("pid %d status %d\n", task->pid, frozen(task));
+	}
 	css_task_iter_end(&it);
 }
 
