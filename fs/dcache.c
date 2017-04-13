@@ -968,7 +968,11 @@ static void shrink_dentry_list(struct list_head *list)
 		}
 
 		inode = dentry->d_inode;
+		#ifdef VENDOR_EDIT
+		if ((inode && unlikely(!spin_trylock(&inode->i_lock))) || (inode && (inode->i_state & I_CLEAR))) {
+		#else
 		if (inode && unlikely(!spin_trylock(&inode->i_lock))) {
+		#endif
 			d_shrink_add(dentry, list);
 			spin_unlock(&dentry->d_lock);
 			if (parent)
