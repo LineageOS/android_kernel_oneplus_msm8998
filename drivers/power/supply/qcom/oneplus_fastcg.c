@@ -505,8 +505,8 @@ static void oneplus_notify_pmic_check_charger_present(void)
 
 static void notify_check_usb_suspend(bool status,bool check_power_ok)
 {
-	if (notify_event && notify_event->check_usb_suspend)
-		notify_event->check_usb_suspend(status,check_power_ok);
+	if (notify_event && notify_event->op_contrl)
+		notify_event->op_contrl(status, check_power_ok);
 }
 
 static void update_charger_present_status(struct work_struct *work)

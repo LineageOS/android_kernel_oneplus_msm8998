@@ -4678,7 +4678,7 @@ int op_handle_switcher_power_ok(void)
 	return 0;
 }
 
-int check_usb_suspend(int enable,bool check_power_ok)
+int op_contrl(int enable, bool check_power_ok)
 {
 	pr_err("%s,en=%d\n",__func__,enable);
 	if(!g_chg)
@@ -4687,10 +4687,14 @@ int check_usb_suspend(int enable,bool check_power_ok)
 		if(check_power_ok)
 		op_handle_switcher_power_ok();
 		enable_irq(g_chg->irq_info[SWITCH_POWER_OK_IRQ].irq);
+		enable_irq(g_chg->irq_info[USBIN_SRC_CHANGE_IRQ].irq);
+		enable_irq(g_chg->irq_info[USBIN_UV_IRQ].irq);
 	}
 	else{
 		op_set_collapse_fet(g_chg,enable);
 		disable_irq(g_chg->irq_info[SWITCH_POWER_OK_IRQ].irq);
+		disable_irq(g_chg->irq_info[USBIN_SRC_CHANGE_IRQ].irq);
+		disable_irq(g_chg->irq_info[USBIN_UV_IRQ].irq);
 	}
 	return 0;
 }
@@ -6038,7 +6042,7 @@ bool get_prop_fastchg_status(struct smb_charger *chg)
 
 static struct notify_dash_event notify_unplug_event  = {
 	.notify_event					= update_dash_unplug_status,
-	.check_usb_suspend				= check_usb_suspend,
+	.op_contrl				        = op_contrl,
 	.notify_dash_charger_present	= set_dash_charger_present,
 };
 void op_pm8998_regmap_register(struct qpnp_pon *pon)
