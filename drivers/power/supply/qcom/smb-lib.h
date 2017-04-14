@@ -76,6 +76,7 @@ enum print_reason {
 #define SW_QC3_VOTER			"SW_QC3_VOTER"
 #define AICL_RERUN_VOTER		"AICL_RERUN_VOTER"
 #define LEGACY_UNKNOWN_VOTER		"LEGACY_UNKNOWN_VOTER"
+#define CC2_WA_VOTER			"CC2_WA_VOTER"
 
 #define VCONN_MAX_ATTEMPTS	3
 #define OTG_MAX_ATTEMPTS	3
@@ -84,13 +85,6 @@ enum smb_mode {
 	PARALLEL_MASTER = 0,
 	PARALLEL_SLAVE,
 	NUM_MODES,
-};
-
-enum cc2_sink_type {
-	CC2_SINK_NONE = 0,
-	CC2_SINK_STD,
-	CC2_SINK_MEDIUM_HIGH,
-	CC2_SINK_WA_DONE,
 };
 
 enum {
@@ -256,6 +250,7 @@ struct smb_charger {
 	struct mutex		write_lock;
 	struct mutex		ps_change_lock;
 	struct mutex		otg_oc_lock;
+	struct mutex            pd_hard_reset_lock;
 #ifdef VENDOR_EDIT
 	struct mutex		sw_dash_lock;
 #endif
@@ -296,6 +291,7 @@ struct smb_charger {
 	struct votable		*apsd_disable_votable;
 	struct votable		*hvdcp_hw_inov_dis_votable;
 	struct votable		*usb_irq_enable_votable;
+	struct votable          *typec_irq_disable_votable;
 
 	/* work */
 	struct work_struct	bms_update_work;
@@ -394,12 +390,13 @@ struct smb_charger {
 	int			vconn_attempts;
 	int			default_icl_ua;
 	int			otg_cl_ua;
+	bool			pd_hard_reset;
 	int			usb_present;
 	u8			typec_status[5];
-	bool		typec_legacy_valid;
+	bool			typec_legacy_valid;
 	/* workaround flag */
 	u32			wa_flags;
-	enum cc2_sink_type	cc2_sink_detach_flag;
+	bool                    cc2_sink_detach_flag;
 	int			boost_current_ua;
 
 	/* extcon for VBUS / ID notification to USB for uUSB */
