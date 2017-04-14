@@ -3636,7 +3636,7 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 1500000);
 		break;
 	case POWER_SUPPLY_TYPE_USB_DCP:
-		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 1800000);
+		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 1500000);
 		break;
 	case POWER_SUPPLY_TYPE_USB_HVDCP:
 	case POWER_SUPPLY_TYPE_USB_HVDCP_3:
@@ -3653,7 +3653,7 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 #ifdef VENDOR_EDIT
 #define DEFAULT_SDP_MA		500
 #define DEFAULT_CDP_MA		1500
-#define DEFAULT_DCP_MA		1800
+#define DEFAULT_DCP_MA		1500
 #endif
 
 #ifdef VENDOR_EDIT
@@ -5708,7 +5708,7 @@ static void check_non_standard_charger_work(struct work_struct *work)
 		aicl_result = op_get_aicl_result(chg);
 		chg->non_stand_chg_current = aicl_result;
 		chg->usb_psy_desc.type = POWER_SUPPLY_TYPE_USB_DCP;
-		op_usb_icl_set(chg, chg->non_stand_chg_current);
+		op_usb_icl_set(chg, DEFAULT_DCP_MA*1000);
 		power_supply_changed(chg->batt_psy);
 		chg->is_power_changed = true;
 		chg->non_std_chg_present = true;
