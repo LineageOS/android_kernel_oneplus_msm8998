@@ -1203,7 +1203,7 @@ static void receive_file_work(struct work_struct *data)
 	}
 
 #ifdef VENDOR_EDIT
-	if (count >= FILE_LENGTH) {
+	if (dev->xfer_file_length >= FILE_LENGTH) {
 		queue_delayed_work(cpu_freq_qos_queue, &cpu_freq_qos_work, msecs_to_jiffies(1000)*3);
 		//pm_qos_update_request(&little_cpu_mtp_freq, MIN_CPUFREQ);
 		//pm_qos_update_request(&big_cpu_mtp_freq, MIN_CPUFREQ);
