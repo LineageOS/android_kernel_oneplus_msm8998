@@ -467,7 +467,6 @@ struct msm_vfe_axi_stream {
 	 */
 	uint32_t vfe_mask;
 	uint32_t composite_irq[MSM_ISP_COMP_IRQ_MAX];
-	uint32_t lpm[VFE_AXI_SRC_MAX];
 };
 
 struct msm_vfe_axi_composite_info {
