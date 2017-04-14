@@ -668,6 +668,7 @@ static int smb2_usb_set_prop(struct power_supply *psy,
 	struct smb_charger *chg = &chip->chg;
 	int rc = 0;
 
+	/*when usb is plug out, some prop can't be set */
 	mutex_lock(&chg->lock);
 	if (!chg->usb_present) {
 		rc = -EINVAL;
