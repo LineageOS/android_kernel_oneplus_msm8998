@@ -2421,7 +2421,6 @@ int msm_isp_ab_ib_update_lpm_mode(struct vfe_device *vfe_dev, void *arg)
 	int i, rc = 0;
 	uint64_t total_bandwidth = 0;
 	int vfe_idx;
-	uint32_t intf;
 	unsigned long flags;
 	struct msm_vfe_axi_stream *stream_info;
 	struct msm_vfe_dual_lpm_mode *ab_ib_vote = NULL;
@@ -2437,11 +2436,7 @@ int msm_isp_ab_ib_update_lpm_mode(struct vfe_device *vfe_dev, void *arg)
 			stream_info =
 				msm_isp_get_stream_common_data(vfe_dev,
 					ab_ib_vote->stream_src[i]);
-			/* loop all stream on current session */
 			spin_lock_irqsave(&stream_info->lock, flags);
-			intf = SRC_TO_INTF(stream_info->stream_src);
-			stream_info->lpm[intf] =
-				ab_ib_vote->lpm_mode;
 			if (stream_info->state == ACTIVE) {
 				vfe_idx =
 					msm_isp_get_vfe_idx_for_stream(vfe_dev,
@@ -2463,9 +2458,6 @@ int msm_isp_ab_ib_update_lpm_mode(struct vfe_device *vfe_dev, void *arg)
 				msm_isp_get_stream_common_data(vfe_dev,
 					ab_ib_vote->stream_src[i]);
 			spin_lock_irqsave(&stream_info->lock, flags);
-			intf = SRC_TO_INTF(stream_info->stream_src);
-			stream_info->lpm[intf] =
-				ab_ib_vote->lpm_mode;
 			if (stream_info->state == PAUSED) {
 				vfe_idx =
 					msm_isp_get_vfe_idx_for_stream(vfe_dev,
@@ -2891,8 +2883,7 @@ static void __msm_isp_stop_axi_streams(struct vfe_device *vfe_dev,
 		 * those state transitions instead of directly forcing stream to
 		 * be INACTIVE
 		 */
-		intf = SRC_TO_INTF(stream_info->stream_src);
-		if ((!stream_info->lpm[intf])) {
+		if (stream_info->state != PAUSED) {
 			while (stream_info->state != ACTIVE)
 				__msm_isp_axi_stream_update(stream_info,
 						&timestamp);
@@ -2909,11 +2900,10 @@ static void __msm_isp_stop_axi_streams(struct vfe_device *vfe_dev,
 				vfe_dev->hw_info->vfe_ops.axi_ops.
 				clear_wm_irq_mask(vfe_dev, stream_info);
 		}
-		if (stream_info->state == ACTIVE &&
-			!stream_info->lpm[intf]) {
+		if (stream_info->state == ACTIVE) {
 			init_completion(&stream_info->inactive_comp);
 			stream_info->state = STOP_PENDING;
-		} else if (stream_info->lpm[intf]) {
+		} else if (stream_info->state == PAUSED) {
 			/* don't wait for reg update */
 			stream_info->state = STOP_PENDING;
 			msm_isp_axi_stream_enable_cfg(stream_info);
@@ -2945,6 +2935,7 @@ static void __msm_isp_stop_axi_streams(struct vfe_device *vfe_dev,
 		}
 		spin_unlock_irqrestore(&stream_info->lock, flags);
 	}
+
 	rc = msm_isp_axi_wait_for_streams(streams, num_streams, 0);
 	if (rc) {
 		pr_err("%s: wait for stream comp failed, retry...\n", __func__);
@@ -3027,7 +3018,6 @@ static int msm_isp_start_axi_stream(struct vfe_device *vfe_dev_ioctl,
 	int k;
 	struct vfe_device *vfe_dev;
 	struct msm_vfe_axi_shared_data *axi_data = &vfe_dev_ioctl->axi_data;
-	uint32_t intf;
 
 	if (stream_cfg_cmd->num_streams > MAX_NUM_STREAM)
 		return -EINVAL;
@@ -3091,24 +3081,16 @@ static int msm_isp_start_axi_stream(struct vfe_device *vfe_dev_ioctl,
 					cfg_wm_irq_mask(vfe_dev, stream_info);
 			}
 		}
-		 intf = SRC_TO_INTF(stream_info->stream_src);
-		if (!stream_info->lpm[intf]) {
-			init_completion(&stream_info->active_comp);
-			stream_info->state = START_PENDING;
-			msm_isp_update_intf_stream_cnt(stream_info, 1);
-		}
+
+		init_completion(&stream_info->active_comp);
+		stream_info->state = START_PENDING;
+		msm_isp_update_intf_stream_cnt(stream_info, 1);
 
 		ISP_DBG("%s, Stream 0x%x src_state %d on vfe %d\n", __func__,
 			stream_info->stream_src, src_state,
 			vfe_dev_ioctl->pdev->id);
 		if (src_state) {
 			src_mask |= (1 << SRC_TO_INTF(stream_info->stream_src));
-			if (stream_info->lpm[intf]) {
-				stream_info->state = START_PENDING;
-				msm_isp_update_intf_stream_cnt(stream_info, 1);
-				msm_isp_axi_stream_enable_cfg(stream_info);
-				stream_info->state = ACTIVE;
-			}
 		} else {
 			for (k = 0; k < stream_info->num_isp; k++) {
 				vfe_dev = stream_info->vfe_dev[k];
