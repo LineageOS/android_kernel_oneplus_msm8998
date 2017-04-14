@@ -2316,6 +2316,43 @@ static int tasha_put_anc_slot(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv, 2014-4-14, add for l21 power*/
+static int tasha_get_L21_Power(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+
+	return 0;
+}
+
+static int tasha_put_L21_Power(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	int ret = 0;
+
+	pr_err("%s value = %d\n",
+	__func__, (uint32_t)ucontrol->value.integer.value[0]);
+
+	if (l21_power == NULL)
+		return 0;
+
+	if (ucontrol->value.integer.value[0] == 1) {
+		regulator_set_voltage(l21_power, 2960000, INT_MAX);
+	    ret = regulator_enable(l21_power);
+		pr_err("%s enable l21 power\n", __func__);
+		if (ret)
+			pr_err("%s fail to enable l21 power\n", __func__);
+	} else {
+		ret = regulator_disable(l21_power);
+		pr_err("%s disable l21 power\n", __func__);
+		if (ret)
+			pr_err("%s fail to disable l21 power\n", __func__);
+	}
+
+	return 0;
+}
+#endif
+
 static int tasha_get_anc_func(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
@@ -8608,6 +8645,12 @@ static const struct snd_kcontrol_new tasha_snd_controls[] = {
 
 	SOC_SINGLE_EXT("ANC Slot", SND_SOC_NOPM, 0, 100, 0, tasha_get_anc_slot,
 		       tasha_put_anc_slot),
+
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv, 2014-4-14, add for l21 power*/
+	SOC_SINGLE_EXT("L21 Power", SND_SOC_NOPM, 0, 100, 0,
+				tasha_get_L21_Power, tasha_put_L21_Power),
+#endif
 	SOC_ENUM_EXT("ANC Function", tasha_anc_func_enum, tasha_get_anc_func,
 		     tasha_put_anc_func),
 
