@@ -3253,6 +3253,24 @@ irqreturn_t smblib_handle_usbin_uv(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+#ifdef VENDOR_EDIT
+static inline void op_dump_reg(struct smb_charger *chip, u16 addr)
+{
+	u8 reg;
+
+	smblib_read(chip, addr, &reg);
+	pr_err("%04X = %02X\n", addr, reg);
+}
+
+static void op_dump_regs(struct smb_charger *chip)
+{
+	u16 addr;
+
+	for (addr = 0x1000; addr <= 0x1700; addr++)
+		op_dump_reg(chip, addr);
+}
+#endif
+
 void smblib_usb_plugin(struct smb_charger *chg)
 {
 	int rc;
@@ -3260,6 +3278,7 @@ void smblib_usb_plugin(struct smb_charger *chg)
 	bool vbus_rising;
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161014 Add charging standard */
+	union power_supply_propval vbus_val;
 	bool last_vbus_present;
 	int is_usb_supend;
 	last_vbus_present = chg->vbus_present;
@@ -3353,6 +3372,20 @@ void smblib_usb_plugin(struct smb_charger *chg)
 		vbus_rising ? "attached" : "detached");
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
+#ifdef VENDOR_EDIT
+		if (!vbus_rising) {
+			rc = smblib_get_prop_usb_voltage_now(chg, &vbus_val);
+			if (rc < 0) {
+				pr_err("V  fail rc=%d\n", rc);
+			} else {
+				if (vbus_val.intval > 3000) {
+					pr_err("unplg,Vbus=%d",
+						vbus_val.intval);
+					op_dump_regs(chg);
+				}
+			}
+		}
+#endif
 	pr_err("IRQ: %s %s\n",
 		__func__, vbus_rising ? "attached" : "detached");
 #endif
