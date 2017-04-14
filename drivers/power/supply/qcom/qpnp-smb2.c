@@ -548,6 +548,7 @@ static enum power_supply_property smb2_usb_props[] = {
 	POWER_SUPPLY_PROP_TYPEC_POWER_ROLE,
 	POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION,
 #ifdef VENDOR_EDIT
+	POWER_SUPPLY_PROP_OTG_SWITCH,
 	POWER_SUPPLY_PROP_OEM_TYPEC_CC_ORIENTATION,
 #endif
 	POWER_SUPPLY_PROP_PD_ALLOWED,
@@ -606,6 +607,12 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 		else
 			rc = smblib_get_prop_typec_mode(chg, val);
 		break;
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20170414 Add otg switch */
+	case POWER_SUPPLY_PROP_OTG_SWITCH:
+		val->intval = chg->otg_switch;
+		break;
+#endif
 	case POWER_SUPPLY_PROP_TYPEC_POWER_ROLE:
 		if (chg->micro_usb_mode)
 			val->intval = POWER_SUPPLY_TYPEC_PR_NONE;
@@ -688,6 +695,12 @@ static int smb2_usb_set_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		rc = smblib_set_prop_usb_current_max(chg, val);
 		break;
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20170414 Add otg switch */
+	case POWER_SUPPLY_PROP_OTG_SWITCH:
+		rc = op_set_prop_otg_switch(chg, val);
+		break;
+#endif
 	case POWER_SUPPLY_PROP_TYPEC_POWER_ROLE:
 		rc = smblib_set_prop_typec_power_role(chg, val);
 		break;
@@ -723,6 +736,10 @@ static int smb2_usb_prop_is_writeable(struct power_supply *psy,
 {
 	switch (psp) {
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20170414 Add otg switch */
+	case POWER_SUPPLY_PROP_OTG_SWITCH:
+#endif
 	case POWER_SUPPLY_PROP_TYPEC_POWER_ROLE:
 	case POWER_SUPPLY_PROP_CTM_CURRENT_MAX:
 		return 1;
@@ -1543,9 +1560,22 @@ static int smb2_configure_typec(struct smb_charger *chg)
 		return rc;
 	}
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20170414 Add otg switch */
+	if (chg->otg_switch)
+		rc = smblib_masked_write(chg,
+					TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
+					TYPEC_POWER_ROLE_CMD_MASK, 0);
+	else
+		rc = smblib_masked_write(chg,
+					TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
+					TYPEC_POWER_ROLE_CMD_MASK,
+					UFP_EN_CMD_BIT);
+#else
 	/* configure power role for dual-role */
 	rc = smblib_masked_write(chg, TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
 				 TYPEC_POWER_ROLE_CMD_MASK, 0);
+#endif
 	if (rc < 0) {
 		dev_err(chg->dev,
 			"Couldn't configure power role for DRP rc=%d\n", rc);
