@@ -2105,8 +2105,9 @@ int security_load_policy(void *data, size_t len)
 	}
 
 	/* Clone the SID table. */
+         printk(KERN_ERR "SELinux: security_load_policy, sidtab_shutdown begin \n");
 	sidtab_shutdown(&sidtab);
-
+        printk(KERN_ERR "SELinux: security_load_policy, sidtab_shutdown end \n");
 	rc = sidtab_map(&sidtab, clone_sid, &newsidtab);
 	if (rc) {
 		printk(KERN_ERR "SELinux: sidtab_map failed: %d\n", rc);
@@ -2129,8 +2130,9 @@ int security_load_policy(void *data, size_t len)
 
 	/* Save the old policydb and SID table to free later. */
 	memcpy(oldpolicydb, &policydb, sizeof(policydb));
+        printk(KERN_ERR "SELinux: security_load_policy, sidtab_set begin \n");
 	sidtab_set(&oldsidtab, &sidtab);
-
+        printk(KERN_ERR "SELinux: security_load_policy,sidtab_set end \n");
 	/* Install the new policydb and SID table. */
 	write_lock_irq(&policy_rwlock);
 	memcpy(&policydb, newpolicydb, sizeof(policydb));
