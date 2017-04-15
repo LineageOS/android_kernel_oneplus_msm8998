@@ -78,6 +78,7 @@ long vfs_truncate(struct path *path, loff_t length)
 	long error;
 
 	inode = path->dentry->d_inode;
+	mnt = path->mnt;
 
 	/* For directories it's -EISDIR, for other non-regulars - -EINVAL */
 	if (S_ISDIR(inode->i_mode))
