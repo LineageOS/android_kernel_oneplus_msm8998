@@ -2900,7 +2900,7 @@ static void __msm_isp_stop_axi_streams(struct vfe_device *vfe_dev,
 			stream_info->state != PAUSED) {
 			while (stream_info->state != ACTIVE)
 				__msm_isp_axi_stream_update(stream_info,
-						&timestamp);
+					&timestamp);
 		}
 		msm_isp_cfg_stream_scratch(stream_info, VFE_PING_FLAG);
 		msm_isp_cfg_stream_scratch(stream_info, VFE_PONG_FLAG);

@@ -1521,15 +1521,7 @@ void msm_vfe47_configure_hvx(struct vfe_device *vfe_dev,
 		pr_err("%s: no stream_clk\n", __func__);
 		return;
 	}
-	rc = msm_camera_clk_enable(&vfe_dev->pdev->dev, vfe_dev->hvx_clk_info,
-			vfe_dev->hvx_clk, vfe_dev->num_hvx_clk, is_stream_on);
-	if (rc) {
-		pr_err("%s: stream_clk enable failed, enable: %u\n",
-			__func__,
-			is_stream_on);
-		return;
-	}
-	if (is_stream_on == 1) {
+	if (is_stream_on) {
 		/* Enable HVX */
 		if (!vfe_dev->hvx_clk_state) {
 			rc = msm_camera_clk_enable(&vfe_dev->pdev->dev,
@@ -2632,7 +2624,6 @@ int msm_vfe47_set_clk_rate(struct vfe_device *vfe_dev, long *rate)
 		}
 	}
 	/*set vfe clock*/
-
 	rc = msm_camera_clk_set_rate(&vfe_dev->pdev->dev,
 				vfe_dev->vfe_clk[clk_idx], *rate);
 	if (rc < 0)
@@ -2654,8 +2645,7 @@ int msm_vfe47_set_clk_rate(struct vfe_device *vfe_dev, long *rate)
 				__func__, ret);
 			return ret;
 		}
-	 }
-
+	}
 	if (vfe_dev->hw_info->vfe_ops.core_ops.ahb_clk_cfg)
 		vfe_dev->hw_info->vfe_ops.core_ops.ahb_clk_cfg(vfe_dev, NULL);
 	return 0;
