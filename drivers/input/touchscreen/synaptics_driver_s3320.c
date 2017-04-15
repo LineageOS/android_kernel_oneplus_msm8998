@@ -2355,10 +2355,13 @@ TEST_WITH_CBC_s3508:
 					left_ramdata = baseline_data;
 				else if (x == (TX_NUM-1) && y == (RX_NUM-2))
 					right_ramdata = baseline_data;
-				if(((baseline_data+360) < *(baseline_data_test+count*2)) || ((baseline_data-60) > *(baseline_data_test+count*2+1))){
+				if(((baseline_data+60) < *(baseline_data_test+count*2)) || ((baseline_data-60) > *(baseline_data_test+count*2+1))){
 					if((x == (TX_NUM-1) && (y != RX_NUM-1 || y != RX_NUM-2))||\
 						(x != (TX_NUM-1) && (y == RX_NUM-1 || y == RX_NUM-2)))//the last tx and rx last two line for touchkey,others no need take care
+					{
+						count++;
 						continue;
+					}
 					TPD_ERR("touchpanel failed,RX_NUM:%d,TX_NUM:%d,baseline_data is %d,TPK_array_limit[%d*2]=%d,TPK_array_limit[%d*2+1]=%d\n ",y,x,baseline_data,count,*(baseline_data_test+count*2),count,*(baseline_data_test+count*2+1));
 					if((baseline_data <= 0) && (first_check == 0)){
 						first_check = 1;
