@@ -58,6 +58,8 @@ enum pm_qos_flags_status {
 #define PM_QOS_CPUFREQ_MIN_DEFAULT_VALUE	MIN_CPUFREQ
 #define PM_QOS_DEVFREQ_MAX_DEFAULT_VALUE	MAX_CPUFREQ
 #define PM_QOS_DEVFREQ_MIN_DEFAULT_VALUE	MIN_CPUFREQ
+
+extern void msm_cpuidle_set_sleep_disable(bool disable);
 #endif
 
 #define PM_QOS_FLAG_NO_POWER_OFF	(1 << 0)
