@@ -699,6 +699,9 @@ CONFIG_SDCARD_FS=y
 # CONFIG_DEBUG_RODATA is not set
 # CONFIG_DEBUG_ALIGN_RODATA is not set
 #end
+#neiltsai, 20170415, add for JTAG debugging
+CONFIG_MSM_DEBUG_LAR_UNLOCK=y
+#neiltsai, 20170415, add for JTAG debugging
 
 #ifdef VENDOR_EDIT
 # waynechang,2017/3/15, add CONFIG_INPUT_KEYCHORD to enable keychord function for systrace service
