@@ -336,6 +336,7 @@ struct smb_charger {
 	int				non_stand_chg_count;
 	int				redet_count;
 
+	bool				otg_switch;
 	bool				use_fake_chgvol;
 	bool				use_fake_temp;
 	bool				use_fake_protect_sts;
@@ -503,14 +504,16 @@ void op_charge_info_init(struct smb_charger *chg);
 int update_dash_unplug_status(void);
 int get_prop_batt_status(struct smb_charger *chg);
 int get_prop_chg_protect_status(struct smb_charger *chg);
+int op_set_prop_otg_switch(struct smb_charger *chg,
+				const union power_supply_propval *val);
 int check_allow_switch_dash(struct smb_charger *chg,
 				const union power_supply_propval *val);
 int smblib_set_prop_chg_voltage(struct smb_charger *chg,
-				  const union power_supply_propval *val);
+				const union power_supply_propval *val);
 int smblib_set_prop_batt_temp(struct smb_charger *chg,
-				  const union power_supply_propval *val);
+				const union power_supply_propval *val);
 int smblib_set_prop_chg_protect_status(struct smb_charger *chg,
-				  const union power_supply_propval *val);
+				const union power_supply_propval *val);
 bool op_get_fastchg_ing(struct smb_charger *chg);
 bool get_prop_fastchg_status(struct smb_charger *chg);
 int op_usb_icl_set(struct smb_charger *chg, int icl_ua);

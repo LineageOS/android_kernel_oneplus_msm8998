@@ -1880,6 +1880,37 @@ int smblib_set_prop_input_suspend(struct smb_charger *chg,
 /* david.liu@bsp, 20161014 Add charging standard */
 static int op_check_battery_temp(struct smb_charger *chg);
 
+int op_set_prop_otg_switch(struct smb_charger *chg,
+				  const union power_supply_propval *val)
+{
+	int rc = 0;
+	u8 power_role;
+	bool pre_otg_switch;
+
+	pre_otg_switch = chg->otg_switch;
+	chg->otg_switch = val->intval;
+
+	if (chg->otg_switch == pre_otg_switch)
+		return rc;
+
+	pr_info("set otg_switch=%d\n", chg->otg_switch);
+	if (chg->otg_switch)
+		power_role = 0;
+	else
+		power_role = UFP_EN_CMD_BIT;
+
+	rc = smblib_masked_write(chg,
+				TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
+				TYPEC_POWER_ROLE_CMD_MASK, power_role);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't write 0x%02x to 0x1368 rc=%d\n",
+			power_role, rc);
+		return rc;
+	}
+
+	return rc;
+}
+
 int smblib_set_prop_chg_voltage(struct smb_charger *chg,
 				  const union power_supply_propval *val)
 {
@@ -2580,6 +2611,12 @@ int smblib_set_prop_typec_power_role(struct smb_charger *chg,
 		smblib_err(chg, "power role %d not supported\n", val->intval);
 		return -EINVAL;
 	}
+
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20170414 Add otg switch */
+	if (!chg->otg_switch)
+		power_role = UFP_EN_CMD_BIT;
+#endif
 
 	rc = smblib_masked_write(chg, TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
 				 TYPEC_POWER_ROLE_CMD_MASK, power_role);
