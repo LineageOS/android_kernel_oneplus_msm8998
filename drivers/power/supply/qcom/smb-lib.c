@@ -4986,6 +4986,9 @@ static void op_check_allow_switch_dash_work(struct work_struct *work)
 
 	if (!is_usb_present(chg))
 		return;
+	if (chg->usb_enum_status)
+		return;
+
 	apsd_result = smblib_get_apsd_result(chg);
 	if (((apsd_result->bit != SDP_CHARGER_BIT
 		&& apsd_result->bit != CDP_CHARGER_BIT
@@ -5725,6 +5728,41 @@ void checkout_term_current(struct smb_charger *chg, int batt_temp)
 		op_charging_en(chg, false);
 	}
 }
+
+#ifdef VENDOR_EDIT
+/* xianglin add for usb enum at first bootup */
+static int usb_enum_check(const char *val, struct kernel_param *kp)
+{
+	const struct apsd_result *apsd_result;
+	int usb_sw_reset = 0;
+	struct smb_charger *chg = g_chg;
+
+	/*if enum done, return */
+	if (chg->usb_enum_status)
+		return 0;
+
+	usb_sw_reset = simple_strtoul(val, NULL, 10);
+	if (!usb_sw_reset)
+		return 0;
+
+	if (!is_usb_present(chg))
+		return 0;
+	/* if not SDP, return */
+	apsd_result = smblib_get_apsd_result(chg);
+	if (apsd_result->bit != SDP_CHARGER_BIT)
+		return 0;
+
+	pr_info("usb don't enum for longtime in boot\n");
+	op_handle_usb_removal(chg);
+	chg->non_stand_chg_count = 0;
+	schedule_delayed_work(
+		&chg->non_standard_charger_check_work,
+		msecs_to_jiffies(TIME_1000MS));
+	return 0;
+}
+module_param_call(sys_boot_complete, usb_enum_check, NULL, NULL, 0644);
+#endif
+
 static void check_non_standard_charger_work(struct work_struct *work)
 {
 	struct delayed_work *dwork = to_delayed_work(work);

@@ -41,7 +41,7 @@ enum print_reason {
 #define BATT_TYPE_FCC_VOTER "BATT_TYPE_FCC_VOTER"
 #define PSY_ICL_VOTER		"PSY_ICL_VOTER"
 #define TEMP_REGION_MAX               9
-#define NON_STANDARD_CHARGER_CHECK_S 90
+#define NON_STANDARD_CHARGER_CHECK_S 60
 #define TIME_1000MS 1000
 #define REDET_COUTNT 5
 #endif
