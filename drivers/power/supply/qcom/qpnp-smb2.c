@@ -677,7 +677,12 @@ static int smb2_usb_set_prop(struct power_supply *psy,
 
 	/*when usb is plug out, some prop can't be set */
 	mutex_lock(&chg->lock);
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 20170417 Fix otg switch */
+	if (!chg->usb_present && psp != POWER_SUPPLY_PROP_OTG_SWITCH) {
+#else
 	if (!chg->usb_present) {
+#endif
 		rc = -EINVAL;
 		goto unlock;
 	}
