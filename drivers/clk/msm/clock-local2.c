@@ -539,7 +539,7 @@ static struct clk *_rcg_clk_get_parent(struct rcg_clk *rcg, bool has_mnd,
 		 */
 		if (rcg->non_local_children) {
 			rcg->set_rate(rcg, &cxo_f);
-			WARN(!!strcmp(rcg->c.dbg_name,"ahb_clk_src"), "don't recognize rcg frequency for %s\n",
+			WARN(1, "don't recognize rcg frequency for %s\n",
 				rcg->c.dbg_name);
 		}
 		return NULL;
