@@ -337,6 +337,7 @@ struct qpnp_hap {
 	bool				misc_trim_error_rc19p2_clk_reg_present;
 #ifdef VENDOR_EDIT /*wulaibin 2016-12-13 add for show vibrator resonant frequency*/
 	int                 resonant_frequency;
+	int                 enable_time;
 #endif
 };
 
@@ -749,6 +750,7 @@ static int qpnp_hap_sc_deb_config(struct qpnp_hap *hap)
 		temp = fls(hap->sc_deb_cycles) - 1;
 		reg |= temp - QPNP_HAP_SC_DEB_SUB;
 	}
+
 	rc = qpnp_hap_write_reg(hap, &reg, QPNP_HAP_SC_DEB_REG(hap->base));
 	if (rc)
 		return rc;
@@ -1688,9 +1690,7 @@ static void qpnp_hap_td_enable(struct timed_output_dev *dev, int value)
 		//if value < 11ms,use overdrive
 		qpnp_hap_wf_samp_store_all(dev, (value<11?1:0));
 		hap->state = 1;
-		hrtimer_start(&hap->hap_timer,
-			      ktime_set(value / 1000, (value % 1000) * 1000000),
-			      HRTIMER_MODE_REL);
+		hap->enable_time = value;
 	}
 	#ifndef VENDOR_EDIT
 	mutex_unlock(&hap->lock);
@@ -1773,6 +1773,12 @@ static void qpnp_hap_worker(struct work_struct *work)
 					 work);
 	u8 val = 0x00;
 	int rc, reg_en = 0;
+
+	if (hap->state) {
+		hrtimer_start(&hap->hap_timer,
+		    ktime_set(hap->enable_time / 1000,
+			(hap->enable_time % 1000) * 1000000), HRTIMER_MODE_REL);
+	}
 
 	if (hap->vcc_pon) {
 		reg_en = regulator_enable(hap->vcc_pon);
