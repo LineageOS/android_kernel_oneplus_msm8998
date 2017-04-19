@@ -3997,9 +3997,15 @@ static void smblib_handle_typec_removal(struct smb_charger *chg)
 		smblib_err(chg, "Couldn't set USBIN_ADAPTER_ALLOW_5V_OR_9V_TO_12V rc=%d\n",
 				rc);
 	/* enable DRP */
+#ifdef VENDOR_EDIT
+	rc = smblib_masked_write(chg,
+		TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
+		TYPEC_POWER_ROLE_CMD_MASK, chg->otg_switch? 0 : UFP_EN_CMD_BIT);
+#else
 	rc = smblib_masked_write(chg,
 		TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
 		TYPEC_POWER_ROLE_CMD_MASK, 0);
+#endif
 	if (rc < 0)
 		smblib_err(chg, "Couldn't enable DRP rc=%d\n", rc);
 	 /* HW controlled CC_OUT */
