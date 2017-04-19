@@ -2946,6 +2946,41 @@ static void __mdss_mdp_kickoff(struct mdss_mdp_ctl *ctl,
 	}
 }
 
+int mdss_mdp_cmd_wait4_vsync(struct mdss_mdp_ctl *ctl)
+{
+	int rc = 0;
+	struct mdss_mdp_cmd_ctx *ctx = ctl->intf_ctx[MASTER_CTX];
+
+	if (!ctx) {
+		pr_err("invalid context to wait for vsync\n");
+		return rc;
+	}
+
+	atomic_inc(&ctx->rdptr_cnt);
+
+	/* enable clks and rd_ptr interrupt */
+	mdss_mdp_setup_vsync(ctx, true);
+
+	/* wait for read pointer */
+	MDSS_XLOG(atomic_read(&ctx->rdptr_cnt));
+	pr_debug("%s: wait for vsync cnt:%d\n",
+		__func__, atomic_read(&ctx->rdptr_cnt));
+
+	rc = mdss_mdp_cmd_wait4readptr(ctx);
+
+	/* wait for 1ms to make sure we are out from trigger window */
+	usleep_range(1000, 1010);
+
+	/* disable rd_ptr interrupt */
+	mdss_mdp_setup_vsync(ctx, false);
+
+	MDSS_XLOG(ctl->num);
+	pr_debug("%s: out from wait for rd_ptr ctl:%d\n", __func__, ctl->num);
+
+	return rc;
+}
+
+
 /*
  * There are 3 partial update possibilities
  * left only ==> enable left pingpong_done
@@ -3316,8 +3351,18 @@ int mdss_mdp_cmd_stop(struct mdss_mdp_ctl *ctl, int panel_power_state)
 		 * mode.
 		 */
 		send_panel_events = true;
-		if (mdss_panel_is_power_on_ulp(panel_power_state))
+		if (mdss_panel_is_power_on_ulp(panel_power_state)) {
 			turn_off_clocks = true;
+		} else if (atomic_read(&ctx->koff_cnt)) {
+			/*
+			 * Transition from interactive to low power
+			 * Wait for kickoffs to finish
+			 */
+			MDSS_XLOG(ctl->num, atomic_read(&ctx->koff_cnt));
+			mdss_mdp_cmd_wait4pingpong(ctl, NULL);
+			if (sctl)
+				mdss_mdp_cmd_wait4pingpong(sctl, NULL);
+		}
 	} else {
 		/* Transitions between low power and ultra low power */
 		if (mdss_panel_is_power_on_ulp(panel_power_state)) {
@@ -3422,6 +3467,7 @@ panel_events:
 	ctl->ops.add_vsync_handler = NULL;
 	ctl->ops.remove_vsync_handler = NULL;
 	ctl->ops.reconfigure = NULL;
+	ctl->ops.wait_for_vsync_fnc = NULL;
 
 end:
 	if (!IS_ERR_VALUE(ret)) {
@@ -3830,6 +3876,7 @@ int mdss_mdp_cmd_start(struct mdss_mdp_ctl *ctl)
 	ctl->ops.pre_programming = mdss_mdp_cmd_pre_programming;
 	ctl->ops.update_lineptr = mdss_mdp_cmd_update_lineptr;
 	ctl->ops.panel_disable_cfg = mdss_mdp_cmd_panel_disable_cfg;
+	ctl->ops.wait_for_vsync_fnc = mdss_mdp_cmd_wait4_vsync;
 	pr_debug("%s:-\n", __func__);
 
 	return 0;
