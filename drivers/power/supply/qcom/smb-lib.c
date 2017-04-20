@@ -76,6 +76,8 @@ static temp_region_type
 static int get_prop_fg_capacity(struct smb_charger *chg);
 static int get_prop_fg_current_now(struct smb_charger *chg);
 static int get_prop_fg_voltage_now(struct smb_charger *chg);
+static void op_check_charger_collapse(struct smb_charger *chg);
+static int op_set_collapse_fet(struct smb_charger *chg, bool on);
 #endif
 
 #define smblib_err(chg, fmt, ...)		\
@@ -3403,6 +3405,12 @@ void smblib_usb_plugin(struct smb_charger *chg)
 		}
 		if (chg->micro_usb_mode)
 			chg->usb_present = 1;
+#ifdef VENDOR_EDIT
+		if (chg->charger_collpse) {
+			op_set_collapse_fet(chg, 0);
+			chg->charger_collpse = false;
+		}
+#endif
 
 	} else {
 		if (chg->wa_flags & BOOST_BACK_WA)
@@ -4651,7 +4659,7 @@ static void smblib_icl_change_work(struct work_struct *work)
 
 	smblib_dbg(chg, PR_INTERRUPT, "icl_settled=%d\n", settled_ua);
 }
-int op_set_collapse_fet(struct smb_charger *chg, bool on)
+static int op_set_collapse_fet(struct smb_charger *chg, bool on)
 {
 	int rc = 0;
 	u8 stat;
@@ -4692,10 +4700,13 @@ int op_set_collapse_fet(struct smb_charger *chg, bool on)
 			USBIN_CONT_AICL_THRESHOLD_CFG_REG, stat);
 
 	rc = smblib_masked_write(chg, USBIN_AICL_OPTIONS_CFG_REG,
-						USBIN_HV_COLLAPSE_RESPONSE_BIT
-						| USBIN_LV_COLLAPSE_RESPONSE_BIT,
-						on ? 0 : USBIN_HV_COLLAPSE_RESPONSE_BIT
-						| USBIN_LV_COLLAPSE_RESPONSE_BIT);
+					SUSPEND_ON_COLLAPSE_USBIN_BIT
+					| USBIN_HV_COLLAPSE_RESPONSE_BIT
+					| USBIN_LV_COLLAPSE_RESPONSE_BIT
+					| USBIN_AICL_RERUN_EN_BIT,
+					on ? 0 : SUSPEND_ON_COLLAPSE_USBIN_BIT
+					| USBIN_HV_COLLAPSE_RESPONSE_BIT
+					| USBIN_LV_COLLAPSE_RESPONSE_BIT);
 	if (rc < 0) {
 		smblib_err(chg,
 			"Couldn't write %s to 0x%x rc=%d\n",
@@ -5636,6 +5647,40 @@ static void op_check_battery_uovp(struct smb_charger *chg)
 
 	return;
 }
+static void op_check_charger_collapse(struct smb_charger *chg)
+{
+	int rc, is_usb_supend;
+	u8 stat;
+
+	if (!chg->vbus_present)
+		return;
+	if (chg->dash_present)
+		return;
+	rc = smblib_read(chg, BATTERY_CHARGER_STATUS_1_REG, &stat);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't read POWER_PATH_STATUS rc=%d\n",
+			rc);
+	}
+	smblib_get_usb_suspend(chg, &is_usb_supend);
+	pr_debug("stat=0x%x\n", stat);
+	stat = !is_usb_supend &&
+			(CC_SOFT_TERMINATE_BIT & stat);
+	if (stat) {
+		rc = smblib_masked_write(chg, USBIN_AICL_OPTIONS_CFG_REG,
+		SUSPEND_ON_COLLAPSE_USBIN_BIT
+		|USBIN_AICL_START_AT_MAX_BIT
+		| USBIN_AICL_ADC_EN_BIT
+		|USBIN_AICL_RERUN_EN_BIT, USBIN_AICL_RERUN_EN_BIT);
+		if (rc < 0)
+			dev_err(chg->dev,
+			"Couldn't configure AICL rc=%d\n", rc);
+	smblib_rerun_aicl(chg);
+	chg->charger_collpse = true;
+	schedule_delayed_work(&chg->op_re_set_work,
+				msecs_to_jiffies(TIME_1000MS));
+	smblib_err(chg, "op_check_charger_collapse done\n");
+	}
+}
 
 static void op_check_charger_uovp(struct smb_charger *chg, int vchg_mv)
 {
@@ -5843,6 +5888,38 @@ static void smbchg_re_det_work(struct work_struct *work)
 				msecs_to_jiffies(TIME_1000MS));
 	}
 }
+static void op_recovery_set_work(struct work_struct *work)
+{
+	struct smb_charger *chg = container_of(work,
+			struct smb_charger,
+			op_re_set_work.work);
+	int rc;
+
+	pr_debug("chg->reset_count=%d\n", chg->reset_count);
+	if (!chg->charger_collpse) {
+		chg->reset_count = 0;
+		return;
+	}
+	if (!chg->vbus_present) {
+		chg->reset_count = 0;
+		return;
+	}
+
+	if (chg->reset_count >= 90) {
+
+		pr_err("op_set_collapse_fet\n");
+		rc = smblib_write(chg, USBIN_AICL_OPTIONS_CFG_REG, 0xc7);
+		if (rc < 0)
+			smblib_err(chg,
+			"Couldn't enable OTG regulator rc=%d\n", rc);
+		chg->charger_collpse = false;
+		chg->reset_count = 0;
+	} else {
+		chg->reset_count++;
+		schedule_delayed_work(&chg->op_re_set_work,
+				msecs_to_jiffies(TIME_1000MS));
+	}
+}
 
 static void op_heartbeat_work(struct work_struct *work)
 {
@@ -5893,6 +5970,8 @@ static void op_heartbeat_work(struct work_struct *work)
 
 	op_check_charger_uovp(chg, vbus_val.intval);
 	op_check_battery_uovp(chg);
+	if (vbus_val.intval > 4500)
+		op_check_charger_collapse(chg);
 
 	vbat_mv = get_prop_batt_voltage_now(chg) / 1000;
 	temp_region = op_battery_temp_region_get(chg);
@@ -6577,6 +6656,7 @@ int smblib_init(struct smb_charger *chg)
 	INIT_DELAYED_WORK(&chg->non_standard_charger_check_work,
 		check_non_standard_charger_work);
 	INIT_DELAYED_WORK(&chg->re_det_work, smbchg_re_det_work);
+	INIT_DELAYED_WORK(&chg->op_re_set_work, op_recovery_set_work);
 	schedule_delayed_work(&chg->heartbeat_work,
 			msecs_to_jiffies(HEARTBEAT_INTERVAL_MS));
 	notify_dash_unplug_register(&notify_unplug_event);

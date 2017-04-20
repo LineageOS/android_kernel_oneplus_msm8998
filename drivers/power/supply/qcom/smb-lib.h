@@ -307,6 +307,7 @@ struct smb_charger {
 	struct delayed_work non_standard_charger_check_work;
 	struct delayed_work heartbeat_work;
 	struct delayed_work re_det_work;
+	struct delayed_work op_re_set_work;
 	struct wake_lock	chg_wake_lock;
 #endif
 	struct delayed_work	clear_hdc_work;
@@ -335,6 +336,7 @@ struct smb_charger {
 	int				non_stand_chg_current;
 	int				non_stand_chg_count;
 	int				redet_count;
+	int				reset_count;
 
 	bool				otg_switch;
 	bool				use_fake_chgvol;
@@ -343,6 +345,7 @@ struct smb_charger {
 	bool				vbus_present;
 	bool				hvdcp_present;
 	bool				dash_present;
+	bool				charger_collpse;
 	bool				usb_enum_status;
 	bool				non_std_chg_present;
 	bool				usb_type_redet_done;
