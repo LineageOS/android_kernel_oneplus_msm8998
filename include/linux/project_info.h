@@ -23,6 +23,7 @@ struct project_info{
        uint32  ddr_reserve_info;
        uint32  platform_id;
        uint32  ftm_uart_boot_mode;
+       uint32  feature_id;
 };
 
 struct component_info{
