@@ -703,7 +703,6 @@ struct q6v5_data *pil_q6v5_init(struct platform_device *pdev)
 		drv->qdss_clk = devm_clk_get(&pdev->dev, "qdss_clk");
 		if (IS_ERR(drv->qdss_clk))
 			return ERR_CAST(drv->qdss_clk);
-		clk_prepare_enable(drv->qdss_clk);
 	} else {
 		drv->qdss_clk = NULL;
 	}
