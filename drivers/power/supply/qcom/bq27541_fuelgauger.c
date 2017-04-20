@@ -250,6 +250,7 @@ struct bq27541_device_info {
 	int device_type;
 	struct cmd_address cmd_addr;
 	bool modify_soc_smooth;
+	bool already_modify_smooth;
 #endif
 };
 
@@ -1701,6 +1702,7 @@ write_parameter:
 		usleep_range(1000, 1000);
 		seal();
 	}
+	di->already_modify_smooth = true;
 	pr_err("%s end\n", __func__);
 }
 
@@ -1903,7 +1905,8 @@ static void bq27541_shutdown(struct i2c_client *client)
 {
 	struct bq27541_device_info *di = i2c_get_clientdata(client);
 	if (bq27541_di) {
-		bq27411_modify_soc_smooth_parameter(bq27541_di, false);
+		if (di->already_modify_smooth)
+			bq27411_modify_soc_smooth_parameter(bq27541_di, false);
 	}
 
 	if (di->soc_pre != DEFAULT_INVALID_SOC_PRE)
