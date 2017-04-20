@@ -445,7 +445,6 @@ static int qpnp_hap_mod_enable(struct qpnp_hap *hap, int on)
 		val &= ~QPNP_HAP_EN;
 	}
 
-	pr_err("bean set mod enable val =0x%x\n", val);
 	rc = qpnp_hap_write_reg(hap, &val,
 			QPNP_HAP_EN_CTL_REG(hap->base));
 	if (rc < 0)
@@ -1671,7 +1670,6 @@ static void qpnp_hap_td_enable(struct timed_output_dev *dev, int value)
 
 	mutex_lock(&hap->lock);
 
-	pr_err("bean set td enable value = %d\n", value);
 	if (hap->act_type == QPNP_HAP_LRA &&
 				hap->correct_lra_drive_freq)
 		hrtimer_cancel(&hap->auto_res_err_poll_timer);
