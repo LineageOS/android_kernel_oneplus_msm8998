@@ -1887,7 +1887,9 @@ int op_set_prop_otg_switch(struct smb_charger *chg,
 {
 	int rc = 0;
 	u8 power_role;
+	u8 ctrl = 0;
 	bool pre_otg_switch;
+	int i = 0;
 
 	pre_otg_switch = chg->otg_switch;
 	chg->otg_switch = val->intval;
@@ -1901,14 +1903,30 @@ int op_set_prop_otg_switch(struct smb_charger *chg,
 	else
 		power_role = UFP_EN_CMD_BIT;
 
-	rc = smblib_masked_write(chg,
-				TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
-				TYPEC_POWER_ROLE_CMD_MASK, power_role);
-	if (rc < 0) {
-		smblib_err(chg, "Couldn't write 0x%02x to 0x1368 rc=%d\n",
-			power_role, rc);
-		return rc;
+	for (i = 0; i < 10; i++) {
+		rc = smblib_masked_write(chg,
+					TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
+					TYPEC_POWER_ROLE_CMD_MASK, power_role);
+		if (rc < 0) {
+			smblib_err(chg, "Couldn't write 0x%02x to 0x1368 rc=%d\n",
+				power_role, rc);
+			return rc;
+		}
+		usleep_range(30000, 31000);
+		ctrl = 0;
+		rc = smblib_read(chg, TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG, &ctrl);
+		if (rc < 0) {
+			smblib_err(chg, "Couldn't read err=%d\n", rc);
+			return rc;
+		}
+		if ((power_role == 0) && (ctrl == 0x30))
+			break;
+		if ((power_role == UFP_EN_CMD_BIT) && (ctrl == 0x34))
+			break;
 	}
+	pr_info("retry time = %d,ctrl = %d\n", i,ctrl);
+	if (i == 10)
+		pr_err("retry time over\n");
 
 	return rc;
 }
