@@ -705,9 +705,7 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 		.spec_rev		= USBPD_REV_20,
 	};
 	union power_supply_propval val = {0};
-#ifndef VENDOR_EDIT
 	unsigned long flags;
-#endif
 	int ret;
 
 	usbpd_dbg(&pd->dev, "%s -> %s\n",
@@ -735,10 +733,7 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 			 */
 		}
 
-#ifndef VENDOR_EDIT
-/* david.liu@bsp, 20170308 block notification */
 		dual_role_instance_changed(pd->dual_role);
-#endif
 
 		/* Set CC back to DRP toggle for the next disconnect */
 		val.intval = POWER_SUPPLY_TYPEC_PR_DUAL;
@@ -854,10 +849,7 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 
 		kobject_uevent(&pd->dev.kobj, KOBJ_CHANGE);
 		complete(&pd->is_ready);
-#ifndef VENDOR_EDIT
-/* david.liu@bsp, 20170308 block notification */
 		dual_role_instance_changed(pd->dual_role);
-#endif
 		break;
 
 	case PE_SRC_HARD_RESET:
@@ -894,10 +886,7 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 			}
 		}
 
-#ifndef VENDOR_EDIT
-/* david.liu@bsp, 20170308 block notification */
 		dual_role_instance_changed(pd->dual_role);
-#endif
 
 		ret = power_supply_get_property(pd->usb_psy,
 				POWER_SUPPLY_PROP_PD_ALLOWED, &val);
@@ -957,12 +946,10 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 		/* fall-through */
 
 	case PE_SNK_WAIT_FOR_CAPABILITIES:
-#ifndef VENDOR_EDIT
 		spin_lock_irqsave(&pd->rx_lock, flags);
 		if (list_empty(&pd->rx_q))
 			kick_sm(pd, SINK_WAIT_CAP_TIME);
 		spin_unlock_irqrestore(&pd->rx_lock, flags);
-#endif
 		break;
 
 	case PE_SNK_EVALUATE_CAPABILITY:
@@ -999,10 +986,7 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 		pd->in_explicit_contract = true;
 		kobject_uevent(&pd->dev.kobj, KOBJ_CHANGE);
 		complete(&pd->is_ready);
-#ifndef VENDOR_EDIT
-/* david.liu@bsp, 20170308 block notification */
 		dual_role_instance_changed(pd->dual_role);
-#endif
 		break;
 
 	case PE_SNK_TRANSITION_TO_DEFAULT:
@@ -1694,7 +1678,6 @@ static void usbpd_sm(struct work_struct *w)
 		break;
 
 	case PE_SRC_SEND_CAPABILITIES:
-#ifndef VENDOR_EDIT
 		ret = pd_send_msg(pd, MSG_SOURCE_CAPABILITIES, default_src_caps,
 				ARRAY_SIZE(default_src_caps), SOP_MSG);
 		if (ret) {
@@ -1727,11 +1710,6 @@ static void usbpd_sm(struct work_struct *w)
 		pd->current_state = PE_SRC_SEND_CAPABILITIES_WAIT;
 		kick_sm(pd, SENDER_RESPONSE_TIME);
 		val.intval = 1;
-#else
-		usbpd_err(&pd->dev, "Src start host\n");
-		start_usb_host(pd, true);
-		val.intval = 0;
-#endif
 		power_supply_set_property(pd->usb_psy,
 				POWER_SUPPLY_PROP_PD_ACTIVE, &val);
 		break;
