@@ -451,11 +451,14 @@ int __init init_project_info(void)
 		    snprintf(mainboard_version, sizeof(mainboard_version), "%s %s", project_info_desc->project_name, "EVT2");
 		    break;
 		case 21:
-			snprintf(mainboard_version, sizeof(mainboard_version), "%s %s", project_info_desc->project_name, "EVT3");
-			break;
+		    snprintf(mainboard_version, sizeof(mainboard_version), "%s %s", project_info_desc->project_name, "EVT3");
+		    break;
 		case 22:
-			snprintf(mainboard_version, sizeof(mainboard_version), "%s %s", project_info_desc->project_name, "DVT1");
-			break;
+		    snprintf(mainboard_version, sizeof(mainboard_version), "%s %s", project_info_desc->project_name, "DVT1");
+		    break;
+		case 23:
+		    snprintf(mainboard_version, sizeof(mainboard_version), "%s %s", project_info_desc->project_name, "PVT");
+		    break;
 
 		default:
 		    snprintf(mainboard_version, sizeof(mainboard_version), "%d", project_info_desc->hw_version);
