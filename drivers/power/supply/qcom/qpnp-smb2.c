@@ -1767,10 +1767,10 @@ static int smb2_init_hw(struct smb2 *chip)
 #endif
 	vote(chg->dc_icl_votable,
 		DEFAULT_VOTER, true, chip->dt.dc_icl_ua);
-	vote(chg->hvdcp_disable_votable_indirect, DEFAULT_VOTER,
-		chip->dt.hvdcp_disable, 0);
 	vote(chg->hvdcp_disable_votable_indirect, PD_INACTIVE_VOTER,
 			true, 0);
+	vote(chg->hvdcp_disable_votable_indirect, DEFAULT_VOTER,
+		chip->dt.hvdcp_disable, 0);
 	vote(chg->hvdcp_disable_votable_indirect, VBUS_CC_SHORT_VOTER,
 		true, 0);
 	vote(chg->pd_disallowed_votable_indirect, CC_DETACHED_VOTER,

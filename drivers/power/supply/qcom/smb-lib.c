@@ -784,17 +784,37 @@ int smblib_rerun_apsd_if_required(struct smb_charger *chg)
 
 	apsd_result = smblib_get_apsd_result(chg);
 #ifdef VENDOR_EDIT
-	if ((apsd_result->pst == POWER_SUPPLY_TYPE_UNKNOWN)
-		|| (apsd_result->pst == POWER_SUPPLY_TYPE_USB)
-		|| (apsd_result->pst == POWER_SUPPLY_TYPE_USB_CDP)
-		|| (apsd_result->bit == FLOAT_CHARGER_BIT)) {
+	if ((apsd_result->pst != POWER_SUPPLY_TYPE_UNKNOWN)
+		&& (apsd_result->pst != POWER_SUPPLY_TYPE_USB)
+		&& (apsd_result->pst != POWER_SUPPLY_TYPE_USB_CDP)
+		&& (apsd_result->bit != FLOAT_CHARGER_BIT))
+		return 0;
 #else
-	if ((apsd_result->pst == POWER_SUPPLY_TYPE_UNKNOWN)
-		|| (apsd_result->pst == POWER_SUPPLY_TYPE_USB)) {
+	if ((apsd_result->pst != POWER_SUPPLY_TYPE_UNKNOWN)
+		&& (apsd_result->pst != POWER_SUPPLY_TYPE_USB))
+		/* if type is not usb or unknown no need to rerun apsd */
+		return 0;
 #endif
-		smblib_rerun_apsd(chg);
+
+	/* fetch the DPDM regulator */
+	if (!chg->dpdm_reg && of_get_property(chg->dev->of_node,
+						"dpdm-supply", NULL)) {
+		chg->dpdm_reg = devm_regulator_get(chg->dev, "dpdm");
+		if (IS_ERR(chg->dpdm_reg)) {
+			smblib_err(chg, "Couldn't get dpdm regulator rc=%ld\n",
+				PTR_ERR(chg->dpdm_reg));
+			chg->dpdm_reg = NULL;
+		}
 	}
 
+	if (chg->dpdm_reg && !regulator_is_enabled(chg->dpdm_reg)) {
+		smblib_dbg(chg, PR_MISC, "enabling DPDM regulator\n");
+		rc = regulator_enable(chg->dpdm_reg);
+		if (rc < 0)
+			smblib_err(chg, "Couldn't enable dpdm regulator rc=%d\n",
+				rc);
+	}
+	smblib_rerun_apsd(chg);
 	return 0;
 }
 
