@@ -337,6 +337,7 @@ struct smb_charger {
 	int				non_stand_chg_count;
 	int				redet_count;
 	int				reset_count;
+	int				dump_count;
 
 	bool				otg_switch;
 	bool				use_fake_chgvol;

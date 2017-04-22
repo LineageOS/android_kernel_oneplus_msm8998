@@ -4464,6 +4464,7 @@ static void op_handle_usb_removal(struct smb_charger *chg)
 	chg->non_stand_chg_current = 0;
 	chg->non_stand_chg_count = 0;
 	chg->redet_count = 0;
+	chg->dump_count = 0;
 	op_battery_temp_region_set(chg, BATT_TEMP_INVALID);
 }
 
@@ -5969,20 +5970,19 @@ static void op_heartbeat_work(struct work_struct *work)
 	static int batt_temp = 0, vbat_mv = 0;
 	union power_supply_propval vbus_val;
 	int rc;
-	static int dump_count;
 
 	op_check_charge_timeout(chg);
+	rc = smblib_get_prop_usb_voltage_now(chg, &vbus_val);
+	if (rc < 0) {
+		pr_err("failed to read usb_voltage rc=%d\n", rc);
+		vbus_val.intval = CHG_VOLTAGE_NORMAL;
+	}
 
 	charger_present = is_usb_present(chg);
 	if (!charger_present)
 		goto out;
 
 	/* charger present */
-	rc = smblib_get_prop_usb_voltage_now(chg, &vbus_val);
-	if (rc < 0) {
-		pr_err("failed to read usb_voltage rc=%d\n", rc);
-		vbus_val.intval = CHG_VOLTAGE_NORMAL;
-	}
 	power_supply_changed(chg->batt_psy);
 	chg->dash_on = get_prop_fast_chg_started(chg);
 	if (chg->dash_on) {
@@ -6041,9 +6041,9 @@ static void op_heartbeat_work(struct work_struct *work)
 			&& !chg->time_out) {
 		op_check_battery_temp(chg);
 	}
-	dump_count++;
-	if (dump_count == 50) {
-		dump_count = 0;
+	chg->dump_count++;
+	if (chg->dump_count == 500) {
+		chg->dump_count = 0;
 		op_dump_regs(chg);
 	}
 
