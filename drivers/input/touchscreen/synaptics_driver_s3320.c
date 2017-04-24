@@ -583,7 +583,7 @@ static int tpd_hw_pwron(struct synaptics_ts_data *ts)
 		TPD_DEBUG("synaptics:enable the enable2v8_gpio\n");
 		gpio_direction_output(ts->enable2v8_gpio, 1);
 	}
-	msleep(10);
+	usleep_range(10*1000, 10*1000);
 	if (!IS_ERR(ts->vcc_i2c_1v8)) {
 		//regulator_set_optimum_mode(ts->vcc_i2c_1v8,100000);
 		rc = regulator_enable( ts->vcc_i2c_1v8 );
@@ -592,14 +592,12 @@ static int tpd_hw_pwron(struct synaptics_ts_data *ts)
 			//return rc;
 		}
 	}
-	msleep(10);
+	usleep_range(10*1000, 10*1000);
 	if( ts->reset_gpio > 0 ) {
 		gpio_direction_output(ts->reset_gpio, 1);
-		msleep(20);
-        //usleep_range(10*1000, 10*1000);
+        usleep_range(10*1000, 10*1000);
 		gpio_direction_output(ts->reset_gpio, 0);
-		msleep(20);
-        //usleep_range(5*1000, 5*1000);
+        usleep_range(10*1000, 10*1000);
 		gpio_direction_output(ts->reset_gpio, 1);
 		TPD_DEBUG("synaptics:enable the reset_gpio\n");
 	}
@@ -3120,6 +3118,8 @@ static int tp_baseline_get(struct synaptics_ts_data *ts, bool flag)
 	mutex_lock(&ts->mutex);
 	if (ts->gesture_enable)
 		synaptics_enable_interrupt_for_gesture(ts,false);
+	else
+		synaptics_mode_change(0x00);//change to active later getbase data
 	ret = synaptics_rmi4_i2c_write_byte(ts->client, 0xff, 0x1);
 
 	ret = i2c_smbus_write_byte_data(ts->client, F54_ANALOG_DATA_BASE, 0x03);//select report type 0x03
@@ -4706,7 +4706,7 @@ static int synaptics_i2c_resume(struct device *dev)
 	struct synaptics_ts_data *ts = dev_get_drvdata(dev);
 
 	TPD_DEBUG("%s is called\n", __func__);
-    queue_delayed_work(synaptics_wq,&ts->speed_up_work, msecs_to_jiffies(5));
+    queue_delayed_work(synaptics_wq,&ts->speed_up_work, msecs_to_jiffies(1));
 	if (ts->gesture_enable == 1){
 		/*disable gpio wake system through intterrupt*/
 		disable_irq_wake(ts->irq);
@@ -4736,7 +4736,6 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 {
 	struct fb_event *evdata = data;
 	int *blank;
-	int ret;
 
 	struct synaptics_ts_data *ts = container_of(self, struct synaptics_ts_data, fb_notif);
 
@@ -4755,13 +4754,7 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 			{
 				TPD_DEBUG("%s going TP resume start\n", __func__);
 				ts->is_suspended = 0;
-				if (0 == ts->gesture_enable){
-						ret = synaptics_mode_change(0x00);//when gesture disable TP wakeup eary
-						if (ret < 0){
-							TPD_ERR("%s line%d ERROR %d!\n",__func__, __LINE__, ret);
-					}
-				}
-				queue_delayed_work(get_base_report, &ts->base_work,msecs_to_jiffies(1));
+				queue_delayed_work(get_base_report, &ts->base_work,msecs_to_jiffies(80));
 				synaptics_ts_resume(&ts->client->dev);
 				//atomic_set(&ts->is_stop,0);
 				TPD_DEBUG("%s going TP resume end\n", __func__);
