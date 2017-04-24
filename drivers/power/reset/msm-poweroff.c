@@ -282,6 +282,7 @@ static void halt_spmi_pmic_arbiter(void)
 static void msm_restart_prepare(const char *cmd)
 {
 	bool need_warm_reset = false;
+	bool oem_panic_record = false;
 
 #ifdef CONFIG_QCOM_DLOAD_MODE
 
@@ -292,6 +293,7 @@ static void msm_restart_prepare(const char *cmd)
 
 	set_dload_mode(download_mode &&
 			(in_panic || restart_mode == RESTART_DLOAD));
+
 #endif
 
 	if (qpnp_pon_check_hard_reset_stored()) {
@@ -304,9 +306,13 @@ static void msm_restart_prepare(const char *cmd)
 		need_warm_reset = (get_dload_mode() ||
 				(cmd != NULL && cmd[0] != '\0'));
 	}
+	if (!download_mode &&
+			(in_panic || restart_mode == RESTART_DLOAD)) {
+		oem_panic_record = true;
+	}
 
 	/* Hard reset the PMIC unless memory contents must be maintained. */
-	if (need_warm_reset) {
+	if (need_warm_reset || oem_panic_record) {
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
 	} else {
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
@@ -377,6 +383,10 @@ static void msm_restart_prepare(const char *cmd)
 		}
 	}
 
+	if (oem_panic_record) {
+		qpnp_pon_set_restart_reason(PON_RESTART_REASON_PANIC);
+		__raw_writel(OEM_PANIC, restart_reason);
+	}
 	flush_cache_all();
 
 	/*outer_flush_all is not supported by 64bit kernel*/

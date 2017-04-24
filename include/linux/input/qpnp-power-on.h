@@ -97,6 +97,7 @@ enum pon_restart_reason {
 	PON_RESTART_REASON_KERNEL		= 0x15,
 	PON_RESTART_REASON_ANDROID		= 0x16,
 	PON_RESTART_REASON_MODEM		= 0x17,
+	PON_RESTART_REASON_PANIC		= 0x18,
 #endif
 };
 
@@ -110,6 +111,8 @@ enum pon_restart_reason {
 #define KERNEL_MODE		0x7766550d
 #define ANDROID_MODE		0x7766550c
 #define MODEM_MODE		0x7766550b
+#define OEM_PANIC		0x77665518
+
 #endif
 
 #ifdef CONFIG_INPUT_QPNP_POWER_ON
