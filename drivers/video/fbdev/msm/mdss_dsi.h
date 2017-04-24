@@ -612,44 +612,6 @@ struct mdss_dsi_ctrl_pdata {
 	int night_mode;
 	struct dsi_panel_cmds night_mode_on_cmds;
 	struct dsi_panel_cmds night_mode_off_cmds;
-
-	int night_mode3500k;
-	int night_mode3800k;
-	int night_mode4000k;
-	int night_mode4300k;
-	int night_mode4500k;
-	int night_mode3100k;
-	int night_mode4800k;
-	int night_mode2800k;
-	int night_mode5000k;
-	int night_mode5500k;
-	int night_mode6000k;
-	int night_mode6500k;
-	int night_mode6800k;
-	int night_mode7200k;
-
-	struct dsi_panel_cmds night_mode3500k_on_cmds;
-	struct dsi_panel_cmds night_mode3800k_on_cmds;
-	struct dsi_panel_cmds night_mode4000k_on_cmds;
-	struct dsi_panel_cmds night_mode4300k_on_cmds;
-	struct dsi_panel_cmds night_mode4500k_on_cmds;
-	struct dsi_panel_cmds night_mode3100k_on_cmds;
-	struct dsi_panel_cmds night_mode4800k_on_cmds;
-	struct dsi_panel_cmds night_mode2800k_on_cmds;
-	struct dsi_panel_cmds night_mode5000k_on_cmds;
-	struct dsi_panel_cmds night_mode5500k_on_cmds;
-	struct dsi_panel_cmds night_mode6000k_on_cmds;
-	struct dsi_panel_cmds night_mode6500k_on_cmds;
-	struct dsi_panel_cmds night_mode6800k_on_cmds;
-	struct dsi_panel_cmds night_mode7200k_on_cmds;
-
-
-//#endif
-//#ifdef VENDOR_EDIT
-	int reading_mode;
-	struct dsi_panel_cmds read_mode_on_cmds;
-	struct dsi_panel_cmds read_mode_off_cmds;
-
 //#endif
 //#ifdef VENDOR_EDIT
 	int disp_vci_en_gpio;
