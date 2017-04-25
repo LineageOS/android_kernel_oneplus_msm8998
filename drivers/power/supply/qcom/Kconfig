@@ -92,6 +92,15 @@ config QPNP_SMB2
 	help
 	  Enables support for the SMB2 charging peripheral
 
+config OP_DEBUG_CHG
+	tristate "OP DEBUG CHARGE"
+	depends on MFD_SPMI_PMIC
+	help
+	  Enables support for the debug charging peripheral
+	  When use agingboot,can dump pmic register and
+	  print vbus vbat current information
+	  a
+
 config SMB138X_CHARGER
 	tristate "SMB138X Battery Charger"
 	depends on MFD_I2C_PMIC

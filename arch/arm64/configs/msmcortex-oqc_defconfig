@@ -772,3 +772,8 @@ CONFIG_QCOM_TLB_EL2_HANDLER=y
 CONFIG_DEBUG_KERNEL=y
 CONFIG_DEBUG_VM=y
 #endif
+#ifdef VENDOR_EDIT
+#yfb add for charge debug
+CONFIG_OP_DEBUG_CHG=y
+#endif
+

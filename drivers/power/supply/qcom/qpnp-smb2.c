@@ -295,7 +295,12 @@ do {									\
 } while (0)
 #endif
 
-static int __debug_mask = PR_OP_DEBUG;
+#ifdef	CONFIG_OP_DEBUG_CHG
+	static int __debug_mask = PR_OP_DEBUG;
+#else
+	static int __debug_mask;
+#endif
+
 module_param_named(
 	debug_mask, __debug_mask, int, S_IRUSR | S_IWUSR
 );

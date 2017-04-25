@@ -6148,12 +6148,13 @@ static void op_heartbeat_work(struct work_struct *work)
 			&& !chg->time_out) {
 		op_check_battery_temp(chg);
 	}
+#ifdef	CONFIG_OP_DEBUG_CHG
 	chg->dump_count++;
 	if (chg->dump_count == 500) {
 		chg->dump_count = 0;
 		op_dump_regs(chg);
 	}
-
+#endif
 out:
 		smblib_dbg(chg, PR_OP_DEBUG, "CAP=%d (Q:%d), VBAT=%d (Q:%d), IBAT=%d (Q:%d), BAT_TEMP=%d, CHG_TYPE=%d, VBUS=%d\n",
 				get_prop_batt_capacity(chg),
