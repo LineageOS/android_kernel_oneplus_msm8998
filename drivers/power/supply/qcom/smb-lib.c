@@ -3439,6 +3439,8 @@ void smblib_usb_plugin(struct smb_charger *chg)
 			op_set_collapse_fet(chg, 0);
 			chg->charger_collpse = false;
 		}
+		schedule_delayed_work(&chg->op_check_apsd_work,
+				msecs_to_jiffies(TIME_1000MS));
 #endif
 
 	} else {
@@ -3872,6 +3874,7 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 			msecs_to_jiffies(TIME_1000MS));
 		}
 	}
+	chg->op_apsd_done = true;
 
 	/* set allow read extern fg IIC */
 	set_property_on_fg(chg,
@@ -4465,6 +4468,7 @@ static void op_handle_usb_removal(struct smb_charger *chg)
 	chg->non_stand_chg_count = 0;
 	chg->redet_count = 0;
 	chg->dump_count = 0;
+	chg->op_apsd_done = 0;
 	op_battery_temp_region_set(chg, BATT_TEMP_INVALID);
 }
 
@@ -5011,6 +5015,51 @@ static void op_re_kick_work(struct work_struct *work)
 				msecs_to_jiffies(500));
 	}
 }
+static void op_chek_apsd_done_work(struct work_struct *work)
+{
+	struct smb_charger *chg = container_of(work,
+			struct smb_charger,
+			op_check_apsd_work.work);
+	union power_supply_propval vbus_val;
+	int rc;
+	const struct apsd_result *apsd_result;
+
+	pr_debug("chg->ck_apsd_count=%d\n", chg->ck_apsd_count);
+	if (chg->usb_enum_status || chg->op_apsd_done) {
+		chg->ck_apsd_count = 0;
+		return;
+	}
+	rc = smblib_get_prop_usb_voltage_now(chg, &vbus_val);
+	if (rc < 0) {
+		chg->ck_apsd_count = 0;
+		pr_info("failed to read usb_voltage rc=%d\n", rc);
+		return;
+	}
+	if (vbus_val.intval < 2500) {
+		pr_info("vbus less 2.5v\n");
+		chg->ck_apsd_count = 0;
+		return;
+	}
+	apsd_result = smblib_get_apsd_result(chg);
+	if (apsd_result->bit) {
+		chg->ck_apsd_count = 0;
+		return;
+	}
+
+	if (chg->ck_apsd_count >= APSD_CHECK_COUTNT) {
+		pr_info("apsd done error\n");
+		chg->ck_apsd_count = 0;
+		op_dump_regs(chg);
+		op_rerun_apsd(chg);
+	} else {
+		chg->ck_apsd_count++;
+		schedule_delayed_work(&chg->op_check_apsd_work,
+				msecs_to_jiffies(TIME_1000MS));
+	}
+}
+
+
+
 static void op_enable_usb_suspend_work(struct work_struct *work)
 {
 	struct smb_charger *chg = container_of(work,
@@ -6693,6 +6742,7 @@ int smblib_init(struct smb_charger *chg)
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 	INIT_DELAYED_WORK(&chg->re_kick_work, op_re_kick_work);
+	INIT_DELAYED_WORK(&chg->op_check_apsd_work, op_chek_apsd_done_work);
 	INIT_DELAYED_WORK(&chg->enable_usb_suspend_work, op_enable_usb_suspend_work);
 	INIT_DELAYED_WORK(&chg->check_switch_dash_work,
 			op_check_allow_switch_dash_work);

@@ -44,6 +44,7 @@ enum print_reason {
 #define NON_STANDARD_CHARGER_CHECK_S 60
 #define TIME_1000MS 1000
 #define REDET_COUTNT 5
+#define APSD_CHECK_COUTNT 15
 #endif
 #define DEFAULT_VOTER			"DEFAULT_VOTER"
 #define USER_VOTER			"USER_VOTER"
@@ -308,6 +309,7 @@ struct smb_charger {
 	struct delayed_work heartbeat_work;
 	struct delayed_work re_det_work;
 	struct delayed_work op_re_set_work;
+	struct delayed_work	op_check_apsd_work;
 	struct wake_lock	chg_wake_lock;
 #endif
 	struct delayed_work	clear_hdc_work;
@@ -338,6 +340,7 @@ struct smb_charger {
 	int				redet_count;
 	int				reset_count;
 	int				dump_count;
+	int				ck_apsd_count;
 
 	bool				otg_switch;
 	bool				use_fake_chgvol;
@@ -363,6 +366,7 @@ struct smb_charger {
 	bool				chg_enabled;
 	bool				pd_disabled;
 	bool				deal_vusbin_error_done;
+	bool				op_apsd_done;
 
 	temp_region_type		mBattTempRegion;
 	enum batt_status_type		battery_status;
