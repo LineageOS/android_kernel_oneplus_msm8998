@@ -1789,6 +1789,14 @@ static int smb2_init_hw(struct smb2 *chip)
 	if (rc < 0)
 		dev_err(chg->dev, "Couldn't disable HVDCP rc=%d\n", rc);
 #endif
+#ifdef VENDOR_EDIT
+	/* aicl rerun time */
+	rc = smblib_masked_write(chg, AICL_RERUN_TIME_CFG_REG,
+		BIT(0)|BIT(1), 0);
+	if (rc < 0)
+		dev_err(chg->dev, "Couldn't set aicl rerunTimerc=%d\n", rc);
+#endif
+
 	/*
 	 * AICL configuration:
 	 * start from min and AICL ADC disable
