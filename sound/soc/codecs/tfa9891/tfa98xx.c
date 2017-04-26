@@ -124,6 +124,15 @@ static int get_profile_from_list(char *buf, int id);
 static int get_profile_id_for_sr(int id, unsigned int rate); 
 /*zhiguang.su@MultiMediaService,2017-02-09,avoid no sound for ftm*/
 static void tfa98xx_dsp_startInit(struct tfa98xx *tfa98xx);
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMediaService,2017-04-26,add ftm spk pa rivision test*/
+static int tfa98xx_info_rivision_ctl(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_info *uinfo);
+static int tfa98xx_get_rivision_ctl(struct snd_kcontrol *kcontrol,
+			     struct snd_ctl_elem_value *ucontrol);
+static int tfa98xx_set_rivision_ctl(struct snd_kcontrol *kcontrol,
+			     struct snd_ctl_elem_value *ucontrol);
+#endif
 
 #ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMedia.AudioDrv, 2015-11-09, add for debug*/
@@ -153,6 +162,18 @@ static struct tfa98xx_rate rate_to_fssel[] = {
 	{ 48000, 8 },
 };
 
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMediaService,2017-04-26,add ftm spk pa rivision test*/
+static struct snd_kcontrol_new tfa98xx_at_controls[] = {
+	{
+		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name = "SPK_PA rivision",
+		.info = tfa98xx_info_rivision_ctl,
+		.get = tfa98xx_get_rivision_ctl,
+		.put = tfa98xx_set_rivision_ctl,
+	},
+};
+#endif
 static ssize_t tfa98xx_state_store(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t count)
 {
@@ -1608,6 +1629,49 @@ static int tfa98xx_set_stop_ctl(struct snd_kcontrol *kcontrol,
 	return 1;
 }
 
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMediaService,2017-04-26,add ftm spk pa rivision test*/
+static int tfa98xx_info_rivision_ctl(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_info *uinfo)
+{
+	pr_err("%s\n", __func__);
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+	uinfo->count = 5;
+	uinfo->value.integer.min = 0;
+	uinfo->value.integer.max = 5;
+
+	return 0;
+}
+
+static int tfa98xx_get_rivision_ctl(struct snd_kcontrol *kcontrol,
+			     struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tfa98xx *tfa98xx = snd_soc_codec_get_drvdata(codec);
+	int ret;
+	unsigned int reg;
+
+	pr_err("%s\n", __func__);
+	ucontrol->value.integer.value[0] = 1;
+	ret = regmap_read(tfa98xx->regmap, 0x03, &reg);
+	if (ret < 0) {
+		pr_err("%s Failed to read Revision register: %d\n",
+			__func__, ret);
+		ucontrol->value.integer.value[0] = 0;
+	}
+
+	return 0;
+}
+
+static int tfa98xx_set_rivision_ctl(struct snd_kcontrol *kcontrol,
+			     struct snd_ctl_elem_value *ucontrol)
+{
+	pr_err("%s\n", __func__);
+	ucontrol->value.integer.value[0] = 0;
+	return 1;
+}
+#endif
+
 static int tfa98xx_create_controls(struct tfa98xx *tfa98xx)
 {
 	int prof, nprof, mix_index = 0;
@@ -1632,7 +1696,6 @@ static int tfa98xx_create_controls(struct tfa98xx *tfa98xx)
 		if (tfacont_get_max_vstep(tfa98xx->handle, prof))
 			nr_controls++; /* Playback Volume control */
 	}
-
 	tfa98xx_controls = devm_kzalloc(tfa98xx->codec->dev,
 			nr_controls * sizeof(tfa98xx_controls[0]), GFP_KERNEL);
 	if(!tfa98xx_controls)
@@ -1721,7 +1784,11 @@ static int tfa98xx_create_controls(struct tfa98xx *tfa98xx)
 
 	/* set the number of user selectable profiles in the mixer */
 	tfa98xx_mixer_profiles = id;
-    
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMediaService,2017-04-26,add ftm spk pa rivision test*/
+	snd_soc_add_codec_controls(tfa98xx->codec, tfa98xx_at_controls,
+				   ARRAY_SIZE(tfa98xx_at_controls));
+#endif
 	return snd_soc_add_codec_controls(tfa98xx->codec,
 		tfa98xx_controls, mix_index);
 }
@@ -1829,11 +1896,8 @@ static const struct snd_soc_dapm_route tfa9888_input_dapm_routes[] = {
 
 static void tfa98xx_add_widgets(struct tfa98xx *tfa98xx)
 {
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(3,18,0)
-	struct snd_soc_dapm_context *dapm = &tfa98xx->codec->dapm;
-#else
-    struct snd_soc_dapm_context *dapm = snd_soc_codec_get_dapm(tfa98xx->codec);
-#endif
+	struct snd_soc_dapm_context *dapm =
+			snd_soc_codec_get_dapm(tfa98xx->codec);
 	struct snd_soc_dapm_widget *widgets;
 	unsigned int num_dapm_widgets = ARRAY_SIZE(tfa98xx_dapm_widgets_common);
 
