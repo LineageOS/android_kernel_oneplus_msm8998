@@ -4489,6 +4489,8 @@ static void op_handle_usb_removal(struct smb_charger *chg)
 	chg->redet_count = 0;
 	chg->dump_count = 0;
 	chg->op_apsd_done = 0;
+	chg->ck_dash_count = 0;
+	chg->re_trigr_dash_done = 0;
 	op_battery_temp_region_set(chg, BATT_TEMP_INVALID);
 }
 
@@ -4965,6 +4967,9 @@ static void set_usb_switch(struct smb_charger *chg, bool enable)
 		usb_sw_gpio_set(1);
 		msleep(10);
 		mcu_en_gpio_set(0);
+		if (!chg->re_trigr_dash_done)
+			schedule_delayed_work(&chg->rechk_sw_dsh_work,
+					msecs_to_jiffies(TIME_200MS));
 	} else {
 		pr_err("switch off fastchg\n");
 		usb_sw_gpio_set(0);
@@ -5035,6 +5040,35 @@ static void op_re_kick_work(struct work_struct *work)
 				msecs_to_jiffies(500));
 	}
 }
+static void retrigger_dash_work(struct work_struct *work)
+{
+	struct smb_charger *chg = container_of(work,
+			struct smb_charger,
+			rechk_sw_dsh_work.work);
+	pr_debug("chg->ck_dash_count=%d\n", chg->ck_dash_count);
+	if (chg->dash_present) {
+		chg->ck_dash_count = 0;
+		return;
+	}
+	if (!chg->vbus_present) {
+		chg->ck_dash_count = 0;
+		return;
+	}
+	if (chg->ck_dash_count >= DASH_CHECK_COUNT) {
+		pr_info("retrger dash\n");
+		chg->re_trigr_dash_done = true;
+		set_usb_switch(chg, false);
+		op_set_fast_chg_allow(chg, false);
+		set_usb_switch(chg, true);
+		op_set_fast_chg_allow(chg, true);
+		chg->ck_dash_count = 0;
+	} else {
+		chg->ck_dash_count++;
+		schedule_delayed_work(&chg->rechk_sw_dsh_work,
+				msecs_to_jiffies(TIME_200MS));
+	}
+}
+
 static void op_chek_apsd_done_work(struct work_struct *work)
 {
 	struct smb_charger *chg = container_of(work,
@@ -6765,6 +6799,7 @@ int smblib_init(struct smb_charger *chg)
 	INIT_DELAYED_WORK(&chg->step_soc_req_work, step_soc_req_work);
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
+	INIT_DELAYED_WORK(&chg->rechk_sw_dsh_work, retrigger_dash_work);
 	INIT_DELAYED_WORK(&chg->re_kick_work, op_re_kick_work);
 	INIT_DELAYED_WORK(&chg->op_check_apsd_work, op_chek_apsd_done_work);
 	INIT_DELAYED_WORK(&chg->enable_usb_suspend_work, op_enable_usb_suspend_work);

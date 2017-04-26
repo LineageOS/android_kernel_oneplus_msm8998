@@ -45,6 +45,9 @@ enum print_reason {
 #define TIME_1000MS 1000
 #define REDET_COUTNT 5
 #define APSD_CHECK_COUTNT 15
+#define DASH_CHECK_COUNT 4
+#define TIME_200MS 200
+
 #endif
 #define DEFAULT_VOTER			"DEFAULT_VOTER"
 #define USER_VOTER			"USER_VOTER"
@@ -302,6 +305,7 @@ struct smb_charger {
 	struct delayed_work	step_soc_req_work;
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
+	struct delayed_work rechk_sw_dsh_work;
 	struct delayed_work	re_kick_work;
 	struct delayed_work	enable_usb_suspend_work;
 	struct delayed_work	check_switch_dash_work;
@@ -341,6 +345,7 @@ struct smb_charger {
 	int				reset_count;
 	int				dump_count;
 	int				ck_apsd_count;
+	int				ck_dash_count;
 
 	bool				otg_switch;
 	bool				use_fake_chgvol;
@@ -367,6 +372,7 @@ struct smb_charger {
 	bool				pd_disabled;
 	bool				deal_vusbin_error_done;
 	bool				op_apsd_done;
+	bool				re_trigr_dash_done;
 
 	temp_region_type		mBattTempRegion;
 	enum batt_status_type		battery_status;
