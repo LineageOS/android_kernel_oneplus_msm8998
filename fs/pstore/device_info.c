@@ -129,7 +129,7 @@ static int __init init_device_info(void)
 
 	write_device_info("hardware version", oem_hw_version);
 	write_device_info("rf version", oem_rf_version);
-	write_device_info("ddr manufacturer and fw version", ddr_manufacture_and_fw_verion);
+	write_device_info("ddr info", ddr_manufacture_and_fw_verion);
 	write_device_info("pcba number", oem_pcba_number);
 	write_device_info("serial number", oem_serialno);
 
