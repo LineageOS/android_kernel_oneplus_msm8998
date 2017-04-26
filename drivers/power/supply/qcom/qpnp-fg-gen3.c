@@ -3343,6 +3343,14 @@ static int fg_hw_init(struct fg_chip *chip)
 		return rc;
 	}
 
+#ifdef VENDOR_EDIT
+	rc = fg_masked_write(chip, BATT_INFO_ESR_PULL_DN_CFG(chip), 0xFF, 0);
+	if (rc < 0) {
+		pr_err("Error in writing ESR PULL DN, rc=%d\n", rc);
+		return rc;
+	}
+#endif
+
 	return 0;
 }
 
