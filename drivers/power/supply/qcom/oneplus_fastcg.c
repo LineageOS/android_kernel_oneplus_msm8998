@@ -26,7 +26,7 @@
 #define	FW_CHECK_FAIL		0
 #define	FW_CHECK_SUCCESS	1
 
-#define SHOW_FW_VERSION_DELAY_MS 12000
+#define SHOW_FW_VERSION_DELAY_MS 18000
 
 struct fastchg_device_info {
 	struct i2c_client		*client;
