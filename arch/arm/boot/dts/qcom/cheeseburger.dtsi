@@ -327,6 +327,7 @@
 	qcom,ramp-step-ms = <100>;
 	qcom,pause-lo = <2000>;
 	qcom,pause-hi = <1000>;
+	/delete-property/ linux,default-trigger;
 };
 
 &green_led {
@@ -339,6 +340,7 @@
 	qcom,ramp-step-ms = <100>;
 	qcom,pause-lo = <2000>;
 	qcom,pause-hi = <1000>;
+	/delete-property/ linux,default-trigger;
 };
 
 &blue_led {
@@ -351,6 +353,7 @@
 	qcom,ramp-step-ms = <100>;
 	qcom,pause-lo = <2000>;
 	qcom,pause-hi = <1000>;
+	/delete-property/ linux,default-trigger;
 };
 
 /* Charging */
