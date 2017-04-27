@@ -765,6 +765,9 @@ CONFIG_F2FS_FS_SECURITY=y
 # WayneChang, 2017/1/10, set CONFIG_KSWAPD_CPU_AFFINITY_MASK to avoid error in vmscan.c
 CONFIG_KSWAPD_CPU_AFFINITY_MASK="f"
 #endif
+#neiltsai, 20170415, add for JTAG debugging
+CONFIG_MSM_DEBUG_LAR_UNLOCK=y
+#neiltsai, 20170415, add for JTAG debugging
 
 #ifdef VENDOR_EDIT
 # /* liochen@filesystem, 2017/01/25, Support sdcardfs filesystem in kernel */
