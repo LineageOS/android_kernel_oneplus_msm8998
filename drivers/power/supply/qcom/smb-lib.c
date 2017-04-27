@@ -4408,7 +4408,8 @@ bool is_fastchg_allowed(struct smb_charger *chg)
 
 	if (!fw_updated)
 		return false;
-
+	if (chg->usb_enum_status)
+		return false;
 	if (temp < 165 || temp > 430) {
 		if (temp != pre_temp) {
 			pr_err("temp=%d is not allow to swith fastchg\n", temp);
