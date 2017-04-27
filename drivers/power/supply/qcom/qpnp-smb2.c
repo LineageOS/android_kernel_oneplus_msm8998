@@ -295,15 +295,7 @@ do {									\
 } while (0)
 #endif
 
-#ifdef VENDOR_EDIT
-	#ifdef	CONFIG_OP_DEBUG_CHG
-	static int __debug_mask = PR_OP_DEBUG;
-	#endif
-#else
-	static int __debug_mask;
-#endif
-
-
+static int __debug_mask = PR_OP_DEBUG;
 module_param_named(
 	debug_mask, __debug_mask, int, S_IRUSR | S_IWUSR
 );
