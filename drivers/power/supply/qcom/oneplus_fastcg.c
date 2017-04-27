@@ -115,6 +115,7 @@ void usb_sw_gpio_set(int value)
 		gpio_direction_output (fastchg_di->usb_sw_1_gpio, 0);
 		gpio_direction_output (fastchg_di->usb_sw_2_gpio, 0);
 	}
+	fastchg_di->fast_chg_allow = value;
 	/* david@bsp add log */
 	pr_info("get usb_sw_gpio=%d&%d\n"
 		, gpio_get_value(fastchg_di->usb_sw_1_gpio)
