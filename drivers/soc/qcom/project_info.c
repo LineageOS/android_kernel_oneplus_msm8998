@@ -39,6 +39,7 @@ static DEVICE_ATTR(ddr_reserve_info, S_IRUGO, project_info_get, NULL);
 static DEVICE_ATTR(secboot_status, S_IRUGO, project_info_get, NULL);
 static DEVICE_ATTR(platform_id, S_IRUGO, project_info_get, NULL);
 static DEVICE_ATTR(serialno, S_IRUGO, project_info_get, NULL);
+static DEVICE_ATTR(feature_id, S_IRUGO, project_info_get, NULL);
 
 uint8 get_secureboot_fuse_status(void)
 {
@@ -94,7 +95,8 @@ static ssize_t project_info_get(struct device *dev,
 			return sprintf(buf, "%d\n", project_info_desc->platform_id);
 		if (attr == &dev_attr_serialno)
 			return sprintf(buf, "0x%x\n", chip_serial_num);
-
+		if (attr == &dev_attr_feature_id)
+			return sprintf(buf, "%d\n", project_info_desc->feature_id);
 	}
 
 	return -EINVAL;
@@ -116,6 +118,7 @@ static struct attribute *project_info_sysfs_entries[] = {
 	&dev_attr_secboot_status.attr,
 	&dev_attr_platform_id.attr,
 	&dev_attr_serialno.attr,
+	&dev_attr_feature_id.attr,
 	NULL,
 };
 
