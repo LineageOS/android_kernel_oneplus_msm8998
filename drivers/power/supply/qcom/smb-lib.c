@@ -5950,6 +5950,7 @@ static void op_heartbeat_work(struct work_struct *work)
 	static int batt_temp = 0, vbat_mv = 0;
 	union power_supply_propval vbus_val;
 	int rc;
+	static int dump_count;
 
 	op_check_charge_timeout(chg);
 
@@ -6021,6 +6022,11 @@ static void op_heartbeat_work(struct work_struct *work)
 			&& !chg->time_out) {
 		op_check_battery_temp(chg);
 	}
+	dump_count++;
+	if (dump_count == 50) {
+		dump_count = 0;
+		op_dump_regs(chg);
+	}
 
 out:
 		smblib_dbg(chg, PR_OP_DEBUG, "CAP=%d (Q:%d), VBAT=%d (Q:%d), IBAT=%d (Q:%d), BAT_TEMP=%d, CHG_TYPE=%d, VBUS=%d\n",
@@ -6033,6 +6039,7 @@ out:
 				get_prop_batt_temp(chg),
 				chg->usb_psy_desc.type,
 				vbus_val.intval);
+
 
 	/*update time 6s*/
 	schedule_delayed_work(&chg->heartbeat_work,
