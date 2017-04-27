@@ -1910,6 +1910,7 @@ int smblib_set_prop_input_suspend(struct smb_charger *chg,
 }
 
 #ifdef VENDOR_EDIT
+#define POWER_ROLE_BIT (DFP_EN_CMD_BIT | UFP_EN_CMD_BIT)
 /* david.liu@bsp, 20161014 Add charging standard */
 static int op_check_battery_temp(struct smb_charger *chg);
 
@@ -1950,9 +1951,9 @@ int op_set_prop_otg_switch(struct smb_charger *chg,
 			smblib_err(chg, "Couldn't read err=%d\n", rc);
 			return rc;
 		}
-		if ((power_role == 0) && (ctrl == 0x30))
+		if ((power_role == 0) && ((ctrl & POWER_ROLE_BIT) == 0))
 			break;
-		if ((power_role == UFP_EN_CMD_BIT) && (ctrl == 0x34))
+		if ((power_role == UFP_EN_CMD_BIT) && (ctrl | UFP_EN_CMD_BIT))
 			break;
 	}
 	pr_info("retry time = %d,ctrl = %d\n", i,ctrl);
