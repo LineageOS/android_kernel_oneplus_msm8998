@@ -5729,7 +5729,7 @@ static void op_check_battery_uovp(struct smb_charger *chg)
 }
 static void op_check_charger_collapse(struct smb_charger *chg)
 {
-	int rc, is_usb_supend;
+	int rc, is_usb_supend, curr;
 	u8 stat, chger_stat, pwer_source_stats;
 
 	if (!chg->vbus_present)
@@ -5749,9 +5749,12 @@ static void op_check_charger_collapse(struct smb_charger *chg)
 	smblib_get_usb_suspend(chg, &is_usb_supend);
 	pr_debug("chger_stat=0x%x, aicl_stats =0x%x\n",
 		chger_stat, pwer_source_stats);
-	stat = !is_usb_supend &&
-			((CC_SOFT_TERMINATE_BIT & chger_stat)
-			|| (pwer_source_stats == 0x72));
+	curr = get_prop_batt_current_now(chg) / 1000;
+	stat = !chg->chg_done
+			&& !is_usb_supend
+			&& (curr > 20)
+			&& ((CC_SOFT_TERMINATE_BIT & chger_stat)
+				|| (pwer_source_stats == 0x72));
 
 	if (stat && !chg->charger_collpse) {
 		rc = smblib_masked_write(chg, USBIN_AICL_OPTIONS_CFG_REG,
