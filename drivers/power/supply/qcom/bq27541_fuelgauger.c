@@ -440,6 +440,8 @@ static struct i2c_client *new_client = NULL;
 #define ONE_MINUTE                             60
 #define TWENTY_MINUTES                         1200
 #define TWENTY_PERCENT                         20
+#define TWENTY_SECS                         20
+
 
 #define CAPACITY_SALTATE_COUNTER_60            38 /* 40 1min */
 #define CAPACITY_SALTATE_COUNTER_95            78 /* 60 2.5min */
@@ -596,9 +598,8 @@ static int fg_soc_calibrate(struct  bq27541_device_info *di, int soc)
 					|| temp_region == BATT_TEMP_NORMAL
 					|| temp_region == BATT_TEMP_PRE_NORMAL
 					|| temp_region == BATT_TEMP_COOL)) {
-				if (time_last > FIVE_MINUTES) {
+				if (time_last > TWENTY_SECS)
 					soc_calib = di->soc_pre + 1;
-				}
 			}
 		} else {
 			if (soc - di->soc_pre > 0) {
