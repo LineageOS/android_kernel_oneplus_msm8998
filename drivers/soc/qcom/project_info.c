@@ -490,9 +490,14 @@ int __init init_project_info(void)
 	}
 
 	snprintf(ddr_version, sizeof(ddr_version), "size_%dG_r_%d_c_%d", ddr_size, project_info_desc->ddr_row,project_info_desc->ddr_column);
-	snprintf(ddr_manufacture_and_fw_verion, sizeof(ddr_manufacture_and_fw_verion), "%s %u.%u",
-		ddr_manufacture, project_info_desc->ddr_fw_version >> 16, project_info_desc->ddr_fw_version & 0x0000FFFF);
-	push_component_info(DDR,ddr_version, ddr_manufacture_and_fw_verion);
+	snprintf(ddr_manufacture_and_fw_verion,
+		sizeof(ddr_manufacture_and_fw_verion),
+		"%s%s %u.%u", ddr_manufacture,
+		project_info_desc->ddr_reserve_info == 0x05 ? "20nm" :
+		(project_info_desc->ddr_reserve_info == 0x06 ? "18nm" : " "),
+		project_info_desc->ddr_fw_version >> 16,
+		project_info_desc->ddr_fw_version & 0x0000FFFF);
+	push_component_info(DDR, ddr_version, ddr_manufacture_and_fw_verion);
 
 	get_cpu_type();
 	push_component_info(CPU,cpu_type, "Qualcomm");
