@@ -5680,22 +5680,29 @@ static void op_check_battery_uovp(struct smb_charger *chg)
 static void op_check_charger_collapse(struct smb_charger *chg)
 {
 	int rc, is_usb_supend;
-	u8 stat;
+	u8 stat, chger_stat, aicl_stats;
 
 	if (!chg->vbus_present)
 		return;
 	if (chg->dash_present)
 		return;
-	rc = smblib_read(chg, BATTERY_CHARGER_STATUS_1_REG, &stat);
+	rc = smblib_read(chg, BATTERY_CHARGER_STATUS_1_REG, &chger_stat);
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't read POWER_PATH_STATUS rc=%d\n",
 			rc);
 	}
+	rc = smblib_read(chg, AICL_STATUS_REG, &aicl_stats);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't read AICL_STATUS_REG rc=%d\n",
+			rc);
+	}
 	smblib_get_usb_suspend(chg, &is_usb_supend);
-	pr_debug("stat=0x%x\n", stat);
+	pr_debug("chger_stat=0x%x, aicl_stats =0x%x\n", chger_stat, aicl_stats);
 	stat = !is_usb_supend &&
-			(CC_SOFT_TERMINATE_BIT & stat);
-	if (stat) {
+			((CC_SOFT_TERMINATE_BIT & chger_stat)
+			|| (SOFT_ILIMIT_BIT & aicl_stats));
+
+	if (stat && !chg->charger_collpse) {
 		rc = smblib_masked_write(chg, USBIN_AICL_OPTIONS_CFG_REG,
 		SUSPEND_ON_COLLAPSE_USBIN_BIT
 		|USBIN_AICL_START_AT_MAX_BIT
@@ -5935,7 +5942,7 @@ static void op_recovery_set_work(struct work_struct *work)
 		return;
 	}
 
-	if (chg->reset_count >= 90) {
+	if (chg->reset_count >= 13) {
 
 		pr_err("op_set_collapse_fet\n");
 		rc = smblib_write(chg, USBIN_AICL_OPTIONS_CFG_REG, 0xc7);
