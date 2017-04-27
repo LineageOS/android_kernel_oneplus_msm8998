@@ -1572,15 +1572,26 @@ static int smb2_configure_typec(struct smb_charger *chg)
 
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20170414 Add otg switch */
-	if (chg->otg_switch)
+	if (chg->otg_switch) {
+		/* restore it back to 0xA5 */
+		rc = smblib_write(chg, TM_IO_DTEST4_SEL, 0xA5);
+		if (rc < 0)
+			dev_err(chg->dev, "Couldn't restore it back rc=%d\n", rc);
 		rc = smblib_masked_write(chg,
 					TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
 					TYPEC_POWER_ROLE_CMD_MASK, 0);
-	else
+	}
+	else {
+		/* disable PBS workaround when forcing sink mode */
+		rc = smblib_write(chg, TM_IO_DTEST4_SEL, 0x0);
+		if (rc < 0)
+			dev_err(chg->dev, "Couldn't disable PBS workaround rc=%d\n", rc);
+
 		rc = smblib_masked_write(chg,
 					TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
 					TYPEC_POWER_ROLE_CMD_MASK,
 					UFP_EN_CMD_BIT);
+	}
 #else
 	/* configure power role for dual-role */
 	rc = smblib_masked_write(chg, TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,

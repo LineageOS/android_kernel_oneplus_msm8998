@@ -2667,6 +2667,22 @@ int smblib_set_prop_typec_power_role(struct smb_charger *chg,
 /* david.liu@bsp, 20170414 Add otg switch */
 	if (!chg->otg_switch)
 		power_role = UFP_EN_CMD_BIT;
+
+	if (power_role == UFP_EN_CMD_BIT) {
+		/* disable PBS workaround when forcing sink mode */
+		rc = smblib_write(chg, TM_IO_DTEST4_SEL, 0x0);
+		if (rc < 0) {
+			smblib_err(chg, "Couldn't write TM_IO_DTEST4_SEL to 0 rc=%d\n",
+				rc);
+		}
+	} else {
+		/* restore it back to 0xA5 */
+		rc = smblib_write(chg, TM_IO_DTEST4_SEL, 0xA5);
+		if (rc < 0) {
+			smblib_err(chg, "Couldn't write to TM_IO_DTEST4_SEL rc=%d\n",
+				rc);
+		}
+	}
 #endif
 
 	rc = smblib_masked_write(chg, TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
