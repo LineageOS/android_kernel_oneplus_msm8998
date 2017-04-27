@@ -61,8 +61,12 @@ static ulong ramoops_device_info_size = MIN_MEM_SIZE;
 module_param_named(device_info_size, ramoops_device_info_size, ulong, 0400);
 MODULE_PARM_DESC(device_info_size, "size of device info");
 
-
+#ifdef VENDOR_EDIT
+static ulong ramoops_pmsg_size = 256*1024UL;
+#else
 static ulong ramoops_pmsg_size = MIN_MEM_SIZE;
+#endif
+
 module_param_named(pmsg_size, ramoops_pmsg_size, ulong, 0400);
 MODULE_PARM_DESC(pmsg_size, "size of user space message log");
 
