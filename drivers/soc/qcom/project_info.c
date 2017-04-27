@@ -462,6 +462,9 @@ int __init init_project_info(void)
 		case 23:
 		    snprintf(mainboard_version, sizeof(mainboard_version), "%s %s", project_info_desc->project_name, "PVT");
 		    break;
+		case 55:
+		    snprintf(mainboard_version, sizeof(mainboard_version), "%s %s", project_info_desc->project_name, "BACKUP");
+		    break;
 
 		default:
 		    snprintf(mainboard_version, sizeof(mainboard_version), "%d", project_info_desc->hw_version);
