@@ -4847,6 +4847,7 @@ int op_handle_switcher_power_ok(void)
 		pr_err("fail to read usb_voltage rc=%d\n", rc);
 	} else if(vbus_val.intval >= 2500) {
 		pr_err("vbus_val.intval=%d\n",vbus_val.intval);
+		op_dump_regs(g_chg);
 		smblib_err(g_chg, "OP Reverse boost detected\n");
 		g_chg->deal_vusbin_error_done = true;
 	}
