@@ -1806,6 +1806,12 @@ static int smb2_init_hw(struct smb2 *chip)
 		dev_err(chg->dev, "Couldn't disable HVDCP rc=%d\n", rc);
 #endif
 #ifdef VENDOR_EDIT
+	rc = smblib_masked_write(chg, USBIN_SOURCE_CHANGE_INTRPT_ENB_REG,
+			SLOW_IRQ_EN_CFG_BIT, 0);
+	if (rc < 0)
+		dev_err(chg->dev,
+				"Couldn't clean slow plugin irq=%d\n", rc);
+
 	/* aicl rerun time */
 	rc = smblib_masked_write(chg, AICL_RERUN_TIME_CFG_REG,
 		BIT(0)|BIT(1), 0);
