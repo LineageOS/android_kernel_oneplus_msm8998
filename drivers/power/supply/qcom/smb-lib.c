@@ -3526,6 +3526,7 @@ void smblib_usb_plugin(struct smb_charger *chg)
 			}
 		}
 #endif
+
 	pr_err("IRQ: %s %s\n",
 		__func__, vbus_rising ? "attached" : "detached");
 #endif
@@ -5202,7 +5203,7 @@ static int set_dash_charger_present(int status)
 
 	return 0;
 }
-
+#ifndef CONFIG_OP_DEBUG_CHG
 static void op_check_charge_timeout(struct smb_charger *chg)
 {
 	static int batt_status, count = 0;
@@ -5223,7 +5224,7 @@ static void op_check_charge_timeout(struct smb_charger *chg)
 		chg->time_out = true;
 	}
 }
-
+#endif
 static int get_prop_batt_present(struct smb_charger *chg)
 {
 	int rc;
@@ -6094,8 +6095,9 @@ static void op_heartbeat_work(struct work_struct *work)
 	static int batt_temp = 0, vbat_mv = 0;
 	union power_supply_propval vbus_val;
 	int rc;
-
+#ifndef CONFIG_OP_DEBUG_CHG
 	op_check_charge_timeout(chg);
+#endif
 	rc = smblib_get_prop_usb_voltage_now(chg, &vbus_val);
 	if (rc < 0) {
 		pr_err("failed to read usb_voltage rc=%d\n", rc);
