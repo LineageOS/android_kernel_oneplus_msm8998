@@ -357,7 +357,17 @@ static inline void set_top(struct sdcardfs_inode_info *info, struct inode *top)
 	struct inode *old_top = NULL;
 	BUG_ON(IS_ERR_OR_NULL(top));
 	if (info->top && info->top != &info->vfs_inode) {
+		#ifdef VENDOR_EDIT
+		spin_lock(&info->top->i_lock);
+		if(!(info->top->i_state & I_CLEAR)){
+			spin_unlock(&info->top->i_lock);
+			old_top = info->top;
+		} else {
+			spin_unlock(&info->top->i_lock);
+		}
+		#else
 		old_top = info->top;
+		#endif
 	}
 	if (top != &info->vfs_inode)
 		igrab(top);
