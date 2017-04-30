@@ -435,9 +435,16 @@ struct dentry *sdcardfs_lookup(struct inode *dir, struct dentry *dentry,
 		fixup_tmp_permissions(d_inode(dentry));
 		fixup_lower_ownership(dentry, dentry->d_name.name);
 	}
+	#ifdef VENDOR_EDIT
+	if(d_inode(parent) && sdcardfs_lower_inode(d_inode(parent))) {
+		fsstack_copy_attr_atime(d_inode(parent),
+					sdcardfs_lower_inode(d_inode(parent)));
+	}
+	#else
 	/* update parent directory's atime */
 	fsstack_copy_attr_atime(d_inode(parent),
 				sdcardfs_lower_inode(d_inode(parent)));
+	#endif
 
 out:
 	sdcardfs_put_lower_path(parent, &lower_parent_path);
