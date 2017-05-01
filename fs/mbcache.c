@@ -262,6 +262,7 @@ mb_cache_shrink_scan(struct shrinker *shrink, struct shrink_control *sc)
 		list_del_init(&ce->e_lru_list);
 		if (ce->e_used || ce->e_queued || atomic_read(&ce->e_refcnt))
 			continue;
+		spin_unlock(&mb_cache_spinlock);
 		/* Prevent any find or get operation on the entry */
 		hlist_bl_lock(ce->e_block_hash_p);
 		hlist_bl_lock(ce->e_index_hash_p);
@@ -270,10 +271,10 @@ mb_cache_shrink_scan(struct shrinker *shrink, struct shrink_control *sc)
 			!list_empty(&ce->e_lru_list)) {
 			hlist_bl_unlock(ce->e_index_hash_p);
 			hlist_bl_unlock(ce->e_block_hash_p);
+			spin_lock(&mb_cache_spinlock);
 			continue;
 		}
 		__mb_cache_entry_unhash_unlock(ce);
-		spin_unlock(&mb_cache_spinlock);
 		list_add_tail(&ce->e_lru_list, &free_list);
 		spin_lock(&mb_cache_spinlock);
 	}
@@ -669,7 +670,6 @@ mb_cache_entry_get(struct mb_cache *cache, struct block_device *bdev,
 			   cache->c_bucket_bits);
 	block_hash_p = &cache->c_block_hash[bucket];
 	/* First serialize access to the block corresponding hash chain. */
-	spin_lock(&mb_cache_spinlock);
 	hlist_bl_lock(block_hash_p);
 	hlist_bl_for_each_entry(ce, l, block_hash_p, e_block_list) {
 		mb_assert(ce->e_block_hash_p == block_hash_p);
@@ -678,11 +678,9 @@ mb_cache_entry_get(struct mb_cache *cache, struct block_device *bdev,
 			 * Prevent a free from removing the entry.
 			 */
 			atomic_inc(&ce->e_refcnt);
-			if (!list_empty(&ce->e_lru_list))
-				list_del_init(&ce->e_lru_list);
-			spin_unlock(&mb_cache_spinlock);
 			hlist_bl_unlock(block_hash_p);
 			__spin_lock_mb_cache_entry(ce);
+			atomic_dec(&ce->e_refcnt);
 			if (ce->e_used > 0) {
 				DEFINE_WAIT(wait);
 				while (ce->e_used > 0) {
@@ -697,9 +695,13 @@ mb_cache_entry_get(struct mb_cache *cache, struct block_device *bdev,
 				finish_wait(&mb_cache_queue, &wait);
 			}
 			ce->e_used += 1 + MB_CACHE_WRITER;
-			atomic_dec(&ce->e_refcnt);
 			__spin_unlock_mb_cache_entry(ce);
 
+			if (!list_empty(&ce->e_lru_list)) {
+				spin_lock(&mb_cache_spinlock);
+				list_del_init(&ce->e_lru_list);
+				spin_unlock(&mb_cache_spinlock);
+			}
 			if (!__mb_cache_entry_is_block_hashed(ce)) {
 				__mb_cache_entry_release(ce);
 				return NULL;
@@ -708,7 +710,6 @@ mb_cache_entry_get(struct mb_cache *cache, struct block_device *bdev,
 		}
 	}
 	hlist_bl_unlock(block_hash_p);
-	spin_unlock(&mb_cache_spinlock);
 	return NULL;
 }
 
