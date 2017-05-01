@@ -369,19 +369,7 @@ static inline struct inode *grab_top(struct sdcardfs_inode_info *info)
 {
 	struct inode *top = info->top;
 	if (top) {
-		#ifdef VENDOR_EDIT
-		spin_lock(&info->top->i_lock);
-		if(info->top->i_state & (I_FREEING|I_WILL_FREE)) {
-			spin_unlock(&info->top->i_lock);
-			info->top=NULL;
-			return info->top;
-		} else {
-			spin_unlock(&info->top->i_lock);
-			return igrab(top);
-		}
-		#else
 		return igrab(top);
-		#endif
 	} else {
 		return NULL;
 	}
