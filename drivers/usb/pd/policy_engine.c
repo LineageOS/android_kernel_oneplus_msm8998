@@ -1683,6 +1683,13 @@ static void usbpd_sm(struct work_struct *w)
 		if (ret) {
 			pd->caps_count++;
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 201710503 Fix slow SRC & SNK */
+			if (pd->current_dr == DR_DFP)
+				start_usb_host(pd, true);
+			else if (pd->caps_count == 10)
+				break;
+#else
 			if (pd->caps_count == 10 && pd->current_dr == DR_DFP) {
 				/* Likely not PD-capable, start host now */
 				start_usb_host(pd, true);
@@ -1696,7 +1703,7 @@ static void usbpd_sm(struct work_struct *w)
 						&val);
 				break;
 			}
-
+#endif
 			kick_sm(pd, SRC_CAP_TIME);
 			break;
 		}

@@ -2483,7 +2483,15 @@ int smblib_get_prop_typec_power_role(struct smb_charger *chg,
 int smblib_get_prop_pd_allowed(struct smb_charger *chg,
 			       union power_supply_propval *val)
 {
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 201710503 Fix slow SRC & SNK */
+	if (chg->pd_disabled)
+		val->intval = 0;
+	else
+		val->intval = get_effective_result(chg->pd_allowed_votable);
+#else
 	val->intval = get_effective_result(chg->pd_allowed_votable);
+#endif
 	return 0;
 }
 
