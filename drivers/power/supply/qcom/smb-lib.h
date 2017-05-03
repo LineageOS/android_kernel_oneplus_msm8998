@@ -373,6 +373,7 @@ struct smb_charger {
 	bool				deal_vusbin_error_done;
 	bool				op_apsd_done;
 	bool				re_trigr_dash_done;
+	bool				op_irq_enabled;
 
 	temp_region_type		mBattTempRegion;
 	enum batt_status_type		battery_status;
