@@ -2626,9 +2626,11 @@ static int smb2_probe(struct platform_device *pdev)
 #endif
 #endif
 #ifdef VENDOR_EDIT
-	if (usb_present)
+	if (usb_present) {
 		schedule_delayed_work(&chg->non_standard_charger_check_work,
 		msecs_to_jiffies(TIME_1000MS));
+		chg->boot_usb_present = true;
+	}
 	if (!usb_present && chg->vbus_present)
 		op_handle_usb_plugin(chg);
 #endif

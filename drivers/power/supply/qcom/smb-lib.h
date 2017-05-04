@@ -47,6 +47,7 @@ enum print_reason {
 #define APSD_CHECK_COUTNT 15
 #define DASH_CHECK_COUNT 4
 #define TIME_200MS 200
+#define TIME_3S 3000
 
 #endif
 #define DEFAULT_VOTER			"DEFAULT_VOTER"
@@ -374,7 +375,7 @@ struct smb_charger {
 	bool				op_apsd_done;
 	bool				re_trigr_dash_done;
 	bool				op_irq_enabled;
-
+	bool				boot_usb_present;
 	temp_region_type		mBattTempRegion;
 	enum batt_status_type		battery_status;
 	short				mBattTempBoundT0;
