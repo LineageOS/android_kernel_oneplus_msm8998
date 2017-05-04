@@ -4490,7 +4490,7 @@ bool is_fastchg_allowed(struct smb_charger *chg)
 bool get_oem_charge_done_status(void)
 {
 	if (g_chg)
-		return g_chg->chg_done;
+		return (g_chg->chg_done || g_chg->recharge_status);
 	else
 		return false;
 }
