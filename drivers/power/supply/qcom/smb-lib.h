@@ -512,6 +512,7 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
+void op_handle_usb_plugin(struct smb_charger *chg);
 int op_rerun_apsd(struct smb_charger *chg);
 irqreturn_t smblib_handle_aicl_done(int irq, void *data);
 void op_charge_info_init(struct smb_charger *chg);
