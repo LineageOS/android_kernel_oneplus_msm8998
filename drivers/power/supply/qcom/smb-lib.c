@@ -6092,7 +6092,21 @@ static void op_recovery_set_work(struct work_struct *work)
 				msecs_to_jiffies(TIME_1000MS));
 	}
 }
+#ifdef	CONFIG_OP_DEBUG_CHG
+void aging_test_check_aicl(struct smb_charger *chg)
+{
+	int aicl_result, vbat;
 
+	if (chg->usb_enum_status)
+		return;
+	vbat = get_prop_fg_voltage_now(chg) / 1000;
+	aicl_result = op_get_aicl_result(chg);
+	if (aicl_result < 800*1000) {
+		if (vbat < 4000)
+			smblib_rerun_aicl(chg);
+	}
+}
+#endif
 static void op_heartbeat_work(struct work_struct *work)
 {
 	struct delayed_work *dwork = to_delayed_work(work);
@@ -6178,9 +6192,12 @@ static void op_heartbeat_work(struct work_struct *work)
 	}
 #ifdef	CONFIG_OP_DEBUG_CHG
 	chg->dump_count++;
-	if (chg->dump_count == 500) {
+	if (chg->dump_count == 600) {
 		chg->dump_count = 0;
-		op_dump_regs(chg);
+		if ((get_prop_batt_current_now(chg) / 1000) > 0) {
+			op_dump_regs(chg);
+			aging_test_check_aicl(chg);
+		}
 	}
 #endif
 out:
