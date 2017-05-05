@@ -4862,25 +4862,34 @@ int op_handle_switcher_power_ok(void)
 
 	return 0;
 }
-
-int op_contrl(int enable, bool check_power_ok)
+void op_irq_control(int enable)
 {
-	pr_err("%s,en=%d\n",__func__,enable);
-	if(!g_chg)
-		return 0;
-	if(enable){
-		if(check_power_ok)
-		op_handle_switcher_power_ok();
+	if (g_chg->op_irq_enabled == enable)
+		return;
+	if (!enable) {
+		disable_irq(g_chg->irq_info[SWITCH_POWER_OK_IRQ].irq);
+		disable_irq(g_chg->irq_info[USBIN_SRC_CHANGE_IRQ].irq);
+		disable_irq(g_chg->irq_info[USBIN_UV_IRQ].irq);
+	} else {
 		enable_irq(g_chg->irq_info[SWITCH_POWER_OK_IRQ].irq);
 		enable_irq(g_chg->irq_info[USBIN_SRC_CHANGE_IRQ].irq);
 		enable_irq(g_chg->irq_info[USBIN_UV_IRQ].irq);
 	}
-	else{
-		op_set_collapse_fet(g_chg,enable);
-		disable_irq(g_chg->irq_info[SWITCH_POWER_OK_IRQ].irq);
-		disable_irq(g_chg->irq_info[USBIN_SRC_CHANGE_IRQ].irq);
-		disable_irq(g_chg->irq_info[USBIN_UV_IRQ].irq);
+	g_chg->op_irq_enabled = enable;
+}
+int op_contrl(int enable, bool check_power_ok)
+{
+	pr_info("%s, en=%d\n", __func__, enable);
+	if (!g_chg)
+		return 0;
+	if (enable) {
+		if(check_power_ok)
+		op_handle_switcher_power_ok();
 	}
+	else{
+		op_set_collapse_fet(g_chg, enable);
+	}
+	op_irq_control(enable);
 	return 0;
 }
 
@@ -5758,6 +5767,7 @@ void op_charge_info_init(struct smb_charger *chg)
 	chg->disable_normal_chg_for_dash = false;
 	chg->usb_enum_status = false;
 	chg->non_std_chg_present = false;
+	chg->op_irq_enabled = true;
 }
 
 static int op_handle_battery_uovp(struct smb_charger *chg)
