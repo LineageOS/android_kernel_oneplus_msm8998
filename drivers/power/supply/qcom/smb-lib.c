@@ -6118,8 +6118,12 @@ void aging_test_check_aicl(struct smb_charger *chg)
 	vbat = get_prop_fg_voltage_now(chg) / 1000;
 	aicl_result = op_get_aicl_result(chg);
 	if (aicl_result < 800*1000) {
-		if (vbat < 4000)
-			smblib_rerun_aicl(chg);
+		if (vbat < 4000) {
+			pr_info("set icl 900mA\n");
+			vote(chg->usb_icl_votable, AICL_RERUN_VOTER,
+				true, 900*1000);
+			vote(chg->usb_icl_votable, AICL_RERUN_VOTER, false, 0);
+		}
 	}
 }
 #endif
