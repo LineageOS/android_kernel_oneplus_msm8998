@@ -3093,6 +3093,21 @@ static int __dev_queue_xmit(struct sk_buff *skb, void *accel_priv)
 	/* Disable soft irqs for various locks below. Also
 	 * stops preemption for RCU.
 	 */
+	if(dev->flags & IFF_UP && strcmp("wlan", dev->name)) {
+		struct ethhdr *eth;
+		eth = (struct ethhdr *)skb_mac_header(skb);
+		if((void *)eth != (void *)skb->data )
+		{
+			pr_info("%s() mac header not data \n", __func__);
+		}
+
+		pr_info("%s() type =%d h_dest %s \n", __func__, eth->h_proto, eth->h_dest);
+		if (eth->h_proto == 1544)
+		{
+			WARN(1, "just want to send call stack \n");
+		}
+	}
+
 	rcu_read_lock_bh();
 
 	skb_update_prio(skb);
