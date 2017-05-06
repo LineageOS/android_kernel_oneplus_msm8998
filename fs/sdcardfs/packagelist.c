@@ -24,6 +24,7 @@
 #include <linux/kthread.h>
 #include <linux/inotify.h>
 #include <linux/delay.h>
+#include <linux/ctype.h>
 
 #define STRING_BUF_SIZE		(512)
 
@@ -44,6 +45,21 @@ struct packagelist_data {
 };
 
 static struct kmem_cache *hashtable_entry_cachep;
+
+
+static unsigned int full_name_case_hash(const unsigned char *name, unsigned int len)
+{
+	unsigned long hash = init_name_hash();
+	while (len--)
+		hash = partial_name_hash(tolower(*name++), hash);
+	return end_name_hash(hash);
+}
+
+static void inline qstr_init(struct qstr *q, const char *name) {
+	q->name = name;
+	q->len = strlen(q->name);
+	q->hash = full_name_case_hash(q->name, q->len);
+}
 
 /* Path to system-provided mapping of package name to appIds */
 static const char* const kpackageslist_file = "/data/system/packages.list";

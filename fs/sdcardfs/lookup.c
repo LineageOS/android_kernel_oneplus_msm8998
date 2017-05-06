@@ -199,6 +199,28 @@ out:
 	return err;
 }
 
+struct sdcardfs_name_data {
+	struct dir_context ctx;
+	struct qstr *to_find;
+	char *name;
+	bool found;
+};
+
+static int sdcardfs_name_match(struct dir_context *ctx, const char *name, int namelen,
+		loff_t offset, u64 ino, unsigned int d_type)
+{
+	struct sdcardfs_name_data *buf = container_of(ctx, struct sdcardfs_name_data, ctx);
+	struct qstr candidate = QSTR_INIT(name, namelen);
+
+	if (qstr_case_eq(buf->to_find, &candidate)) {
+		memcpy(buf->name, name, namelen);
+		buf->name[namelen] = 0;
+		buf->found = true;
+		return 1;
+	}
+	return 0;
+}
+
 extern int vfs_path_lookup(struct dentry *, struct vfsmount *,
                             const char *, unsigned int, struct path *);
 /*
@@ -239,6 +261,43 @@ static struct dentry *__sdcardfs_lookup(struct dentry *dentry,
 	} else if (sbi->options.lower_fs == LOWER_FS_FAT) {
 		err = vfs_path_lookup(lower_dir_dentry, lower_dir_mnt, name, 0,
 				&lower_path);
+	}
+
+	/* check for other cases */
+	if (err == -ENOENT) {
+		struct file *file;
+		const struct cred *cred = current_cred();
+
+		struct sdcardfs_name_data buffer = {
+			.ctx.actor = sdcardfs_name_match,
+			.to_find = &(dentry->d_name),
+			.name = __getname(),
+			.found = false,
+		};
+
+		if (!buffer.name) {
+			err = -ENOMEM;
+			goto out;
+		}
+		file = dentry_open(lower_parent_path, O_RDONLY, cred);
+		if (IS_ERR(file)) {
+			err = PTR_ERR(file);
+			goto put_name;
+		}
+		err = iterate_dir(file, &buffer.ctx);
+		fput(file);
+		if (err)
+			goto put_name;
+
+		if (buffer.found)
+			err = vfs_path_lookup(lower_dir_dentry,
+						lower_dir_mnt,
+						buffer.name, 0,
+						&lower_path);
+		else
+			err = -ENOENT;
+put_name:
+		__putname(buffer.name);
 	}
 
 	/* no error: handle positive dentries */
