@@ -687,7 +687,7 @@ static int sdcardfs_permission(struct inode *inode, int mask)
 }
 
 #ifdef VENDOR_EDIT
-//Jiemin.Zhu@Swdp.Android.Cts, 2017/03/18, fix dir uid after rename
+//2017/03/18, fix dir uid after rename
 static char attr_buf[PATH_MAX] = {0};
 #endif /* VENDOR_EDIT */
 
@@ -700,7 +700,7 @@ static int sdcardfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
 	struct path lower_path;
 	struct dentry *parent;
 #ifdef VENDOR_EDIT
-//Jiemin.Zhu@Swdp.Android.Cts, 2017/03/18, fix dir uid after rename
+//2017/03/18, fix dir uid after rename
 	char *path;
 #endif /* VENDOR_EDIT */
 
@@ -713,7 +713,7 @@ static int sdcardfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
 		return -EACCES;
 	}
 #ifdef VENDOR_EDIT
-//Jiemin.Zhu@Swdp.Android.Cts, 2017/03/18, fix dir uid after rename
+//2017/03/18, fix dir uid after rename
 	if (parent->d_inode && SDCARDFS_I(parent->d_inode)->d_uid == 0 && SDCARDFS_I(dentry->d_inode) != 0) {
 		path = dentry_path_raw(dentry, attr_buf, PATH_MAX);
 		if (!IS_ERR(path) && strstr(path, "com.example.does.not.exist")) {

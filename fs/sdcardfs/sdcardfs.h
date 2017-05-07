@@ -546,4 +546,14 @@ out_nospc:
 				,statfs.f_bavail, statfs.f_bsize, (u64)size);
 	return 0;
 }
+
+static inline bool str_case_eq(const char *s1, const char *s2)
+{
+	return !strcasecmp(s1, s2);
+}
+
+static inline bool qstr_case_eq(const struct qstr *q1, const struct qstr *q2)
+{
+	return q1->len == q2->len && str_case_eq(q1->name, q2->name);
+}
 #endif	/* not _SDCARDFS_H_ */
