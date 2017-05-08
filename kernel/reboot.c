@@ -45,6 +45,8 @@ int reboot_cpu;
 enum reboot_type reboot_type = BOOT_ACPI;
 int reboot_force;
 
+extern int oem_get_download_mode(void);
+
 /*
  * If set, this is used for preparing the system to power off.
  */
@@ -223,11 +225,15 @@ void kernel_restart(char *cmd)
 		pr_emerg("Restarting system with command '%s'\n", cmd);
 
 	#ifdef VENDOR_EDIT
-	if (((cmd != NULL && cmd[0] != '\0') && !strcmp(cmd, "dm-verity device corrupted")))
+	
+	if(oem_get_download_mode())
 	{
-	   panic("dm-verity device corrupted Force Dump");
-	   pr_emerg("Restarting system painc \n");
-	   msleep(10000);
+		if (((cmd != NULL && cmd[0] != '\0') && !strcmp(cmd, "dm-verity device corrupted")))
+		{
+		   panic("dm-verity device corrupted Force Dump");
+		   pr_emerg("Restarting system painc \n");
+		   msleep(10000);
+		}
 	}
 	#endif
 
