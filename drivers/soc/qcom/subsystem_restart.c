@@ -865,7 +865,7 @@ static int subsys_start(struct subsys_device *subsys)
 static void subsys_stop(struct subsys_device *subsys)
 {
 	const char *name = subsys->desc->name;
-
+	pr_info("[%s]: enter %s()\n", name, __func__);
 	notify_each_subsys_device(&subsys, 1, SUBSYS_BEFORE_SHUTDOWN, NULL);
 	if (!of_property_read_bool(subsys->desc->dev->of_node,
 					"qcom,pil-force-shutdown")) {
@@ -1032,6 +1032,7 @@ void subsystem_put(void *subsystem)
 	if (WARN(!subsys->count, "%s: %s: Reference count mismatch\n",
 			subsys->desc->name, __func__))
 		goto err_out;
+	pr_info("[%s]: enter %s()\n", subsys->desc->name, __func__);
 	if (!--subsys->count) {
 		subsys_stop(subsys);
 		if (subsys->do_ramdump_on_put)
@@ -1529,7 +1530,7 @@ static int subsys_device_close(struct inode *inode, struct file *file)
 
 	if (!subsys_dev)
 		return -EINVAL;
-
+	pr_info("[%s]: enter %s()\n", subsys_dev->desc->name, __func__);
 	subsystem_put(subsys_dev);
 	return 0;
 }
