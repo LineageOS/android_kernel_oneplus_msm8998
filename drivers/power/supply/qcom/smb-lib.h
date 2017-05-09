@@ -376,6 +376,7 @@ struct smb_charger {
 	bool				re_trigr_dash_done;
 	bool				op_irq_enabled;
 	bool				boot_usb_present;
+	bool				is_aging_test;
 	temp_region_type		mBattTempRegion;
 	enum batt_status_type		battery_status;
 	short				mBattTempBoundT0;

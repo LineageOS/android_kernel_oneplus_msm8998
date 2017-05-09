@@ -3808,6 +3808,7 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 #define DEFAULT_SDP_MA		500
 #define DEFAULT_CDP_MA		1500
 #define DEFAULT_DCP_MA		1500
+#define DEFAULT_AGAING_CHG_MA		1000
 #endif
 
 #ifdef VENDOR_EDIT
@@ -3893,6 +3894,9 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 	}
 	else if ((apsd_result->bit) == OCP_CHARGER_BIT)
 		current_limit_ua = DEFAULT_DCP_MA*1000;
+
+	if (chg->is_aging_test)
+		current_limit_ua = DEFAULT_AGAING_CHG_MA*1000;
 	vote(chg->usb_icl_votable,
 		DCP_VOTER, true, current_limit_ua);
 
@@ -6231,7 +6235,6 @@ out:
 				get_prop_batt_temp(chg),
 				chg->usb_psy_desc.type,
 				vbus_val.intval);
-
 
 	/*update time 6s*/
 	schedule_delayed_work(&chg->heartbeat_work,
