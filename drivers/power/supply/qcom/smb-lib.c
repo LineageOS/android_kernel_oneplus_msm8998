@@ -5004,6 +5004,13 @@ static void set_usb_switch(struct smb_charger *chg, bool enable)
 
 	if (enable) {
 		pr_err("switch on fastchg\n");
+		if (chg->boot_usb_present) {
+			vote(chg->usb_icl_votable, AICL_RERUN_VOTER,
+					true, 0);
+			usleep_range(500000, 510000);
+			vote(chg->usb_icl_votable, AICL_RERUN_VOTER,
+					true, DEFAULT_DCP_MA*1000);
+		}
 		set_mcu_en_gpio_value(1);
 		msleep(10);
 		usb_sw_gpio_set(1);
