@@ -1246,11 +1246,6 @@ void mdss_mdp_overlay_buf_free(struct msm_fb_data_type *mfd,
 	if (!list_empty(&buf->pipe_list))
 		list_del_init(&buf->pipe_list);
 
-	MDSS_XLOG(buf->last_pipe->num, buf->p[0].addr, buf->p[0].len,
-			buf->p[1].addr, buf->p[1].len,
-			buf->p[2].addr, buf->p[2].len,
-			buf->p[3].addr, buf->p[3].len);
-
 	mdss_mdp_data_free(buf, false, DMA_TO_DEVICE);
 
 	buf->last_freed = local_clock();
