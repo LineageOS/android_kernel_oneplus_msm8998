@@ -55,11 +55,7 @@ static void __iomem *virt_dbgbase;
 		.div_src_val = BVAL(4, 0, (int)FIXDIV(div)) \
 			| BVAL(10, 8, s##_source_val), \
 	}
-//qcom patch
-#define GPLL0_MISC_MASK        0x3
-DEFINE_CLK_DUMMY(gcc_mmss_misc_clk, 0);
-DEFINE_SPINLOCK(local_clock_lock);
-//qcom patch
+
 static DEFINE_VDD_REGULATORS(vdd_dig, VDD_DIG_NUM, 1, vdd_corner, NULL);
 static DEFINE_VDD_REGULATORS(vdd_dig_ao, VDD_DIG_NUM, 1, vdd_corner, NULL);
 
@@ -179,7 +175,6 @@ static struct local_vote_clk gcc_mmss_gpll0_clk = {
 		.dbg_name = "gcc_mmss_gpll0_clk",
 		.parent = &gpll0.c,
 		.ops = &clk_ops_vote,
-		.depends = &gcc_mmss_misc_clk.c,//qcom patch
 		CLK_INIT(gcc_mmss_gpll0_clk.c),
 	},
 };
@@ -194,7 +189,6 @@ static struct local_vote_clk gcc_mmss_gpll0_div_clk = {
 		.dbg_name = "gcc_mmss_gpll0_div_clk",
 		.parent = &gpll0.c,
 		.ops = &clk_ops_vote,
-		.depends = &gcc_mmss_misc_clk.c,//qcom patch
 		CLK_INIT(gcc_mmss_gpll0_div_clk.c),
 	},
 };
@@ -2685,35 +2679,6 @@ static void msm_gcc_8998_v2_fixup(void)
 	gcc_qspi_ahb_clk.c.ops = &clk_ops_dummy;
 }
 
-//qcom patch
-static int misc_clk_enable(struct clk *c)
-{
-       u32 regval;
-       unsigned long flags;
-
-       spin_lock_irqsave(&local_clock_lock, flags);
-       regval = readl_relaxed(virt_base + GCC_MMSS_MISC);
-       /* Enable GPLL0 main and div active input to MMSS */
-       regval &= ~GPLL0_MISC_MASK;
-       writel_relaxed(regval, virt_base + GCC_MMSS_MISC);
-       spin_unlock_irqrestore(&local_clock_lock, flags);
-
-       return 0;
-}
-
-static void misc_clk_disable(struct clk *c)
-{
-       unsigned long flags;
-       u32 regval;
-
-       spin_lock_irqsave(&local_clock_lock, flags);
-       regval = readl_relaxed(virt_base + GCC_MMSS_MISC);
-       /* Disable GPLL0 main and div active input to MMSS */
-       regval |= GPLL0_MISC_MASK;
-       writel_relaxed(regval, virt_base + GCC_MMSS_MISC);
-       spin_unlock_irqrestore(&local_clock_lock, flags);
-}
-//qcom patch
 static int msm_gcc_8998_probe(struct platform_device *pdev)
 {
 	struct resource *res;
@@ -2760,11 +2725,7 @@ static int msm_gcc_8998_probe(struct platform_device *pdev)
 					"Unable to get vdd_dig_ao regulator\n");
 		return PTR_ERR(vdd_dig_ao.regulator[0]);
 	}
-   //qcom patch
-   /* Overwrite enable/disable clock ops for gcc_mmss_misc_clk */
-   gcc_mmss_misc_clk.c.ops->enable = misc_clk_enable;
-   gcc_mmss_misc_clk.c.ops->disable = misc_clk_disable;
-   //qcom patch
+
 	bimc_clk.c.parent = &cxo_clk_src.c;
 	ret = of_msm_clock_register(pdev->dev.of_node, msm_clocks_rpm_8998,
 				    ARRAY_SIZE(msm_clocks_rpm_8998));
