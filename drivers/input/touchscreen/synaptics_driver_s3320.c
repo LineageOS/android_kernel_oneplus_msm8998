@@ -1393,7 +1393,7 @@ void int_touch(void)
 	}
         if(count_data > 10){
             TPD_ERR("count_data is: %d\n", count_data);
-            panic("finger number wrong");
+            goto INT_TOUCH_END;
         }
 	ret = synaptics_rmi4_i2c_read_block(ts->client, F12_2D_DATA_BASE, count_data*8+1, buf);
 	if (ret < 0) {
