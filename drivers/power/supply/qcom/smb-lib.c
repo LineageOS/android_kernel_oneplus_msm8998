@@ -5835,9 +5835,24 @@ static void op_check_battery_uovp(struct smb_charger *chg)
 
 	return;
 }
+int op_get_charg_en(struct smb_charger *chg, int *chg_enabled)
+{
+	int rc = 0;
+	u8 temp;
+
+	rc = smblib_read(chg, CHARGING_ENABLE_CMD_REG, &temp);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't read chg en rc=%d\n", rc);
+		return rc;
+	}
+	*chg_enabled = temp & CHARGING_ENABLE_CMD_BIT;
+
+	return rc;
+}
+
 static void op_check_charger_collapse(struct smb_charger *chg)
 {
-	int rc, is_usb_supend, curr;
+	int rc, is_usb_supend, curr, chg_en;
 	u8 stat, chger_stat, pwer_source_stats;
 
 	if (!chg->vbus_present)
@@ -5855,12 +5870,14 @@ static void op_check_charger_collapse(struct smb_charger *chg)
 			rc);
 	}
 	smblib_get_usb_suspend(chg, &is_usb_supend);
-	pr_debug("chger_stat=0x%x, aicl_stats =0x%x\n",
-		chger_stat, pwer_source_stats);
+	op_get_charg_en(chg, &chg_en);
+	pr_debug("chger_stat=0x%x, aicl_stats =0x%x, chg_en =%d\n",
+		chger_stat, pwer_source_stats, chg_en);
 	curr = get_prop_batt_current_now(chg) / 1000;
 	stat = !chg->chg_done
 			&& !is_usb_supend
 			&& (curr > 20)
+			&& chg_en
 			&& ((CC_SOFT_TERMINATE_BIT & chger_stat)
 				|| (pwer_source_stats == 0x72));
 
