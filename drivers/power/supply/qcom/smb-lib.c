@@ -35,6 +35,10 @@
 #include <linux/delay.h>
 #include <linux/input/qpnp-power-on.h>
 #include <linux/spmi.h>
+#if defined(CONFIG_FB)
+#include <linux/notifier.h>
+#include <linux/fb.h>
+#endif /*CONFIG_FB*/
 
 #define SOC_INVALID                   0x7E
 #define SOC_DATA_REG_0                0x88D
@@ -5951,6 +5955,36 @@ static void op_check_charger_uovp(struct smb_charger *chg, int vchg_mv)
 	pre_uovp_satus = uovp_satus;
 	return;
 }
+#if defined(CONFIG_FB)
+static int fb_notifier_callback(struct notifier_block *self,
+		unsigned long event, void *data)
+{
+	struct fb_event *evdata = data;
+	int *blank;
+	struct smb_charger *chip =
+		container_of(self, struct smb_charger, fb_notif);
+
+	if (evdata && evdata->data && chip) {
+		if (event == FB_EVENT_BLANK) {
+			blank = evdata->data;
+			if (*blank == FB_BLANK_UNBLANK) {
+				if (!chip->oem_lcd_is_on)
+					set_property_on_fg(chip,
+					POWER_SUPPLY_PROP_UPDATE_LCD_IS_OFF, 0);
+				chip->oem_lcd_is_on = true;
+			} else if (*blank == FB_BLANK_POWERDOWN) {
+				if (chip->oem_lcd_is_on != false)
+					set_property_on_fg(chip,
+					POWER_SUPPLY_PROP_UPDATE_LCD_IS_OFF, 1);
+				chip->oem_lcd_is_on = false;
+			}
+		}
+
+	}
+
+	return 0;
+}
+#endif /*CONFIG_FB*/
 
 #define SOFT_CHG_TERM_CURRENT 100 /* 100MA */
 void checkout_term_current(struct smb_charger *chg, int batt_temp)
@@ -6911,6 +6945,14 @@ int smblib_init(struct smb_charger *chg)
 	g_chg = chg;
 
 	regsister_notify_usb_enumeration_status(&usb_enumeration);
+#if defined(CONFIG_FB)
+	chg->fb_notif.notifier_call = fb_notifier_callback;
+
+	rc = fb_register_client(&chg->fb_notif);
+
+	if (rc)
+		pr_err("Unable to register fb_notifier: %d\n", rc);
+#endif /*CONFIG_FB*/
 #endif
 	INIT_DELAYED_WORK(&chg->clear_hdc_work, clear_hdc_work);
 	INIT_WORK(&chg->otg_oc_work, smblib_otg_oc_work);
