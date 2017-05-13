@@ -1443,6 +1443,7 @@ static void calculate_lra_code(struct qpnp_hap *hap)
 	u8 play_rate_code_lo, play_rate_code_hi;
 	int play_rate_code, neg_idx = 0, pos_idx = LRA_POS_FREQ_COUNT-1;
 	int lra_init_freq, freq_variation, start_variation = AUTO_RES_ERR_MAX;
+	int range;
 
 	qpnp_hap_read_reg(hap, &play_rate_code_lo,
 				QPNP_HAP_RATE_CFG1_REG(hap->base));
@@ -1452,8 +1453,9 @@ static void calculate_lra_code(struct qpnp_hap *hap)
 	play_rate_code = (play_rate_code_hi << 8) | (play_rate_code_lo & 0xff);
 
 	lra_init_freq = 200000 / play_rate_code;
+	range = (abs(lra_init_freq-235)*100)/235;
 
-	lra_init_freq = ((abs(lra_init_freq-235)*100/235) < 15) ? lra_init_freq : 235;
+	lra_init_freq = (range < 5) ? lra_init_freq : 235;
 
 	while (start_variation >= AUTO_RES_ERR_CAPTURE_RES) {
 		freq_variation = (lra_init_freq * start_variation) / 100;
@@ -1510,7 +1512,7 @@ static void update_lra_frequency(struct qpnp_hap *hap)
 
     lra_init_freq = 200000/temp;
 
-    if ((abs(lra_init_freq-235)*100/235) < 15){
+	if ((abs(lra_init_freq-235)*100/235) < 5) {
         lra_auto_res_lo = lra_auto_res_lo;
         lra_auto_res_hi = lra_auto_res_hi;
     }else{
