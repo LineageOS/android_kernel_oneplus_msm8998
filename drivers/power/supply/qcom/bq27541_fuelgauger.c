@@ -240,6 +240,7 @@ struct bq27541_device_info {
 	bool lcd_is_off;
 	bool alow_reading;
 	bool fastchg_started;
+	bool bq_present;
 	unsigned long	lcd_off_time;
 	unsigned long	soc_pre_time;
 	/* david.liu@oneplus.tw, 2016/05/16  Fix capacity won't udate */
@@ -1056,6 +1057,12 @@ bool get_extern_fg_regist_done(void)
 {
 	return bq27541_registerd;
 }
+bool get_extern_bq_present(void)
+{
+	if (bq27541_di)
+		return bq27541_di->bq_present;
+	return 0;
+}
 
 #ifdef CONFIG_GAUGE_BQ27411
 /* david.liu@bsp, 20161004 Add BQ27411 support */
@@ -1084,6 +1091,20 @@ static void bq_modify_soc_smooth_parameter(struct work_struct *work)
 	di = container_of(work, struct bq27541_device_info,
 			modify_soc_smooth_parameter.work);
 	bq27411_modify_soc_smooth_parameter(di, true);
+}
+
+static bool check_bat_present(struct bq27541_device_info *di)
+{
+	int flags = 0, ret = 0;
+
+	ret = bq27541_read(BQ27541_SUBCMD_CHEM_ID, &flags, 0, di);
+	if (ret < 0) {
+		pr_err("read bq27541  fail\n");
+		di->bq_present = false;
+		return false;
+	}
+	di->bq_present = true;
+	return true;
 }
 
 static void bq27541_hw_config(struct work_struct *work)
@@ -1804,7 +1825,7 @@ static int bq27541_battery_probe(struct i2c_client *client,
 	schedule_delayed_work(&di->hw_config, BQ27541_INIT_DELAY);
 	schedule_delayed_work(&di->battery_soc_work, BATTERY_SOC_UPDATE_MS);
 	pr_info("probe sucdess\n");
-
+	check_bat_present(di);
 	return 0;
 
 batt_failed_4:

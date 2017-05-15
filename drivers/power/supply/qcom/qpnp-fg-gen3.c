@@ -2909,7 +2909,8 @@ static int fg_psy_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_TEMP:
 #ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
-		if (!get_extern_fg_regist_done())
+		if (!get_extern_fg_regist_done()
+			&& get_extern_bq_present())
 			pval->intval = DEFALUT_BATT_TEMP;
 		else if (chip->use_external_fg && external_fg
 				&& external_fg->get_average_current)
