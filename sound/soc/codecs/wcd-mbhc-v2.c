@@ -43,7 +43,12 @@
 				  SND_JACK_BTN_2 | SND_JACK_BTN_3 | \
 				  SND_JACK_BTN_4 | SND_JACK_BTN_5 )
 #define OCP_ATTEMPT 20
+#ifndef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv, 2016-3-31, improve detect speed*/
 #define HS_DETECT_PLUG_TIME_MS (3 * 1000)
+#else
+#define HS_DETECT_PLUG_TIME_MS (800)
+#endif
 #define SPECIAL_HS_DETECT_TIME_MS (2 * 1000)
 #define MBHC_BUTTON_PRESS_THRESHOLD_MIN 250
 #define GND_MIC_SWAP_THRESHOLD 4
@@ -1228,6 +1233,11 @@ static void wcd_correct_swch_plug(struct work_struct *work)
 		else
 			plug_type = MBHC_PLUG_TYPE_INVALID;
 	}
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv , 2016/3/18, modify for debug*/
+	pr_err("%s: Valid plug found, plug type is %d\n",
+			 __func__, plug_type);
+#endif
 
 	do {
 		cross_conn = wcd_check_cross_conn(mbhc);
@@ -1339,8 +1349,11 @@ correct_plug_type:
 					 * This is due to GND/MIC switch didn't
 					 * work,  Report unsupported plug.
 					 */
-					pr_debug("%s: switch didnt work\n",
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv , 2016/3/18, modify for debug*/
+					pr_err("%s: switch didn't work\n",
 						  __func__);
+#endif
 					plug_type = MBHC_PLUG_TYPE_GND_MIC_SWAP;
 					goto report;
 				} else {
@@ -1366,8 +1379,11 @@ correct_plug_type:
 				 */
 				if (mbhc->mbhc_cfg->swap_gnd_mic &&
 					mbhc->mbhc_cfg->swap_gnd_mic(codec)) {
-					pr_debug("%s: US_EU gpio present,flip switch\n"
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv , 2016/7/6, add for debug*/
+					pr_err("%s: US_EU gpio present,flip switch\n"
 						, __func__);
+#endif
 					continue;
 				}
 			}
@@ -1376,12 +1392,18 @@ correct_plug_type:
 		WCD_MBHC_REG_READ(WCD_MBHC_HPHL_SCHMT_RESULT, hphl_sch);
 		WCD_MBHC_REG_READ(WCD_MBHC_MIC_SCHMT_RESULT, mic_sch);
 		if (hs_comp_res && !(hphl_sch || mic_sch)) {
-			pr_debug("%s: cable is extension cable\n", __func__);
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv , 2016/3/18, modify for debug*/
+			pr_err("%s: cable is extension cable\n", __func__);
+#endif
 			plug_type = MBHC_PLUG_TYPE_HIGH_HPH;
 			wrk_complete = true;
 		} else {
-			pr_debug("%s: cable might be headset: %d\n", __func__,
-					plug_type);
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv , 2016/3/18, modify for debug*/
+		pr_err("%s: cable might be headset: %d mbhc->current_plug = %d\n",
+			__func__, plug_type, mbhc->current_plug);
+#endif
 			if (!(plug_type == MBHC_PLUG_TYPE_GND_MIC_SWAP)) {
 				plug_type = MBHC_PLUG_TYPE_HEADSET;
 				/*
@@ -1395,11 +1417,14 @@ correct_plug_type:
 				      MBHC_PLUG_TYPE_ANC_HEADPHONE)) &&
 				    !wcd_swch_level_remove(mbhc) &&
 				    !mbhc->btn_press_intr) {
-					pr_debug("%s: cable is %sheadset\n",
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv , 2016/3/18, modify for debug*/
+					pr_err("%s: cable is %sheadset\n",
 						__func__,
 						((spl_hs_count ==
 							WCD_MBHC_SPL_HS_CNT) ?
 							"special ":""));
+#endif
 					goto report;
 				}
 			}
@@ -1407,7 +1432,10 @@ correct_plug_type:
 		}
 	}
 	if (!wrk_complete && mbhc->btn_press_intr) {
-		pr_debug("%s: Can be slow insertion of headphone\n", __func__);
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv , 2016/3/18, modify for debug*/
+		pr_err("%s: Can be slow insertion of headphone\n", __func__);
+#endif
 		wcd_cancel_btn_work(mbhc);
 		plug_type = MBHC_PLUG_TYPE_HEADPHONE;
 	}
@@ -1417,8 +1445,11 @@ correct_plug_type:
 	 */
 	if (!wrk_complete && ((plug_type == MBHC_PLUG_TYPE_HEADSET) ||
 	    (plug_type == MBHC_PLUG_TYPE_ANC_HEADPHONE))) {
-		pr_debug("%s: plug_type:0x%x already reported\n",
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv , 2016/3/18, modify for debug*/
+		pr_err("%s: plug_type:0x%x already reported\n",
 			 __func__, mbhc->current_plug);
+#endif
 		goto enable_supply;
 	}
 
@@ -1434,7 +1465,10 @@ correct_plug_type:
 
 report:
 	if (wcd_swch_level_remove(mbhc)) {
-		pr_debug("%s: Switch level is low\n", __func__);
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv , 2016/3/18, modify for debug*/
+		pr_err("%s: Switch level is low\n", __func__);
+#endif
 		goto exit;
 	}
 	if (plug_type == MBHC_PLUG_TYPE_GND_MIC_SWAP && mbhc->btn_press_intr) {
@@ -1442,9 +1476,12 @@ report:
 		wcd_cancel_btn_work(mbhc);
 		plug_type = MBHC_PLUG_TYPE_HEADPHONE;
 	}
-	pr_debug("%s: Valid plug found, plug type %d wrk_cmpt %d btn_intr %d\n",
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv , 2016/3/18, modify for debug*/
+	pr_err("%s: Valid plug found, plug type %d wrk_cmpt %d btn_intr %d\n",
 			__func__, plug_type, wrk_complete,
 			mbhc->btn_press_intr);
+#endif
 	WCD_MBHC_RSC_LOCK(mbhc);
 	wcd_mbhc_find_plug_and_report(mbhc, plug_type);
 	WCD_MBHC_RSC_UNLOCK(mbhc);
@@ -1982,6 +2019,13 @@ static irqreturn_t wcd_mbhc_btn_press_handler(int irq, void *data)
 		goto done;
 	}
 	mbhc->buttons_pressed |= mask;
+
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv , 2016/5/24, add for debug*/
+	pr_err("%s mbhc->buttons_pressed = %x\n",
+		__func__, mbhc->buttons_pressed);
+#endif
+
 	mbhc->mbhc_cb->lock_sleep(mbhc, true);
 	if (schedule_delayed_work(&mbhc->mbhc_btn_dwork,
 				msecs_to_jiffies(400)) == 0) {
@@ -1999,7 +2043,10 @@ static irqreturn_t wcd_mbhc_release_handler(int irq, void *data)
 	struct wcd_mbhc *mbhc = data;
 	int ret;
 
-	pr_debug("%s: enter\n", __func__);
+#ifdef VENDOR_EDIT
+/*zhiguang.su@MultiMedia.AudioDrv , 2016/5/24, add for debug*/
+	pr_err("%s\n", __func__);
+#endif
 	WCD_MBHC_RSC_LOCK(mbhc);
 	if (wcd_swch_level_remove(mbhc)) {
 		pr_debug("%s: Switch level is low ", __func__);
@@ -2019,11 +2066,24 @@ static irqreturn_t wcd_mbhc_release_handler(int irq, void *data)
 	 * headset not headphone.
 	 */
 	if (mbhc->current_plug == MBHC_PLUG_TYPE_HEADPHONE) {
+
+#ifdef VENDOR_EDIT
+    /*zhiguang.su@MultiMedia.AudioDrv , 2016/5/24, add for debug*/
+		pr_err("%s MBHC_PLUG_TYPE_HEADPHONE\n", __func__);
+#endif
+
 		wcd_mbhc_find_plug_and_report(mbhc, MBHC_PLUG_TYPE_HEADSET);
 		goto exit;
 
 	}
 	if (mbhc->buttons_pressed & WCD_MBHC_JACK_BUTTON_MASK) {
+
+#ifdef VENDOR_EDIT
+    /*zhiguang.su@MultiMedia.AudioDrv , 2016/5/24, add for debug*/
+		pr_err("%s mbhc->buttons_pressed = %x\n", __func__,
+			mbhc->buttons_pressed);
+#endif
+
 		ret = wcd_cancel_btn_work(mbhc);
 		if (ret == 0) {
 			pr_debug("%s: Reporting long button release event\n",
