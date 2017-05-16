@@ -5247,7 +5247,7 @@ static void op_check_charge_timeout(struct smb_charger *chg)
 {
 	static int batt_status, count = 0;
 
-	if (chg->chg_done)
+	if (chg->chg_done || chg->is_aging_test)
 		return;
 
 	batt_status = get_prop_batt_status(chg);
@@ -6098,7 +6098,10 @@ static void check_non_standard_charger_work(struct work_struct *work)
 		aicl_result = op_get_aicl_result(chg);
 		chg->non_stand_chg_current = aicl_result;
 		chg->usb_psy_desc.type = POWER_SUPPLY_TYPE_USB_DCP;
-		op_usb_icl_set(chg, DEFAULT_DCP_MA*1000);
+		if (chg->is_aging_test)
+			op_usb_icl_set(chg, DEFAULT_AGAING_CHG_MA*1000);
+		else
+			op_usb_icl_set(chg, DEFAULT_DCP_MA*1000);
 		power_supply_changed(chg->batt_psy);
 		chg->is_power_changed = true;
 		chg->non_std_chg_present = true;
