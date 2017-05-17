@@ -143,6 +143,7 @@ dtb-$(CONFIG_ARCH_MSM8998) += cheeseburger-v2.1-evt2.dtb
 dtb-$(CONFIG_ARCH_MSM8998) += cheeseburger-v2.1-evt3.dtb
 dtb-$(CONFIG_ARCH_MSM8998) += cheeseburger-v2.1-dvt1.dtb
 dtb-$(CONFIG_ARCH_MSM8998) += cheeseburger-v2.1-pvt.dtb
+dtb-$(CONFIG_ARCH_MSM8998) += cheeseburger-v2.1-pvt1.dtb
 dtb-$(CONFIG_ARCH_MSM8998) += cheeseburger-v2.1-backup.dtb
 #endif
 
