@@ -63,6 +63,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/project_info.h>
 #include <linux/syscalls.h>
+#include <linux/wakelock.h>
 
 #define DRAGON_NFC 1
 #define SIG_NFC 44
@@ -73,6 +74,7 @@ struct pn544_dev    {
     struct mutex        read_mutex;
     struct i2c_client   *client;
     struct miscdevice   pn544_device;
+    struct wake_lock    pn544_wake_lock; /*NFC CLK_REQ*/
     unsigned int        ven_gpio;
     unsigned int        firm_gpio;
     unsigned int        irq_gpio;
@@ -83,14 +85,16 @@ struct pn544_dev    {
     bool                nfc_ven_enabled; /* stores the VEN pin state powered by Nfc */
     bool                spi_ven_enabled; /* stores the VEN pin state powered by Spi */
     bool                irq_enabled;
+    bool                clk_enabled; /*NFC CLK_REQ*/
     spinlock_t          irq_enabled_lock;
+    spinlock_t          clk_enabled_lock; /*NFC CLK_REQ*/
     long                nfc_service_pid; /*used to signal the nfc the nfc service */
     const char          *clk_src_name;
     unsigned int        clk_gpio;
     struct  clk         *s_clk;
     struct regulator    *p544_regulator;
     struct regulator    *p544_regulator_s4;
-
+    int irq; /*NFC CLK_REQ*/
 };
 /*enable nfc log cmd echo 1 > sys/module/pn544/parameters/nfc_kernel_log*/
 
@@ -148,6 +152,45 @@ static irqreturn_t pn544_dev_irq_handler(int irq, void *dev_id)
     return IRQ_HANDLED;
 }
 
+
+/*NFC CLK_EQ*/
+static void pn544_disable_clk(struct pn544_dev *pn544_dev)
+{
+    unsigned long flags;
+    spin_lock_irqsave(&pn544_dev->clk_enabled_lock, flags);
+    if (pn544_dev->clk_enabled) {
+        disable_irq_nosync(pn544_dev->irq);
+        pn544_dev->clk_enabled = false;
+    }
+    printk("###clkreq_disable_irq###");
+    spin_unlock_irqrestore(&pn544_dev->clk_enabled_lock, flags);
+}
+
+static void pn544_enable_clk(struct pn544_dev *pn544_dev)
+{
+    unsigned long flags;
+    spin_lock_irqsave(&pn544_dev->clk_enabled_lock, flags);
+    if (!pn544_dev->clk_enabled) {
+        pn544_dev->clk_enabled = true;
+        enable_irq(pn544_dev->irq);
+    }
+    printk("###clkreq_enable_irq###");
+    spin_unlock_irqrestore(&pn544_dev->clk_enabled_lock, flags);
+}
+
+static irqreturn_t clk_req_handler(int irq, void *dev_id)
+{
+    struct pn544_dev *pn544_dev = dev_id;
+    printk("%s ", __func__);
+    if (!gpio_get_value(pn544_dev->clk_gpio)) {
+        pn544_disable_clk(pn544_dev);
+        wake_unlock(&pn544_dev->pn544_wake_lock);
+    }
+
+    return IRQ_HANDLED;
+}
+
+/* End, NFC CLK_REQ*/
 static ssize_t pn544_dev_read(struct file *filp, char __user *buf,
         size_t count, loff_t *offset)
 {
@@ -231,8 +274,8 @@ static ssize_t pn544_dev_write(struct file *filp, const char __user *buf,
     int ret;
 
     pn544_dev = filp->private_data;
-    gpio_set_value(pn544_dev->wake_up_gpio, 1); 
-    
+    gpio_set_value(pn544_dev->wake_up_gpio, 1);
+
     if (count > MAX_BUFFER_SIZE)
         count = MAX_BUFFER_SIZE;
 
@@ -253,7 +296,7 @@ static ssize_t pn544_dev_write(struct file *filp, const char __user *buf,
     /* pn544 seems to be slow in handling I2C write requests
      * so add 1ms delay after I2C send oparation */
     udelay(1000);
-    gpio_set_value(pn544_dev->wake_up_gpio, 0); 
+    gpio_set_value(pn544_dev->wake_up_gpio, 0);
 
 gotoret:
     return ret;
@@ -964,6 +1007,12 @@ static int pn544_probe(struct i2c_client *client,
     mutex_init(&pn544_dev->p61_state_mutex);
     spin_lock_init(&pn544_dev->irq_enabled_lock);
 
+    /*NFC CLK_REQ*/
+    spin_lock_init(&pn544_dev->clk_enabled_lock);
+    wake_lock_init(&pn544_dev->pn544_wake_lock,
+    WAKE_LOCK_SUSPEND, "pn544_wake_lock");
+    /* End, NFC CLK_REQ*/
+
     pn544_dev->pn544_device.minor = MISC_DYNAMIC_MINOR;
     pn544_dev->pn544_device.name = "pn544";
     pn544_dev->pn544_device.fops = &pn544_dev_fops;
@@ -990,6 +1039,24 @@ static int pn544_probe(struct i2c_client *client,
     /*add for wake up ap side*/
     enable_irq_wake(pn544_dev->client->irq);
     push_component_info(NFC, "NQ330", "NXP");
+
+    /* NFC CLK_REQ */
+    pr_info("%s pn544_dev->clk_gpio = %d\n", __func__, gpio_get_value(pn544_dev->clk_gpio));
+    pn544_dev->irq = gpio_to_irq(pn544_dev->clk_gpio);
+    if (pn544_dev->irq < 0) {
+        pr_info("%s gpio to irq failed", __func__);
+    }
+    pr_info("%s : requesting IRQ %d\n", __func__, pn544_dev->irq);
+    pn544_dev->clk_enabled = true;
+    ret = request_irq(pn544_dev->irq, clk_req_handler,
+    IRQF_TRIGGER_FALLING, "CLK_REQ_DETECT", pn544_dev);
+
+    if (ret) {
+        dev_err(&client->dev, "%s: request_irq failed\n", __func__);
+        goto err_request_irq_failed;
+    }
+    pn544_disable_clk(pn544_dev);
+    /* End, NFC CLK_REQ*/
     return 0;
 
     err_request_irq_failed:
@@ -1033,6 +1100,7 @@ static int pn544_remove(struct i2c_client *client)
     regulator_put(pn544_dev->p544_regulator_s4);
     regulator_put(pn544_dev->p544_regulator);
     free_irq(client->irq, pn544_dev);
+    free_irq(pn544_dev->irq, pn544_dev); /*NFC CLK_REQ*/
     misc_deregister(&pn544_dev->pn544_device);
     mutex_destroy(&pn544_dev->read_mutex);
     mutex_destroy(&pn544_dev->p61_state_mutex);
@@ -1062,11 +1130,36 @@ static struct of_device_id pn544_i2c_dt_match[] = {
     {}
 };
 #endif
+
+/*NFC CLK_REQ*/
+static int pn544_suspend(struct device *dev)
+{
+    struct i2c_client *client = to_i2c_client(dev);
+    struct pn544_dev *pn544_dev = i2c_get_clientdata(client);
+    printk("%s pn544_dev->clk_gpio = %d\n", __func__, gpio_get_value(pn544_dev->clk_gpio));
+    if (gpio_get_value(pn544_dev->clk_gpio)) {
+        wake_lock(&pn544_dev->pn544_wake_lock);
+        pn544_enable_clk(pn544_dev);
+    }
+    return 0;
+}
+
+static int pn544_resume(struct device *dev)
+{
+    return 0;
+}
+
+static const struct dev_pm_ops pn544_pm_ops = {
+    .suspend    = pn544_suspend, /*NFC CLK_REQ*/
+    .resume     = pn544_resume, /*NFC CLK_REQ*/
+};
+
 static struct i2c_driver pn544_driver = {
         .id_table   = pn544_id,
         .probe      = pn544_probe,
         .remove     = pn544_remove,
         .driver     = {
+        .pm    = &pn544_pm_ops,
                 .owner = THIS_MODULE,
                 .name  = "pn544",
 #if DRAGON_NFC
@@ -1074,6 +1167,7 @@ static struct i2c_driver pn544_driver = {
 #endif
         },
 };
+/* End, NFC CLK_REQ*/
 
 /*
  * module load/unload record keeping
