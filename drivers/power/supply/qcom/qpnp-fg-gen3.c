@@ -2983,6 +2983,15 @@ static int fg_psy_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_FG_CURRENT_NOW:
 			rc = fg_get_battery_current(chip, &pval->intval);
 		break;
+	case POWER_SUPPLY_PROP_BATTERY_HEALTH:
+		if (chip->use_external_fg && external_fg
+				&& external_fg->get_batt_health)
+			pval->intval = external_fg->get_batt_health();
+		else if (get_extern_fg_regist_done() == false)
+			pval->intval = -1;
+		else
+			pval->intval = -1;
+		break;
 #endif
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE:
 		rc = fg_get_sram_prop(chip, FG_SRAM_VBATT_FULL, &pval->intval);
@@ -3110,6 +3119,9 @@ static enum power_supply_property fg_psy_props[] = {
 	POWER_SUPPLY_PROP_SOC_REPORTING_READY,
 	POWER_SUPPLY_PROP_DEBUG_BATTERY,
 	POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE,
+#ifdef VENDOR_EDIT
+	POWER_SUPPLY_PROP_BATTERY_HEALTH,
+#endif
 };
 
 static const struct power_supply_desc fg_psy_desc = {
@@ -4219,8 +4231,8 @@ static void oem_update_cc_cv_setpoint(struct fg_chip *chip,int cv_float_point)
 static void oneplus_set_allow_read_iic(struct fg_chip *chip,bool status)
 {
 	if (chip->use_external_fg && external_fg
-			&& external_fg->set_alow_reading)
-		external_fg->set_alow_reading(status);
+			&& external_fg->set_allow_reading)
+		external_fg->set_allow_reading(status);
 	else
 		pr_info("set allow read extern fg iic fail\n");
 }
