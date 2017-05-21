@@ -5103,6 +5103,8 @@ static void retrigger_dash_work(struct work_struct *work)
 			struct smb_charger,
 			rechk_sw_dsh_work.work);
 	pr_debug("chg->ck_dash_count=%d\n", chg->ck_dash_count);
+	if (chg->usb_enum_status)
+		return;
 	if (chg->dash_present) {
 		chg->ck_dash_count = 0;
 		return;
@@ -5115,9 +5117,7 @@ static void retrigger_dash_work(struct work_struct *work)
 		pr_info("retrger dash\n");
 		chg->re_trigr_dash_done = true;
 		set_usb_switch(chg, false);
-		op_set_fast_chg_allow(chg, false);
 		set_usb_switch(chg, true);
-		op_set_fast_chg_allow(chg, true);
 		chg->ck_dash_count = 0;
 	} else {
 		chg->ck_dash_count++;
