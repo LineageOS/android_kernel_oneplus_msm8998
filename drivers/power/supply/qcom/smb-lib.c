@@ -5008,7 +5008,7 @@ static void set_usb_switch(struct smb_charger *chg, bool enable)
 
 	if (enable) {
 		pr_err("switch on fastchg\n");
-		if (chg->boot_usb_present) {
+		if (chg->boot_usb_present && chg->re_trigr_dash_done) {
 			vote(chg->usb_icl_votable, AICL_RERUN_VOTER,
 					true, 0);
 			usleep_range(500000, 510000);
