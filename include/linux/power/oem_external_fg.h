@@ -12,6 +12,7 @@ struct external_battery_gauge {
 	bool (*is_usb_switch_on) (void);
 	int (*get_battery_status)(void);
 	int (*get_batt_remaining_capacity) (void);
+	int (*get_batt_health)(void);
 	int (*monitor_for_recharging) (void);
 	int (*get_battery_soc) (void);
 	int (*get_average_current) (void);
@@ -27,7 +28,7 @@ struct external_battery_gauge {
 	bool (*get_fast_chg_ing)	(void);
 	bool (*get_fast_low_temp_full)	(void);
 	int (*set_low_temp_full_false)	(void);
-	int (*set_alow_reading) (int enable);
+	int (*set_allow_reading)(int enable);
 	int (*set_lcd_off_status) (int status);
 	int (*fast_chg_started_status) (bool status);
 	bool (*get_fastchg_firmware_already_updated) (void);
