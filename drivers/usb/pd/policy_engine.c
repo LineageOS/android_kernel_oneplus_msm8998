@@ -1684,11 +1684,13 @@ static void usbpd_sm(struct work_struct *w)
 			pd->caps_count++;
 
 #ifdef VENDOR_EDIT
-/* david.liu@bsp, 201710503 Fix slow SRC & SNK */
-			if (pd->current_dr == DR_DFP)
+/* david.liu@bsp, 201710523 Fix C2C swap failed with Pixel */
+			if (pd->caps_count < 10 && pd->current_dr == DR_DFP) {
 				start_usb_host(pd, true);
-			else if (pd->caps_count == 10)
+			} else if (pd->caps_count >= 10) {
+				usbpd_set_state(pd, PE_SRC_DISABLED);
 				break;
+			}
 #else
 			if (pd->caps_count == 10 && pd->current_dr == DR_DFP) {
 				/* Likely not PD-capable, start host now */
@@ -1708,6 +1710,10 @@ static void usbpd_sm(struct work_struct *w)
 			break;
 		}
 
+#ifdef VENDOR_EDIT
+/* david.liu@bsp, 201710523 Fix C2C swap failed with Pixel */
+		break;
+#else
 		/* transmit was successful if GoodCRC was received */
 		pd->caps_count = 0;
 		pd->hard_reset_count = 0;
@@ -1720,6 +1726,7 @@ static void usbpd_sm(struct work_struct *w)
 		power_supply_set_property(pd->usb_psy,
 				POWER_SUPPLY_PROP_PD_ACTIVE, &val);
 		break;
+#endif
 
 	case PE_SRC_SEND_CAPABILITIES_WAIT:
 		if (IS_DATA(rx_msg, MSG_REQUEST)) {
