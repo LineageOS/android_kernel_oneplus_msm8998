@@ -4344,7 +4344,7 @@ int op_get_aicl_result(struct smb_charger *chg)
 				&chg->param.icl_stat, &icl_ma);
 	if (rc < 0) {
 		pr_err("Couldn't get ICL status rc=%d\n", rc);
-		return IRQ_HANDLED;
+		return  -EINVAL;
 	}
 
 	pr_info("AICL result=%d\n", icl_ma);
