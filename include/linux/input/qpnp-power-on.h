@@ -40,8 +40,12 @@ struct qpnp_pon {
 	u8			pon_ver;
 	u8			warm_reset_reason1;
 	u8			warm_reset_reason2;
-	bool			is_spon;
-	bool			store_hard_reset_reason;
+	bool		is_spon;
+	bool		store_hard_reset_reason;
+	//#ifdef VENDOR_EDIT
+	bool        kpd_dbc_enable;
+	ktime_t     kpd_release_time;
+	//#endif /* VENDOR_EDIT */
 };
 
 /**

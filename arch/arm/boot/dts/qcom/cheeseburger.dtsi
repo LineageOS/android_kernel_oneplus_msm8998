@@ -308,6 +308,7 @@
 	qcom,pm8998@0{
 		qcom,power-on@800 {
 		    qcom,pon-dbc-delay = <31250>;
+		    qcom,kpd-dbc-enable;
 	    };
 	};
 	qcom,pmi8998@3 {

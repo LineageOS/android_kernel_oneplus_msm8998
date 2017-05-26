@@ -400,6 +400,29 @@ out:
 	return rc;
 }
 
+//#ifdef VENDOR_EDIT
+static int qpnp_pon_get_dbc(struct qpnp_pon *pon, u32 *delay)
+{
+	int rc;
+	unsigned int val;
+
+	rc = regmap_read(pon->regmap, QPNP_PON_DBC_CTL(pon), &val);
+	if (rc) {
+	pr_err("Unable to read pon_dbc_ctl rc=%d\n", rc);
+	return rc;
+	}
+	val &= QPNP_PON_DBC_DELAY_MASK(pon);
+
+	if (is_pon_gen2(pon))
+	*delay = USEC_PER_SEC /
+	(1 << (QPNP_PON_GEN2_DELAY_BIT_SHIFT - val));
+	else
+	*delay = USEC_PER_SEC /
+	(1 << (QPNP_PON_DELAY_BIT_SHIFT - val));
+	return rc;
+}
+//#endif /* VENDOR_EDIT */
+
 static ssize_t qpnp_pon_dbc_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
@@ -759,6 +782,9 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 	u8  pon_rt_bit = 0;
 	u32 key_status;
 	uint pon_rt_sts;
+	//#ifdef VENDOR_EDIT
+	u64 elapsed_us;
+	//#endif /* VENDOR_EDIT */
 
 	cfg = qpnp_get_cfg(pon, pon_type);
 	if (!cfg)
@@ -767,6 +793,16 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 	/* Check if key reporting is supported */
 	if (!cfg->key_code)
 		return 0;
+
+	//#ifdef VENDOR_EDIT
+	if (pon->kpd_dbc_enable && cfg->pon_type == PON_KPDPWR) {
+		elapsed_us = ktime_us_delta(ktime_get(), pon->kpd_release_time);
+		if (elapsed_us < pon->dbc) {
+		pr_err("Ignoring kpd event - within debounce time\n");
+		return 0;
+		}
+	}
+	//#endif /* VENDOR_EDIT */
 
 	/* check the RT status to get the current status of the line */
 	rc = regmap_read(pon->regmap, QPNP_PON_RT_STS(pon), &pon_rt_sts);
@@ -805,12 +841,18 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 	pr_debug("PMIC input: code=%d, sts=0x%hhx\n",
 					cfg->key_code, pon_rt_sts);
 	key_status = pon_rt_sts & pon_rt_bit;
+	//#ifdef VENDOR_EDIT
+	if (pon->kpd_dbc_enable && cfg->pon_type == PON_KPDPWR) {
+		if (!key_status)
+		pon->kpd_release_time = ktime_get();
+	}
+	//#endif /* VENDOR_EDIT */
 
 	/*
 	 * simulate press event in case release event occurred
 	 * without a press event
 	 */
-#ifndef VENDOR_EDIT
+
 	if (!cfg->old_state && !key_status)
 	{
 		input_report_key(pon->pon_input, cfg->key_code, 1);
@@ -819,14 +861,6 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 
 	input_report_key(pon->pon_input, cfg->key_code, key_status);
 	input_sync(pon->pon_input);
-#endif
-#ifdef VENDOR_EDIT
-	if (!(!cfg->old_state && !key_status))
-	{
-		input_report_key(pon->pon_input, cfg->key_code, key_status);
-		input_sync(pon->pon_input);
-	}
-#endif
 
 	cfg->old_state = !!key_status;
 
@@ -2564,6 +2598,12 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 	} else {
 		rc = qpnp_pon_set_dbc(pon, delay);
 	}
+	//#ifdef VENDOR_EDIT
+	qpnp_pon_get_dbc(pon, &pon->dbc);
+
+	pon->kpd_dbc_enable = of_property_read_bool(pon->pdev->dev.of_node,
+	"qcom,kpd-dbc-enable");
+	//#endif /* VENDOR_EDIT */
 
 	rc = of_property_read_u32(pon->pdev->dev.of_node,
 				"qcom,warm-reset-poweroff-type",
