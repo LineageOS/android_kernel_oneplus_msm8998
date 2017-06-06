@@ -49,7 +49,6 @@ static struct msm_actuator *actuators[] = {
 };
 
 /* add by likelong@camera 2017.5.12 to update PID of eeprom in driver IC */
-#ifdef VENDOR_EDIT
 static int32_t msm_actuator_update_PID(struct msm_actuator_ctrl_t *a_ctrl)
 {
 	int i;
@@ -293,7 +292,6 @@ EXIT2:
 
 	return rc;
 }
-#endif
 
 static int32_t msm_actuator_piezo_set_default_focus(
 	struct msm_actuator_ctrl_t *a_ctrl,
@@ -1622,9 +1620,7 @@ static int32_t msm_actuator_set_param(struct msm_actuator_ctrl_t *a_ctrl,
 	a_ctrl->curr_region_index = 0;
 
 /* add by likelong@camera 2017.5.12 to update PID of eeprom in driver IC */
-#ifdef VENDOR_EDIT
 	msm_actuator_update_PID(a_ctrl);
-#endif
 
 	CDBG("Exit\n");
 

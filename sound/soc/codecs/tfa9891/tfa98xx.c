@@ -29,15 +29,11 @@
 #include <linux/input.h>
 
 #include "config.h"
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMedia.AudioDrv, 2014-4-14, add for l21 power*/
 #include <linux/regulator/consumer.h>
-#endif
 
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMedia.AudioDrv, 2015-11-09, add for debug*/
 #include <sound/sounddebug.h>
-#endif
 
 #define I2C_RETRIES 50
 #define I2C_RETRY_DELAY 5 /* ms */
@@ -110,11 +106,9 @@ MODULE_PARM_DESC(no_start, "do not start the work queue; for debugging via user\
 struct tfa98xx *g_tfa98xx = NULL;
 EXPORT_SYMBOL_GPL(g_tfa98xx);
 
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMedia.AudioDrv, 2014-4-14, add for l21 power*/
 struct regulator *l21_power;
 EXPORT_SYMBOL_GPL(l21_power);
-#endif
 
 static void tfa98xx_tapdet_check_update(struct tfa98xx *tfa98xx);
 static void tfa98xx_interrupt_restore(struct tfa98xx *tfa98xx);
@@ -124,7 +118,6 @@ static int get_profile_from_list(char *buf, int id);
 static int get_profile_id_for_sr(int id, unsigned int rate); 
 /*zhiguang.su@MultiMediaService,2017-02-09,avoid no sound for ftm*/
 static void tfa98xx_dsp_startInit(struct tfa98xx *tfa98xx);
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMediaService,2017-04-26,add ftm spk pa rivision test*/
 static int tfa98xx_info_rivision_ctl(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_info *uinfo);
@@ -132,18 +125,13 @@ static int tfa98xx_get_rivision_ctl(struct snd_kcontrol *kcontrol,
 			     struct snd_ctl_elem_value *ucontrol);
 static int tfa98xx_set_rivision_ctl(struct snd_kcontrol *kcontrol,
 			     struct snd_ctl_elem_value *ucontrol);
-#endif
 
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMedia.AudioDrv, 2015-11-09, add for debug*/
 int testLogOn = 0;
 EXPORT_SYMBOL_GPL(testLogOn);
-#endif
 
-#ifdef VENDOR_EDIT
 /*wangdongdong@MultiMediaService,2016/11/30,add for speaker impedence detection*/
 static int tfa98xx_speaker_recalibration(Tfa98xx_handle_t handle,unsigned int *speakerImpedance);
-#endif
 
 struct tfa98xx_rate {
 	unsigned int rate;
@@ -162,7 +150,6 @@ static struct tfa98xx_rate rate_to_fssel[] = {
 	{ 48000, 8 },
 };
 
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMediaService,2017-04-26,add ftm spk pa rivision test*/
 static struct snd_kcontrol_new tfa98xx_at_controls[] = {
 	{
@@ -173,7 +160,6 @@ static struct snd_kcontrol_new tfa98xx_at_controls[] = {
 		.put = tfa98xx_set_rivision_ctl,
 	},
 };
-#endif
 static ssize_t tfa98xx_state_store(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t count)
 {
@@ -189,10 +175,8 @@ static ssize_t tfa98xx_state_show(struct device *dev, struct device_attribute *a
     char *str;
 	uint16_t status;
 	int ret, calibrate_done;
-#ifdef VENDOR_EDIT
 /*wangdongdong@MultiMediaService,2016/11/30,add for speaker impedence detection*/
 	unsigned int speakerImpedance1 = 0;
-#endif
     if(g_tfa98xx == NULL)
     {
         pr_err("%s g_tfa98xx = NULL\n",__func__);
@@ -233,15 +217,9 @@ static ssize_t tfa98xx_state_show(struct device *dev, struct device_attribute *a
 	switch (calibrate_done) {
 	case 1:
 		/* calibration complete ! */
-#ifndef VENDOR_EDIT
-/*wangdongdong@MultiMediaService,2016/11/30,add for speaker impedence detection*/
-		tfa_dsp_get_calibration_impedance(tfa98xx->handle);
-		ret = print_calibration(tfa98xx->handle, str, PAGE_SIZE);
-#else
         tfa98xx_speaker_recalibration(tfa98xx->handle,&speakerImpedance1);
         pr_err("tfa speaker calibration impedance = %d\n",speakerImpedance1);
 		ret = print_calibration_modify(tfa98xx->handle, str, PAGE_SIZE);
-#endif
 
 		break;
 	case 0:
@@ -273,7 +251,6 @@ r_c_err:
 static struct device_attribute tfa98xx_state_attr =
      __ATTR(calibra, 0444, tfa98xx_state_show, tfa98xx_state_store);
 
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMedia.AudioDrv, 2015-11-05, add for debug*/
 static ssize_t tfa98xx_Log_state_store(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t count)
@@ -305,7 +282,6 @@ static ssize_t tfa98xx_Log_state_show(struct device *dev, struct device_attribut
 static struct device_attribute tfa98xx_Log_state_attr =
      __ATTR(Log, S_IWUSR|S_IRUGO, tfa98xx_Log_state_show, tfa98xx_Log_state_store);
 
-#endif
 
 /* Wrapper for tfa start */
 static enum tfa_error tfa98xx_tfa_start(struct tfa98xx *tfa98xx, int next_profile, int *vstep)
@@ -807,10 +783,8 @@ static ssize_t tfa98xx_dbgfs_r_read(struct file *file,
 	char *str;
 	uint16_t status;
 	int ret, calibrate_done;
-#ifdef VENDOR_EDIT
 /*wangdongdong@MultiMediaService,2016/11/30,add for speaker impedence detection*/
 	unsigned int speakerImpedance1 = 0;
-#endif
 
 	mutex_lock(&tfa98xx->dsp_lock);
 	ret = tfa98xx_open(tfa98xx->handle);
@@ -843,15 +817,9 @@ static ssize_t tfa98xx_dbgfs_r_read(struct file *file,
 	switch (calibrate_done) {
 	case 1:
 		/* calibration complete ! */
-#ifndef VENDOR_EDIT
-/*wangdongdong@MultiMediaService,2016/11/30,add for speaker impedence detection*/
-		tfa_dsp_get_calibration_impedance(tfa98xx->handle);
-		ret = print_calibration(tfa98xx->handle, str, PAGE_SIZE);
-#else
         tfa98xx_speaker_recalibration(tfa98xx->handle,&speakerImpedance1);
         pr_err("tfa speaker calibration impedance = %d\n",speakerImpedance1);
 		ret = print_calibration_modify(tfa98xx->handle, str, PAGE_SIZE);
-#endif
 
 		break;
 	case 0:
@@ -955,17 +923,8 @@ static ssize_t tfa98xx_dbgfs_dsp_state_set(struct file *file,
 		pr_err("tfa_stop complete: %d\n", ret);
 	} else if (!strncmp(buf, mon_start_cmd, sizeof(mon_start_cmd) - 1)) {
 		pr_info("Manual start of monitor thread...\n");
-#ifndef VENDOR_EDIT
-/*suzhiguang@MultiMedia.AudioDrv, 2017-02-21,monitor will cause some problem,ref CBG-1183,remove it */
-		queue_delayed_work(tfa98xx->tfa98xx_wq,
-					&tfa98xx->monitor_work, HZ);
-#endif
 	} else if (!strncmp(buf, mon_stop_cmd, sizeof(mon_stop_cmd) - 1)) {
 		pr_info("Manual stop of monitor thread...\n");
-#ifndef VENDOR_EDIT
-/*suzhiguang@MultiMedia.AudioDrv, 2017-02-21,monitor will cause some problem,ref CBG-1183,remove it */
-		cancel_delayed_work_sync(&tfa98xx->monitor_work);
-#endif
 	} else {
 		return -EINVAL;
 	}
@@ -1195,7 +1154,6 @@ static void tfa98xx_debug_remove(struct tfa98xx *tfa98xx)
 		debugfs_remove_recursive(tfa98xx->dbg_dir);
 }
 #endif
-#ifdef VENDOR_EDIT
 /*wangdongdong@MultiMediaService,2016/11/30,add for speaker impedence detection*/
 static int tfa98xx_speaker_recalibration(Tfa98xx_handle_t handle,unsigned int *speakerImpedance)
 {
@@ -1225,7 +1183,6 @@ static int tfa98xx_speaker_recalibration(Tfa98xx_handle_t handle,unsigned int *s
 
 	return error;
 }
-#endif
 
 static int tfa98xx_get_vstep(struct snd_kcontrol *kcontrol,
 			     struct snd_ctl_elem_value *ucontrol)
@@ -1612,10 +1569,6 @@ static int tfa98xx_set_stop_ctl(struct snd_kcontrol *kcontrol,
 	tfa98xx_close(tfa98xx->handle);
 
 	if ((ucontrol->value.integer.value[0] != 0) && ready) {
-#ifndef VENDOR_EDIT
-/*suzhiguang@MultiMedia.AudioDrv, 2017-02-21,monitor will cause some problem,ref CBG-1183,remove it */
-		cancel_delayed_work_sync(&tfa98xx->monitor_work);
-#endif
 		cancel_delayed_work_sync(&tfa98xx->init_work);
 		if (tfa98xx->dsp_fw_state != TFA98XX_DSP_FW_OK)
 			return 0;
@@ -1629,7 +1582,6 @@ static int tfa98xx_set_stop_ctl(struct snd_kcontrol *kcontrol,
 	return 1;
 }
 
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMediaService,2017-04-26,add ftm spk pa rivision test*/
 static int tfa98xx_info_rivision_ctl(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_info *uinfo)
@@ -1670,7 +1622,6 @@ static int tfa98xx_set_rivision_ctl(struct snd_kcontrol *kcontrol,
 	ucontrol->value.integer.value[0] = 0;
 	return 1;
 }
-#endif
 
 static int tfa98xx_create_controls(struct tfa98xx *tfa98xx)
 {
@@ -1784,11 +1735,9 @@ static int tfa98xx_create_controls(struct tfa98xx *tfa98xx)
 
 	/* set the number of user selectable profiles in the mixer */
 	tfa98xx_mixer_profiles = id;
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMediaService,2017-04-26,add ftm spk pa rivision test*/
 	snd_soc_add_codec_controls(tfa98xx->codec, tfa98xx_at_controls,
 				   ARRAY_SIZE(tfa98xx_at_controls));
-#endif
 	return snd_soc_add_codec_controls(tfa98xx->codec,
 		tfa98xx_controls, mix_index);
 }
@@ -2691,66 +2640,6 @@ static void tfa98xx_tapdet_work(struct work_struct *work)
 	queue_delayed_work(tfa98xx->tfa98xx_wq, &tfa98xx->tapdet_work, HZ/10);
 }
 
-#ifndef VENDOR_EDIT
-/*suzhiguang@MultiMedia.AudioDrv, 2017-02-21,monitor will cause some problem,ref CBG-1183,remove it */
-static void tfa98xx_monitor(struct work_struct *work)
-{
-	struct tfa98xx *tfa98xx;
-	u16 val;
-
-	tfa98xx = container_of(work, struct tfa98xx, monitor_work.work);
-
-	/* Check for tap-detection - bypass monitor if it is active */
-	if (!tfa98xx->input) {
-		/*
-		 * check IC status bits: cold start
-		 * and DSP watch dog bit to re init
-		 */
-		val = snd_soc_read(tfa98xx->codec, TFA98XX_STATUSREG);
-		pr_err("SYS_STATUS0: 0x%04x\n", val);
-		if ((TFA98XX_STATUSREG_ACS & val) ||
-		    (TFA98XX_STATUSREG_WDS & val)) {
-			tfa98xx->dsp_init = TFA98XX_DSP_INIT_RECOVER;
-
-			if (TFA98XX_STATUSREG_ACS & val)
-				pr_err("ERROR: ACS\n");
-			if (TFA98XX_STATUSREG_WDS & val)
-				pr_err("ERROR: WDS\n");
-
-			queue_delayed_work(tfa98xx->tfa98xx_wq, &tfa98xx->init_work, 0);
-		}
-
-		if (TFA98XX_STATUSREG_SPKS & val)
-			pr_err("ERROR: SPKS\n");
-		if (!(TFA98XX_STATUSREG_SWS & val))
-			pr_err("ERROR: SWS\n");
-
-		/* Check secondary errors */
-		if (	!(val & TFA98XX_STATUSREG_CLKS) ||
-			!(val & TFA98XX_STATUSREG_UVDS) ||
-			!(val & TFA98XX_STATUSREG_OVDS) ||
-			!(val & TFA98XX_STATUSREG_OTDS) ||
-			!(val & TFA98XX_STATUSREG_PLLS) ||
-			!(val & TFA98XX_STATUSREG_VDDS))
-			pr_err("Misc errors detected: STATUS_FLAG0 = 0x%x\n", val);
-
-		if (tfa98xx_dev_family(tfa98xx->handle) == 2) {
-			val = snd_soc_read(tfa98xx->codec, TFA98XX_STATUS_FLAGS1);
-			if ((val & TFA98XX_STATUS_FLAGS1_TDMERR) |
-				(val & (0x6 << TFA98XX_STATUS_FLAGS1_TDMSTAT_POS)) |
-				(val & TFA98XX_STATUS_FLAGS1_TDMLUTER))
-				pr_err("TDM related errors: STATUS_FLAG1 = 0x%x\n", val);
-		}
-	}
-
-#ifndef VENDOR_EDIT
-/*suzhiguang@MultiMedia.AudioDrv, 2017-02-21,monitor will cause some problem,ref CBG-1183,remove it */
-	/* reschedule */
-	queue_delayed_work(tfa98xx->tfa98xx_wq, &tfa98xx->monitor_work, 5*HZ);
-#endif
-
-}
-#endif
 
 
 static void tfa98xx_dsp_init(struct tfa98xx *tfa98xx)
@@ -2797,12 +2686,6 @@ static void tfa98xx_dsp_init(struct tfa98xx *tfa98xx)
 			 * periodically, and re-init IC to recover if
 			 * needed.
 			 */
- #ifndef VENDOR_EDIT
-/*suzhiguang@MultiMedia.AudioDrv, 2017-02-21,monitor will cause some problem,ref CBG-1183,remove it */
-			queue_delayed_work(tfa98xx->tfa98xx_wq,
-						&tfa98xx->monitor_work,
-						1*HZ);
-#endif
 		}
 	} else {
 		/* exceeded max number ot start tentatives, cancel start */
@@ -3088,10 +2971,6 @@ static int tfa98xx_mute(struct snd_soc_dai *dai, int mute, int stream)
 			tfa98xx->cstream = 0;
 		if (tfa98xx->pstream != 0 || tfa98xx->cstream != 0)
 			return 0;
-#ifndef VENDOR_EDIT
-/*suzhiguang@MultiMedia.AudioDrv, 2017-02-21,monitor will cause some problem,ref CBG-1183,remove it */
-		cancel_delayed_work_sync(&tfa98xx->monitor_work);
-#endif
 		cancel_delayed_work_sync(&tfa98xx->init_work);
 		if (tfa98xx->dsp_fw_state != TFA98XX_DSP_FW_OK)
 			return 0;
@@ -3177,10 +3056,6 @@ static int tfa98xx_probe(struct snd_soc_codec *codec)
 
 	INIT_DELAYED_WORK(&tfa98xx->init_work, tfa98xx_dsp_init_work);
 
-#ifndef VENDOR_EDIT
-/*suzhiguang@MultiMedia.AudioDrv, 2017-02-21,monitor will cause some problem,ref CBG-1183,remove it */
-	INIT_DELAYED_WORK(&tfa98xx->monitor_work, tfa98xx_monitor);
-#endif
 
 	INIT_DELAYED_WORK(&tfa98xx->interrupt_work, tfa98xx_interrupt);
 	INIT_DELAYED_WORK(&tfa98xx->tapdet_work, tfa98xx_tapdet_work);
@@ -3217,10 +3092,6 @@ static int tfa98xx_remove(struct snd_soc_codec *codec)
 	tfa98xx_inputdev_unregister(tfa98xx);
 
 	cancel_delayed_work_sync(&tfa98xx->interrupt_work);
-#ifndef VENDOR_EDIT
-/*suzhiguang@MultiMedia.AudioDrv, 2017-02-21,monitor will cause some problem,ref CBG-1183,remove it */
-	cancel_delayed_work_sync(&tfa98xx->monitor_work);
-#endif
 	cancel_delayed_work_sync(&tfa98xx->init_work);
 	cancel_delayed_work_sync(&tfa98xx->tapdet_work);
 
@@ -3637,14 +3508,12 @@ static int tfa98xx_i2c_probe(struct i2c_client *i2c,
 		tfa98xx->flags |= TFA98XX_FLAG_SKIP_INTERRUPTS;
 	}
 
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMedia.AudioDrv, 2014-4-14, add for l21 power*/
 	pr_err("%s request l21 power\n", __func__);
 	l21_power = NULL;
 	l21_power = regulator_get(&i2c->dev, "l21power");
 	if (IS_ERR(l21_power))
 		pr_err("%s request l21 power error!\n", __func__);
-#endif
 
 
 #ifdef CONFIG_DEBUG_FS
@@ -3686,10 +3555,6 @@ static int tfa98xx_i2c_remove(struct i2c_client *i2c)
 	pr_err("\n");
 
 	cancel_delayed_work_sync(&tfa98xx->interrupt_work);
-#ifndef VENDOR_EDIT
-/*suzhiguang@MultiMedia.AudioDrv, 2017-02-21,monitor will cause some problem,ref CBG-1183,remove it */
-	cancel_delayed_work_sync(&tfa98xx->monitor_work);
-#endif
 	cancel_delayed_work_sync(&tfa98xx->init_work);
 	cancel_delayed_work_sync(&tfa98xx->tapdet_work);
 

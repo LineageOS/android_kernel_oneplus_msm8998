@@ -378,10 +378,8 @@ static struct channel_ctx *ch_name_to_ch_ctx_create(
 static void ch_push_remote_rx_intent(struct channel_ctx *ctx, size_t size,
 					uint32_t riid, void *cookie);
 
-#ifdef VENDOR_EDIT
 static void oem_ch_push_remote_rx_intent(struct channel_ctx *ctx, size_t size,
 							uint32_t riid, bool is_atomic);
-#endif
 
 static int ch_pop_remote_rx_intent(struct channel_ctx *ctx, size_t size,
 			uint32_t *riid_ptr, size_t *intent_size, void **cookie);
@@ -1297,7 +1295,6 @@ void ch_push_remote_rx_intent(struct channel_ctx *ctx, size_t size,
 			intent->intent_size);
 }
 
-#ifdef VENDOR_EDIT
 
 void oem_ch_push_remote_rx_intent(struct channel_ctx *ctx, size_t size,
 		uint32_t riid, bool is_atomic)
@@ -1344,7 +1341,6 @@ void oem_ch_push_remote_rx_intent(struct channel_ctx *ctx, size_t size,
 }
 
 
-#endif
 
 /**
  * ch_push_local_rx_intent() - Create an rx_intent
@@ -3047,11 +3043,7 @@ static int glink_tx_common(void *handle, void *pkt_priv,
 				is_atomic ? GFP_ATOMIC : GFP_KERNEL);
 	if (!tx_info) {
 		GLINK_ERR_CH(ctx, "%s: No memory for allocation\n", __func__);
-#ifdef VENDOR_EDIT
 		oem_ch_push_remote_rx_intent(ctx, intent_size, riid, cookie);
-#else
-		ch_push_remote_rx_intent(ctx, intent_size, riid, cookie);
-#endif
 		ret = -ENOMEM;
 		goto glink_tx_common_err;
 	}

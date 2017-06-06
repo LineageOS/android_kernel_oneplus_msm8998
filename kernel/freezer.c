@@ -71,12 +71,8 @@ bool __refrigerator(bool check_kthr_stop)
 		spin_lock_irq(&freezer_lock);
 		current->flags |= PF_FROZEN;
 		if (!freezing(current) ||
-                #ifdef VENDOR_EDIT
                 //huruihuan add for kill task in D status
                     (check_kthr_stop && kthread_should_stop()) || current->kill_flag)
-                #else
-                    (check_kthr_stop && kthread_should_stop()) )
-                #endif
 			current->flags &= ~PF_FROZEN;
 		spin_unlock_irq(&freezer_lock);
 
@@ -109,7 +105,6 @@ static void fake_signal_wake_up(struct task_struct *p)
 	}
 }
 
-#ifdef VENDOR_EDIT
 //huruihuan add for freezing task in cgroup despite of PF_FREEZER_SKIP flag
 bool freeze_cgroup_task(struct task_struct *p)
 {
@@ -130,7 +125,6 @@ bool freeze_cgroup_task(struct task_struct *p)
 	return true;
 }
 
-#endif
 
 /**
  * freeze_task - send a freeze request to given task

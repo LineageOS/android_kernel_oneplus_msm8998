@@ -40,10 +40,8 @@
 #include "../codecs/wcd934x/wcd934x.h"
 #include "../codecs/wcd934x/wcd934x-mbhc.h"
 #include "../codecs/wsa881x.h"
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMedia.AudioDrv, 2015-11-09, add for debug*/
 #include <sound/sounddebug.h>
-#endif
 #define DRV_NAME "msm8998-asoc-snd"
 
 #define __CHIPSET__ "MSM8998 "
@@ -528,18 +526,10 @@ static struct wcd_mbhc_config wcd_mbhc_cfg = {
 	.mono_stero_detection = false,
 	.swap_gnd_mic = NULL,
 	.hs_ext_micbias = true,
-	#ifndef VENDOR_EDIT
-	/*zhiguang.su@MultiMedia.AudioDrv , 2017/1/3, config headset button*/
-	.key_code[0] = KEY_MEDIA,
-	.key_code[1] = KEY_VOICECOMMAND,
-	.key_code[2] = KEY_VOLUMEUP,
-	.key_code[3] = KEY_VOLUMEDOWN,
-	#else
 	.key_code[0] = KEY_MEDIA,
 	.key_code[1] = KEY_VOLUMEUP,
 	.key_code[2] = KEY_VOLUMEDOWN,
 	.key_code[3] = 0,
-	#endif
 	.key_code[4] = 0,
 	.key_code[5] = 0,
 	.key_code[6] = 0,
@@ -3664,16 +3654,6 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 		pdata->codec_root = entry;
 		tavil_codec_info_create_codec_entry(pdata->codec_root, codec);
 	} else {
-#ifndef VENDOR_EDIT
-/*wangdongdong@MultiMediaService,2016/10/09,remove wsa device to avoid null pointer*/
-		if (rtd->card->num_aux_devs && rtd_aux && rtd_aux->component)
-			if (!strcmp(rtd_aux->component->name, WSA8810_NAME_1) ||
-			    !strcmp(rtd_aux->component->name, WSA8810_NAME_2)) {
-				tasha_set_spkr_mode(rtd->codec, SPKR_MODE_1);
-				tasha_set_spkr_gain_offset(rtd->codec,
-							RX_GAIN_OFFSET_M1P5_DB);
-		}
-#endif
 		card = rtd->card->snd_card;
 		entry = snd_register_module_info(card->module, "codecs",
 						 card->proc_root);
@@ -3717,12 +3697,7 @@ static void *def_tasha_mbhc_cal(void)
 		return NULL;
 
 #define S(X, Y) ((WCD_MBHC_CAL_PLUG_TYPE_PTR(tasha_wcd_cal)->X) = (Y))
-#ifndef VENDOR_EDIT
-/*zhiguang.su@MultiMedia.AudioDrv , 2017/2/16, avoid headset detected as headphone*/
-	S(v_hs_max, 1600);
-#else
     S(v_hs_max, 1700);
-#endif
 
 #undef S
 #define S(X, Y) ((WCD_MBHC_CAL_BTN_DET_PTR(tasha_wcd_cal)->X) = (Y))
@@ -3732,18 +3707,10 @@ static void *def_tasha_mbhc_cal(void)
 	btn_cfg = WCD_MBHC_CAL_BTN_DET_PTR(tasha_wcd_cal);
 	btn_high = ((void *)&btn_cfg->_v_btn_low) +
 		(sizeof(btn_cfg->_v_btn_low[0]) * btn_cfg->num_btn);
-#ifndef VENDOR_EDIT
-/*zhiguang.su@MultiMedia.AudioDrv , 2017/1/3, config headset button*/
-	btn_high[0] = 75;
-	btn_high[1] = 150;
-	btn_high[2] = 237;
-	btn_high[3] = 500;
-#else
 	btn_high[0] = 75;
 	btn_high[1] = 213;
 	btn_high[2] = 450;
 	btn_high[3] = 470;
-#endif
 	btn_high[4] = 500;
 	btn_high[5] = 500;
 	btn_high[6] = 500;
@@ -6138,7 +6105,6 @@ static struct snd_soc_dai_link msm_wcn_be_dai_links[] = {
 	},
 };
 
-#ifdef VENDOR_EDIT
 /*wangdongdong@MultiMediaService,add i2s patch*/
 static struct snd_soc_dai_link msm_mi2s_be_dai_links[] = {
 	{
@@ -6259,7 +6225,6 @@ static struct snd_soc_dai_link msm_mi2s_be_dai_links[] = {
 	},
 };
 
-#endif
 
 static struct snd_soc_dai_link ext_disp_be_dai_link[] = {
 	/* HDMI BACK END DAI Link */
@@ -6981,10 +6946,8 @@ static int msm_init_wsa_dev(struct platform_device *pdev,
 	char *dev_name_str = NULL;
 	int found = 0;
 	int ret = 0;
-#ifdef VENDOR_EDIT
 /*wangdongdong@MultiMediaService,add to avoid wsa init*/
     return ret;
-#endif
 	/* Get maximum WSA device count for this platform */
 	ret = of_property_read_u32(pdev->dev.of_node,
 				   "qcom,wsa-max-devs", &wsa_max_devs);

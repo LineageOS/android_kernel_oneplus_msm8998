@@ -103,37 +103,6 @@ dtb-$(CONFIG_ARCH_MSM8996) += msm8996-v2-pmi8994-cdp.dtb \
 	apq8096-v3-pmi8996-dragonboard.dtb
 
 
-#ifndef VENDOR_EDIT
-#dtb-$(CONFIG_ARCH_MSM8998) += msm8998-sim.dtb \
-#	msm8998-rumi.dtb \
-#	msm8998-cdp.dtb \
-#	msm8998-mtp.dtb \
-#	msm8998-qrd.dtb \
-#	msm8998-v2-sim.dtb \
-#	msm8998-v2-rumi.dtb \
-#	msm8998-v2-mtp.dtb \
-#	msm8998-v2-cdp.dtb \
-#	msm8998-v2-qrd.dtb \
-#	msm8998-qrd-skuk.dtb \
-#	msm8998-v2-qrd-skuk.dtb \
-#	msm8998-qrd-vr1.dtb \
-#	msm8998-v2-qrd-vr1.dtb \
-#	apq8998-mtp.dtb \
-#	apq8998-cdp.dtb \
-#	apq8998-v2-mtp.dtb \
-#	apq8998-v2-cdp.dtb \
-#	apq8998-v2-qrd.dtb \
-#	msm8998-v2.1-mtp.dtb \
-#	msm8998-v2.1-cdp.dtb \
-#	msm8998-v2.1-qrd.dtb \
-#	apq8998-v2.1-mtp.dtb \
-#	apq8998-v2.1-cdp.dtb \
-#	apq8998-v2.1-qrd.dtb \
-#	apq8998-v2.1-mediabox.dtb \
-#	msm8998-v2.1-interposer-msmfalcon-cdp.dtb \
-#	msm8998-v2.1-interposer-msmfalcon-mtp.dtb \
-#	msm8998-v2.1-interposer-msmfalcon-qrd.dtb
-#else
 dtb-$(CONFIG_ARCH_MSM8998) += cheeseburger-evb.dtb
 dtb-$(CONFIG_ARCH_MSM8998) += cheeseburger-v2.1-evb.dtb
 dtb-$(CONFIG_ARCH_MSM8998) += cheeseburger-v2.1-t0.dtb
@@ -145,7 +114,6 @@ dtb-$(CONFIG_ARCH_MSM8998) += cheeseburger-v2.1-dvt1.dtb
 dtb-$(CONFIG_ARCH_MSM8998) += cheeseburger-v2.1-pvt.dtb
 dtb-$(CONFIG_ARCH_MSM8998) += cheeseburger-v2.1-pvt1.dtb
 dtb-$(CONFIG_ARCH_MSM8998) += cheeseburger-v2.1-backup.dtb
-#endif
 
 dtb-$(CONFIG_ARCH_MSMHAMSTER) += msmhamster-rumi.dtb
 

@@ -47,11 +47,9 @@
 #include <soc/qcom/service-notifier.h>
 #include <soc/qcom/socinfo.h>
 #include <soc/qcom/ramdump.h>
-//#ifdef VENDOR_EDIT
 #include <linux/project_info.h>
 static u32 fw_version;
 static u32 fw_version_ext;
-//#endif VENDOR_EDIT
 
 #include "wlan_firmware_service_v01.h"
 
@@ -4076,7 +4074,6 @@ static int icnss_get_vbatt_info(struct icnss_priv *priv)
 	return 0;
 }
 
-//#ifdef VENDOR_EDIT
 /* Initial and show wlan firmware build version */
 void cnss_set_fw_version(u32 version, u32 ext) {
         fw_version = version;
@@ -4256,11 +4253,9 @@ static int icnss_probe(struct platform_device *pdev)
 
 	penv = priv;
 
-        //#ifdef VENDOR_EDIT
         /* Create device file */
         device_create_file(&penv->pdev->dev, &dev_attr_cnss_version_information);
         push_component_info(WCN, "WCN3990", "QualComm");
-        //#endif VENDOR_EDIT
 
 	icnss_pr_info("Platform driver probed successfully\n");
 
@@ -4282,9 +4277,7 @@ static int icnss_remove(struct platform_device *pdev)
 
 	icnss_debugfs_destroy(penv);
 
-	//#ifdef VENDOR_EDIT
 	device_remove_file(&penv->pdev->dev, &dev_attr_cnss_version_information);
-	//#endif VENDOR_EDIT
 
 	icnss_modem_ssr_unregister_notifier(penv);
 

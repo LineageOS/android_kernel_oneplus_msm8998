@@ -383,11 +383,7 @@ void devfreq_interval_update(struct devfreq *devfreq, unsigned int *delay)
 		cancel_delayed_work_sync(&devfreq->work);
 		mutex_lock(&devfreq->lock);
         /*Modified by liwei for avoiding BUG_ON issue*/
-#ifdef VENDOR_EDITI
 		if (!devfreq->stop_polling && !delayed_work_pending(&devfreq->work))
-#else
-		if (!devfreq->stop_polling)
-#endif
 			queue_delayed_work(devfreq_wq, &devfreq->work,
 			      msecs_to_jiffies(devfreq->profile->polling_ms));
 	}

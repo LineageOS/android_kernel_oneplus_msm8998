@@ -251,9 +251,7 @@
 #define NUM_KPDBL_LEDS			4
 #define KPDBL_MASTER_BIT_INDEX		0
 /*taokai@bsp add for indicator shows when Mobile phone completely shut down*/
-#ifdef VENDOR_EDIT
 static u8	shutdown_enable = 0;
-#endif
 
 /**
  * enum qpnp_leds - QPNP supported led ids
@@ -2560,18 +2558,6 @@ static ssize_t duty_pcts_store(struct device *dev,
 
 	buffer = (char *)buf;
 
-	#ifndef VENDOR_EDIT
-	for (i = 0; i < max_duty_pcts; i++) {
-		if (buffer == NULL)
-			break;
-		ret = sscanf((const char *)buffer, "%u,%s", &value, buffer);
-		pwm_cfg->old_duty_pcts[i] = value;
-		num_duty_pcts++;
-		if (ret <= 1)
-			break;
-	}
-
-	#else
 	rets= sscanf((const char *)buffer,
 		"%x %x %x %x %x %x %x %x %x %x %x ",
 			    &pwm_cfg->old_duty_pcts[0], &pwm_cfg->old_duty_pcts[1],
@@ -2588,7 +2574,6 @@ static ssize_t duty_pcts_store(struct device *dev,
 
 	num_duty_pcts = 11;
 
-	#endif /*VENDOR_EDIT*/
 
 	if (num_duty_pcts >= max_duty_pcts) {
 		dev_err(&led->pdev->dev,
@@ -2718,7 +2703,6 @@ static ssize_t blink_store(struct device *dev,
 }
 
 /*taokai@bsp add for indicator shows when Mobile phone completely shut down*/
-#ifdef VENDOR_EDIT
 static ssize_t shutdown_enable_show(struct device *dev,
 				 struct device_attribute *attr,
 				 char *buf)
@@ -2754,7 +2738,6 @@ static ssize_t shutdown_enable_store(struct device *dev,
 	return count;
 
 }
-#endif
 
 static DEVICE_ATTR(led_mode, 0664, NULL, led_mode_store);
 static DEVICE_ATTR(strobe, 0664, NULL, led_strobe_type_store);
@@ -2766,9 +2749,7 @@ static DEVICE_ATTR(ramp_step_ms, 0664, NULL, ramp_step_ms_store);
 static DEVICE_ATTR(lut_flags, 0664, NULL, lut_flags_store);
 static DEVICE_ATTR(duty_pcts, 0664, NULL, duty_pcts_store);
 static DEVICE_ATTR(blink, 0664, NULL, blink_store);
-#ifdef VENDOR_EDIT
 static DEVICE_ATTR(enable, 0644, shutdown_enable_show, shutdown_enable_store);
-#endif
 static struct attribute *led_attrs[] = {
 	&dev_attr_led_mode.attr,
 	&dev_attr_strobe.attr,
@@ -2781,9 +2762,7 @@ static const struct attribute_group led_attr_group = {
 
 static struct attribute *pwm_attrs[] = {
 	&dev_attr_pwm_us.attr,
-#ifdef VENDOR_EDIT
 	&dev_attr_enable.attr,
-#endif
 	NULL
 };
 
@@ -4278,7 +4257,6 @@ static int qpnp_leds_remove(struct platform_device *pdev)
 }
 
 /*taokai@bsp add for indicator shows when Mobile phone completely shut down*/
-#ifdef VENDOR_EDIT
 static void qpnp_leds_shutdown(struct platform_device *pdev)
 {
 	struct qpnp_led_data *led_array = dev_get_drvdata(&pdev->dev);
@@ -4309,7 +4287,6 @@ static void qpnp_leds_shutdown(struct platform_device *pdev)
 		__qpnp_led_work(led_array+i, led_array[i].cdev.brightness);
 	}
 }
-#endif
 
 #ifdef CONFIG_OF
 static const struct of_device_id spmi_match_table[] = {
@@ -4328,9 +4305,7 @@ static struct platform_driver qpnp_leds_driver = {
 	.probe		= qpnp_leds_probe,
 	.remove		= qpnp_leds_remove,
 /*taokai@bsp add for indicator shows when Mobile phone completely shut down*/
-#ifdef VENDOR_EDIT
 	.shutdown	= qpnp_leds_shutdown,
-#endif
 };
 
 static int __init qpnp_led_init(void)

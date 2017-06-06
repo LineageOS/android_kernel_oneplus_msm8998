@@ -589,7 +589,6 @@ struct ufshcd_req_stat {
 #endif
 
 /* neiltsai, 20170406, for NOC error */
-#ifdef VENDOR_EDIT
 enum h_ctx {
     QUEUE_CMD = 10,
     ERR_HNDL,
@@ -620,7 +619,6 @@ struct clk_rel_ctx {
     ktime_t ts;
     enum r_ctx rel_ctx;
 };
-#endif
 /* neiltsai, 20170406, for NOC error */
 
 /**
@@ -652,7 +650,6 @@ struct ufs_stats {
 
 #endif
 /* neiltsai, 20170406, for NOC error */
-#ifdef VENDOR_EDIT
     u32 last_devcmd_type;
     ktime_t last_devcmd_ts;
     u32 last_intr_status;
@@ -660,7 +657,6 @@ struct ufs_stats {
     ktime_t last_scaling_freq_update;
     struct clk_hold_ctx chc;
     struct clk_rel_ctx crc;
-#endif
 /* neiltsai, 20170406, for NOC error */
 	u32 hibern8_exit_cnt;
 	ktime_t last_hibern8_exit_tstamp;
@@ -903,7 +899,6 @@ struct ufs_hba {
 	struct ufs_clk_gating clk_gating;
 	struct ufs_hibern8_on_idle hibern8_on_idle;
 	/* neiltsai, 20170329, for AHB_TIMEOUT debug */
-	#ifdef VENDOR_EDIT
 	ktime_t h8_enter_issue_time;
 	ktime_t h8_enter_cmpl_time;
 	ktime_t h8_exit_issue_time;
@@ -919,7 +914,6 @@ struct ufs_hba {
 	ktime_t link_startup_issue_time;
 	ktime_t link_startup_cmpl_time;
 	bool cmd_between_gear_scale_and_hibern8_enter;
-	#endif
 	/* neiltsai, 20170329, for AHB_TIMEOUT debug */
 
 	/* Control to enable/disable host capabilities */
@@ -1180,10 +1174,8 @@ out:
 
 int ufshcd_read_device_desc(struct ufs_hba *hba, u8 *buf, u32 size);
 
-#ifdef VENDOR_EDIT
 //qiuchangping@BSP 2015-11-17 add for ufs info display
 int ufshcd_read_geometry_desc(struct ufs_hba *hba, u8 *buf, u32 size);
-#endif
 
 static inline bool ufshcd_is_hs_mode(struct ufs_pa_layer_attr *pwr_info)
 {

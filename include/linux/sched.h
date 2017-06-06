@@ -1541,16 +1541,12 @@ struct task_struct {
 	atomic_t usage;
 	unsigned int flags;	/* per process flags, defined below */
 	unsigned int ptrace;
-#ifdef VENDOR_EDIT
         //huruihuan add for kill task in D status
 	unsigned int kill_flag;
 	struct timespec ttu;
-#endif
 
-#ifdef VENDOR_EDIT
 //xiaoxiaohuan add for fd leak debug
     bool dump_fd_leak;
-#endif
 
 #ifdef CONFIG_SMP
 	struct llist_node wake_entry;

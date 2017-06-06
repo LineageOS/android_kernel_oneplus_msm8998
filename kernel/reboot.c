@@ -224,7 +224,6 @@ void kernel_restart(char *cmd)
 	else
 		pr_emerg("Restarting system with command '%s'\n", cmd);
 
-	#ifdef VENDOR_EDIT
 	
 	if(oem_get_download_mode())
 	{
@@ -235,7 +234,6 @@ void kernel_restart(char *cmd)
 		   msleep(10000);
 		}
 	}
-	#endif
 
 	kmsg_dump(KMSG_DUMP_RESTART);
 	machine_restart(cmd);

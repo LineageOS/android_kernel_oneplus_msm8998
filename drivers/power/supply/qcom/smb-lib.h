@@ -17,11 +17,9 @@
 #include <linux/irqreturn.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/consumer.h>
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161014 Add charging standard */
 #include <linux/power/oem_external_fg.h>
 #include <linux/wakelock.h>
-#endif
 #include <linux/extcon.h>
 #include "storm-watch.h"
 
@@ -31,12 +29,9 @@ enum print_reason {
 	PR_MISC		= BIT(2),
 	PR_PARALLEL	= BIT(3),
 	PR_OTG		= BIT(4),
-#ifdef VENDOR_EDIT
 	PR_OP_DEBUG	= BIT(5),
-#endif
 };
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161014 Add charging standard */
 #define BATT_TYPE_FCC_VOTER "BATT_TYPE_FCC_VOTER"
 #define PSY_ICL_VOTER		"PSY_ICL_VOTER"
@@ -46,10 +41,12 @@ enum print_reason {
 #define REDET_COUTNT 5
 #define APSD_CHECK_COUTNT 15
 #define DASH_CHECK_COUNT 4
+#define BOOST_BACK_COUNT 5
 #define TIME_200MS 200
+#define TIME_100MS 100
+
 #define TIME_3S 3000
 
-#endif
 #define DEFAULT_VOTER			"DEFAULT_VOTER"
 #define USER_VOTER			"USER_VOTER"
 #define PD_VOTER			"PD_VOTER"
@@ -256,9 +253,7 @@ struct smb_charger {
 	struct mutex		ps_change_lock;
 	struct mutex		otg_oc_lock;
 	struct mutex            pd_hard_reset_lock;
-#ifdef VENDOR_EDIT
 	struct mutex		sw_dash_lock;
-#endif
 
 	/* power supplies */
 	struct power_supply		*batt_psy;
@@ -307,11 +302,10 @@ struct smb_charger {
 	struct delayed_work	hvdcp_detect_work;
 	struct delayed_work	ps_change_timeout_work;
 	struct delayed_work	step_soc_req_work;
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 	struct delayed_work rechk_sw_dsh_work;
 	struct delayed_work	re_kick_work;
-	struct delayed_work	enable_usb_suspend_work;
+	struct delayed_work	recovery_suspend_work;
 	struct delayed_work	check_switch_dash_work;
 	struct delayed_work non_standard_charger_check_work;
 	struct delayed_work heartbeat_work;
@@ -319,7 +313,6 @@ struct smb_charger {
 	struct delayed_work op_re_set_work;
 	struct delayed_work	op_check_apsd_work;
 	struct wake_lock	chg_wake_lock;
-#endif
 	struct delayed_work	clear_hdc_work;
 	struct work_struct	otg_oc_work;
 	struct work_struct	vconn_oc_work;
@@ -327,7 +320,6 @@ struct smb_charger {
 	struct delayed_work	icl_change_work;
 	struct work_struct	legacy_detection_work;
 	/* cached status */
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 	int				BATT_TEMP_T0;
 	int				BATT_TEMP_T1;
@@ -350,6 +342,7 @@ struct smb_charger {
 	int				dump_count;
 	int				ck_apsd_count;
 	int				ck_dash_count;
+	int				recovery_boost_count;
 
 	bool				otg_switch;
 	bool				use_fake_chgvol;
@@ -389,7 +382,6 @@ struct smb_charger {
 	short				mBattTempBoundT4;
 	short				mBattTempBoundT5;
 	short				mBattTempBoundT6;
-#endif
 	int			voltage_min_uv;
 	int			voltage_max_uv;
 	int			pd_active;
@@ -516,7 +508,6 @@ int smblib_set_prop_batt_capacity(struct smb_charger *chg,
 int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 				const union power_supply_propval *val);
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 void op_handle_usb_plugin(struct smb_charger *chg);
 int op_rerun_apsd(struct smb_charger *chg);
@@ -538,7 +529,7 @@ int smblib_set_prop_chg_protect_status(struct smb_charger *chg,
 bool op_get_fastchg_ing(struct smb_charger *chg);
 bool get_prop_fastchg_status(struct smb_charger *chg);
 int op_usb_icl_set(struct smb_charger *chg, int icl_ua);
-#endif
+int op_get_aicl_result(struct smb_charger *chg);
 int smblib_get_prop_dc_present(struct smb_charger *chg,
 				union power_supply_propval *val);
 int smblib_get_prop_dc_online(struct smb_charger *chg,

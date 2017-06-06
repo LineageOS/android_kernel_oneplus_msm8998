@@ -190,7 +190,6 @@ int need_graft_path(struct dentry *dentry)
 	struct dentry *parent = dget_parent(dentry);
 	struct sdcardfs_inode_info *parent_info= SDCARDFS_I(parent->d_inode);
 
-//#ifndef VENDOR_EDIT
 //#2016/09/16, Add for sovle bugid852335 mkdir -p /storage/sdcard1/Android/obb,it's going to die
 //Reference C7 code
 /*

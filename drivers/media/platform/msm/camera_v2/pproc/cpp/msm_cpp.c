@@ -2954,14 +2954,9 @@ static int msm_cpp_validate_input(unsigned int cmd, void *arg,
 
 		*ioctl_ptr = arg;
 		/* neiltsai, 20170411, for CR#2025367 iommu fix */
-		#ifdef VENDOR_EDIT
 		if (((*ioctl_ptr) == NULL) ||
 			((*ioctl_ptr)->ioctl_ptr == NULL) ||
 			((*ioctl_ptr)->len == 0)) {
-		#else
-		if ((*ioctl_ptr == NULL) ||
-			((*ioctl_ptr)->ioctl_ptr == NULL)) {
-		#endif
 		/* neiltsai, 20170411, for CR#2025367 iommu fix */
 			pr_err("Error invalid ioctl argument cmd %u", cmd);
 			return -EINVAL;
@@ -3037,11 +3032,7 @@ long msm_cpp_subdev_ioctl(struct v4l2_subdev *sd,
 	mutex_lock(&cpp_dev->mutex);
 
 	/* neiltsai, 20170411, for CR#2025367 iommu fix */
-	#ifdef VENDOR_EDIT
 	CPP_DBG("cmd: 0x%x\n", cmd);
-	#else
-	CPP_DBG("E cmd: 0x%x\n", cmd);
-	#endif
 	/* neiltsai, 20170411, for CR#2025367 iommu fix */
 	switch (cmd) {
 	case VIDIOC_MSM_CPP_GET_HW_INFO: {
@@ -3514,24 +3505,17 @@ STREAM_BUFF_END:
 		break;
 	}
 	/* neiltsai, 20170411, for CR#2025367 iommu fix */
-	#ifndef VENDOR_EDIT
-	default:
-		pr_err_ratelimited("invalid value: cmd=0x%x\n", cmd);
-		break;
-	#endif
 	/* neiltsai, 20170411, for CR#2025367 iommu fix */
 	case VIDIOC_MSM_CPP_IOMMU_ATTACH: {
 		if (cpp_dev->iommu_state == CPP_IOMMU_STATE_DETACHED) {
 			struct msm_camera_smmu_attach_type cpp_attach_info;
 
 			/* neiltsai, 20170411, for CR#2025367 iommu fix */
-			#ifdef VENDOR_EDIT
 			if (ioctl_ptr->len !=
 				sizeof(struct msm_camera_smmu_attach_type)) {
 				rc = -EINVAL;
 				break;
 			}
-			#endif
 			/* neiltsai, 20170411, for CR#2025367 iommu fix */
 			memset(&cpp_attach_info, 0, sizeof(cpp_attach_info));
 			rc = msm_cpp_copy_from_ioctl_ptr(&cpp_attach_info,
@@ -3539,13 +3523,8 @@ STREAM_BUFF_END:
 			if (rc < 0) {
 				pr_err("CPP_IOMMU_ATTACH copy from user fail");
 				/* neiltsai, 20170411, for CR#2025367 iommu fix */
-				#ifdef VENDOR_EDIT
 				rc = -EINVAL;
 				break;
-				#else
-				ERR_COPY_FROM_USER();
-				return -EINVAL;
-				#endif
 				/* neiltsai, 20170411, for CR#2025367 iommu fix */
 			}
 
@@ -3560,11 +3539,7 @@ STREAM_BUFF_END:
 			}
 			if (rc < 0) {
 				/* neiltsai, 20170411, for CR#2025367 iommu fix */
-				#ifdef VENDOR_EDIT
 				pr_err("%s:%d iommu attach failed\n",
-				#else
-				pr_err("%s:%diommu_attach_device failed\n",
-				#endif
 				/* neiltsai, 20170411, for CR#2025367 iommu fix */
 					__func__, __LINE__);
 				rc = -EINVAL;
@@ -3585,13 +3560,11 @@ STREAM_BUFF_END:
 			struct msm_camera_smmu_attach_type cpp_attach_info;
 
 			/* neiltsai, 20170411, for CR#2025367 iommu fix */
-			#ifdef VENDOR_EDIT
 			if (ioctl_ptr->len !=
 				sizeof(struct msm_camera_smmu_attach_type)) {
 				rc = -EINVAL;
 				break;
 			}
-			#endif
 			/* neiltsai, 20170411, for CR#2025367 iommu fix */
 			memset(&cpp_attach_info, 0, sizeof(cpp_attach_info));
 			rc = msm_cpp_copy_from_ioctl_ptr(&cpp_attach_info,
@@ -3599,13 +3572,8 @@ STREAM_BUFF_END:
 			if (rc < 0) {
 				pr_err("CPP_IOMMU_DETTACH copy from user fail");
 				/* neiltsai, 20170411, for CR#2025367 iommu fix */
-				#ifdef VENDOR_EDIT
 				rc = -EINVAL;
 				break;
-				#else
-				ERR_COPY_FROM_USER();
-				return -EINVAL;
-				#endif
 				/* neiltsai, 20170411, for CR#2025367 iommu fix */
 			}
 
@@ -3620,11 +3588,7 @@ STREAM_BUFF_END:
 			}
 			if (rc < 0) {
 				/* neiltsai, 20170411, for CR#2025367 iommu fix */
-				#ifdef VENDOR_EDIT
 				pr_err("%s:%d iommu detach failed\n", __func__,
-				#else
-				pr_err("%s:%diommu detach failed\n", __func__,
-				#endif
 				/* neiltsai, 20170411, for CR#2025367 iommu fix */
 					__LINE__);
 				rc = -EINVAL;
@@ -3635,19 +3599,15 @@ STREAM_BUFF_END:
 			pr_err("%s:%d IOMMMU attach triggered in invalid state\n",
 				__func__, __LINE__);
 			/* neiltsai, 20170411, for CR#2025367 iommu fix */
-			#ifdef VENDOR_EDIT
 			rc = -EINVAL;
-			#endif
 			/* neiltsai, 20170411, for CR#2025367 iommu fix */
 		}
 		break;
 	}
 	/* neiltsai, 20170411, for CR#2025367 iommu fix */
-	#ifdef VENDOR_EDIT
 	default:
            pr_err_ratelimited("invalid value: cmd=0x%x\n", cmd);
            break;
-	#endif
 	/* neiltsai, 20170411, for CR#2025367 iommu fix */
 	}
 	mutex_unlock(&cpp_dev->mutex);
@@ -3962,9 +3922,7 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 	struct msm_cpp_frame_info32_t k32_frame_info;
 	struct msm_cpp_frame_info_t k64_frame_info;
     /*neiltsai, 20170406, for Fix iommu_attach/detach compat_ioctl issue */
-    #ifdef VENDOR_EDIT
     struct msm_camera_smmu_attach_type kb_cpp_smmu_attach_info;
-    #endif
     /*neiltsai, 20170406, for Fix iommu_attach/detach compat_ioctl issue */
 	uint32_t identity_k = 0;
 	bool is_copytouser_req = true;
@@ -4271,16 +4229,9 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 	}
 	case VIDIOC_MSM_CPP_IOMMU_ATTACH32:
         /* neiltsai, 20170406, for Fix iommu_attach/detach compat_ioctl issue */
-        #ifndef VENDOR_EDIT
-		cmd = VIDIOC_MSM_CPP_IOMMU_ATTACH;
-		break;
-        #endif
         /* neiltsai, 20170406, for Fix iommu_attach/detach compat_ioctl issue */
 	case VIDIOC_MSM_CPP_IOMMU_DETACH32:
         /* neiltsai, 20170406, for Fix iommu_attach/detach compat_ioctl issue */
-        #ifndef VENDOR_EDIT
-		cmd = VIDIOC_MSM_CPP_IOMMU_DETACH;
-        #else
         {
             if ((kp_ioctl.len != sizeof(struct msm_camera_smmu_attach_type))
                     || (copy_from_user(&kb_cpp_smmu_attach_info,
@@ -4295,7 +4246,6 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
                           VIDIOC_MSM_CPP_IOMMU_ATTACH :
                           VIDIOC_MSM_CPP_IOMMU_DETACH;
         }
-        #endif
         /* neiltsai, 20170406, for Fix iommu_attach/detach compat_ioctl issue */
 		break;
 	case MSM_SD_NOTIFY_FREEZE:
@@ -4307,16 +4257,10 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 		break;
 	default:
         /* neiltsai, 20170406, for Fix iommu_attach/detach compat_ioctl issue */
-        #ifndef VENDOR_EDIT
-		pr_err_ratelimited("%s: unsupported compat type :%x LOAD %lu\n",
-				__func__, cmd, VIDIOC_MSM_CPP_LOAD_FIRMWARE);
-		break;
-        #else
         pr_err_ratelimited("%s: unsupported compat type :%x\n",
                 __func__, cmd);
         mutex_unlock(&cpp_dev->mutex);
         return -EINVAL;
-        #endif
         /* neiltsai, 20170406, for Fix iommu_attach/detach compat_ioctl issue */
 	}
 
@@ -4347,15 +4291,9 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 		break;
 	default:
         /* neiltsai, 20170406, for Fix iommu_attach/detach compat_ioctl issue */
-        #ifndef VENDOR_EDIT
-		pr_err_ratelimited("%s: unsupported compat type :%d\n",
-				__func__, cmd);
-		break;
-        #else
         pr_err_ratelimited("%s: unsupported compat type :%x\n",
                 __func__, cmd);
         return -EINVAL;
-        #endif
         /* neiltsai, 20170406, for Fix iommu_attach/detach compat_ioctl issue */
 	}
 

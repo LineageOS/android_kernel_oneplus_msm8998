@@ -1683,7 +1683,6 @@ static void usbpd_sm(struct work_struct *w)
 		if (ret) {
 			pd->caps_count++;
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 201710523 Fix C2C swap failed with Pixel */
 			if (pd->caps_count < 10 && pd->current_dr == DR_DFP) {
 				start_usb_host(pd, true);
@@ -1691,42 +1690,12 @@ static void usbpd_sm(struct work_struct *w)
 				usbpd_set_state(pd, PE_SRC_DISABLED);
 				break;
 			}
-#else
-			if (pd->caps_count == 10 && pd->current_dr == DR_DFP) {
-				/* Likely not PD-capable, start host now */
-				start_usb_host(pd, true);
-			} else if (pd->caps_count >= PD_CAPS_COUNT) {
-				usbpd_dbg(&pd->dev, "Src CapsCounter exceeded, disabling PD\n");
-				usbpd_set_state(pd, PE_SRC_DISABLED);
-
-				val.intval = 0;
-				power_supply_set_property(pd->usb_psy,
-						POWER_SUPPLY_PROP_PD_ACTIVE,
-						&val);
-				break;
-			}
-#endif
 			kick_sm(pd, SRC_CAP_TIME);
 			break;
 		}
 
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 201710523 Fix C2C swap failed with Pixel */
 		break;
-#else
-		/* transmit was successful if GoodCRC was received */
-		pd->caps_count = 0;
-		pd->hard_reset_count = 0;
-		pd->pd_connected = true; /* we know peer is PD capable */
-
-		/* wait for REQUEST */
-		pd->current_state = PE_SRC_SEND_CAPABILITIES_WAIT;
-		kick_sm(pd, SENDER_RESPONSE_TIME);
-		val.intval = 1;
-		power_supply_set_property(pd->usb_psy,
-				POWER_SUPPLY_PROP_PD_ACTIVE, &val);
-		break;
-#endif
 
 	case PE_SRC_SEND_CAPABILITIES_WAIT:
 		if (IS_DATA(rx_msg, MSG_REQUEST)) {
@@ -2409,7 +2378,6 @@ static int psy_changed(struct notifier_block *nb, unsigned long evt, void *ptr)
 	if (pd->typec_mode == typec_mode)
 		return 0;
 
-#if VENDOR_EDIT
 	if ((typec_mode == POWER_SUPPLY_TYPEC_SOURCE_DEFAULT) ||
 		(typec_mode == POWER_SUPPLY_TYPEC_SOURCE_MEDIUM) ||
 		(typec_mode == POWER_SUPPLY_TYPEC_SOURCE_HIGH)) {
@@ -2418,19 +2386,12 @@ static int psy_changed(struct notifier_block *nb, unsigned long evt, void *ptr)
 			return 0;
 		}
 	}
-#endif
 
 	pd->typec_mode = typec_mode;
 
-#if VENDOR_EDIT
 	usbpd_err(&pd->dev, "typec mode:%d present:%d type:%d orientation:%d\n",
 			typec_mode, pd->vbus_present, pd->psy_type,
 			usbpd_get_plug_orientation(pd));
-#else
-	usbpd_dbg(&pd->dev, "typec mode:%d present:%d type:%d orientation:%d\n",
-			typec_mode, pd->vbus_present, pd->psy_type,
-			usbpd_get_plug_orientation(pd));
-#endif
 
 	switch (typec_mode) {
 	/* Disconnect */
@@ -2546,6 +2507,7 @@ static int usbpd_dr_set_property(struct dual_role_phy_instance *dual_role,
 {
 	struct usbpd *pd = dual_role_get_drvdata(dual_role);
 	bool do_swap = false;
+	int wait_count = 20;
 
 	if (!pd)
 		return -ENODEV;
@@ -2567,8 +2529,13 @@ static int usbpd_dr_set_property(struct dual_role_phy_instance *dual_role,
 		set_power_role(pd, PR_NONE);
 
 		/* wait until it takes effect */
-		while (pd->forced_pr != POWER_SUPPLY_TYPEC_PR_NONE)
+		while (pd->forced_pr != POWER_SUPPLY_TYPEC_PR_NONE &&
+				wait_count--)
 			msleep(20);
+		if (!wait_count) {
+			usbpd_err(&pd->dev, "setting mode timed out\n");
+			return -ETIMEDOUT;
+		}
 
 		break;
 

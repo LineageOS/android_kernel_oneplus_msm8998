@@ -1,6 +1,5 @@
 /************************************************************************************
  ** File: - /android/kernel/drivers/input/touchscreen/synaptic_s3320.c
- ** VENDOR_EDIT
  ** Copyright (C), 2008-2012, OEM Mobile Comm Corp., Ltd
  **
  ** Description:
@@ -57,7 +56,6 @@
 #include "synaptics_redremote.h"
 #include <linux/project_info.h>
 #include "synaptics_baseline.h"
-//#define VENDOR_EDIT
 
 /*------------------------------------------------Global Define--------------------------------------------*/
 
@@ -138,7 +136,6 @@ struct test_header {
 #define Sgestrue            14  // S
 
 // carlo@oneplus.net 2015-05-25, begin.
-#ifdef VENDOR_EDIT_OXYGEN
 #define KEY_GESTURE_W          	246 //w
 #define KEY_GESTURE_M      		247 //m
 #define KEY_GESTURE_S			248 //s
@@ -148,11 +145,9 @@ struct test_header {
 #define KEY_GESTURE_V           252 // draw v to toggle flashlight
 #define KEY_GESTURE_LEFT_V      253 // draw left arrow for previous track
 #define KEY_GESTURE_RIGHT_V     254 // draw right arrow for next track
-#endif
 // carlo@oneplus.net 2015-05-25, end.
 
 //ruanbanmao@BSP add for tp gesture 2015-05-06, begin
-#ifdef VENDOR_EDIT
 #define BIT0 (0x1 << 0)
 #define BIT1 (0x1 << 1)
 #define BIT2 (0x1 << 2)
@@ -179,7 +174,6 @@ int Wgestrue_gesture =0;//"(W)"
 int Mgestrue_gesture =0;//"(M)"
 int Sgestrue_gesture =0;//"(S)"
 static int gesture_switch = 0;
-#endif
 //ruanbanmao@BSP add for tp gesture 2015-05-06, end
 #endif
 
@@ -398,7 +392,6 @@ static const struct dev_pm_ops synaptic_pm_ops = {
 };
 
 //add by jiachenghui for boot time optimize 2015-5-13
-#ifdef VENDOR_EDIT
 static int probe_ret;
 struct synaptics_optimize_data{
 	struct delayed_work work;
@@ -435,17 +428,11 @@ static int oem_synaptics_ts_probe(struct i2c_client *client, const struct i2c_de
 
 	return probe_ret;
 }
-#endif /*VENDOR_EDIT*/
 //end add by jiachenghui for boot time optimize 2015-5-13
 
 static struct i2c_driver tpd_i2c_driver = {
 //add by jiachenghui for boot time optimize 2015-5-13
-#ifdef VENDOR_EDIT
 	.probe		= oem_synaptics_ts_probe,
-#else
-//end add by jiachenghui for boot time optimize 2015-5-13
-	.probe		= synaptics_ts_probe,
-#endif /*VENDOR_EDIT*///add by jiachenghui for boot time optimize 2015-5-13
 	.remove		= synaptics_ts_remove,
 	.id_table	= synaptics_ts_id,
 	.driver = {
@@ -1188,7 +1175,6 @@ static void gesture_judge(struct synaptics_ts_data *ts)
 	//detect the gesture mode
 	switch (gesture_sign) {
 		case DTAP_DETECT:
-			//#ifdef VENDOR_EDIT, ruanbanmao@bsp 2015-05-06, begin.
 			    gesture = DouTap;
 			break;
 		case SWIPE_DETECT:
@@ -1228,7 +1214,6 @@ static void gesture_judge(struct synaptics_ts_data *ts)
 	}
 
 // carlo@oneplus.net 2015-05-25, begin.
-#ifdef VENDOR_EDIT_OXYGEN
 	keyCode = UnkownGestrue;
 	// Get key code based on registered gesture.
 	switch (gesture) {
@@ -1265,7 +1250,6 @@ static void gesture_judge(struct synaptics_ts_data *ts)
 		default:
 			break;
 	}
-#endif
 // carlo@oneplus.net 2015-05-25, end.
 
 	TPD_ERR("detect %s gesture\n", gesture == DouTap ? "(double tap)" :
@@ -1718,7 +1702,6 @@ static ssize_t tp_gesture_write_func(struct file *file, const char __user *buffe
 		return count;
 	}
 	//ruanbanmao@BSP add for tp gesture 2015-05-06, begin
-	#ifdef VENDOR_EDIT
 	TPD_ERR("%s write argc1[0x%x],argc2[0x%x]\n",__func__,buf[0],buf[1]);
 
 	UpVee_gesture = (buf[0] & BIT0)?1:0; //"V"
@@ -1741,7 +1724,6 @@ static ssize_t tp_gesture_write_func(struct file *file, const char __user *buffe
 	{
 		ts->gesture_enable = 0;
 	}
-	#endif
     //ruanbanmao@BSP add for tp gesture 2015-05-06, end
 	return count;
 }
@@ -2152,18 +2134,12 @@ static ssize_t tp_baseline_show(struct device_driver *ddri, char *buf)
 #endif
 	synaptics_init_panel(ts);
 //modify by zhouwenping for solve cat tp_baseline_image node cause touch disable 20160225 start
-#ifndef VENDOR_EDIT
-	synaptics_enable_interrupt(ts,1);
-	mutex_unlock(&ts->mutex);
-	touch_enable(ts);
-#else
 	synaptics_enable_interrupt(ts,1);
 	ret = synaptics_soft_reset(ts);
 	if (ret < 0){
            TPD_ERR("%s faile to reset device\n",__func__);
         }
 	mutex_unlock(&ts->mutex);
-#endif/*VENDOR_EDIT*/
 //modify by zhouwenping 20160225 end
 	return num_read_chars;
 
@@ -2658,14 +2634,12 @@ static int	synaptics_input_init(struct synaptics_ts_data *ts)
 	set_bit(BTN_TOOL_FINGER, ts->input_dev->keybit);
 #ifdef SUPPORT_GESTURE
 	set_bit(KEY_F4 , ts->input_dev->keybit);//doulbe-tap resume
-#ifdef VENDOR_EDIT_OXYGEN
 	set_bit(KEY_DOUBLE_TAP, ts->input_dev->keybit);
 	set_bit(KEY_GESTURE_CIRCLE, ts->input_dev->keybit);
 	set_bit(KEY_GESTURE_V, ts->input_dev->keybit);
 	set_bit(KEY_GESTURE_TWO_SWIPE, ts->input_dev->keybit);
 	set_bit(KEY_GESTURE_LEFT_V, ts->input_dev->keybit);
 	set_bit(KEY_GESTURE_RIGHT_V, ts->input_dev->keybit);
-#endif
 	set_bit(KEY_APPSELECT, ts->input_dev->keybit);
 	set_bit(KEY_BACK, ts->input_dev->keybit);
 #endif

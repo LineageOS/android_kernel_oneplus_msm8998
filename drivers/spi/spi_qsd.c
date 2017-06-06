@@ -1619,7 +1619,6 @@ static int msm_spi_transfer_one(struct spi_master *master,
 			__func__);
 		status_error = 1;
 	}
-//#ifdef VENDOR_EDIT
 //qualcomm patch for spi transfer issue.
     udelay(10);//ruanbanmao add for NFC spi
 	if (!status_error)

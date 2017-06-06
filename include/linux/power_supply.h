@@ -115,7 +115,6 @@ enum {
 enum power_supply_property {
 	/* Properties of type `int' */
 	POWER_SUPPLY_PROP_STATUS = 0,
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20160926 Add dash charging */
 	POWER_SUPPLY_PROP_SET_ALLOW_READ_EXTERN_FG_IIC,
 	POWER_SUPPLY_PROP_CC_TO_CV_POINT,
@@ -133,7 +132,6 @@ enum power_supply_property {
 	POWER_SUPPLY_PROP_FG_CURRENT_NOW,
 	POWER_SUPPLY_PROP_IS_AGING_TEST,
 	POWER_SUPPLY_PROP_BATTERY_HEALTH,
-#endif
 	POWER_SUPPLY_PROP_CHARGE_TYPE,
 	POWER_SUPPLY_PROP_HEALTH,
 	POWER_SUPPLY_PROP_PRESENT,
@@ -245,10 +243,8 @@ enum power_supply_property {
 	POWER_SUPPLY_PROP_CURRENT_CAPABILITY,
 	POWER_SUPPLY_PROP_TYPEC_MODE,
 	POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION, /* 0: N/C, 1: CC1, 2: CC2 */
-#ifdef VENDOR_EDIT
 /* xianglin add */
 	POWER_SUPPLY_PROP_OEM_TYPEC_CC_ORIENTATION, /* 0: N/C, 1: CC1, 2: CC2 */
-#endif
 	POWER_SUPPLY_PROP_TYPEC_POWER_ROLE,
 	POWER_SUPPLY_PROP_PD_ALLOWED,
 	POWER_SUPPLY_PROP_PD_ACTIVE,
@@ -297,10 +293,8 @@ enum power_supply_type {
 	POWER_SUPPLY_TYPE_TYPEC,	/* Type-C */
 	POWER_SUPPLY_TYPE_UFP,		/* Type-C UFP */
 	POWER_SUPPLY_TYPE_DFP,		/* TYpe-C DFP */
-#ifdef VENDOR_EDIT
 /* david.liu@bsp, 20161109 Charging porting */
 	POWER_SUPPLY_TYPE_DASH,
-#endif
 };
 
 /* Indicates USB Type-C CC connection status */

@@ -32,16 +32,13 @@
 #include <linux/device.h>
 #include <linux/efi.h>
 #include <linux/fb.h>
-#ifdef VENDOR_EDIT
 #include <linux/sched.h>
 #include <linux/pm_qos.h>
 #include <linux/cpufreq.h>
 #include <linux/pm_wakeup.h>
-#endif
 
 #include <asm/fb.h>
 
-#ifdef VENDOR_EDIT
 #define LCDSPEEDUP_LITTLE_CPU_QOS_FREQ 1900800
 #define LCDSPEEDUP_BIG_CPU_QOS_FREQ    2361600
 #define LCD_QOS_TIMEOUT	250000
@@ -49,7 +46,6 @@
 
 static struct pm_qos_request lcdspeedup_little_cpu_qos;
 static struct pm_qos_request lcdspeedup_big_cpu_qos;
-#endif
 
     /*
      *  Frame buffer device initialization and setup routines
@@ -1078,7 +1074,6 @@ fb_blank(struct fb_info *info, int blank)
 
 	event.info = info;
 	event.data = &blank;
-//#ifdef VENDOR_EDIT
     if (blank == FB_BLANK_UNBLANK)
         pr_err("blank on start\n");
     else if (blank == FB_BLANK_POWERDOWN)
@@ -1099,7 +1094,6 @@ fb_blank(struct fb_info *info, int blank)
 		if (!early_ret)
 			fb_notifier_call_chain(FB_R_EARLY_EVENT_BLANK, &event);
 	}
-//#ifdef VENDOR_EDIT
     if (blank == FB_BLANK_UNBLANK)
         pr_err("blank on end\n");
     else if (blank == FB_BLANK_POWERDOWN)
@@ -1938,7 +1932,6 @@ int fb_new_modelist(struct fb_info *info)
 
 MODULE_LICENSE("GPL");
 
-#ifdef VENDOR_EDIT
 static int fb_state_change(struct notifier_block *nb,
                 unsigned long val, void *data)
 {
@@ -2009,4 +2002,3 @@ static int __init lcdscreen_speedup_init_pm_qos(void)
         return 0;
 }
 late_initcall(lcdscreen_speedup_init_pm_qos);
-#endif

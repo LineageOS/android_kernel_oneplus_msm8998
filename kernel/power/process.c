@@ -190,7 +190,6 @@ int freeze_kernel_threads(void)
 	return error;
 }
 
-#ifdef VENDOR_EDIT
 extern bool fp_irq_cnt;
 extern void c1_cpufreq_limit_queue(void);
 //huruihuan add for speed up resume
@@ -219,7 +218,6 @@ void thaw_fingerprintd(void)
     pm_freezing = true;
     pm_nosig_freezing = true;
 }
-#endif
 
 void thaw_processes(void)
 {

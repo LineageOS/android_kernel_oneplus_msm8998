@@ -940,7 +940,6 @@ static void __init log_buf_add_cpu(void)
 #else /* !CONFIG_SMP */
 static inline void log_buf_add_cpu(void) {}
 #endif /* CONFIG_SMP */
-#ifdef VENDOR_EDIT
 static int __init ftm_console_silent_setup(char *str)
 {
 	pr_info("ftm_silent_log\n");
@@ -948,7 +947,6 @@ static int __init ftm_console_silent_setup(char *str)
 	return 0;
 }
 early_param("ftm_console_silent", ftm_console_silent_setup);
-#endif
 
 void __init setup_log_buf(int early)
 {
@@ -1065,33 +1063,9 @@ static inline void boot_delay_msec(int level)
 static bool printk_time = IS_ENABLED(CONFIG_PRINTK_TIME);
 module_param_named(time, printk_time, bool, S_IRUGO | S_IWUSR);
 
-#ifdef VENDOR_EDIT
 static bool print_wall_time = 1;
-#else
-static bool print_wall_time = 0;
-#endif
 module_param_named(print_wall_time, print_wall_time, bool, S_IRUGO | S_IWUSR);
 
-#ifndef VENDOR_EDIT
-static size_t print_time(u64 ts, char *buf)
-{
-	unsigned long rem_nsec;
-
-	if (!printk_time)
-		return 0;
-
-	rem_nsec = do_div(ts, 1000000000);
-
-	if (!buf)
-		return snprintf(NULL, 0, "[%5lu.000000] ", (unsigned long)ts);
-
-
-	return sprintf(buf, "[%5lu.%06lu]@%d ",
-			(unsigned long)ts, rem_nsec / 1000,raw_smp_processor_id() );
-
-
-}
-#endif
 
 static size_t print_prefix(const struct printk_log *msg, bool syslog, char *buf)
 {
@@ -1111,9 +1085,6 @@ static size_t print_prefix(const struct printk_log *msg, bool syslog, char *buf)
 				len++;
 		}
 	}
-#ifndef VENDOR_EDIT
-	len += print_time(msg->ts_nsec, buf ? buf + len : NULL);
-#endif
 	return len;
 }
 
@@ -1675,10 +1646,6 @@ static size_t cont_print_text(char *text, size_t size)
 	size_t len;
 
 	if (cont.cons == 0 && (console_prev & LOG_NEWLINE)) {
-#ifndef VENDOR_EDIT
-		textlen += print_time(cont.ts_nsec, text);
-		size -= textlen;
-#endif
 	}
 
 	len = cont.len - cont.cons;
@@ -1699,19 +1666,15 @@ static size_t cont_print_text(char *text, size_t size)
 	return textlen;
 }
 
-#ifdef VENDOR_EDIT
 void getnstimeofday64(struct timespec64 *ts);
-#endif
 
 asmlinkage int vprintk_emit(int facility, int level,
 			    const char *dict, size_t dictlen,
 			    const char *fmt, va_list args)
 {
 	static int recursion_bug;
-#ifdef VENDOR_EDIT
 	static char texttmp[LOG_LINE_MAX];
 	static bool last_new_line = true;
-#endif
 	static char textbuf[LOG_LINE_MAX];
 	char *text = textbuf;
 	size_t text_len = 0;
@@ -1722,12 +1685,10 @@ asmlinkage int vprintk_emit(int facility, int level,
 	bool in_sched = false;
 	/* cpu currently holding logbuf_lock in this function */
 	static unsigned int logbuf_cpu = UINT_MAX;
-#ifdef VENDOR_EDIT
 	u64 ts_sec = local_clock();
 	unsigned long rem_nsec;
 
 	rem_nsec = do_div(ts_sec, 1000000000);
-#endif
 
 	if (level == LOGLEVEL_SCHED) {
 		level = LOGLEVEL_DEFAULT;
@@ -1811,7 +1772,6 @@ asmlinkage int vprintk_emit(int facility, int level,
 		}
 	}
 
-#ifdef VENDOR_EDIT
 	if (last_new_line) {
 		if (print_wall_time && ts_sec >= 20) {
 		    struct timespec64 tspec;
@@ -1850,7 +1810,6 @@ asmlinkage int vprintk_emit(int facility, int level,
 		last_new_line = false;
 	}
 
-#endif
 
 #ifdef CONFIG_EARLY_PRINTK_DIRECT
 	printascii(text);
@@ -2157,13 +2116,11 @@ static int __init console_setup(char *str)
 }
 __setup("console=", console_setup);
 
-#ifdef VENDOR_EDIT
 int force_oem_console_setup(char *str)
 {
 	console_setup(str);
 	return 1;
 }
-#endif
 
 EXPORT_SYMBOL(force_oem_console_setup);
 

@@ -97,13 +97,11 @@ struct reset_attribute {
 module_param_call(download_mode, dload_set, param_get_int,
 			&download_mode, 0644);
 
-#ifdef VENDOR_EDIT
 //hefaxi@filesystems, 2015/12/07, add for force dump function
 int oem_get_download_mode(void)
 {
 	return download_mode;
 }
-#endif
 
 static int panic_prep_restart(struct notifier_block *this,
 			      unsigned long event, void *ptr)
@@ -142,7 +140,6 @@ int scm_set_dload_mode(int arg1, int arg2)
 static void set_dload_mode(int on)
 {
 	int ret;
-        //#ifdef VENDOR_EDIT
         printk("set_dload_mode %s\n", on ? "ON" : "OFF");
         //#endif /* VENDOR_EDIT */
 	if (dload_mode_addr) {
@@ -155,10 +152,8 @@ static void set_dload_mode(int on)
 	ret = scm_set_dload_mode(on ? SCM_DLOAD_MODE : 0, 0);
 	if (ret)
 		pr_err("Failed to set secure DLOAD mode: %d\n", ret);
-#ifdef VENDOR_EDIT
 	if(!on)
 		scm_disable_sdi();
-#endif
 
 
 	if (on)
@@ -328,7 +323,6 @@ static void msm_restart_prepare(const char *cmd)
 	}
 
 	if (cmd != NULL) {
-#ifdef VENDOR_EDIT
 		if (!strncmp(cmd, "rf", 2)) {
 			qpnp_pon_set_restart_reason(PON_RESTART_REASON_RF);
 			__raw_writel(RF_MODE, restart_reason);
@@ -354,7 +348,6 @@ static void msm_restart_prepare(const char *cmd)
 			qpnp_pon_set_restart_reason(PON_RESTART_REASON_AGING);
 			__raw_writel(AGING_MODE, restart_reason);
 		} else if (!strncmp(cmd, "bootloader", 10)) {
-#endif
 			qpnp_pon_set_restart_reason(
 				PON_RESTART_REASON_BOOTLOADER);
 			__raw_writel(0x77665500, restart_reason);

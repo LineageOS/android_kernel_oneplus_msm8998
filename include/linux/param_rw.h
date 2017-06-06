@@ -181,7 +181,6 @@ typedef struct
 typedef struct
 {
     param_product_desc_head_t sid_head;
-    //#ifdef VENDOR_EDIT
     /* Only for wlan evm chip */
     int use_special_boarddata;
     //#endif /* VENDOR_EDIT */
@@ -292,7 +291,6 @@ int get_param_camera_laser_sensor_cross_talk(uint * laser_sensor_cross_talk);
 int set_param_camera_laser_sensor_cross_talk(uint * laser_sensor_cross_talk);
 int get_param_gamma_select(uint * gamma_select);
 int get_param_pcba_number(char * pcbe_number);
-//#ifdef VENDOR_EDIT
 /* Only for wlan evm chip */
 int get_param_nvm_boarddata(uint * nvm_boarddata_select);
 //#endif /* VENDOR_EDIT */

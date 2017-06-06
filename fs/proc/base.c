@@ -2999,9 +2999,7 @@ static int proc_pid_personality(struct seq_file *m, struct pid_namespace *ns,
 	return err;
 }
 
-//#ifdef VENDOR_EDIT
 static const struct file_operations proc_wakeup_operations;
-//#endif VENDOR_EDIT
 
 /*
  * Thread groups
@@ -3112,7 +3110,6 @@ static const struct pid_entry tgid_base_stuff[] = {
 	REG("timers",	  S_IRUGO, proc_timers_operations),
 #endif
 	REG("timerslack_ns", S_IRUGO|S_IWUGO, proc_pid_set_timerslack_ns_operations),
-	//#ifdef VENDOR_EDIT
 	//MaJunhai@OnePlus..MultiMediaService, add /proc/process/task/taskid/wakeup || /proc/process/wakeup for ion tracking
 	REG("wakeup",  S_IRUGO, proc_wakeup_operations),
 	//#endif
@@ -3499,7 +3496,6 @@ static const struct pid_entry tid_base_stuff[] = {
 	REG("projid_map", S_IRUGO|S_IWUSR, proc_projid_map_operations),
 	REG("setgroups",  S_IRUGO|S_IWUSR, proc_setgroups_operations),
 #endif
-//#ifdef VENDOR_EDIT
 //MaJunhai@OnePlus..MultiMediaService, add /proc/process/task/taskid/wakeup || /proc/process/wakeup for ion tracking
     REG("wakeup",  S_IRUGO, proc_wakeup_operations),
 //#endif

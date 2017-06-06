@@ -335,18 +335,14 @@ struct qpnp_hap {
 	bool				sup_brake_pat;
 	bool				correct_lra_drive_freq;
 	bool				misc_trim_error_rc19p2_clk_reg_present;
-#ifdef VENDOR_EDIT /*wulaibin 2016-12-13 add for show vibrator resonant frequency*/
 	int                 resonant_frequency;
 	int                 enable_time;
-#endif
 };
 
 static struct qpnp_hap *ghap;
 /*wulaibin  2015-11-18 add begin for optimizing the response speed of the
 vibrator*/
-#ifdef VENDOR_EDIT
 static struct workqueue_struct *vibqueue;
-#endif //VENDOR_EDIT
 /*wulaibin  2015-11-18 add end for optimizing the response speed of the
 vibrator*/
 
@@ -1024,7 +1020,6 @@ static ssize_t qpnp_hap_wf_s7_store(struct device *dev,
 	return qpnp_hap_wf_samp_store(dev, buf, count, 7);
 }
 
-#ifdef VENDOR_EDIT /*wulaibin 2016-12-13 add for show vibrator resonant frequency*/
 static ssize_t qpnp_hap_rf_hz_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -1100,7 +1095,6 @@ static ssize_t qpnp_hap_vmax_store(struct device *dev,
 
     return count;
 }
-#endif /*VENDOR_EDIT*/
 
 /* sysfs show for wave form update */
 static ssize_t qpnp_hap_wf_update_show(struct device *dev,
@@ -1409,14 +1403,12 @@ static ssize_t qpnp_hap_ramp_test_data_show(struct device *dev,
 
 /* sysfs attributes */
 static struct device_attribute qpnp_hap_attrs[] = {
-#ifdef VENDOR_EDIT /*wulaibin 2016-12-13 add for show vibrator resonant frequency*/
 	__ATTR(rf_hz, (S_IRUGO | S_IWUSR | S_IWGRP),
 			qpnp_hap_rf_hz_show,
 			qpnp_hap_rf_hz_store),
 	__ATTR(vmax, (S_IRUGO | S_IWUSR | S_IWGRP),
 			qpnp_hap_vmax_show,
 			qpnp_hap_vmax_store),
-#endif /*VENDOR_EDIT*/
 	__ATTR(wf_s0, 0664, qpnp_hap_wf_s0_show, qpnp_hap_wf_s0_store),
 	__ATTR(wf_s1, 0664, qpnp_hap_wf_s1_show, qpnp_hap_wf_s1_store),
 	__ATTR(wf_s2, 0664, qpnp_hap_wf_s2_show, qpnp_hap_wf_s2_store),
@@ -1692,14 +1684,9 @@ static void qpnp_hap_td_enable(struct timed_output_dev *dev, int value)
 		hap->state = 1;
 		hap->enable_time = value;
 	}
-	#ifndef VENDOR_EDIT
-	mutex_unlock(&hap->lock);
-	schedule_work(&hap->work);
-	#else //#ifdef VENDOR_EDIT
 	queue_work(vibqueue,&hap->work);
 	msleep(1);
 	mutex_unlock(&hap->lock);
-	#endif //VENDOR_EDIT
 	/* shankai 2015-07-7 modify end for optimizing the response speed of the vibrator*/
 	//schedule_work(&hap->work); wulaibin remove it 2017-02-22 for vibrete time nonuniform
 }
@@ -2372,9 +2359,7 @@ static int qpnp_haptic_probe(struct platform_device *pdev)
 	mutex_init(&hap->lock);
 	mutex_init(&hap->wf_lock);
 
-        #ifdef VENDOR_EDIT
 	vibqueue = create_singlethread_workqueue("vibthread");
-	#endif //VENDOR_EDIT
 
 	INIT_WORK(&hap->work, qpnp_hap_worker);
 	INIT_DELAYED_WORK(&hap->sc_work, qpnp_handle_sc_irq);

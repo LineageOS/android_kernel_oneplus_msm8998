@@ -137,9 +137,7 @@ struct kmemleak_scan_area {
 #define KMEMLEAK_GREY	0
 #define KMEMLEAK_BLACK	-1
 
-#ifdef VENDOR_EDIT
 int oem_kmemleak_flag;
-#endif
 /*
  * Structure holding the metadata for each allocated memory block.
  * Modifications to such objects should be made while holding the

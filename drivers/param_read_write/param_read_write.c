@@ -749,7 +749,6 @@ int get_param_gamma_select(uint * gamma_select)
 }
 EXPORT_SYMBOL(get_param_gamma_select);
 
-//#ifdef VENDOR_EDIT
 /* Only for wlan evm chip */
 int get_param_nvm_boarddata(uint * nvm_boarddata_select)
 {

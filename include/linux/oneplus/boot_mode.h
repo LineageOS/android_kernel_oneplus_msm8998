@@ -1,4 +1,3 @@
-#ifdef VENDOR_EDIT
 #ifndef _BOOT_MODE_H_
 #define _BOOT_MODE_H_ 1
 
@@ -14,5 +13,4 @@ enum oem_boot_mode{
 	MSM_BOOT_MODE__CHARGE,
 };
 enum oem_boot_mode get_boot_mode(void);
-#endif
 #endif

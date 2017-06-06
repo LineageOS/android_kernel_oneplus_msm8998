@@ -918,7 +918,6 @@ err1:
 	g_ion_clnt = NULL;
 }
 
-#ifdef VENDOR_EDIT
 //WayneChang, 2016/10/28, add procfs for qsee_log due to oemlogkit cannot access debugfs in android N
 static ssize_t proc_qsee_log_func(struct file *file, char __user *user_buf, size_t count, loff_t *ppos)
 {
@@ -1008,7 +1007,6 @@ err:
 	return rc;
 }
 
-#endif
 
 static int  tzdbgfs_init(struct platform_device *pdev)
 {
@@ -1195,11 +1193,9 @@ static int tz_log_probe(struct platform_device *pdev)
 
 	if (tzdbgfs_init(pdev))
 		goto err;
-#ifdef VENDOR_EDIT
 //WayneChang, 2016/10/28, add procfs for qsee_log due to oemlogkit cannot access debugfs in android N
 	if(tzprocfs_init(pdev))
 		goto err;
-#endif
 
 	tzdbg_register_qsee_log_buf();
 	return 0;

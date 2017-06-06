@@ -18,14 +18,12 @@ enum {
 	PM_QOS_NETWORK_LATENCY,
 	PM_QOS_NETWORK_THROUGHPUT,
 	PM_QOS_MEMORY_BANDWIDTH,
-#ifdef VENDOR_EDIT
 	PM_QOS_C0_CPUFREQ_MAX,
 	PM_QOS_C0_CPUFREQ_MIN,
 	PM_QOS_C1_CPUFREQ_MAX,
 	PM_QOS_C1_CPUFREQ_MIN,
 	PM_QOS_DEVFREQ_MAX,
 	PM_QOS_DEVFREQ_MIN,
-#endif
 
 	/* insert new class ID */
 	PM_QOS_NUM_CLASSES,
@@ -49,7 +47,6 @@ enum pm_qos_flags_status {
 #define PM_QOS_LATENCY_TOLERANCE_NO_CONSTRAINT	(-1)
 #define PM_QOS_LATENCY_ANY			((s32)(~(__u32)0 >> 1))
 
-#ifdef VENDOR_EDIT
 #define	MIN_CPUFREQ  0
 #define	MAX_CPUFREQ  0x40
 #define	MASK_CPUFREQ 0xE0
@@ -60,7 +57,6 @@ enum pm_qos_flags_status {
 #define PM_QOS_DEVFREQ_MIN_DEFAULT_VALUE	MIN_CPUFREQ
 
 extern void msm_cpuidle_set_sleep_disable(bool disable);
-#endif
 
 #define PM_QOS_FLAG_NO_POWER_OFF	(1 << 0)
 #define PM_QOS_FLAG_REMOTE_WAKEUP	(1 << 1)

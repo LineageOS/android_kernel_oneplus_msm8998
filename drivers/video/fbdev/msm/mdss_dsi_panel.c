@@ -25,11 +25,9 @@
 
 #include "mdss_dsi.h"
 #include "mdss_dba_utils.h"
-//#ifdef VENDOR_EDIT
 #include <linux/clk.h>
 #include "mdss_dsi_iris2p_lightup.h"
 #include <linux/project_info.h>
-//#endif
 #include "mdss_debug.h"
 
 #define DT_CMD_HDR 6
@@ -219,14 +217,12 @@ static struct dsi_cmd_desc backlight_cmd = {
 	{DTYPE_DCS_WRITE1, 1, 0, 0, 1, sizeof(led_pwm1)},
 	led_pwm1
 };
-//#ifdef VENDOR_EDIT
 //samsung s6e3fa6 panel backlight
 static char led_pwm2[3] = {0x51, 0x00, 0x00};	/* DTYPE_DCS_LWRITE */
 static struct dsi_cmd_desc backlight_cmd2 = {
 	{DTYPE_DCS_LWRITE, 1, 0, 0, 1, sizeof(led_pwm2)},
 	led_pwm2
 };
-//#endif
 static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 {
 	struct dcs_cmd_req cmdreq;
@@ -239,21 +235,20 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	}
 
 	pr_debug("%s: level=%d\n", __func__, level);
-    //#ifdef VENDOR_EDIT
     if (ctrl->bklt_max > 255){
         u8 ldata = level%4;
         u8 hdata = level/4;
 
         led_pwm2[2] = ldata;
         led_pwm2[1] = hdata;
-    }else //#endif VENDOR_EDIT
+    }else
 	    led_pwm1[1] = (unsigned char)level;
 
 	memset(&cmdreq, 0, sizeof(cmdreq));
-	//#ifdef VENDOR_EDIT
+
     if (ctrl->bklt_max > 255){
         cmdreq.cmds = &backlight_cmd2;
-    }else //#endif VENDOR_EDIT
+    }else 
 	    cmdreq.cmds = &backlight_cmd;
 	cmdreq.cmds_cnt = 1;
 	cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL;
@@ -450,16 +445,13 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 			gpio_set_value(ctrl_pdata->lcd_mode_sel_gpio, 0);
 			gpio_free(ctrl_pdata->lcd_mode_sel_gpio);
 		}
-	//#ifdef VENDOR_EDIT
 	    usleep_range(10* 1000, 10* 1000);
-    //#endif
 	}
 
 exit:
 	return rc;
 }
 
-//#ifdef VENDOR_EDIT
 int mdss_dsi_px_clk_req(struct mdss_panel_data *pdata, int enable)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
@@ -903,7 +895,6 @@ static void mdss_dsi_panel_switch_mode(struct mdss_panel_data *pdata,
 			(!pdata->panel_info.send_pps_before_switch))
 		mdss_dsi_panel_dsc_pps_send(ctrl_pdata, &pdata->panel_info);
 }
-//#ifdef VENDOR_EDIT
 /*******************************************************************************
 remap backlight level 0-->55 to 0-->55
 remap backlight level 55-->230 to 55-->200
@@ -926,20 +917,17 @@ static u32 backlight_level_remap(struct mdss_dsi_ctrl_pdata *ctrl, u32 level)
     }
 	return remap_level;
 }
-//#endif
 static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 							u32 bl_level)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_dsi_ctrl_pdata *sctrl = NULL;
-//#ifdef VENDOR_EDIT
 	static bool first_bl_level = true;
 
 	if (first_bl_level || (bl_level == 0)){
         printk("---backlight level = %d---\n", bl_level);
         first_bl_level = (bl_level == 0)? true : false;
 	}
-//#endif
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
 		return;
@@ -948,12 +936,10 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
-  //#ifdef VENDOR_EDIT
     if (ctrl_pdata->high_brightness_panel){
        pr_debug("%s goto backlight level remap\n", __func__);
        bl_level = backlight_level_remap(ctrl_pdata, bl_level);
     }
-  //#endif
 	/*
 	 * Some backlight controllers specify a minimum duty cycle
 	 * for the backlight brightness. If the brightness is less
@@ -1006,7 +992,6 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 	}
 }
 
-//#ifdef VENDOR_EDIT
 int mdss_dsi_panel_set_acl(struct mdss_dsi_ctrl_pdata *ctrl, int mode)
 {
 	struct dsi_panel_cmds *acl_cmds;
@@ -1031,9 +1016,7 @@ int mdss_dsi_panel_get_acl_mode(struct mdss_dsi_ctrl_pdata *ctrl)
 {
    return ctrl->acl_mode;
 }
-//#endif
 
-//#ifdef VENDOR_EDIT
 int mdss_dsi_panel_set_hbm_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 {
 	struct dsi_panel_cmds *hbm_on_cmds,*hbm_off_cmds;
@@ -1068,8 +1051,6 @@ int mdss_dsi_panel_get_hbm_mode(struct mdss_dsi_ctrl_pdata *ctrl)
 {
     return ctrl->hbm_mode;
 }
-//#endif
-//#ifdef VENDOR_EDIT
 int mdss_dsi_panel_set_srgb_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 {
 	struct dsi_panel_cmds *srgb_on_cmds;
@@ -1104,8 +1085,6 @@ int mdss_dsi_panel_get_srgb_mode(struct mdss_dsi_ctrl_pdata *ctrl)
 {
    return ctrl->SRGB_mode;
 }
-//#endif
-//#ifdef VENDOR_EDIT
 int mdss_dsi_panel_set_adobe_rgb_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 {
 	struct dsi_panel_cmds *adobe_rgb_on_cmds;
@@ -1140,8 +1119,6 @@ int mdss_dsi_panel_get_adobe_rgb_mode(struct mdss_dsi_ctrl_pdata *ctrl)
 {
    return ctrl->Adobe_RGB_mode;
 }
-//#endif
-//#ifdef VENDOR_EDIT
 int mdss_dsi_panel_set_dci_p3_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 {
 	struct dsi_panel_cmds *dci_p3_on_cmds;
@@ -1176,8 +1153,7 @@ int mdss_dsi_panel_get_dci_p3_mode(struct mdss_dsi_ctrl_pdata *ctrl)
 {
    return ctrl->dci_p3_mode;
 }
-//#endif
-//#ifdef VENDOR_EDIT
+
 int mdss_dsi_panel_set_night_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 {
 	struct dsi_panel_cmds *night_mode_on_cmds;
@@ -1212,7 +1188,6 @@ int mdss_dsi_panel_get_night_mode(struct mdss_dsi_ctrl_pdata *ctrl)
 {
    return ctrl->night_mode;
 }
-//#endif
 static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl = NULL;
@@ -1224,9 +1199,7 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
-//#ifdef VENDOR_EDIT
     pr_err("%s start\n", __func__);
-//#endif
 	pinfo = &pdata->panel_info;
 	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
@@ -1247,39 +1220,27 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	pr_debug("%s: ndx=%d cmd_cnt=%d\n", __func__,
 				ctrl->ndx, on_cmds->cmd_cnt);
 
-    //#ifdef VENDOR_EDIT
     if (ctrl->iris_enabled){
         iris_init(ctrl);
         iris_panel_cmds(ctrl, &ctrl->on_cmds);
-	}else//#endif VENDOR_EDIT
+	}else
 	if (on_cmds->cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, on_cmds, CMD_REQ_COMMIT);
-//#ifdef VENDOR_EDIT
     mutex_lock(&ctrl->panel_mode_lock);
     ctrl->is_panel_on = true;
     mutex_unlock(&ctrl->panel_mode_lock);
-//#endif
-//#ifdef VENDOR_EDIT
 	if (mdss_dsi_panel_get_acl_mode(ctrl)){
 		mdss_dsi_panel_set_acl(ctrl, mdss_dsi_panel_get_acl_mode(ctrl));
 	}
-//#endif
-//#ifdef VENDOR_EDIT
     if (mdss_dsi_panel_get_srgb_mode(ctrl)){
         mdss_dsi_panel_set_srgb_mode(ctrl, mdss_dsi_panel_get_srgb_mode(ctrl));
     }
-//#endif
-//#ifdef VENDOR_EDIT
     if (mdss_dsi_panel_get_adobe_rgb_mode(ctrl)){
         mdss_dsi_panel_set_adobe_rgb_mode(ctrl, mdss_dsi_panel_get_adobe_rgb_mode(ctrl));
     }
-//#endif
-//#ifdef VENDOR_EDIT
     if (mdss_dsi_panel_get_dci_p3_mode(ctrl)){
         mdss_dsi_panel_set_dci_p3_mode(ctrl, mdss_dsi_panel_get_dci_p3_mode(ctrl));
     }
-//#endif
-//#ifdef VENDOR_EDIT
     if (mdss_dsi_panel_get_night_mode(ctrl)){
         mdss_dsi_panel_set_night_mode(ctrl, mdss_dsi_panel_get_night_mode(ctrl));
     }
@@ -1287,7 +1248,6 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 
 
 /***************************************************************/
-//#endif
 	if (pinfo->compression_mode == COMPRESSION_DSC)
 		mdss_dsi_panel_dsc_pps_send(ctrl, pinfo);
 
@@ -1299,9 +1259,7 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 
 end:
 	pr_debug("%s:-\n", __func__);
-//#ifdef VENDOR_EDIT
     pr_err("%s end\n", __func__);
-//#endif
 	return ret;
 }
 
@@ -1316,9 +1274,7 @@ static int mdss_dsi_post_panel_on(struct mdss_panel_data *pdata)
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
-//#ifdef VENDOR_EDIT
     pr_err("%s start\n", __func__);
-//#endif
 	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
@@ -1343,9 +1299,7 @@ static int mdss_dsi_post_panel_on(struct mdss_panel_data *pdata)
 
 end:
 	pr_debug("%s:-\n", __func__);
-//#ifdef VENDOR_EDIT
     pr_err("%s end\n", __func__);
-//#endif
 	return 0;
 }
 
@@ -1358,9 +1312,7 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
-//#ifdef VENDOR_EDIT
     pr_err("%s start\n", __func__);
-//#endif
 	pinfo = &pdata->panel_info;
 	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
@@ -1371,16 +1323,13 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		if (ctrl->ndx != DSI_CTRL_LEFT)
 			goto end;
 	}
-//#ifdef VENDOR_EDIT
     mutex_lock(&ctrl->panel_mode_lock);
     ctrl->is_panel_on = false;
     mutex_unlock(&ctrl->panel_mode_lock);
-//#endif
-    //#ifdef VENDOR_EDIT
     if (ctrl->iris_enabled){
         iris_lightoff(ctrl);
         iris_panel_cmds(ctrl, &ctrl->off_cmds);
-    }else//#endif VENDOR_EDIT
+    }else
     if (ctrl->off_cmds.cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, &ctrl->off_cmds, CMD_REQ_COMMIT);
 
@@ -1391,9 +1340,7 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 
 end:
 	pr_debug("%s:-\n", __func__);
-//#ifdef VENDOR_EDIT
     pr_err("%s end\n", __func__);
-//#endif
 	return 0;
 }
 
@@ -3245,14 +3192,11 @@ static int mdss_panel_parse_dt(struct device_node *np,
 
 	pinfo->is_dba_panel = of_property_read_bool(np,
 			"qcom,dba-panel");
-//#ifdef VENDOR_EDIT
     ctrl_pdata->iris_enabled = of_property_read_bool(np, "qcom,iris-enabled");
     if (ctrl_pdata->iris_enabled){
         iris_init_params_parse(np, ctrl_pdata);
         iris_init_cmd_setup(ctrl_pdata);
 	}
-//#endif
-//#ifdef VENDOR_EDIT
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->acl_cmds,
 		"qcom,mdss-dsi-panel-acl-command",
 		"qcom,mdss-dsi-acl-command-state");
@@ -3260,16 +3204,14 @@ static int mdss_panel_parse_dt(struct device_node *np,
 	ctrl_pdata->acl_ncmds = (!rc ? tmp : 0);
 	rc = of_property_read_u32(np, "qcom,mdss-dsi-acl-npayload", &tmp);
 	ctrl_pdata->acl_npayload = (!rc ? tmp : 0);
-//#endif
-//#ifdef VENDOR_EDIT
+
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->hbm_on_cmds,
 		"qcom,mdss-dsi-panel-hbm-on-command",
 		"qcom,mdss-dsi-hbm-command-state");
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->hbm_off_cmds,
 		"qcom,mdss-dsi-panel-hbm-off-command",
 		"qcom,mdss-dsi-hbm-command-state");
-//#endif
-//#ifdef VENDOR_EDIT
+
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->srgb_on_cmds,
 		"qcom,mdss-dsi-panel-srgb-on-command",
 		"qcom,mdss-dsi-srgb-command-state");
@@ -3282,28 +3224,25 @@ static int mdss_panel_parse_dt(struct device_node *np,
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->night_mode_off_cmds,
 		"qcom,mdss-dsi-panel-night-mode-off-command",
 		"qcom,mdss-dsi-night-mode-command-state");
-//#endif
-//#ifdef VENDOR_EDIT
+
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->Adobe_RGB_on_cmds,
 		"qcom,mdss-dsi-panel-Adobe-rgb-on-command",
 		"qcom,mdss-dsi-Adobe-rgb-command-state");
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->Adobe_RGB_off_cmds,
 		"qcom,mdss-dsi-panel-Adobe-rgb-off-command",
 		"qcom,mdss-dsi-Adobe-rgb-command-state");
-//#endif
-//#ifdef VENDOR_EDIT
+
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->dci_p3_on_cmds,
 		"qcom,mdss-dsi-panel-dci-p3-on-command",
 		"qcom,mdss-dsi-dci-p3-command-state");
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->dci_p3_off_cmds,
 		"qcom,mdss-dsi-panel-dci-p3-off-command",
 		"qcom,mdss-dsi-dci-p3-command-state");
-//#endif
-//#ifdef VENDOR_EDIT
+
 	ctrl_pdata->high_brightness_panel= of_property_read_bool(np,
 					"qcom,mdss-dsi-high-brightness-panel");
     pr_err("high brightness panel: %d\n", ctrl_pdata->high_brightness_panel);
-//#endif
+
 	if (pinfo->is_dba_panel) {
 		bridge_chip_name = of_get_property(np,
 			"qcom,bridge-name", &len);
@@ -3337,12 +3276,12 @@ int mdss_dsi_panel_init(struct device_node *node,
 	int rc = 0;
 	static const char *panel_name;
 	struct mdss_panel_info *pinfo;
-//#ifdef VENDOR_EDIT
+
 	static const char *panel_manufacture;
 	static const char *panel_version;
 	static const char *backlight_manufacture;
 	static const char *backlight_version;
-//#endif
+
 	if (!node || !ctrl_pdata) {
 		pr_err("%s: Invalid arguments\n", __func__);
 		return -ENODEV;
@@ -3360,7 +3299,7 @@ int mdss_dsi_panel_init(struct device_node *node,
 		pr_info("%s: Panel Name = %s\n", __func__, panel_name);
 		strlcpy(&pinfo->panel_name[0], panel_name, MDSS_MAX_PANEL_LEN);
 	}
-//#ifdef VENDOR_EDIT
+
 	mutex_init(&ctrl_pdata->panel_mode_lock);
 	panel_manufacture = of_get_property(node, "qcom,mdss-dsi-panel-manufacture", NULL);
     if (!panel_manufacture)
@@ -3377,7 +3316,7 @@ int mdss_dsi_panel_init(struct device_node *node,
 	if (!backlight_version)
 		pr_info("%s:%d, backlight version not specified\n", __func__, __LINE__);
 	push_component_info(BACKLIGHT, (char *)backlight_version, (char *)backlight_manufacture);
-//#endif
+
 	rc = mdss_panel_parse_dt(node, ctrl_pdata);
 	if (rc) {
 		pr_err("%s:%d panel dt parse failed\n", __func__, __LINE__);

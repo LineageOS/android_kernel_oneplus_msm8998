@@ -570,55 +570,43 @@ struct mdss_dsi_ctrl_pdata {
 	struct mdss_dsi_debugfs_info *debugfs_info;
 
 	struct dsi_err_container err_cont;
-//#ifdef VENDOR_EDIT
 	struct mutex panel_mode_lock;
 //#endif
-//#ifdef VENDOR_EDIT
     bool is_panel_on;
 //#endif
-//#ifdef VENDOR_EDIT
     bool high_brightness_panel;
 //#endif
-//#ifdef VENDOR_EDIT
 	int acl_mode;
 	struct dsi_panel_cmds acl_cmds;
 	int acl_ncmds;
 	int acl_npayload;
 //#endif
-//#ifdef VENDOR_EDIT
 	struct dsi_panel_cmds hbm_on_cmds;
 	struct dsi_panel_cmds hbm_off_cmds;
 	int  hbm_mode;
 //#endif
-//#ifdef VENDOR_EDIT
 	bool setting_mode_loaded;
 //#endif
-//#ifdef VENDOR_EDIT
 	int SRGB_mode;
 	struct dsi_panel_cmds srgb_on_cmds;
 	struct dsi_panel_cmds srgb_off_cmds;
 //#endif
-//#ifdef VENDOR_EDIT
 	int Adobe_RGB_mode;
 	struct dsi_panel_cmds Adobe_RGB_on_cmds;
 	struct dsi_panel_cmds Adobe_RGB_off_cmds;
 //#endif
-//#ifdef VENDOR_EDIT
 	int dci_p3_mode;
 	struct dsi_panel_cmds dci_p3_on_cmds;
 	struct dsi_panel_cmds dci_p3_off_cmds;
 //#endif
-//#ifdef VENDOR_EDIT
 	int night_mode;
 	struct dsi_panel_cmds night_mode_on_cmds;
 	struct dsi_panel_cmds night_mode_off_cmds;
 //#endif
-//#ifdef VENDOR_EDIT
 	int disp_vci_en_gpio;
 	struct delayed_work techeck_work;
 	struct completion te_comp;
 //#endif
-//#ifdef VENDOR_EDIT
 	const char *px_clk_src_name;
 	struct	clk	*px_clk_src;
 	int px_clk_enabled;
@@ -759,32 +747,25 @@ void mdss_dsi_set_reg(struct mdss_dsi_ctrl_pdata *ctrl, int off,
 	u32 mask, u32 val);
 int mdss_dsi_phy_pll_reset_status(struct mdss_dsi_ctrl_pdata *ctrl);
 
-//#ifdef VENDOR_EDIT
 int mdss_dsi_px_clk_req(struct mdss_panel_data *pdata, int enable);
 int mdss_dsi_disp_vci_en(struct mdss_panel_data *pdata, int enable);
 int mdss_dsi_px_1v1_en(struct mdss_panel_data *pdata, int enable);
 //#endif
-//#ifdef VENDOR_EDIT
 int mdss_dsi_panel_set_acl(struct mdss_dsi_ctrl_pdata *ctrl, int mode);
 int mdss_dsi_panel_get_acl_mode(struct mdss_dsi_ctrl_pdata *ctrl);
 //#endif
-//#ifdef VENDOR_EDIT
 int mdss_dsi_panel_set_hbm_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level);
 int mdss_dsi_panel_get_hbm_mode(struct mdss_dsi_ctrl_pdata *ctrl);
 //#endif
-//#ifdef VENDOR_EDIT
 int mdss_dsi_panel_set_srgb_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level);
 int mdss_dsi_panel_get_srgb_mode(struct mdss_dsi_ctrl_pdata *ctrl);
 //#endif
-//#ifdef VENDOR_EDIT
 int mdss_dsi_panel_set_adobe_rgb_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level);
 int mdss_dsi_panel_get_adobe_rgb_mode(struct mdss_dsi_ctrl_pdata *ctrl);
 //#endif
-//#ifdef VENDOR_EDIT
 int mdss_dsi_panel_set_dci_p3_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level);
 int mdss_dsi_panel_get_dci_p3_mode(struct mdss_dsi_ctrl_pdata *ctrl);
 //#endif
-//#ifdef VENDOR_EDIT
 int mdss_dsi_panel_set_night_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level);
 int mdss_dsi_panel_get_night_mode(struct mdss_dsi_ctrl_pdata *ctrl);
 int mdss_dsi_panel_set_night_mode3500k(struct mdss_dsi_ctrl_pdata *ctrl, int level);
@@ -817,7 +798,6 @@ int mdss_dsi_panel_set_night_mode7200k(struct mdss_dsi_ctrl_pdata *ctrl, int lev
 int mdss_dsi_panel_get_night_mode7200k(struct mdss_dsi_ctrl_pdata *ctrl);
 
 //#endif
-//#ifdef VENDOR_EDIT
 int mdss_dsi_panel_set_reading_mode(struct mdss_dsi_ctrl_pdata *ctrl, int level);
 int mdss_dsi_panel_get_reading_mode(struct mdss_dsi_ctrl_pdata *ctrl);
 //#endif

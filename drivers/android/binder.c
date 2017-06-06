@@ -39,9 +39,7 @@
 #include <linux/pid_namespace.h>
 #include <linux/security.h>
 // neiltsai, 20161115, add for oemlogkit used
-#ifdef VENDOR_EDIT
 #include <linux/proc_fs.h>
-#endif
 // neiltsai end
 #ifdef CONFIG_ANDROID_BINDER_IPC_32BIT
 #define BINDER_IPC_32BIT 1
@@ -2840,7 +2838,6 @@ retry:
 		switch (w->type) {
 		case BINDER_WORK_TRANSACTION: {
 			t = container_of(w, struct binder_transaction, work);
-			//#ifdef VENDOR_EDIT
             //MaJunhai@OnePlus..MultiMediaService, add /proc/process/task/taskid/wakeup || /proc/process/wakeup for ion tracking
             if(t->from) {
                 task_thread_info(current)->pid = t->from->pid;
@@ -4286,7 +4283,6 @@ BINDER_DEBUG_ENTRY(transactions);
 BINDER_DEBUG_ENTRY(transaction_log);
 
 // neiltsai, 20161115, add for oemlogkit used
-#ifdef VENDOR_EDIT
 static int proc_state_open(struct inode *inode, struct file *file)
 {
     return single_open(file, binder_state_show, NULL);
@@ -4331,7 +4327,6 @@ static int binder_proc_init(void)
     proc_create("proc_transaction_log", 0, NULL, &proc_transaction_log_operations);
     return 0;
 }
-#endif
 // neiltsai end
 static int __init init_binder_device(const char *name)
 {
@@ -4404,9 +4399,7 @@ static int __init binder_init(void)
 				    &binder_transaction_log_fops);
 	}
 // neiltsai, 20161115, add for oemlogkit used
-#ifdef VENDOR_EDIT
     binder_proc_init();
-#endif
 // neiltsai end
 
 	/*

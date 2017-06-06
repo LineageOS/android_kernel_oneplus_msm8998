@@ -24,10 +24,8 @@
 #include "tfa_dsp_fw.h"
 /* TODO: remove genregs usage? */
 #include "tfa98xx_genregs_N1C.h"
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMedia.AudioDrv, 2015-11-09, add for debug*/
 #include <sound/sounddebug.h>
-#endif
 /* handle macro for bitfield */
 #define TFA_MK_BF(reg, pos, len) ((reg<<8)|(pos<<4)|(len-1))
 
@@ -98,7 +96,6 @@ int print_calibration(Tfa98xx_handle_t handle, char *str, size_t size)
 				handles_local[handle].mohm[0],
 				handles_local[handle].mohm[1]);
 }
-#ifdef VENDOR_EDIT
 /*wangdongdong@MultiMedia,2016/11/30,add for calibrate node*/
 int print_calibration_modify(Tfa98xx_handle_t handle, char *str, size_t size)
 {
@@ -106,7 +103,6 @@ int print_calibration_modify(Tfa98xx_handle_t handle, char *str, size_t size)
                                 2,
                                 handles_local[handle].mohm[0]);
 }
-#endif
 
 /*
 * set OTC

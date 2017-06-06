@@ -46,10 +46,8 @@
 #include "wcd9xxx-resmgr-v2.h"
 #include "wcd_cpe_core.h"
 #include "wcdcal-hwdep.h"
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMedia.AudioDrv, 2015-11-09, add for debug*/
 #include <sound/sounddebug.h>
-#endif
 
 #define TASHA_RX_PORT_START_NUMBER  16
 
@@ -195,12 +193,7 @@ module_param(sido_buck_svs_voltage, int,
 		S_IRUGO | S_IWUSR | S_IWGRP);
 MODULE_PARM_DESC(sido_buck_svs_voltage,
 			"setting for SVS voltage for SIDO BUCK");
-#ifndef VENDOR_EDIT
-/*wangdongdong@MultiMediaService,2017/03/03,modify delay time to avoid pop when route to new path*/
-#define TASHA_TX_UNMUTE_DELAY_MS	25
-#else
 #define TASHA_TX_UNMUTE_DELAY_MS        50
-#endif
 
 static int tx_unmute_delay = TASHA_TX_UNMUTE_DELAY_MS;
 module_param(tx_unmute_delay, int,
@@ -901,7 +894,6 @@ static const struct tasha_reg_mask_val tasha_spkr_mode1[] = {
 	{WCD9335_CDC_BOOST0_BOOST_CTL, 0x7C, 0x44},
 	{WCD9335_CDC_BOOST1_BOOST_CTL, 0x7C, 0x44},
 };
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMedia.AudioDrv, 2015-10-26, Modify for headset uevent*/
 enum
 {
@@ -932,7 +924,6 @@ static ssize_t wcd9xxx_print_name(struct switch_dev *sdev, char *buf)
 	}
 	return -EINVAL;
 }
-#endif
 /*
  * wcd9335_get_codec_info: Get codec specific information
  *
@@ -2316,7 +2307,6 @@ static int tasha_put_anc_slot(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMedia.AudioDrv, 2014-4-14, add for l21 power*/
 static int tasha_get_L21_Power(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
@@ -2351,7 +2341,6 @@ static int tasha_put_L21_Power(struct snd_kcontrol *kcontrol,
 
 	return 0;
 }
-#endif
 
 static int tasha_get_anc_func(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
@@ -8646,11 +8635,9 @@ static const struct snd_kcontrol_new tasha_snd_controls[] = {
 	SOC_SINGLE_EXT("ANC Slot", SND_SOC_NOPM, 0, 100, 0, tasha_get_anc_slot,
 		       tasha_put_anc_slot),
 
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMedia.AudioDrv, 2014-4-14, add for l21 power*/
 	SOC_SINGLE_EXT("L21 Power", SND_SOC_NOPM, 0, 100, 0,
 				tasha_get_L21_Power, tasha_put_L21_Power),
-#endif
 	SOC_ENUM_EXT("ANC Function", tasha_anc_func_enum, tasha_get_anc_func,
 		     tasha_put_anc_func),
 
@@ -13670,10 +13657,8 @@ static int tasha_codec_probe(struct snd_soc_codec *codec)
 	void *ptr = NULL;
 	struct regulator *supply;
 
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMedia.AudioDrv, 2017-03-27, add for debug*/
 pr_err("%s enter\n", __func__);
-#endif
 
 	control = dev_get_drvdata(codec->dev->parent);
 
@@ -13763,7 +13748,6 @@ pr_err("%s enter\n", __func__);
 		goto err_hwdep;
 	}
 
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMedia.AudioDrv, 2015-10-26, Modify for headset uevent*/
 		tasha->mbhc.wcd9xxx_sdev.name= "h2w";
 		tasha->mbhc.wcd9xxx_sdev.print_name = wcd9xxx_print_name;
@@ -13772,7 +13756,6 @@ pr_err("%s enter\n", __func__);
 		{
 			goto err_switch_dev_register;
 		}
-#endif
 
 	ptr = devm_kzalloc(codec->dev, (sizeof(tasha_rx_chs) +
 			   sizeof(tasha_tx_chs)), GFP_KERNEL);
@@ -13886,10 +13869,8 @@ pr_err("%s enter\n", __func__);
 	snd_soc_dapm_sync(dapm);
 
 
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMedia.AudioDrv, 2015-10-26, Modify for headset uevent*/
    priv_headset_type = tasha;
-#endif
 
 	return ret;
 
@@ -13897,11 +13878,9 @@ err_pdata:
 	devm_kfree(codec->dev, ptr);
 	control->rx_chs = NULL;
 	control->tx_chs = NULL;
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMedia.AudioDrv, 2015-10-26, Modify for headset uevent*/
 	switch_dev_unregister(&tasha->mbhc.wcd9xxx_sdev);
 	err_switch_dev_register:
-#endif
 err_hwdep:
 	devm_kfree(codec->dev, tasha->fw_data);
 	tasha->fw_data = NULL;
@@ -14396,10 +14375,8 @@ static int tasha_probe(struct platform_device *pdev)
 	struct wcd9xxx_resmgr_v2 *resmgr;
 	struct wcd9xxx_power_region *cdc_pwr;
 
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMedia.AudioDrv, 2017-03-27, add for debug*/
 pr_err("%s enter\n", __func__);
-#endif
 	if (wcd9xxx_get_intf_type() == WCD9XXX_INTERFACE_TYPE_I2C) {
 		if (apr_get_subsys_state() == APR_SUBSYS_DOWN) {
 			dev_err(&pdev->dev, "%s: dsp down\n", __func__);
@@ -14483,10 +14460,8 @@ pr_err("%s enter\n", __func__);
 	else
 		tasha->wcd_native_clk = wcd_native_clk;
 
-#ifdef VENDOR_EDIT
 /*zhiguang.su@MultiMedia.AudioDrv, 2017-03-27, add for debug*/
 pr_err("%s snd_soc_register_codec\n", __func__);
-#endif
 
 	if (wcd9xxx_get_intf_type() == WCD9XXX_INTERFACE_TYPE_SLIMBUS)
 		ret = snd_soc_register_codec(&pdev->dev, &soc_codec_dev_tasha,

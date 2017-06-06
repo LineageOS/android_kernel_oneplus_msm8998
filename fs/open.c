@@ -642,9 +642,7 @@ SYSCALL_DEFINE3(chown, const char __user *, filename, uid_t, user, gid_t, group)
 {
 	return sys_fchownat(AT_FDCWD, filename, user, group, 0);
 }
-#ifdef VENDOR_EDIT
 EXPORT_SYMBOL(sys_chown);
-#endif
 
 
 SYSCALL_DEFINE3(lchown, const char __user *, filename, uid_t, user, gid_t, group)

@@ -686,10 +686,8 @@ static int sdcardfs_permission(struct inode *inode, int mask)
 
 }
 
-#ifdef VENDOR_EDIT
 //2017/03/18, fix dir uid after rename
 static char attr_buf[PATH_MAX] = {0};
-#endif /* VENDOR_EDIT */
 
 static int sdcardfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
 		 struct kstat *stat)
@@ -699,10 +697,8 @@ static int sdcardfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
 	struct inode *lower_inode;
 	struct path lower_path;
 	struct dentry *parent;
-#ifdef VENDOR_EDIT
 //2017/03/18, fix dir uid after rename
 	char *path;
-#endif /* VENDOR_EDIT */
 
 	parent = dget_parent(dentry);
 	if(!check_caller_access_to_name(parent->d_inode, dentry->d_name.name)) {
@@ -712,7 +708,6 @@ static int sdcardfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
 		dput(parent);
 		return -EACCES;
 	}
-#ifdef VENDOR_EDIT
 //2017/03/18, fix dir uid after rename
 	if (parent->d_inode && SDCARDFS_I(parent->d_inode)->d_uid == 0 && SDCARDFS_I(dentry->d_inode) != 0) {
 		path = dentry_path_raw(dentry, attr_buf, PATH_MAX);
@@ -721,7 +716,6 @@ static int sdcardfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
 			fix_derived_permission(dentry->d_inode);
 		}
 	}
-#endif /* VENDOR_EDIT */
 	dput(parent);
 
 	inode = dentry->d_inode;

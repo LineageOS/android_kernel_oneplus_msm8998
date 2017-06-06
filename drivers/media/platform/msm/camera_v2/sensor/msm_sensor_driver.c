@@ -19,7 +19,6 @@
 #include "msm_camera_dt_util.h"
 
 /* chenneng@camera 20151117 add for product information */
-#ifdef VENDOR_EDIT
 #include <linux/project_info.h>
 struct camera_vendor_match_tbl {
     char sensor_name[32];
@@ -33,7 +32,6 @@ static struct camera_vendor_match_tbl match_tbl[] = {
     {"imx179","Sony"},
     {"s5k3p8sp","SAMSUNG"},
 };
-#endif /* VENDOR_EDIT */
 
 /* Logging macro */
 #undef CDBG
@@ -721,10 +719,8 @@ int32_t msm_sensor_driver_probe(void *setting,
 	struct msm_camera_sensor_slave_info *slave_info = NULL;
 	struct msm_camera_slave_info        *camera_info = NULL;
 /* chenneng@camera 20151117 add for product information */
-#ifdef VENDOR_EDIT
 	uint32_t count = 0,i;
 	enum COMPONENT_TYPE CameraID;
-#endif /* VENDOR_EDIT */
 
 	unsigned long                        mount_pos = 0;
 	uint32_t                             is_yuv;
@@ -1045,7 +1041,6 @@ CSID_TG:
 	s_ctrl->sensordata->cam_slave_info = slave_info;
 
 /* chenneng@camera 20151117 add for product information */
-#ifdef VENDOR_EDIT
     if (0 == slave_info->camera_id)
         CameraID = R_CAMERA;
     else if (1 == slave_info->camera_id)
@@ -1064,7 +1059,6 @@ CSID_TG:
     else
         push_component_info(CameraID,slave_info->sensor_name,
             match_tbl[i].vendor_name);
-#endif /* VENDOR_EDIT */
 
 	msm_sensor_fill_sensor_info(s_ctrl, probed_info, entity_name);
 

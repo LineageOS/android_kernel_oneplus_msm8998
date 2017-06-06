@@ -27,9 +27,7 @@
 #include <linux/once.h>
 
 #include <uapi/linux/net.h>
-#ifdef VENDOR_EDIT
 #include <linux/sched.h>
-#endif /* VENDOR_EDIT */
 
 struct poll_table_struct;
 struct pipe_inode_info;
@@ -124,9 +122,7 @@ struct socket {
 	struct file		*file;
 	struct sock		*sk;
 	const struct proto_ops	*ops;
-#ifdef VENDOR_EDIT
 	char cmdline[TASK_COMM_LEN];
-#endif /* VENDOR_EDIT */
 };
 
 struct vm_area_struct;

@@ -22,9 +22,7 @@ struct qpnp_pon {
 	struct pon_regulator	*pon_reg_cfg;
 	struct list_head	list;
 	struct delayed_work	bark_work;
-	#ifdef VENDOR_EDIT
 	struct delayed_work	press_work;
-	#endif
 	struct dentry		*debugfs;
 	int			pon_trigger_reason;
 	int			pon_power_off_reason;
@@ -42,7 +40,6 @@ struct qpnp_pon {
 	u8			warm_reset_reason2;
 	bool		is_spon;
 	bool		store_hard_reset_reason;
-	//#ifdef VENDOR_EDIT
 	bool        kpd_dbc_enable;
 	ktime_t     kpd_release_time;
 	//#endif /* VENDOR_EDIT */
@@ -91,7 +88,6 @@ enum pon_restart_reason {
 	PON_RESTART_REASON_DMVERITY_CORRUPTED	= 0x04,
 	PON_RESTART_REASON_DMVERITY_ENFORCE	= 0x05,
 	PON_RESTART_REASON_KEYS_CLEAR		= 0x06,
-#ifdef VENDOR_EDIT
 	PON_RESTART_REASON_AGING		= 0x07,
 	PON_RESTART_REASON_REBOOT		= 0x10,
 	PON_RESTART_REASON_FACTORY		= 0x11,
@@ -102,10 +98,8 @@ enum pon_restart_reason {
 	PON_RESTART_REASON_ANDROID		= 0x16,
 	PON_RESTART_REASON_MODEM		= 0x17,
 	PON_RESTART_REASON_PANIC		= 0x18,
-#endif
 };
 
-#ifdef VENDOR_EDIT
 /* Define OEM reboot mode magic*/
 #define AGING_MODE		0x77665510
 #define FACTORY_MODE		0x77665504
@@ -117,7 +111,6 @@ enum pon_restart_reason {
 #define MODEM_MODE		0x7766550b
 #define OEM_PANIC		0x77665518
 
-#endif
 
 #ifdef CONFIG_INPUT_QPNP_POWER_ON
 int qpnp_pon_system_pwr_off(enum pon_power_off_type type);

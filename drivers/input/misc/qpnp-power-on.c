@@ -30,14 +30,10 @@
 #include <linux/regulator/driver.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/of_regulator.h>
-#ifdef VENDOR_EDIT
 #include <linux/syscalls.h>
 #include <linux/power/oem_external_fg.h>
-#endif
-#ifdef VENDOR_EDIT
 //hefaxi@filesystems, 2015/12/07, add for force dump function
 #include <linux/oem_force_dump.h>
-#endif
 #include <linux/input/qpnp-power-on.h>
 #include <linux/power_supply.h>
 
@@ -400,7 +396,6 @@ out:
 	return rc;
 }
 
-//#ifdef VENDOR_EDIT
 static int qpnp_pon_get_dbc(struct qpnp_pon *pon, u32 *delay)
 {
 	int rc;
@@ -782,7 +777,6 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 	u8  pon_rt_bit = 0;
 	u32 key_status;
 	uint pon_rt_sts;
-	//#ifdef VENDOR_EDIT
 	u64 elapsed_us;
 	//#endif /* VENDOR_EDIT */
 
@@ -794,7 +788,6 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 	if (!cfg->key_code)
 		return 0;
 
-	//#ifdef VENDOR_EDIT
 	if (pon->kpd_dbc_enable && cfg->pon_type == PON_KPDPWR) {
 		elapsed_us = ktime_us_delta(ktime_get(), pon->kpd_release_time);
 		if (elapsed_us < pon->dbc) {
@@ -814,7 +807,6 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 	switch (cfg->pon_type) {
 	case PON_KPDPWR:
 		pon_rt_bit = QPNP_PON_KPDPWR_N_SET;
-		//#ifdef VENDOR_EDIT
 		if ((pon_rt_sts & pon_rt_bit) == 0)
 		{
 			printk("Power-Key UP\n");
@@ -841,7 +833,6 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 	pr_debug("PMIC input: code=%d, sts=0x%hhx\n",
 					cfg->key_code, pon_rt_sts);
 	key_status = pon_rt_sts & pon_rt_bit;
-	//#ifdef VENDOR_EDIT
 	if (pon->kpd_dbc_enable && cfg->pon_type == PON_KPDPWR) {
 		if (!key_status)
 		pon->kpd_release_time = ktime_get();
@@ -864,10 +855,8 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 
 	cfg->old_state = !!key_status;
 
-#ifdef VENDOR_EDIT
 //hefaxi@filesystems, 2015/07/03, add for force dump function
 	oem_check_force_dump_key(cfg->key_code,key_status);
-#endif
 
 	return 0;
 }
@@ -1021,7 +1010,6 @@ static void bark_work_func(struct work_struct *work)
 err_return:
 	return;
 }
-#ifdef VENDOR_EDIT
 static void press_work_func(struct work_struct *work)
 {
 	int rc;
@@ -1048,7 +1036,6 @@ static void press_work_func(struct work_struct *work)
 err_return:
 	return;
 }
-#endif
 static irqreturn_t qpnp_resin_bark_irq(int irq, void *_pon)
 {
 	int rc;
@@ -2093,7 +2080,6 @@ static int read_gen2_pon_off_reason(struct qpnp_pon *pon, u16 *reason,
 	return 0;
 }
 
-#ifdef VENDOR_EDIT
 /* add by taokai@bsp 2016/11/09, a interface to know powron/off reasons*/
 static bool created_pwr_on_off_obj;
 
@@ -2268,7 +2254,6 @@ static struct attribute_group pwr_on_off_attrs_group = {
         .attrs = pwr_on_off_attrs,
 };
 static struct kobject *pwr_on_off_kobj;
-#endif
 static int qpnp_pon_probe(struct platform_device *pdev)
 {
 	struct qpnp_pon *pon;
@@ -2284,9 +2269,7 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 	u8 s3_src_reg;
 	unsigned long flags;
 	uint temp = 0;
-	#ifdef VENDOR_EDIT
 	int i, reg;
-	#endif
 	pon = devm_kzalloc(&pdev->dev, sizeof(struct qpnp_pon), GFP_KERNEL);
 	if (!pon)
 		return -ENOMEM;
@@ -2349,7 +2332,6 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 				sizeof(struct qpnp_pon_config) *
 				pon->num_pon_config, GFP_KERNEL);
 
-#ifdef VENDOR_EDIT
 	for(i=0;i<16;i++)
 	{
 		rc = regmap_read(pon->regmap,((pon)->base + 0xC0+i),&reg);
@@ -2360,7 +2342,6 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 			return rc;
 		}
 	}
-#endif
 
 	/* Read PON_PERPH_SUBTYPE register to get PON type */
 	rc = regmap_read(pon->regmap,
@@ -2420,7 +2401,6 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 			rc);
 		return rc;
 	}
-	//#ifdef VENDOR_EDIT
 	// change by taokai@bsp 2016/11/9, print all pon reason
 	//index = ffs(pon_sts) - 1;
 
@@ -2465,7 +2445,6 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 		}
 		poff_sts = buf[0] | (buf[1] << 8);
 	}
-	//#ifdef VENDOR_EDIT
 	// change by taokai@bsp 2016/11/9, print all poff reason
 	index = ffs(poff_sts) - 1 + reason_index_offset;
 		if (index >= ARRAY_SIZE(qpnp_poff_reason) || index < 0) {
@@ -2483,7 +2462,6 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 	}
 	//taokai@bsp 2016/11/9 change end
 	//#endif
-#ifdef VENDOR_EDIT
 /* add by taokai@bsp 2015/10/16, a interface to know powron/off reasons*/
     if(to_spmi_device(pon->pdev->dev.parent)->usid>=0 && to_spmi_device(pon->pdev->dev.parent)->usid<PMIC_SID_NUM){
         g_pon[to_spmi_device(pon->pdev->dev.parent)->usid] = pon;
@@ -2492,7 +2470,6 @@ static int qpnp_pon_probe(struct platform_device *pdev)
            op_pm8998_regmap_register(pon);/*yangfb@BSP ,20170316,to get pm8998 regmap pointer*/
         }
     }
-#endif
 
 	if (pon->pon_trigger_reason == PON_SMPL ||
 		pon->pon_power_off_reason == QPNP_POFF_REASON_UVLO) {
@@ -2576,9 +2553,7 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, pon);
 
 	INIT_DELAYED_WORK(&pon->bark_work, bark_work_func);
-#ifdef VENDOR_EDIT
 	INIT_DELAYED_WORK(&pon->press_work, press_work_func);
-#endif
 	/* register the PON configurations */
 	rc = qpnp_pon_config_init(pon);
 	if (rc) {
@@ -2598,7 +2573,6 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 	} else {
 		rc = qpnp_pon_set_dbc(pon, delay);
 	}
-	//#ifdef VENDOR_EDIT
 	qpnp_pon_get_dbc(pon, &pon->dbc);
 
 	pon->kpd_dbc_enable = of_property_read_bool(pon->pdev->dev.of_node,
@@ -2675,7 +2649,6 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 	/* config whether store the hard reset reason */
 	pon->store_hard_reset_reason = of_property_read_bool(pdev->dev.of_node,
 					"qcom,store-hard-reset-reason");
-#ifdef VENDOR_EDIT
 /* add by taokai@bsp 2016/11/9, a interface to know powron/off reasons*/
     if(!created_pwr_on_off_obj){
         pwr_on_off_kobj = kobject_create_and_add("pwr_on_off_reason", NULL);
@@ -2688,7 +2661,6 @@ static int qpnp_pon_probe(struct platform_device *pdev)
         }
         created_pwr_on_off_obj = true;
     }
-#endif
 
 	qpnp_pon_debugfs_init(pdev);
 	return 0;

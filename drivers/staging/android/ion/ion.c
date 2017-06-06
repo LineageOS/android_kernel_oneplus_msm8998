@@ -300,7 +300,6 @@ static void _ion_buffer_destroy(struct kref *kref)
 	mutex_lock(&dev->buffer_lock);
 	rb_erase(&buffer->node, &dev->buffers);
 	mutex_unlock(&dev->buffer_lock);
-    //#ifdef VENDOR_EDIT
     //MaJunhai@OnePlus..MultiMediaService, add /proc/process/task/taskid/wakeup || /proc/process/wakeup for ion tracking
   //  printk("[%5d:%5d] destroy ion buffer %p\n", current->tgid, current->pid, buffer);
     //#endif
@@ -351,7 +350,6 @@ static void ion_buffer_remove_from_handle(struct ion_buffer *buffer)
 		task = current->group_leader;
 		get_task_comm(buffer->task_comm, task);
 		buffer->pid = task_pid_nr(task);
-        //#ifdef VENDOR_EDIT
         //MaJunhai@OnePlus..MultiMediaService, add /proc/process/task/taskid/wakeup || /proc/process/wakeup for ion tracking
         //if(!strncmp("Binder", current->comm, strlen("Binder"))) {
             buffer->client_tgid = task_thread_info(current)->tgid;
@@ -572,7 +570,6 @@ static struct ion_handle *__ion_alloc(struct ion_client *client, size_t len,
 		buffer = ion_buffer_create(heap, dev, len, align, flags);
 		trace_ion_alloc_buffer_end(client->name, heap->name, len,
 					   heap_id_mask, flags);
-        //#ifdef VENDOR_EDIT
         //MaJunhai@OnePlus..MultiMediaService, add /proc/process/task/taskid/wakeup || /proc/process/wakeup for ion tracking
 		if (!IS_ERR(buffer))
          //   printk("[%5d:%5d] create ion buffer %p\n", current->tgid, current->pid, buffer);
@@ -1813,22 +1810,13 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 			continue;
 		total_size += buffer->size;
 		if (!buffer->handle_count) {
-			#ifdef VENDOR_EDIT
             //MaJunhai@OnePlus..MultiMediaService, add /proc/process/task/taskid/wakeup || /proc/process/wakeup for ion tracking
             seq_printf(s, "%p %16.s %16u %16u %16u %16zu %d %d %d %d\n",
                    buffer, buffer->task_comm, buffer->client_tgid, buffer->client_pid, buffer->pid,
                    buffer->size, buffer->kmap_cnt,
                    atomic_read(&buffer->ref.refcount), buffer->heap->id, buffer->handle_count);
             total_orphaned_size += buffer->size;
-			#else
-            seq_printf(s, "%16.s %16u %16zu %d %d\n",
-               buffer->task_comm, buffer->pid,
-               buffer->size, buffer->kmap_cnt,
-               atomic_read(&buffer->ref.refcount));
-            total_orphaned_size += buffer->size;
-			#endif
 		}
-		//#ifdef VENDOR_EDIT
         //MaJunhai@OnePlus..MultiMediaService, add /proc/process/task/taskid/wakeup || /proc/process/wakeup for ion tracking
         else {
             seq_printf(s, "%p %16.s %16u %16u %16u %16zu %d %d %d %d\n",

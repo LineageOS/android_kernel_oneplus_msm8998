@@ -36,9 +36,7 @@
 #include "pinctrl-msm.h"
 #include "../pinctrl-utils.h"
 #include <linux/wakeup_reason.h>
-#ifdef VENDOR_EDIT
 #include <linux/cpufreq.h>
-#endif
 
 #define MAX_NR_GPIO 300
 #define PS_HOLD_OFFSET 0x820
@@ -502,7 +500,6 @@ static void msm_gpio_dbg_show_one(struct seq_file *s,
 	func = (ctl_reg >> g->mux_bit) & 7;
 	drive = (ctl_reg >> g->drv_bit) & 7;
 	pull = (ctl_reg >> g->pull_bit) & 3;
-#ifdef VENDOR_EDIT
 #ifdef CONFIG_PM_SUSPEND_DEBUG_OP
 	p = buf;
 	if (s) {
@@ -516,16 +513,6 @@ static void msm_gpio_dbg_show_one(struct seq_file *s,
 	seq_printf(s, " %-8s: %-3s fun%d", g->name, is_out ? "out" : "in", func);
 	if (gpio <= 149)//the ship real gpio
 		seq_printf(s, " %s", chip->get(chip, offset) ? "hi":"lo");
-#endif
-#else
-#ifdef CONFIG_PM_SUSPEND_DEBUG_OP
-	if (s)
-		seq_printf(s, " %-8s: %-3s %d", g->name, is_out ? "out" : "in", func);
-	else
-		p += sprintf(p, " %-8s: %-3s %d", g->name, is_out ? "out" : "in", func);
-#else
-	seq_printf(s, " %-8s: %-3s %d", g->name, is_out ? "out" : "in", func);
-#endif
 #endif
 #ifdef CONFIG_PM_SUSPEND_DEBUG_OP
 	if (s) {
@@ -548,10 +535,8 @@ static void msm_gpio_dbg_show(struct seq_file *s, struct gpio_chip *chip)
 	unsigned i;
 
 	for (i = 0; i < chip->ngpio; i++, gpio++) {
-#ifdef VENDOR_EDIT
 		if(gpio == 0 || gpio == 1 || gpio == 2 || gpio == 3 || gpio == 81 || gpio == 82 || gpio == 83 || gpio == 84)
 			continue;
-#endif
 		msm_gpio_dbg_show_one(s, NULL, chip, i, gpio);
 #ifdef CONFIG_PM_SUSPEND_DEBUG_OP
 		if (s)
@@ -846,12 +831,10 @@ static void msm_gpio_irq_handler(struct irq_desc *desc)
 			//++add by lyb@bsp for printk wakeup irqs
 			if(!!need_show_pinctrl_irq){
 				need_show_pinctrl_irq = false;
-#ifdef VENDOR_EDIT
 				if (strstr(irq_to_desc(irq_pin)->action->name, "soc:fpc_fpc1020") != NULL) { //it is fpc irq
 					fp_irq_cnt = true;
 					c0_cpufreq_limit_queue();
 				}
-#endif
 				printk(KERN_ERR "hwirq %s [irq_num=%d ]triggered\n",irq_to_desc(irq_pin)->action->name,irq_pin);
 				log_wakeup_reason(irq_pin);
 			}

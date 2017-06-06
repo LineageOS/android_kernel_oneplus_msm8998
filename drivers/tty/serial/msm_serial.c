@@ -1746,7 +1746,6 @@ OF_EARLYCON_DECLARE(msm_serial_dm, "qcom,msm-uartdm",
 		    msm_serial_early_console_setup_dm);
 
 /*Anderson-Config_UARTPIN_as_GPIO+[*/
-#ifdef VENDOR_EDIT
 
 struct oemconsole{
 	bool default_console ;
@@ -1769,7 +1768,6 @@ static int __init parse_console_config(char *str)
 	return 0;
 }
 early_param("console", parse_console_config);
-#endif
 /*Anderson-Config_UARTPIN_as_GPIO+]*/
 
 static struct uart_driver msm_uart_driver;
@@ -1816,10 +1814,8 @@ static int msm_serial_probe(struct platform_device *pdev)
 	const struct of_device_id *id;
 	int irq, line;
 	/*Anderson-Config_UARTPIN_as_GPIO+[*/
-	#ifdef VENDOR_EDIT
 	struct pinctrl *pinctrl = NULL;
 	struct pinctrl_state *set_state = NULL;
-	#endif
 	/*Anderson-Config_UARTPIN_as_GPIO+]*/
 
 	if (pdev->dev.of_node)
@@ -1840,7 +1836,6 @@ static int msm_serial_probe(struct platform_device *pdev)
 	msm_port = UART_TO_MSM(port);
 
 	/*Anderson-Config_UARTPIN_as_GPIO+[*/
-	#ifdef VENDOR_EDIT
 	pinctrl = devm_pinctrl_get(port->dev);
 	if(pinctrl != NULL)
 	{
@@ -1857,7 +1852,6 @@ static int msm_serial_probe(struct platform_device *pdev)
 				pinctrl_select_state(pinctrl, set_state);
 		}
 	}
-	#endif
 	/*Anderson-Config_UARTPIN_as_GPIO+]*/
 
 	id = of_match_device(msm_uartdm_table, &pdev->dev);
@@ -1898,9 +1892,7 @@ static int msm_serial_remove(struct platform_device *pdev)
 {
 	struct uart_port *port = platform_get_drvdata(pdev);
 
-	#ifdef VENDOR_EDIT /*zyh we should disable clk when we remove serial*/
 	msm_power(port,3,0);
-	#endif
 	uart_remove_one_port(&msm_uart_driver, port);
 
 	return 0;
@@ -1950,7 +1942,6 @@ static int __init msm_serial_init(void)
 {
 	int ret =0;
 	pr_err("%s\n",__func__);
-	#ifdef VENDOR_EDIT
 	if(oem_console.console_initialized ==1 )
 	{
 	   pr_err("msm_serial: driver already initialized %s int=%d\n",__func__,oem_console.console_initialized);
@@ -1964,7 +1955,6 @@ static int __init msm_serial_init(void)
 		msm_serial_pinctrl_init();
 		return 0;
 	}
-	#endif
 	ret = uart_register_driver(&msm_uart_driver);
 	if (unlikely(ret))
 		return ret;
@@ -1973,7 +1963,6 @@ static int __init msm_serial_init(void)
 	if (unlikely(ret))
 		uart_unregister_driver(&msm_uart_driver);
 	/*Anderson-Config_UARTPIN_as_GPIO*[*/
-	#ifdef VENDOR_EDIT
 	if(!oem_console.default_console && !oem_console.force_console){
 		platform_driver_unregister(&msm_platform_driver);
 		uart_unregister_driver(&msm_uart_driver);
@@ -1984,9 +1973,6 @@ static int __init msm_serial_init(void)
 		oem_console.console_initialized =1;
 		pr_info("msm_serial: driver initialized\n");
 	}
-	#else
-		pr_info("msm_serial: driver initialized\n");
-	#endif
 	/*Anderson-Config_UARTPIN_as_GPIO*]*/
 
 	return ret;
@@ -1995,18 +1981,15 @@ static int __init msm_serial_init(void)
 static void __exit msm_serial_exit(void)
 {
 	pr_err("%s \n",__func__);
-	#ifdef VENDOR_EDIT
 	if(oem_console.console_initialized ==0 )
 	{
 	   pr_err("msm_serial: driver already exit %s int=%d\n",__func__,oem_console.console_initialized);
 	   return ;
 	}
 	oem_console.console_initialized = 0;
-	#endif
     platform_driver_unregister(&msm_platform_driver);
 	uart_unregister_driver(&msm_uart_driver);
 }
-#ifdef VENDOR_EDIT
 
 static int msm_serial_pinctrl_probe(struct platform_device *pdev)
 {
@@ -2152,7 +2135,6 @@ static struct platform_driver oem_force_serial_driver = {
     .probe = oem_force_serial_probe,
 };
 module_platform_driver(oem_force_serial_driver);
-#endif
 module_init(msm_serial_init);
 module_exit(msm_serial_exit);
 

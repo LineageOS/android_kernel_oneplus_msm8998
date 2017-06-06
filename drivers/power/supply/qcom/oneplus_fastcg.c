@@ -351,7 +351,6 @@ update_fw_err:
 }
 
 
-#ifdef VENDOR_EDIT
 static struct external_battery_gauge *bq27541_data = NULL;
 void bq27541_information_register(struct external_battery_gauge *fast_chg)
 {
@@ -453,7 +452,6 @@ static struct external_battery_gauge fastcharge_information  = {
 	.get_fastchg_firmware_already_updated	= get_fastchg_firmware_already_updated,
 	.is_usb_switch_on						= fastchg_is_usb_switch_on,
 };
-#endif
 
 static struct notify_dash_event *notify_event = NULL;
 

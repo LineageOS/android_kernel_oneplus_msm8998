@@ -322,12 +322,8 @@ static void freeze_cgroup(struct freezer *freezer)
 
 	css_task_iter_start(&freezer->css, &it);
 	while ((task = css_task_iter_next(&it)))
-	    #ifdef VENDOR_EDIT
             //huruihuan add for freezing task in cgroup despite of PF_FREEZER_SKIP flag
                 freeze_cgroup_task(task);
-            #else
-	        freeze_task(task);
-            #endif
 	css_task_iter_end(&it);
 }
 
@@ -335,7 +331,6 @@ static void unfreeze_cgroup(struct freezer *freezer)
 {
 	struct css_task_iter it;
 	struct task_struct *task;
-#ifdef VENDOR_EDIT
 	struct task_struct *tmp_tsk = NULL;
 	struct task_struct *g, *p;
 
@@ -353,12 +348,6 @@ static void unfreeze_cgroup(struct freezer *freezer)
 			__thaw_task(p);
 	} while_each_thread(g, p);
 	read_unlock(&tasklist_lock);
-#else
-	css_task_iter_start(&freezer->css, &it);
-	while ((task = css_task_iter_next(&it)))
-		__thaw_task(task);
-	css_task_iter_end(&it);
-#endif
 }
 
 /**

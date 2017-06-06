@@ -23,10 +23,8 @@
 #include <linux/rcupdate.h>
 #include <linux/workqueue.h>
 
-#ifdef VENDOR_EDIT
 //xiaoxiaohuan@OnePlus.MultiMediaService,2016/11/23,add for fd leak debug
 #define FD_OVER_CHECK
-#endif /*VENDOR_EDIT*/
 
 int sysctl_nr_open __read_mostly = 1024*1024;
 int sysctl_nr_open_min = BITS_PER_LONG;
@@ -495,7 +493,6 @@ static unsigned long find_next_fd(struct fdtable *fdt, unsigned long start)
 	return find_next_zero_bit(fdt->open_fds, maxfd, start);
 }
 
-#ifdef VENDOR_EDIT
 //xiaoxiaohuan@OnePlus.MultiMediaService,2016/11/23,add for fd leak debug
 #ifdef FD_OVER_CHECK
 #define FD_CHECK_NAME_SIZE 256
@@ -628,7 +625,6 @@ void fd_show_open_files(pid_t pid, struct files_struct *files, struct fdtable *f
     mutex_unlock(&over_fd_mutex);
 }
 #endif
-#endif /*VENDOR_EDIT*/
 
 /*
  * allocate a file descriptor, mark it busy.
@@ -688,7 +684,6 @@ repeat:
 
 out:
 	spin_unlock(&files->file_lock);
-	#ifdef VENDOR_EDIT
     //xiaoxiaohuan@OnePlus.MultiMediaService,2016/11/23,add for fd leak debug
     #ifdef FD_OVER_CHECK
 	if(error == -EMFILE) {
@@ -701,7 +696,6 @@ out:
         }
 	}
     #endif
-    #endif/*VENDOR_EDIT*/
 	return error;
 }
 

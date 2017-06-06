@@ -229,7 +229,6 @@ static int dsp_domr_notify_cb(struct notifier_block *n, unsigned long code,
 	case LOCATOR_UP:
 		reg = _cmd;
                 /*
-                 * #ifdef VENDOR_EDIT
                  * wangdongdong@MultiMediaService,2016/09/21,add to avoid NULL pointer
                  */
                  if (!reg || reg->total_domains != 1) {

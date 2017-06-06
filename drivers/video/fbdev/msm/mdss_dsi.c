@@ -33,7 +33,6 @@
 #include "mdss_debug.h"
 #include "mdss_dsi_phy.h"
 #include "mdss_dba_utils.h"
-//#ifdef VENDOR_EDIT
 #include <linux/param_rw.h>
 //#endif
 
@@ -303,13 +302,11 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 	if (ret)
 		pr_err("%s: failed to disable vregs for %s\n",
 			__func__, __mdss_dsi_pm_name(DSI_PANEL_PM));
-//#ifdef VENDOR_EDIT
     mdss_dsi_disp_vci_en(pdata, 0);
     if (ctrl_pdata->iris_enabled){
         mdss_dsi_px_1v1_en(pdata, 0);
     }
 //#endif
-    //#ifdef VENDOR_EDIT
     if (ctrl_pdata->iris_enabled){
         mdss_dsi_px_clk_req(pdata, 0);
     }
@@ -330,7 +327,6 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
-//#ifdef VENDOR_EDIT
     if (ctrl_pdata->iris_enabled){
         mdss_dsi_px_clk_req(pdata, 1);
         mdss_dsi_px_1v1_en(pdata, 1);
@@ -344,7 +340,6 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 			__func__, __mdss_dsi_pm_name(DSI_PANEL_PM));
 		return ret;
 	}
-//#ifdef VENDOR_EDIT
     mdss_dsi_disp_vci_en(pdata, 1);
 //#endif
 	/*
@@ -648,7 +643,6 @@ struct buf_data {
 	char *string_buf; /* cmd buf as string, 3 bytes per number */
 	int sblen; /* string buffer length */
 	int sync_flag;
-//#ifdef VENDOR_EDIT
     struct mdss_dsi_ctrl_pdata *ctrl;
 //#endif
 	struct mutex dbg_mutex; /* mutex to synchronize read/write/flush */
@@ -845,7 +839,6 @@ static int mdss_dsi_cmd_flush(struct file *file, fl_owner_t id)
 	int blen, len, i;
 	char *buf, *bufp, *bp;
 	struct dsi_ctrl_hdr *dchdr;
-	//#ifdef VENDOR_EDIT
 	struct mdss_dsi_ctrl_pdata * ctrl_data = pcmds->ctrl;
 	//#endif
 
@@ -916,7 +909,6 @@ static int mdss_dsi_cmd_flush(struct file *file, fl_owner_t id)
 		pcmds->buf = buf;
 		pcmds->blen = blen;
 	}
-//#ifdef VENDOR_EDIT
 	if ((ctrl_data != NULL) && (ctrl_data->debugfs_info != NULL)){
         ctrl_data->debugfs_info->override_flag = 1;
     }
@@ -992,7 +984,6 @@ static int mdss_dsi_debugfs_setup(struct mdss_panel_data *pdata,
 				ctrl_pdata->on_cmds);
 	DEBUGFS_CREATE_DCS_CMD("dsi_off_cmd", dfs->root, &dfs->off_cmd,
 				ctrl_pdata->off_cmds);
-//#ifdef VENDOR_EDIT
     dfs->on_cmd.ctrl = ctrl_pdata;
     dfs->off_cmd.ctrl = ctrl_pdata;
 //#endif
@@ -1228,7 +1219,6 @@ static int mdss_dsi_off(struct mdss_panel_data *pdata, int power_state)
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
-//#ifdef VENDOR_EDIT
     pr_err("%s start\n", __func__);
 //#endif
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
@@ -1292,7 +1282,6 @@ panel_power_ctrl:
 	ctrl_pdata->cur_max_pkt_size = 0;
 end:
 	pr_debug("%s-:\n", __func__);
-//#ifdef VENDOR_EDIT
     pr_err("%s end\n", __func__);
 //#endif
 	return ret;
@@ -1415,7 +1404,6 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
-//#ifdef VENDOR_EDIT
     pr_err("%s start\n", __func__);
 //#endif
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
@@ -1517,7 +1505,6 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 
 end:
 	pr_debug("%s-:\n", __func__);
-//#ifdef VENDOR_EDIT
     pr_err("%s end\n", __func__);
 //#endif
 	return ret;
@@ -1638,7 +1625,6 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 			ATRACE_END("dsi_panel_on");
 		}
 	}
-//#ifdef VENDOR_EDIT
     if (!ctrl_pdata->setting_mode_loaded){
         ctrl_pdata->setting_mode_loaded = true;
         mutex_lock(&ctrl_pdata->panel_mode_lock);
@@ -1649,7 +1635,6 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 	if ((pdata->panel_info.type == MIPI_CMD_PANEL) &&
 		mipi->vsync_enable && mipi->hw_vsync_mode) {
 		mdss_dsi_set_tear_on(ctrl_pdata);
-		//#ifdef VENDOR_EDIT
 		if (mdss_dsi_is_te_based_esd(ctrl_pdata))
 		    schedule_delayed_work(&ctrl_pdata->techeck_work, msecs_to_jiffies(3000));
 		//#else
@@ -1726,7 +1711,6 @@ static int mdss_dsi_blank(struct mdss_panel_data *pdata, int power_state)
 	if ((pdata->panel_info.type == MIPI_CMD_PANEL) &&
 		mipi->vsync_enable && mipi->hw_vsync_mode) {
 		if (mdss_dsi_is_te_based_esd(ctrl_pdata)) {
-		//#ifdef VENDOR_EDIT
                 cancel_delayed_work_sync(&ctrl_pdata->techeck_work);
 		//#else
 		//		disable_irq(gpio_to_irq(
@@ -2804,7 +2788,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 					&ctrl_pdata->dba_work, HZ);
 		}
 		break;
-    //#ifdef VENDOR_EDIT
 	case MDSS_EVENT_PANEL_SET_ACL:
 		ctrl_pdata->acl_mode = (int)(unsigned long) arg;
 		mdss_dsi_panel_set_acl(ctrl_pdata, (int)(unsigned long) ctrl_pdata->acl_mode);
@@ -2813,7 +2796,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		rc = mdss_dsi_panel_get_acl_mode(ctrl_pdata);
 		break;
 	//#endif
-    //#ifdef VENDOR_EDIT
 	case MDSS_EVENT_PANEL_SET_HBM_MODE:
 		ctrl_pdata->hbm_mode = (int)(unsigned long) arg;
 		mdss_dsi_panel_set_hbm_mode(ctrl_pdata, (int)(unsigned long) ctrl_pdata->hbm_mode);
@@ -2822,7 +2804,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		rc = mdss_dsi_panel_get_hbm_mode(ctrl_pdata);
 		break;
 	//#endif
-    //#ifdef VENDOR_EDIT
 	case MDSS_EVENT_PANEL_SET_SRGB_MODE:
 		ctrl_pdata->SRGB_mode= (int)(unsigned long) arg;
 		if(ctrl_pdata->SRGB_mode==1)
@@ -2833,7 +2814,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		rc = mdss_dsi_panel_get_srgb_mode(ctrl_pdata);
 		break;
 	//#endif
-    //#ifdef VENDOR_EDIT
 	case MDSS_EVENT_PANEL_SET_ADOBE_RGB_MODE:
 		ctrl_pdata->Adobe_RGB_mode= (int)(unsigned long) arg;
 		mdss_dsi_panel_set_adobe_rgb_mode(ctrl_pdata,(int)(unsigned long) ctrl_pdata->Adobe_RGB_mode);
@@ -2842,7 +2822,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		rc = mdss_dsi_panel_get_adobe_rgb_mode(ctrl_pdata);
 		break;
 	//#endif
-    //#ifdef VENDOR_EDIT
 	case MDSS_EVENT_PANEL_SET_DCI_P3_MODE:
 		ctrl_pdata->dci_p3_mode= (int)(unsigned long) arg;
 		if(ctrl_pdata->dci_p3_mode==1)
@@ -2853,7 +2832,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		rc = mdss_dsi_panel_get_dci_p3_mode(ctrl_pdata);
 		break;
 	//#endif
-    //#ifdef VENDOR_EDIT
 	case MDSS_EVENT_PANEL_SET_NIGHT_MODE:
 		ctrl_pdata->night_mode= (int)(unsigned long) arg;
 		mdss_dsi_panel_set_night_mode(ctrl_pdata, (int)(unsigned long) ctrl_pdata->night_mode);
@@ -3317,7 +3295,6 @@ static int mdss_dsi_ctrl_validate_config(struct mdss_dsi_ctrl_pdata *ctrl)
 error:
 	return rc;
 }
-//#ifdef VENDOR_EDIT
 static void techeck_work_func(struct work_struct *work )
 {
 	int ret = 0;
@@ -3466,7 +3443,6 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 		pr_err("%s: Failed to set dsi splash config\n", __func__);
 		return rc;
 	}
-//#ifdef VENDOR_EDIT
 	if (mdss_dsi_is_te_based_esd(ctrl_pdata)) {
 	    init_completion(&ctrl_pdata->te_comp);
 		INIT_DELAYED_WORK(&ctrl_pdata->techeck_work, techeck_work_func);
@@ -4340,7 +4316,6 @@ static int mdss_dsi_parse_gpio_params(struct platform_device *ctrl_pdev,
 		pr_debug("%s:%d mode gpio not specified\n", __func__, __LINE__);
 		ctrl_pdata->lcd_mode_sel_gpio = -EINVAL;
 	}
-//#ifdef VENDOR_EDIT
 	ctrl_pdata->disp_vci_en_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
 		"qcom,platform-vci-gpio", 0);
 	if (!gpio_is_valid(ctrl_pdata->disp_vci_en_gpio))
