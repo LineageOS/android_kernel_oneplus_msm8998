@@ -26,6 +26,8 @@
 #include <linux/if_pppolac.h>
 #include <linux/if_pppopns.h>
 
+#define IFNAMSIZ 16
+
 /* For user-space programs to pick up these definitions
  * which they wouldn't get otherwise without defining __KERNEL__
  */
