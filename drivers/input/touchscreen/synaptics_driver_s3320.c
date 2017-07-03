@@ -1817,43 +1817,6 @@ static ssize_t i2c_device_test_read_func(struct file *file, char __user *user_bu
 }
 
 #ifdef SUPPORT_GESTURE
-static ssize_t gesture_read_func(struct file *file, char __user *user_buf, size_t count, loff_t *ppos)
-{
-	int ret = 0;
-	char page[PAGESIZE];
-
-	ret = sprintf(page, "%d\n", ts_g->gestures_enable);
-	ret = simple_read_from_buffer(user_buf, count, ppos, page, strlen(page));
-
-	return ret;
-}
-
-static ssize_t gesture_write_func(struct file *file, const char __user *buffer, size_t count, loff_t *ppos)
-{
-	int ret, write_flag = 0;
-	char buf[10] = {0};
-	struct synaptics_ts_data *ts = ts_g;
-
-	if (!ts) {
-		return count;
-	}
-
-	if (ts->loading_fw) {
-		TPD_ERR("%s FW is updating break!!\n", __func__);
-		return count;
-	}
-
-	if (copy_from_user(buf, buffer, count)) {
-		TPD_ERR(KERN_INFO "%s: read proc input error.\n", __func__);
-		return count;
-	}
-
-	ret = sscanf(buf, "%d", &write_flag);
-	ts->gestures_enable = write_flag;
-
-	return count;
-}
-
 static ssize_t coordinate_proc_read_func(struct file *file, char __user *user_buf, size_t count, loff_t *ppos)
 {
 	int ret = 0;
@@ -1869,69 +1832,55 @@ static ssize_t coordinate_proc_read_func(struct file *file, char __user *user_bu
 	return ret;
 }
 
-static ssize_t double_tap_enable_read_func(struct file *file, char __user *user_buf, size_t count, loff_t *ppos)
-{
-	int ret = 0;
-	char page[PAGESIZE];
-
-	ret = sprintf(page, "%d\n", (ts_g->gestures_enable & GESTURE_DOUBLE_TAP) != 0);
-	ret = simple_read_from_buffer(user_buf, count, ppos, page, strlen(page));
-
-	return ret;
-}
-
-static ssize_t double_tap_enable_write_func(struct file *file, const char __user *buffer, size_t count, loff_t *ppos)
-{
-	int ret, write_flag = 0;
-	char buf[10] = {0};
-	struct synaptics_ts_data *ts = ts_g;
-
-	if (!ts) {
-		return count;
-	}
-
-	if (ts->loading_fw) {
-		TPD_ERR("%s FW is updating break!!\n", __func__);
-		return count;
-	}
-
-	if (copy_from_user(buf, buffer, count)) {
-		TPD_ERR(KERN_INFO "%s: read proc input error.\n", __func__);
-		return count;
-	}
-
-	ret = sscanf(buf, "%d", &write_flag);
-
-	if (write_flag) {
-		ts->gestures_enable |= GESTURE_DOUBLE_TAP;
-	} else {
-		ts->gestures_enable &= ~GESTURE_DOUBLE_TAP;
-	}
-
-	return count;
-}
-
-// chenggang.li@BSP.TP modified for oem 2014-08-08 create node
-/******************************start****************************/
-static const struct file_operations gesture_proc_fops = {
-	.write = gesture_write_func,
-	.read =  gesture_read_func,
-	.open = simple_open,
-	.owner = THIS_MODULE,
-};
-
 static const struct file_operations coordinate_proc_fops = {
 	.read =  coordinate_proc_read_func,
 	.open = simple_open,
 	.owner = THIS_MODULE,
 };
 
-static const struct file_operations double_tap_enable_proc_fops = {
-	.write = double_tap_enable_write_func,
-	.read =  double_tap_enable_read_func,
-	.open = simple_open,
-	.owner = THIS_MODULE,
-};
+#define GESTURE_ATTR(name, flag)\
+	static ssize_t name##_enable_read_func(struct file *file, char __user *user_buf, size_t count, loff_t *ppos)\
+	{\
+		int ret = 0;\
+		char page[PAGESIZE];\
+		ret = sprintf(page, "%d\n", (ts_g->gestures_enable & flag) != 0);\
+		ret = simple_read_from_buffer(user_buf, count, ppos, page, strlen(page));\
+		return ret;\
+	}\
+	static ssize_t name##_enable_write_func(struct file *file, const char __user *user_buf, size_t count, loff_t *ppos)\
+	{\
+		int ret, write_flag = 0;\
+		char page[PAGESIZE] = {0};\
+		ret = copy_from_user(page, user_buf, count);\
+		ret = sscanf(page, "%d", &write_flag);\
+		if (write_flag) {\
+			ts_g->gestures_enable |= flag;\
+		} else {\
+			ts_g->gestures_enable &= ~flag;\
+		}\
+		return count;\
+	}\
+	static const struct file_operations name##_enable_proc_fops = {\
+	    .write = name##_enable_write_func,\
+	    .read =  name##_enable_read_func,\
+	    .open = simple_open,\
+	    .owner = THIS_MODULE,\
+	};
+
+GESTURE_ATTR(double_tap, GESTURE_DOUBLE_TAP);
+GESTURE_ATTR(up_arrow, GESTURE_UP_ARROW);
+GESTURE_ATTR(down_arrow, GESTURE_DOWN_ARROW);
+GESTURE_ATTR(left_arrow, GESTURE_LEFT_ARROW);
+GESTURE_ATTR(right_arrow, GESTURE_RIGHT_ARROW);
+GESTURE_ATTR(double_swipe, GESTURE_DOUBLE_SWIPE);
+GESTURE_ATTR(up_swipe, GESTURE_UP_SWIPE);
+GESTURE_ATTR(down_swipe, GESTURE_DOWN_SWIPE);
+GESTURE_ATTR(left_swipe, GESTURE_LEFT_SWIPE);
+GESTURE_ATTR(right_swipe, GESTURE_RIGHT_SWIPE);
+GESTURE_ATTR(letter_o, GESTURE_CIRCLE);
+GESTURE_ATTR(letter_w, GESTURE_W);
+GESTURE_ATTR(letter_m, GESTURE_M);
+GESTURE_ATTR(letter_s, GESTURE_S);
 #endif
 
 static int page, address, block;
@@ -3596,6 +3545,13 @@ static const struct file_operations key_disable_proc_fops = {
 };
 #endif
 
+#define CREATE_GESTURE_NODE(name)\
+	prEntry_tmp = proc_create(#name "_enable", 0666, prEntry_tp, &name##_enable_proc_fops);\
+	if (prEntry_tmp == NULL) {\
+		ret = -ENOMEM;\
+		TPD_ERR("Couldn't create " #name "_enable\n");\
+	}
+
 static int init_synaptics_proc(void)
 {
 	int ret = 0;
@@ -3608,23 +3564,26 @@ static int init_synaptics_proc(void)
 	}
 
 #ifdef SUPPORT_GESTURE
-	prEntry_tmp = proc_create("gestures_enable", 0666, prEntry_tp, &gesture_proc_fops);
-	if (prEntry_tmp == NULL) {
-		ret = -ENOMEM;
-		TPD_ERR("Couldn't create gestures_enable\n");
-	}
-
-    prEntry_tmp = proc_create("double_tap_enable", 0666, prEntry_tp, &double_tap_enable_proc_fops);
-    if (prEntry_tmp == NULL) {
-        ret = -ENOMEM;
-        TPD_ERR("Couldn't create double_tap_enable\n");
-    }
-
 	prEntry_tmp = proc_create("coordinate", 0444, prEntry_tp, &coordinate_proc_fops);
 	if (prEntry_tmp == NULL) {
 		ret = -ENOMEM;
 		TPD_ERR("Couldn't create coordinate\n");
 	}
+
+	CREATE_GESTURE_NODE(double_tap);
+	CREATE_GESTURE_NODE(up_arrow);
+	CREATE_GESTURE_NODE(down_arrow);
+	CREATE_GESTURE_NODE(left_arrow);
+	CREATE_GESTURE_NODE(right_arrow);
+	CREATE_GESTURE_NODE(double_swipe);
+	CREATE_GESTURE_NODE(up_swipe);
+	CREATE_GESTURE_NODE(down_swipe);
+	CREATE_GESTURE_NODE(left_swipe);
+	CREATE_GESTURE_NODE(right_swipe);
+	CREATE_GESTURE_NODE(letter_o);
+	CREATE_GESTURE_NODE(letter_w);
+	CREATE_GESTURE_NODE(letter_m);
+	CREATE_GESTURE_NODE(letter_s);
 #endif
 
 #ifdef SUPPORT_GLOVES_MODE
