@@ -160,9 +160,10 @@ struct test_header {
 #define KEY_DOUBLE_TAP              KEY_WAKEUP // double tap to wake
 #define KEY_GESTURE_CIRCLE          250 // draw circle to lunch camera
 #define KEY_GESTURE_TWO_SWIPE       251 // swipe two finger vertically to play/pause
-#define KEY_GESTURE_V               252 // draw v to toggle flashlight
-#define KEY_GESTURE_LEFT_V          253 // draw left arrow for previous track
-#define KEY_GESTURE_RIGHT_V         254 // draw right arrow for next track
+#define KEY_GESTURE_UP_ARROW        252 // draw up arrow to toggle flashlight
+#define KEY_GESTURE_LEFT_ARROW      253 // draw left arrow for previous track
+#define KEY_GESTURE_RIGHT_ARROW     254 // draw right arrow for next track
+#define KEY_GESTURE_DOWN_ARROW      255 // draw down arrow to toggle flashlight
 #define KEY_GESTURE_SWIPE_RIGHT     KEY_F5
 #define KEY_GESTURE_SWIPE_LEFT      KEY_F6
 #define KEY_GESTURE_SWIPE_DOWN      KEY_F7
@@ -1318,16 +1319,19 @@ static void gesture_judge(struct synaptics_ts_data *ts)
 		break;
 
 	case GESTURE_UP_ARROW:
+		keyCode = KEY_GESTURE_UP_ARROW;
+		break;
+
 	case GESTURE_DOWN_ARROW:
-		keyCode = KEY_GESTURE_V;
+		keyCode = KEY_GESTURE_DOWN_ARROW;
 		break;
 
 	case GESTURE_LEFT_ARROW:
-		keyCode = KEY_GESTURE_LEFT_V;
+		keyCode = KEY_GESTURE_LEFT_ARROW;
 		break;
 
 	case GESTURE_RIGHT_ARROW:
-		keyCode = KEY_GESTURE_RIGHT_V;
+		keyCode = KEY_GESTURE_RIGHT_ARROW;
 		break;
 
 	case GESTURE_CIRCLE:
@@ -2767,10 +2771,11 @@ static int	synaptics_input_init(struct synaptics_ts_data *ts)
 	set_bit(KEY_F4, ts->input_dev->keybit); //doulbe-tap resume
 	set_bit(KEY_DOUBLE_TAP, ts->input_dev->keybit);
 	set_bit(KEY_GESTURE_CIRCLE, ts->input_dev->keybit);
-	set_bit(KEY_GESTURE_V, ts->input_dev->keybit);
 	set_bit(KEY_GESTURE_TWO_SWIPE, ts->input_dev->keybit);
-	set_bit(KEY_GESTURE_LEFT_V, ts->input_dev->keybit);
-	set_bit(KEY_GESTURE_RIGHT_V, ts->input_dev->keybit);
+	set_bit(KEY_GESTURE_UP_ARROW, ts->input_dev->keybit);
+	set_bit(KEY_GESTURE_LEFT_ARROW, ts->input_dev->keybit);
+	set_bit(KEY_GESTURE_RIGHT_ARROW, ts->input_dev->keybit);
+	set_bit(KEY_GESTURE_DOWN_ARROW, ts->input_dev->keybit);
 	set_bit(KEY_APPSELECT, ts->input_dev->keybit);
 	set_bit(KEY_BACK, ts->input_dev->keybit);
 #endif
