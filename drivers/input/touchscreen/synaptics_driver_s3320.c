@@ -222,7 +222,6 @@ static struct synaptics_ts_data *ts_g = NULL;
 static struct workqueue_struct *synaptics_wq = NULL;
 static struct workqueue_struct *synaptics_report = NULL;
 static struct workqueue_struct *get_base_report = NULL;
-static struct proc_dir_entry *prEntry_tp = NULL;
 
 
 #ifdef SUPPORT_GESTURE
@@ -3147,7 +3146,7 @@ static ssize_t tp_reset_write_func(struct file *file, const char *buffer, size_t
 }
 
 //chenggang.li@bsp add for 14045
-static const struct file_operations base_register_address = {
+static const struct file_operations radd_proc_fops = {
 	.write = synap_write_address,
 	.read =  synap_read_address,
 	.open = simple_open,
@@ -3155,14 +3154,14 @@ static const struct file_operations base_register_address = {
 };
 
 //wangwenxue@BSP add for change baseline_test to "proc\touchpanel\baseline_test"  begin
-static const struct file_operations i2c_device_test_fops = {
+static const struct file_operations i2c_device_test_proc_fops = {
 	.read =  i2c_device_test_read_func,
 	.open = simple_open,
 	.owner = THIS_MODULE,
 };
 
 //wangwenxue@BSP add for change baseline_test to "proc\touchpanel\baseline_test"  begin
-static const struct file_operations tp_baseline_test_proc_fops = {
+static const struct file_operations baseline_test_proc_fops = {
 	.read =  tp_baseline_test_read_func,
 	.open = simple_open,
 	.owner = THIS_MODULE,
@@ -3246,7 +3245,7 @@ static ssize_t changer_write_func(struct file *file, const char __user *buffer, 
 	return count;
 }
 
-static const struct file_operations changer_ops = {
+static const struct file_operations changer_connet_proc_fops = {
 	.write = changer_write_func,
 	.read =  changer_read_func,
 	.open = simple_open,
@@ -3387,7 +3386,7 @@ static ssize_t touch_press_status_write(struct file *file, const char __user *bu
 	return count;
 }
 
-static const struct file_operations touch_press_status = {
+static const struct file_operations touch_press_proc_fops = {
 	.write = touch_press_status_write,
 	.read =  touch_press_status_read,
 	.open = simple_open,
@@ -3459,7 +3458,7 @@ static ssize_t limit_enable_write(struct file *file, const char __user *buffer, 
 	return count;
 }
 
-static const struct file_operations proc_limit_enable = {
+static const struct file_operations tpedge_limit_enable_proc_fops = {
 	.read = limit_enable_read,
 	.write = limit_enable_write,
 	.open = simple_open,
@@ -3492,7 +3491,7 @@ static ssize_t key_swap_write_func(struct file *file, const char __user *user_bu
 	return count;
 }
 
-static const struct file_operations key_swap_proc_fops = {
+static const struct file_operations key_rep_proc_fops = {
 	.write = key_swap_write_func,
 	.read =  key_swap_read_func,
 	.open = simple_open,
@@ -3531,31 +3530,43 @@ static const struct file_operations key_disable_proc_fops = {
 };
 #endif
 
-#define CREATE_GESTURE_NODE(name)\
-	prEntry_tmp = proc_create(#name "_enable", 0666, prEntry_tp, &name##_enable_proc_fops);\
-	if (prEntry_tmp == NULL) {\
+#define CREATE_PROC_NODE(PARENT, NAME, MODE)\
+	node = proc_create(#NAME, MODE, PARENT, &NAME##_proc_fops);\
+	if (node == NULL) {\
 		ret = -ENOMEM;\
-		TPD_ERR("Couldn't create " #name "_enable\n");\
+		TPD_ERR("Couldn't create " #NAME " in " #PARENT "\n");\
 	}
+
+#define CREATE_GESTURE_NODE(NAME)\
+	CREATE_PROC_NODE(touchpanel, NAME##_enable, 0666)
 
 static int init_synaptics_proc(void)
 {
 	int ret = 0;
-	struct proc_dir_entry *prEntry_tmp  = NULL;
 
-	prEntry_tp = proc_mkdir("touchpanel", NULL);
-	if (prEntry_tp == NULL) {
+	struct proc_dir_entry *touchpanel = NULL;
+#ifdef SUPPORT_TP_TOUCHKEY
+	struct proc_dir_entry *s1302 = NULL;
+#endif
+
+	struct proc_dir_entry *node  = NULL;
+
+	touchpanel = proc_mkdir("touchpanel", NULL);
+	if (touchpanel == NULL) {
 		ret = -ENOMEM;
 		TPD_ERR("Couldn't create touchpanel\n");
 	}
 
-#ifdef SUPPORT_GESTURE
-	prEntry_tmp = proc_create("coordinate", 0444, prEntry_tp, &coordinate_proc_fops);
-	if (prEntry_tmp == NULL) {
+#ifdef SUPPORT_TP_TOUCHKEY
+	s1302 = proc_mkdir("s1302", NULL);
+	if (s1302 == NULL) {
 		ret = -ENOMEM;
-		TPD_ERR("Couldn't create coordinate\n");
+		TPD_ERR("Couldn't create s1302\n");
 	}
+#endif
 
+#ifdef SUPPORT_GESTURE
+	CREATE_PROC_NODE(touchpanel, coordinate, 0444);
 	CREATE_GESTURE_NODE(double_tap);
 	CREATE_GESTURE_NODE(up_arrow);
 	CREATE_GESTURE_NODE(down_arrow);
@@ -3573,88 +3584,33 @@ static int init_synaptics_proc(void)
 #endif
 
 #ifdef SUPPORT_GLOVES_MODE
-	prEntry_tmp = proc_create("glove_mode_enable", 0666, prEntry_tp, &glove_mode_enable_proc_fops);
-	if (prEntry_tmp == NULL) {
-		ret = -ENOMEM;
-		TPD_ERR("Couldn't create glove_mode_enable\n");
-	}
+	CREATE_PROC_NODE(touchpanel, glove_mode_enable, 0666);
 #endif
 
 #ifdef SUPPORT_TP_SLEEP_MODE
-	prEntry_tmp = proc_create("sleep_mode_enable", 0666, prEntry_tp, &sleep_mode_enable_proc_fops);
-	if (prEntry_tmp == NULL) {
-		ret = -ENOMEM;
-		TPD_ERR("Couldn't create sleep_mode_enable\n");
-	}
+	CREATE_PROC_NODE(touchpanel, sleep_mode_enable, 0666);
 #endif
 
 #ifdef RESET_ONESECOND
-	prEntry_tmp = proc_create("tp_reset", 0666, prEntry_tp, &tp_reset_proc_fops);
-	if (prEntry_tmp == NULL) {
-		ret = -ENOMEM;
-		TPD_ERR("Couldn't create tp_reset\n");
-	}
+	CREATE_PROC_NODE(touchpanel, tp_reset, 0666);
 #endif
 
 #ifdef ENABLE_TPEDGE_LIMIT
-	prEntry_tmp = proc_create("tpedge_limit_enable", 0666, prEntry_tp, &proc_limit_enable);
-	if (prEntry_tmp == NULL) {
-		ret = -ENOMEM;
-		TPD_ERR("Couldn't create tp_limit_enable\n");
-	}
+	CREATE_PROC_NODE(touchpanel, tpedge_limit_enable, 0666);
 #endif
 
-	//wangwenxue@BSP add for change baseline_test to "proc\touchpanel\baseline_test"  begin
-	prEntry_tmp = proc_create("baseline_test", 0666, prEntry_tp, &tp_baseline_test_proc_fops);
-	if (prEntry_tmp == NULL) {
-		ret = -ENOMEM;
-		TPD_ERR("Couldn't create baseline_test\n");
-	}
-
-	//wangwenxue@BSP add for change baseline_test to "proc\touchpanel\baseline_test"  end
-	//wangwenxue@BSP add for change baseline_test to "proc\touchpanel\i2c_device_test"  begin
-	prEntry_tmp = proc_create("i2c_device_test", 0666, prEntry_tp, &i2c_device_test_fops);
-	if (prEntry_tmp == NULL) {
-		ret = -ENOMEM;
-		TPD_ERR("Couldn't create i2c_device_test\n");
-	}
-
-	prEntry_tmp = proc_create("radd", 0777, prEntry_tp, &base_register_address);
-	if (prEntry_tmp == NULL) {
-		ret = -ENOMEM;
-		TPD_ERR("Couldn't create radd\n");
-	}
-
-	prEntry_tmp = proc_create("vendor_id", 0444, prEntry_tp, &vendor_id_proc_fops);
-	if (prEntry_tmp == NULL) {
-		ret = -ENOMEM;
-		TPD_ERR("Couldn't create vendor_id\n");
-	}
-
-	prEntry_tmp = proc_create("changer_connet", 0666, prEntry_tp, &changer_ops);
-	if (prEntry_tmp == NULL) {
-		ret = -ENOMEM;
-		TPD_ERR("Couldn't create changer_connet\n");
-	}
-
-	prEntry_tmp = proc_create("touch_press", 0666, prEntry_tp, &touch_press_status);
-	if (prEntry_tmp == NULL) {
-		ret = -ENOMEM;
-		TPD_ERR("Couldn't create touch_press\n");
-	}
+	//wangwenxue@BSP add for change baseline_test to "proc\touchpanel\baseline_test"
+	CREATE_PROC_NODE(touchpanel, baseline_test, 0666);
+	//wangwenxue@BSP add for change baseline_test to "proc\touchpanel\i2c_device_test"
+	CREATE_PROC_NODE(touchpanel, i2c_device_test, 0666);
+	CREATE_PROC_NODE(touchpanel, radd, 0777);
+	CREATE_PROC_NODE(touchpanel, vendor_id, 0444);
+	CREATE_PROC_NODE(touchpanel, changer_connet, 0666);
+	CREATE_PROC_NODE(touchpanel, touch_press, 0666);
 
 #ifdef SUPPORT_TP_TOUCHKEY
-	prEntry_tmp = proc_create("key_swap", 0666, prEntry_tp, &key_swap_proc_fops);
-	if (prEntry_tmp == NULL) {
-		ret = -ENOMEM;
-		TPD_ERR("Couldn't create key_swap\n");
-	}
-
-	prEntry_tmp = proc_create("key_disable", 0666, prEntry_tp, &key_disable_proc_fops);
-	if (prEntry_tmp == NULL) {
-		ret = -ENOMEM;
-		TPD_ERR("Couldn't create key_disable\n");
-	}
+	CREATE_PROC_NODE(s1302, key_rep, 0666);
+	CREATE_PROC_NODE(touchpanel, key_disable, 0666);
 #endif
 
 	return ret;
