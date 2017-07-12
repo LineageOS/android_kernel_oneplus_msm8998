@@ -1973,6 +1973,7 @@ struct task_struct {
 #endif
 #ifdef CONFIG_FAULT_INJECTION
 	int make_it_fail;
+	int fail_nth;
 #endif
 	/*
 	 * when (nr_dirtied >= nr_dirtied_pause), it's time to call
