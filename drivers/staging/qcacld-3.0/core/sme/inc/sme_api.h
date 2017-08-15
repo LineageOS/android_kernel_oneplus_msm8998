@@ -83,6 +83,10 @@
 
 #define SME_ACTIVE_LIST_CMD_TIMEOUT_VALUE (30*1000)
 #define SME_CMD_TIMEOUT_VALUE (SME_ACTIVE_LIST_CMD_TIMEOUT_VALUE + 1000)
+
+#define sme_err(format, args...) \
+	QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR, FL(format), ## args)
+
 /*--------------------------------------------------------------------------
   Type declarations
   ------------------------------------------------------------------------*/
@@ -491,25 +495,15 @@ QDF_STATUS sme_set_host_offload(tHalHandle hHal, uint8_t sessionId,
 		tpSirHostOffloadReq pRequest);
 
 /**
- * sme_enable_non_arp_broadcast_filter(): API to enable Broadcast filter
- * when target goes to wow suspend/resume mode
- * @hal: The handle returned by mac_open.
- * @session_id: Session Identifier
+ * sme_conf_hw_filter_mode() - configure the given mode for the given session
+ * @hal: internal hal handle
+ * @session_id: the Id of the session to configure the hw filter for
+ * @mode_bitmap: the hw filter mode to configure
  *
- * Return QDF_STATUS
+ * Return: QDF_STATUS
  */
-QDF_STATUS sme_enable_non_arp_broadcast_filter(tHalHandle hal,
-						uint8_t session_id);
-/**
- * sme_disable_nonarp_broadcast_filter(): API to disable Broadcast filter
- * when target goes to wow suspend/resume mode
- * @hal: The handle returned by mac_open.
- * @session_id: Session Identifier
- *
- * Return QDF_STATUS
- */
-QDF_STATUS sme_disable_nonarp_broadcast_filter(tHalHandle hal,
-						uint8_t session_id);
+QDF_STATUS sme_conf_hw_filter_mode(tHalHandle hal, uint8_t session_id,
+				   uint8_t mode_bitmap);
 
 QDF_STATUS sme_set_keep_alive(tHalHandle hHal, uint8_t sessionId,
 		tpSirKeepAliveReq pRequest);
@@ -1278,6 +1272,7 @@ void sme_set_pdev_ht_vht_ies(tHalHandle hHal, bool enable2x2);
 
 void sme_update_vdev_type_nss(tHalHandle hal, uint8_t max_supp_nss,
 		uint32_t vdev_type_nss, eCsrBand band);
+void sme_update_hw_dbs_capable(tHalHandle hal, uint8_t hw_dbs_capable);
 void sme_register_p2p_lo_event(tHalHandle hHal, void *context,
 					p2p_lo_callback callback);
 
@@ -1479,6 +1474,20 @@ static inline QDF_STATUS sme_set_udp_resp_offload(struct udp_resp_offload
 QDF_STATUS sme_get_rcpi(tHalHandle hal, struct sme_rcpi_req *rcpi);
 
 /**
+ * sme_get_rssi_snr_by_bssid() - gets the rssi and snr by bssid from scan cache
+ * @hal: handle returned by mac_open
+ * @profile: current connected profile
+ * @bssid: bssid to look for in scan cache
+ * @rssi: rssi value found
+ * @snr: snr value found
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS sme_get_rssi_snr_by_bssid(tHalHandle hal, tCsrRoamProfile *profile,
+				     const uint8_t *bssid, int8_t *rssi,
+				     int8_t *snr);
+
+/**
  * sme_get_beacon_frm() - gets the bss descriptor from scan cache and prepares
  * beacon frame
  * @hal: handle returned by mac_open
@@ -1507,5 +1516,7 @@ QDF_STATUS sme_rso_cmd_status_cb(tHalHandle hal,
 
 void sme_set_5g_band_pref(tHalHandle hal_handle,
 			  struct sme_5g_band_pref_params *pref_params);
+
+QDF_STATUS sme_delete_all_tdls_peers(tHalHandle hal, uint8_t session_id);
 
 #endif /* #if !defined( __SME_API_H ) */

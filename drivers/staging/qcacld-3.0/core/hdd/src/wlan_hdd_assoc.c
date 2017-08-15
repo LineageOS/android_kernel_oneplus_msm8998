@@ -2069,7 +2069,7 @@ static int hdd_change_sta_state_authenticated(hdd_adapter_t *adapter,
 		sme_ps_enable_auto_ps_timer(
 			WLAN_HDD_GET_HAL_CTX(adapter),
 			adapter->sessionId,
-			timeout);
+			timeout, false);
 	}
 
 	return ret;
@@ -2259,7 +2259,7 @@ static QDF_STATUS hdd_association_completion_handler(hdd_adapter_t *pAdapter,
 	hdd_station_ctx_t *pHddStaCtx = WLAN_HDD_GET_STATION_CTX_PTR(pAdapter);
 	QDF_STATUS qdf_status = QDF_STATUS_E_FAILURE;
 	uint8_t reqRsnIe[DOT11F_IE_RSN_MAX_LEN];
-	uint32_t reqRsnLength = DOT11F_IE_RSN_MAX_LEN;
+	uint32_t reqRsnLength = DOT11F_IE_RSN_MAX_LEN, ie_len;
 	int ft_carrier_on = false;
 	bool hddDisconInProgress = false;
 	unsigned long rc;
@@ -2313,6 +2313,18 @@ static QDF_STATUS hdd_association_completion_handler(hdd_adapter_t *pAdapter,
 			pAdapter->wapi_info.fIsWapiSta = 0;
 		}
 #endif /* FEATURE_WLAN_WAPI */
+		hdd_debug("bss_descr[%d] devicemode[%d]", !!pRoamInfo->pBssDesc,
+				pAdapter->device_mode);
+		if ((QDF_STA_MODE == pAdapter->device_mode) &&
+						pRoamInfo->pBssDesc) {
+			ie_len = GET_IE_LEN_IN_BSS(pRoamInfo->pBssDesc->length);
+			pHddStaCtx->ap_supports_immediate_power_save =
+				wlan_hdd_is_ap_supports_immediate_power_save(
+				     (uint8_t *) pRoamInfo->pBssDesc->ieFields,
+				     ie_len);
+			hdd_debug("ap_supports_immediate_power_save flag [%d]",
+				  pHddStaCtx->ap_supports_immediate_power_save);
+		}
 
 		/* Indicate 'connect' status to user space */
 		hdd_send_association_event(dev, pRoamInfo);
@@ -3478,8 +3490,7 @@ QDF_STATUS hdd_roam_register_tdlssta(hdd_adapter_t *pAdapter,
  *
  * Return: QDF_STATUS enumeration
  */
-static QDF_STATUS hdd_roam_deregister_tdlssta(hdd_adapter_t *pAdapter,
-					      uint8_t staId)
+QDF_STATUS hdd_roam_deregister_tdlssta(hdd_adapter_t *pAdapter, uint8_t staId)
 {
 	QDF_STATUS qdf_status;
 	qdf_status = ol_txrx_clear_peer(staId);
@@ -3733,13 +3744,16 @@ hdd_roam_tdls_status_update_handler(hdd_adapter_t *pAdapter,
 					hdd_roam_deregister_tdlssta
 						(pAdapter,
 						pRoamInfo->staId);
-				    }
+				    } else
+					mutex_unlock(&pHddCtx->tdls_lock);
 				} else
 				    mutex_unlock(&pHddCtx->tdls_lock);
 
+				mutex_lock(&pHddCtx->tdls_lock);
 				wlan_hdd_tdls_reset_peer(pAdapter,
 							 pRoamInfo->
 							 peerMac.bytes);
+				mutex_unlock(&pHddCtx->tdls_lock);
 
 				pHddCtx->tdlsConnInfo[staIdx].staId = 0;
 				pHddCtx->tdlsConnInfo[staIdx].
@@ -3789,11 +3803,13 @@ hdd_roam_tdls_status_update_handler(hdd_adapter_t *pAdapter,
 						       [staIdx].
 						       peerMac.
 						       bytes));
+				mutex_lock(&pHddCtx->tdls_lock);
 				wlan_hdd_tdls_reset_peer(pAdapter,
 							 pHddCtx->
 							 tdlsConnInfo
 							 [staIdx].
 							 peerMac.bytes);
+				mutex_unlock(&pHddCtx->tdls_lock);
 				hdd_roam_deregister_tdlssta(pAdapter,
 							    pHddCtx->
 							    tdlsConnInfo
@@ -4060,7 +4076,7 @@ hdd_roam_tdls_status_update_handler(hdd_adapter_t *pAdapter,
 }
 #else
 
-static inline QDF_STATUS hdd_roam_deregister_tdlssta(hdd_adapter_t *pAdapter,
+inline QDF_STATUS hdd_roam_deregister_tdlssta(hdd_adapter_t *pAdapter,
 					      uint8_t staId)
 {
 	return QDF_STATUS_SUCCESS;
@@ -4721,6 +4737,11 @@ hdd_sme_roam_callback(void *pContext, tCsrRoamInfo *pRoamInfo, uint32_t roamId,
 	case eCSR_ROAM_DISASSOCIATED:
 	{
 		hdd_info("****eCSR_ROAM_DISASSOCIATED****");
+		hdd_napi_serialize(0);
+		cds_set_connection_in_progress(false);
+		hdd_set_roaming_in_progress(false);
+		pAdapter->defer_disconnect = 0;
+
 		qdf_ret_status =
 			hdd_dis_connect_handler(pAdapter, pRoamInfo, roamId,
 						roamStatus, roamResult);

@@ -3246,6 +3246,7 @@ exit_handler:
 	wma_beacon_miss_handler(wma, wake_info->vdev_id, 0);
 }
 
+/*#ifndef VENDOR_EDIT
 static const char *wma_vdev_type_str(uint32_t vdev_type)
 {
 	switch (vdev_type) {
@@ -3267,6 +3268,7 @@ static const char *wma_vdev_type_str(uint32_t vdev_type)
 		return "unknown";
 	}
 }
+#endif*/
 
 /**
  * wma_wow_wakeup_host_event() - wakeup host event handler
@@ -3304,11 +3306,13 @@ int wma_wow_wakeup_host_event(void *handle, uint8_t *event,
 	if ((wake_info->wake_reason != WOW_REASON_UNSPECIFIED) ||
 	    (wake_info->wake_reason == WOW_REASON_UNSPECIFIED &&
 	     !wmi_get_runtime_pm_inprogress(wma->wmi_handle))) {
+/*#ifndef VENDOR_EDIT
 		WMA_LOGA("WOW wakeup host event received; reason: %s(%d), vdev_id: %d, vdev_type: %s",
 			 wma_wow_wake_reason_str(wake_info->wake_reason),
 			 wake_info->wake_reason,
 			 wake_info->vdev_id,
 			 wma_vdev ? wma_vdev_type_str(wma_vdev->type) : "null");
+#endif*/
 		qdf_wow_wakeup_host_event(wake_info->wake_reason);
 		qdf_wma_wow_wakeup_stats_event();
 	}
@@ -5629,39 +5633,35 @@ QDF_STATUS wma_enable_arp_ns_offload(tp_wma_handle wma,
 	return QDF_STATUS_SUCCESS;
 }
 
-QDF_STATUS wma_configure_non_arp_broadcast_filter(tp_wma_handle wma,
-				struct broadcast_filter_request *bcast_filter)
+QDF_STATUS wma_conf_hw_filter_mode(tp_wma_handle wma,
+				   struct hw_filter_request *req)
 {
-	int32_t res;
+	QDF_STATUS status;
 	uint8_t vdev_id;
 
 	/* Get the vdev id */
-	if (!wma_find_vdev_by_bssid(wma, bcast_filter->bssid.bytes,
-					&vdev_id)) {
+	if (!wma_find_vdev_by_bssid(wma, req->bssid.bytes, &vdev_id)) {
 		WMA_LOGE("vdev handle is invalid for %pM",
-			 bcast_filter->bssid.bytes);
-		qdf_mem_free(bcast_filter);
+			 req->bssid.bytes);
+		qdf_mem_free(req);
 		return QDF_STATUS_E_INVAL;
 	}
 
 	if (!wma->interfaces[vdev_id].vdev_up) {
 		WMA_LOGE("vdev %d is not up skipping enable Broadcast Filter",
 			 vdev_id);
-		qdf_mem_free(bcast_filter);
+		qdf_mem_free(req);
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	res = wmi_unified_configure_broadcast_filter_cmd(wma->wmi_handle,
-				vdev_id, bcast_filter->enable);
-
-	if (res) {
+	status = wmi_unified_conf_hw_filter_mode_cmd(wma->wmi_handle, vdev_id,
+						     req->mode_bitmap);
+	if (QDF_IS_STATUS_ERROR(status))
 		WMA_LOGE("Failed to enable/disable Broadcast Filter");
-		qdf_mem_free(bcast_filter);
-		return QDF_STATUS_E_FAILURE;
-	}
 
-	qdf_mem_free(bcast_filter);
-	return QDF_STATUS_SUCCESS;
+	qdf_mem_free(req);
+
+	return status;
 }
 
 /**
@@ -8626,68 +8626,6 @@ QDF_STATUS wma_encrypt_decrypt_msg(WMA_HANDLE handle,
 }
 
 /**
- * wma_get_arp_stats_handler() - handle arp stats data
- * indicated by FW
- * @handle: wma context
- * @data: event buffer
- * @data len: length of event buffer
- *
- * Return: 0 on success
- */
-int wma_get_arp_stats_handler(void *handle, uint8_t *data,
-			uint32_t data_len)
-{
-	WMI_VDEV_GET_ARP_STAT_EVENTID_param_tlvs *param_buf;
-	wmi_vdev_get_arp_stats_event_fixed_param *data_event;
-	struct rsp_stats rsp;
-	tpAniSirGlobal mac = cds_get_context(QDF_MODULE_ID_PE);
-
-	ENTER();
-
-	if (!mac) {
-		WMA_LOGE("%s: Invalid mac context", __func__);
-		return -EINVAL;
-	}
-
-	if (!mac->sme.get_arp_stats_cb) {
-		WMA_LOGE("%s: Callback not registered", __func__);
-		return -EINVAL;
-	}
-
-	if (data == NULL) {
-		WMA_LOGE("%s: invalid pointer", __func__);
-		return -EINVAL;
-	}
-	param_buf = (WMI_VDEV_GET_ARP_STAT_EVENTID_param_tlvs *)data;
-	if (!param_buf) {
-		WMA_LOGE("%s: Invalid get arp stats event", __func__);
-		return -EINVAL;
-	}
-	data_event = param_buf->fixed_param;
-	if (!data_event) {
-		WMA_LOGE("%s: Invalid get arp stats data event", __func__);
-		return -EINVAL;
-	}
-	rsp.arp_req_enqueue = data_event->arp_req_enqueue;
-	rsp.vdev_id = data_event->vdev_id;
-	rsp.arp_req_tx_success = data_event->arp_req_tx_success;
-	rsp.arp_req_tx_failure = data_event->arp_req_tx_failure;
-	rsp.arp_rsp_recvd = data_event->arp_rsp_recvd;
-	rsp.out_of_order_arp_rsp_drop_cnt =
-		data_event->out_of_order_arp_rsp_drop_cnt;
-	rsp.dad_detected = data_event->dad_detected;
-	rsp.connect_status = data_event->connect_status;
-	rsp.ba_session_establishment_status =
-		data_event->ba_session_establishment_status;
-
-	mac->sme.get_arp_stats_cb(mac->hHdd, &rsp);
-
-	EXIT();
-
-	return 0;
-}
-
-/**
  * wma_encrypt_decrypt_msg_handler() - handle encrypt/decrypt data
  * indicated by FW
  * @handle: wma context
@@ -8758,6 +8696,68 @@ int wma_encrypt_decrypt_msg_handler(void *handle, uint8_t *data,
 	return 0;
 }
 #endif
+
+/**
+ * wma_get_arp_stats_handler() - handle arp stats data
+ * indicated by FW
+ * @handle: wma context
+ * @data: event buffer
+ * @data len: length of event buffer
+ *
+ * Return: 0 on success
+ */
+int wma_get_arp_stats_handler(void *handle, uint8_t *data,
+			uint32_t data_len)
+{
+	WMI_VDEV_GET_ARP_STAT_EVENTID_param_tlvs *param_buf;
+	wmi_vdev_get_arp_stats_event_fixed_param *data_event;
+	struct rsp_stats rsp;
+	tpAniSirGlobal mac = cds_get_context(QDF_MODULE_ID_PE);
+
+	ENTER();
+
+	if (!mac) {
+		WMA_LOGE("%s: Invalid mac context", __func__);
+		return -EINVAL;
+	}
+
+	if (!mac->sme.get_arp_stats_cb) {
+		WMA_LOGE("%s: Callback not registered", __func__);
+		return -EINVAL;
+	}
+
+	if (data == NULL) {
+		WMA_LOGE("%s: invalid pointer", __func__);
+		return -EINVAL;
+	}
+	param_buf = (WMI_VDEV_GET_ARP_STAT_EVENTID_param_tlvs *)data;
+	if (!param_buf) {
+		WMA_LOGE("%s: Invalid get arp stats event", __func__);
+		return -EINVAL;
+	}
+	data_event = param_buf->fixed_param;
+	if (!data_event) {
+		WMA_LOGE("%s: Invalid get arp stats data event", __func__);
+		return -EINVAL;
+	}
+	rsp.arp_req_enqueue = data_event->arp_req_enqueue;
+	rsp.vdev_id = data_event->vdev_id;
+	rsp.arp_req_tx_success = data_event->arp_req_tx_success;
+	rsp.arp_req_tx_failure = data_event->arp_req_tx_failure;
+	rsp.arp_rsp_recvd = data_event->arp_rsp_recvd;
+	rsp.out_of_order_arp_rsp_drop_cnt =
+		data_event->out_of_order_arp_rsp_drop_cnt;
+	rsp.dad_detected = data_event->dad_detected;
+	rsp.connect_status = data_event->connect_status;
+	rsp.ba_session_establishment_status =
+		data_event->ba_session_establishment_status;
+
+	mac->sme.get_arp_stats_cb(mac->hHdd, &rsp);
+
+	EXIT();
+
+	return 0;
+}
 
 /**
  * wma_unified_power_debug_stats_event_handler() - WMA handler function to

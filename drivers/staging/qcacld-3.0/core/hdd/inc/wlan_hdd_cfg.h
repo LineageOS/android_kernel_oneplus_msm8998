@@ -1576,8 +1576,31 @@ typedef enum {
  */
 #define CFG_DROPPED_PKT_DISCONNECT_TH_NAME      "gDroppedPktDisconnectTh"
 #define CFG_DROPPED_PKT_DISCONNECT_TH_MIN       (0)
-#define CFG_DROPPED_PKT_DISCONNECT_TH_MAX       (512)
+#define CFG_DROPPED_PKT_DISCONNECT_TH_MAX       (65535)
 #define CFG_DROPPED_PKT_DISCONNECT_TH_DEFAULT   (512)
+
+/*
+ * <ini>
+ * gForce1x1Exception - force 1x1 when connecting to certain peer
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This INI when enabled will force 1x1 connection with certain peer.
+ *
+ *
+ * Related: None
+ *
+ * Supported Feature: connection
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_FORCE_1X1_NAME      "gForce1x1Exception"
+#define CFG_FORCE_1X1_MIN       (0)
+#define CFG_FORCE_1X1_MAX       (1)
+#define CFG_FORCE_1X1_DEFAULT   (0)
 
 /*
  * <ini>
@@ -2995,10 +3018,47 @@ typedef enum {
 #define CFG_FW_MCC_BCAST_PROB_RESP_MAX         (1)
 #define CFG_FW_MCC_BCAST_PROB_RESP_DEFAULT     (0)
 
+/*
+ * <ini>
+ * gDataInactivityTimeout - Data activity timeout for non wow mode.
+ * @Min: 1
+ * @Max: 255
+ * @Default: 200
+ *
+ * This ini is used to set data inactivity timeout in non wow mode.
+ *
+ * Supported Feature: inactivity timeout in non wow mode
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+
 #define CFG_DATA_INACTIVITY_TIMEOUT_NAME       "gDataInactivityTimeout"
 #define CFG_DATA_INACTIVITY_TIMEOUT_MIN        (1)
 #define CFG_DATA_INACTIVITY_TIMEOUT_MAX        (255)
 #define CFG_DATA_INACTIVITY_TIMEOUT_DEFAULT    (200)
+
+/*
+ * <ini>
+ * g_wow_data_inactivity_timeout - Data activity timeout in wow mode.
+ * @Min: 1
+ * @Max: 255
+ * @Default: 50
+ *
+ * This ini is used to set data inactivity timeout in wow mode.
+ *
+ * Supported Feature: inactivity timeout in wow mode
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+#define CFG_WOW_DATA_INACTIVITY_TIMEOUT_NAME     "g_wow_data_inactivity_timeout"
+#define CFG_WOW_DATA_INACTIVITY_TIMEOUT_MIN      (1)
+#define CFG_WOW_DATA_INACTIVITY_TIMEOUT_MAX      (255)
+#define CFG_WOW_DATA_INACTIVITY_TIMEOUT_DEFAULT  (50)
+
 /*
  * <ini>
  * rfSettlingTimeUs - Settle the TimeUs
@@ -8602,6 +8662,33 @@ enum dot11p_mode {
 #define CFG_SAP_INTERNAL_RESTART_DEFAULT (1)
 
 /*
+ * <ini>
+ * restart_beaconing_on_chan_avoid_event - control the beaconing entity to move
+ * away from active LTE channels
+ * @Min: 0
+ * @Max: 1
+ * @Default: 1
+ *
+ * This ini is used to control the beaconing entity (SAP/GO) to move away from
+ * active LTE channels when channel avoidance event is received
+ * restart_beaconing_on_chan_avoid_event=0: Don't allow beaconing entity move
+ * from active LTE channels
+ * restart_beaconing_on_chan_avoid_event=1: Allow beaconing entity move from
+ * active LTE channels
+ *
+ * Related: None
+ *
+ * Supported Feature: channel avoidance
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+#define CFG_RESTART_BEACONING_ON_CH_AVOID_NAME    "restart_beaconing_on_chan_avoid_event"
+#define CFG_RESTART_BEACONING_ON_CH_AVOID_MIN     (0)
+#define CFG_RESTART_BEACONING_ON_CH_AVOID_MAX     (1)
+#define CFG_RESTART_BEACONING_ON_CH_AVOID_DEFAULT (1)
+/*
  * This parameter will avoid updating ap_sta_inactivity from hostapd.conf
  * file. If a station does not send anything in ap_max_inactivity seconds, an
  * empty data frame is sent to it in order to verify whether it is
@@ -9075,7 +9162,7 @@ enum dot11p_mode {
 #define CFG_PER_ROAM_ENABLE_NAME           "gper_roam_enabled"
 #define CFG_PER_ROAM_ENABLE_MIN            (0)
 #define CFG_PER_ROAM_ENABLE_MAX            (3)
-#define CFG_PER_ROAM_ENABLE_DEFAULT        (0)
+#define CFG_PER_ROAM_ENABLE_DEFAULT        (3)
 
 /*
  * <ini>
@@ -9800,24 +9887,44 @@ enum dot11p_mode {
 #define CFG_ACTIVE_BPF_MODE_MAX     (ACTIVE_BPF_MODE_COUNT - 1)
 #define CFG_ACTIVE_BPF_MODE_DEFAULT (ACTIVE_BPF_DISABLED)
 
+enum hw_filter_mode {
+	HW_FILTER_DISABLED = 0,
+	HW_FILTER_NON_ARP_BC = 1,
+	HW_FILTER_NON_ICMPV6_MC = 2,
+};
+
 /*
  * <ini>
- * g_enable_non_arp_bc_hw_filter - Enable HW broadcast filtering
+ * gHwFilterMode - configure hardware filter for DTIM mode
  * @Min: 0
- * @Max: 1
+ * @Max: 3
  * @Default: 0
  *
- * This ini support to dynamically enable/disable Broadast filter
- * when target goes to wow suspend/resume mode
+ * The hardware filter is only effective in DTIM mode. Use this configuration
+ * to blanket drop broadcast/multicast packets at the hardware level, without
+ * waking up the firmware
  *
- * Usage: External
+ * Takes a bitmap of frame types to drop
+ * @E.g.
+ *	# disable feature (default)
+ *	gHwFilterMode=0
+ *	# drop all broadcast frames, except ARP
+ *	gHwFilterMode=1
+ *	# drop all multicast frames, except ICMPv6
+ *	gHwFilterMode=2
+ *	# drop all broadcast and multicast frames, except ARP and ICMPv6
+ *	gHwFilterMode=3
+ *
+ * Related: N/A
+ *
+ * Usage: Internal/External
  *
  * </ini>
  */
-#define CFG_HW_BC_FILTER_NAME     "g_enable_non_arp_bc_hw_filter"
-#define CFG_HW_FILTER_DEFAULT         (0)
-#define CFG_HW_FILTER_MIN             (0)
-#define CFG_HW_FILTER_MAX             (1)
+#define CFG_HW_FILTER_MODE_NAME		"gHwFilterMode"
+#define CFG_HW_FILTER_MODE_MIN		(0)
+#define CFG_HW_FILTER_MODE_MAX		(3)
+#define CFG_HW_FILTER_MODE_DEFAULT	(0)
 
 /*
  * <ini>
@@ -9923,6 +10030,24 @@ enum dot11p_mode {
 #define CFG_ENABLE_PACKET_FILTERS_DEFAULT  (0)
 #define CFG_ENABLE_PACKET_FILTERS_MIN      (0)
 #define CFG_ENABLE_PACKET_FILTERS_MAX      (63)
+
+/*
+ * <ini>
+ * gItoRepeatCount - sets ito repeated count
+ * @Min: 0
+ * @Max: 5
+ * @Default: 0
+ *
+ * This ini sets the ito count in FW
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ITO_REPEAT_COUNT_NAME "gItoRepeatCount"
+#define CFG_ITO_REPEAT_COUNT_MIN        (0)
+#define CFG_ITO_REPEAT_COUNT_MAX        (5)
+#define CFG_ITO_REPEAT_COUNT_DEFAULT    (0)
 
 /*---------------------------------------------------------------------------
    Type declarations
@@ -10047,6 +10172,7 @@ struct hdd_config {
 	bool mcc_rts_cts_prot_enable;
 	bool mcc_bcast_prob_resp_enable;
 	uint8_t nDataInactivityTimeout;
+	uint8_t wow_data_inactivity_timeout;
 
 	/* WMM QoS Configuration */
 	hdd_wmm_user_mode_t WmmMode;
@@ -10316,7 +10442,7 @@ struct hdd_config {
 	uint32_t ibssPs1RxChainInAtimEnable;
 
 	bool enable_ip_tcp_udp_checksum_offload;
-	bool enablePowersaveOffload;
+	uint8_t enablePowersaveOffload;
 	bool enablefwprint;
 	uint8_t enable_fw_log;
 	uint8_t fVhtAmpduLenExponent;
@@ -10633,8 +10759,9 @@ struct hdd_config {
 	uint32_t max_sched_scan_plan_iterations;
 	uint8_t enable_phy_reg_retention;
 	enum active_bpf_mode active_bpf_mode;
-	bool hw_broadcast_filter;
+	enum hw_filter_mode hw_filter_mode;
 	bool sap_internal_restart;
+	bool restart_beaconing_on_chan_avoid_event;
 	bool enable_bcast_probe_rsp;
 	bool qcn_ie_support;
 	uint8_t fils_max_chan_guard_time;
@@ -10651,6 +10778,8 @@ struct hdd_config {
 	uint8_t packet_filters_bitmap;
 	/* threshold of packet drops at which FW initiates disconnect */
 	uint16_t pkt_err_disconn_th;
+	bool is_force_1x1;
+	uint8_t ito_repeat_count;
 };
 
 #define VAR_OFFSET(_Struct, _Var) (offsetof(_Struct, _Var))

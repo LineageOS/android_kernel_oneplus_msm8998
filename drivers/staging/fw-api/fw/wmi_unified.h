@@ -4050,6 +4050,14 @@ typedef enum {
      *  refer to WMI_PDEV_PKT_PWR_SAVE_LEVEL
      */
     WMI_PDEV_PARAM_PACKET_POWER_SAVE_LEVEL,
+    /** Define IOT pattern to be enabled/disabled
+     * bit values: 0 - disable, 1 - enable
+     * BIT[0..31]: each bit represents an IOT pattern
+     * -----
+     * Bit 0 - avoid SMPS with certain APs
+     * Bits 31:1 - reserved
+     */
+    WMI_PDEV_PARAM_SET_IOT_PATTERN,
 } WMI_PDEV_PARAM;
 
 typedef struct {
@@ -7444,10 +7452,16 @@ WMI_STA_PS_PARAM_QPOWER_MAX_TX_BEFORE_WAKE = 7,
 WMI_STA_PS_PARAM_QPOWER_SPEC_PSPOLL_WAKE_INTERVAL = 8,
 
 /**
-             * Max SPEC PSPOLL to be sent when the PSPOLL response has
-             * no-data bit set
+ * Max SPEC PSPOLL to be sent when the PSPOLL response has
+ * no-data bit set
  */
 WMI_STA_PS_PARAM_QPOWER_SPEC_MAX_SPEC_NODATA_PSPOLL = 9,
+
+/**
+ * Max value of ITO reset when there is no tx-rx
+ * after AP has set the TIM bit
+ */
+WMI_STA_PS_PARAM_MAX_RESET_ITO_COUNT_ON_TIM_NO_TXRX = 10,
 };
 
 typedef struct {

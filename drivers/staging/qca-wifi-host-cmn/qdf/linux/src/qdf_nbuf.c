@@ -194,7 +194,7 @@ struct sk_buff *__qdf_nbuf_alloc(qdf_device_t osdev, size_t size, int reserve,
 	skb = dev_alloc_skb(size);
 
 	if (!skb) {
-		pr_err("ERROR:NBUF alloc failed\n");
+		pr_info("ERROR:NBUF alloc failed\n");
 		return NULL;
 	}
 	memset(skb->cb, 0x0, sizeof(skb->cb));
@@ -1401,6 +1401,7 @@ static void qdf_nbuf_track_memory_manager_destroy(void)
 
 	spin_unlock_irqrestore(&qdf_net_buf_track_free_list_lock, irq_flag);
 	kmem_cache_destroy(nbuf_tracking_cache);
+	qdf_net_buf_track_free_list = NULL;
 }
 
 /**
@@ -2001,7 +2002,10 @@ void __qdf_nbuf_unmap_tso_segment(qdf_device_t osdev,
 			  struct qdf_tso_seg_elem_t *tso_seg,
 			  bool is_last_seg)
 {
-	uint32_t num_frags = tso_seg->seg.num_frags - 1;
+	uint32_t num_frags = 0;
+
+	if (tso_seg->seg.num_frags > 0)
+		num_frags = tso_seg->seg.num_frags - 1;
 
 	/*Num of frags in a tso seg cannot be less than 2 */
 	if (num_frags < 1) {
@@ -2019,6 +2023,7 @@ void __qdf_nbuf_unmap_tso_segment(qdf_device_t osdev,
 			qdf_assert(0);
 			return;
 		}
+		qdf_tso_seg_dbg_record(tso_seg, TSOSEG_LOC_UNMAPTSO);
 		dma_unmap_single(osdev->dev,
 				 tso_seg->seg.tso_frags[num_frags].paddr,
 				 tso_seg->seg.tso_frags[num_frags].length,

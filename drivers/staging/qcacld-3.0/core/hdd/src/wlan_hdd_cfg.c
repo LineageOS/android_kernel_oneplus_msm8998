@@ -948,6 +948,13 @@ REG_TABLE_ENTRY g_registry_table[] = {
 		     CFG_DATA_INACTIVITY_TIMEOUT_MIN,
 		     CFG_DATA_INACTIVITY_TIMEOUT_MAX),
 
+	REG_VARIABLE(CFG_WOW_DATA_INACTIVITY_TIMEOUT_NAME, WLAN_PARAM_Integer,
+		     struct hdd_config, wow_data_inactivity_timeout,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_WOW_DATA_INACTIVITY_TIMEOUT_DEFAULT,
+		     CFG_WOW_DATA_INACTIVITY_TIMEOUT_MIN,
+		     CFG_WOW_DATA_INACTIVITY_TIMEOUT_MAX),
+
 	REG_VARIABLE(CFG_QOS_WMM_MODE_NAME, WLAN_PARAM_Integer,
 		     struct hdd_config, WmmMode,
 		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
@@ -2056,7 +2063,7 @@ REG_TABLE_ENTRY g_registry_table[] = {
 		     CFG_VHT_ENABLE_2x2_CAP_FEATURE_MIN,
 		     CFG_VHT_ENABLE_2x2_CAP_FEATURE_MAX),
 
-	REG_VARIABLE(CFG_VDEV_TYPE_NSS_2G, WLAN_PARAM_HexInteger,
+	REG_VARIABLE(CFG_VDEV_TYPE_NSS_2G, WLAN_PARAM_Integer,
 		     struct hdd_config, vdev_type_nss_2g,
 		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
 		     CFG_VDEV_TYPE_NSS_2G_DEFAULT,
@@ -2070,7 +2077,7 @@ REG_TABLE_ENTRY g_registry_table[] = {
 		     CFG_STA_PREFER_80MHZ_OVER_160MHZ_MIN,
 		     CFG_STA_PREFER_80MHZ_OVER_160MHZ_MAX),
 
-	REG_VARIABLE(CFG_VDEV_TYPE_NSS_5G, WLAN_PARAM_HexInteger,
+	REG_VARIABLE(CFG_VDEV_TYPE_NSS_5G, WLAN_PARAM_Integer,
 		     struct hdd_config, vdev_type_nss_5g,
 		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
 		     CFG_VDEV_TYPE_NSS_5G_DEFAULT,
@@ -4280,12 +4287,12 @@ REG_TABLE_ENTRY g_registry_table[] = {
 		CFG_ACTIVE_BPF_MODE_MIN,
 		CFG_ACTIVE_BPF_MODE_MAX),
 
-	REG_VARIABLE(CFG_HW_BC_FILTER_NAME, WLAN_PARAM_Integer,
-		struct hdd_config, hw_broadcast_filter,
+	REG_VARIABLE(CFG_HW_FILTER_MODE_NAME, WLAN_PARAM_Integer,
+		struct hdd_config, hw_filter_mode,
 		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
-		CFG_HW_FILTER_DEFAULT,
-		CFG_HW_FILTER_MIN,
-		CFG_HW_FILTER_MAX),
+		CFG_HW_FILTER_MODE_DEFAULT,
+		CFG_HW_FILTER_MODE_MIN,
+		CFG_HW_FILTER_MODE_MAX),
 
 	REG_VARIABLE(CFG_SAP_INTERNAL_RESTART_NAME, WLAN_PARAM_Integer,
 		struct hdd_config, sap_internal_restart,
@@ -4294,24 +4301,41 @@ REG_TABLE_ENTRY g_registry_table[] = {
 		CFG_SAP_INTERNAL_RESTART_MIN,
 		CFG_SAP_INTERNAL_RESTART_MAX),
 
+	REG_VARIABLE(CFG_RESTART_BEACONING_ON_CH_AVOID_NAME, WLAN_PARAM_Integer,
+		struct hdd_config, restart_beaconing_on_chan_avoid_event,
+		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		CFG_RESTART_BEACONING_ON_CH_AVOID_DEFAULT,
+		CFG_RESTART_BEACONING_ON_CH_AVOID_MIN,
+		CFG_RESTART_BEACONING_ON_CH_AVOID_MAX),
+
 	REG_VARIABLE(CFG_ENABLE_BCAST_PROBE_RESP_NAME, WLAN_PARAM_Integer,
 		struct hdd_config, enable_bcast_probe_rsp,
 		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
 		CFG_ENABLE_BCAST_PROBE_RESP_DEFAULT,
 		CFG_ENABLE_BCAST_PROBE_RESP_MIN,
 		CFG_ENABLE_BCAST_PROBE_RESP_MAX),
+
 	REG_VARIABLE(CFG_QCN_IE_SUPPORT_NAME, WLAN_PARAM_Integer,
 		struct hdd_config, qcn_ie_support,
 		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
 		CFG_QCN_IE_SUPPORT_DEFAULT,
 		CFG_QCN_IE_SUPPORT_MIN,
 		CFG_QCN_IE_SUPPORT_MAX),
+
 	REG_VARIABLE(CFG_FILS_MAX_CHAN_GUARD_TIME_NAME, WLAN_PARAM_Integer,
 		struct hdd_config, fils_max_chan_guard_time,
 		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
 		CFG_FILS_MAX_CHAN_GUARD_TIME_DEFAULT,
 		CFG_FILS_MAX_CHAN_GUARD_TIME_MIN,
 		CFG_FILS_MAX_CHAN_GUARD_TIME_MAX),
+
+	REG_VARIABLE(CFG_FORCE_1X1_NAME, WLAN_PARAM_Integer,
+		struct hdd_config, is_force_1x1,
+		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		CFG_FORCE_1X1_DEFAULT,
+		CFG_FORCE_1X1_MIN,
+		CFG_FORCE_1X1_MAX),
+
 	REG_VARIABLE(CFG_ENABLE_5G_BAND_PREF_NAME, WLAN_PARAM_Integer,
 		struct hdd_config, enable_5g_band_pref,
 		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
@@ -4373,6 +4397,13 @@ REG_TABLE_ENTRY g_registry_table[] = {
 		CFG_DROPPED_PKT_DISCONNECT_TH_DEFAULT,
 		CFG_DROPPED_PKT_DISCONNECT_TH_MIN,
 		CFG_DROPPED_PKT_DISCONNECT_TH_MAX),
+
+	REG_VARIABLE(CFG_ITO_REPEAT_COUNT_NAME, WLAN_PARAM_Integer,
+		struct hdd_config, ito_repeat_count,
+		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		CFG_ITO_REPEAT_COUNT_DEFAULT,
+		CFG_ITO_REPEAT_COUNT_MIN,
+		CFG_ITO_REPEAT_COUNT_MAX),
 };
 
 /**
@@ -5851,16 +5882,25 @@ void hdd_cfg_print(hdd_context_t *pHddCtx)
 	hdd_info("Name = [%s] Value = [%u]",
 		CFG_ENABLE_PHY_REG_NAME,
 		pHddCtx->config->enable_phy_reg_retention);
-	hdd_err("Name = [%s] Value = [%u]",
-		CFG_HW_BC_FILTER_NAME,
-		pHddCtx->config->hw_broadcast_filter);
+	hdd_debug("Name = [%s] Value = [%u]",
+		CFG_HW_FILTER_MODE_NAME,
+		pHddCtx->config->hw_filter_mode);
 	hdd_per_roam_print_ini_config(pHddCtx);
 	hdd_info("Name = [%s] Value = [%d]",
 		CFG_SAP_INTERNAL_RESTART_NAME,
 		pHddCtx->config->sap_internal_restart);
+	hdd_debug("Name = [%s] Value = [%d]",
+		CFG_RESTART_BEACONING_ON_CH_AVOID_NAME,
+		pHddCtx->config->restart_beaconing_on_chan_avoid_event);
+	hdd_debug("Name = [%s] value = [%u]",
+		CFG_FORCE_1X1_NAME,
+		pHddCtx->config->is_force_1x1);
 	hdd_info("Name = [%s] value = [%u]",
 		 CFG_DROPPED_PKT_DISCONNECT_TH_NAME,
 		 pHddCtx->config->pkt_err_disconn_th);
+	hdd_debug("Name = [%s] value = [%u]",
+		CFG_ITO_REPEAT_COUNT_NAME,
+		pHddCtx->config->ito_repeat_count);
 }
 
 
@@ -5901,7 +5941,7 @@ QDF_STATUS hdd_update_mac_config(hdd_context_t *pHddCtx)
 
 	hdd_debug("wlan_mac.bin size %zu", fw->size);
 
-	temp = qdf_mem_malloc(fw->size);
+	temp = qdf_mem_malloc(fw->size + 1);
 
 	if (temp == NULL) {
 		hdd_err("fail to alloc memory");
@@ -5910,6 +5950,7 @@ QDF_STATUS hdd_update_mac_config(hdd_context_t *pHddCtx)
 	}
 	buffer = temp;
 	qdf_mem_copy(buffer, fw->data, fw->size);
+	buffer[fw->size] = 0x0;
 
 	/* data format:
 	 * Intf0MacAddress=00AA00BB00CC
@@ -6668,6 +6709,13 @@ bool hdd_update_config_cfg(hdd_context_t *hdd_ctx)
 		    config->nDataInactivityTimeout) == QDF_STATUS_E_FAILURE) {
 		status = false;
 		hdd_err("Couldn't pass on WNI_CFG_PS_DATA_INACTIVITY_TIMEOUT to CFG");
+	}
+
+	if (sme_cfg_set_int(hdd_ctx->hHal,
+		WNI_CFG_PS_WOW_DATA_INACTIVITY_TIMEOUT,
+		config->wow_data_inactivity_timeout) == QDF_STATUS_E_FAILURE) {
+		status = false;
+		hdd_err("Fail to pass WNI_CFG_PS_WOW_DATA_INACTIVITY_TO CFG");
 	}
 
 	if (sme_cfg_set_int(hdd_ctx->hHal, WNI_CFG_ENABLE_LTE_COEX,
@@ -7429,6 +7477,8 @@ QDF_STATUS hdd_set_sme_config(hdd_context_t *pHddCtx)
 			pHddCtx->config->fils_max_chan_guard_time;
 	smeConfig->csrConfig.pkt_err_disconn_th =
 			pHddCtx->config->pkt_err_disconn_th;
+	smeConfig->csrConfig.is_force_1x1 =
+			pHddCtx->config->is_force_1x1;
 	status = sme_update_config(pHddCtx->hHal, smeConfig);
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
 		hdd_err("sme_update_config() return failure %d",

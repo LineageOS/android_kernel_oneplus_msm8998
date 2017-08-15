@@ -727,6 +727,7 @@ struct hdd_station_ctx {
 #ifdef WLAN_FEATURE_NAN_DATAPATH
 	struct nan_datapath_ctx ndp_ctx;
 #endif
+	bool ap_supports_immediate_power_save;
 };
 
 #define BSS_STOP    0
@@ -2171,4 +2172,25 @@ static inline void hdd_init_nud_stats_ctx(hdd_context_t *hdd_ctx)
  */
 
 void hdd_start_complete(int ret);
+
+/**
+ * hdd_unregister_notifiers()- unregister kernel notifiers
+ * @hdd_ctx: Hdd Context
+ *
+ * Unregister netdev notifiers like Netdevice,IPv4 and IPv6.
+ *
+ */
+void hdd_unregister_notifiers(hdd_context_t *hdd_ctx);
+
+/*
+ * hdd_get_rssi_snr_by_bssid() - gets the rssi and snr by bssid from scan cache
+ * @adapter: adapter handle
+ * @bssid: bssid to look for in scan cache
+ * @rssi: rssi value found
+ * @snr: snr value found
+ *
+ * Return: QDF_STATUS
+ */
+int hdd_get_rssi_snr_by_bssid(hdd_adapter_t *adapter, const uint8_t *bssid,
+                             int8_t *rssi, int8_t *snr);
 #endif /* end #if !defined(WLAN_HDD_MAIN_H) */

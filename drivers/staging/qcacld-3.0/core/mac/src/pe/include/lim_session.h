@@ -493,6 +493,7 @@ typedef struct sPESession       /* Added to Support BT-AMP */
 	bool ignore_assoc_disallowed;
 	bool send_p2p_conf_frame;
 	bool process_ho_fail;
+	bool enable_bcast_probe_rsp;
 } tPESession, *tpPESession;
 
 /*-------------------------------------------------------------------------

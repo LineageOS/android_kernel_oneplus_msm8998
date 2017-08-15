@@ -2589,7 +2589,7 @@ static bool csr_remove_dup_bss_description(tpAniSirGlobal pMac,
 					   tSirBssDescription *bss_dscp,
 					   tDot11fBeaconIEs *pIes,
 					   tAniSSID *pSsid,
-					   unsigned long *timer, bool fForced)
+					   unsigned long *timer)
 {
 	tListElem *pEntry;
 	tCsrScanResult *scan_entry;
@@ -2612,7 +2612,7 @@ static bool csr_remove_dup_bss_description(tpAniSirGlobal pMac,
 		 */
 		if (csr_is_duplicate_bss_description(pMac,
 			&scan_entry->Result.BssDescriptor,
-			bss_dscp, pIes, fForced)) {
+			bss_dscp, pIes)) {
 			if (bss_dscp->rx_channel == bss_dscp->channelId) {
 				/*
 				 * Update rssi values only if beacon is
@@ -2966,7 +2966,7 @@ csr_remove_from_tmp_list(tpAniSirGlobal mac_ctx,
 		}
 		dup_bss = csr_remove_dup_bss_description(mac_ctx,
 				&bss_dscp->Result.BssDescriptor,
-				local_ie, &tmpSsid, &timer, false);
+				local_ie, &tmpSsid, &timer);
 		/*
 		 * Check whether we have reach out limit, but don't lose the
 		 * LFR candidates came from FW
@@ -3106,7 +3106,7 @@ tCsrScanResult *csr_scan_append_bss_description(tpAniSirGlobal pMac,
 						tSirBssDescription *
 						pSirBssDescription,
 						tDot11fBeaconIEs *pIes,
-						bool fForced, uint8_t sessionId)
+						uint8_t sessionId)
 {
 	tCsrScanResult *pCsrBssDescription = NULL;
 	tAniSSID tmpSsid;
@@ -3115,8 +3115,7 @@ tCsrScanResult *csr_scan_append_bss_description(tpAniSirGlobal pMac,
 
 	tmpSsid.length = 0;
 	result = csr_remove_dup_bss_description(pMac, pSirBssDescription,
-						pIes, &tmpSsid, &timer,
-						fForced);
+						pIes, &tmpSsid, &timer);
 	pCsrBssDescription = csr_scan_save_bss_description(pMac,
 					pSirBssDescription, pIes, sessionId);
 	if (result && (pCsrBssDescription != NULL)) {
@@ -4369,7 +4368,7 @@ csr_scan_remove_dup_bss_description_from_interim_list(tpAniSirGlobal mac_ctx,
 		scan_entry_rssi = scan_bss_dscp->Result.BssDescriptor.rssi;
 		if (csr_is_duplicate_bss_description(mac_ctx,
 			&scan_bss_dscp->Result.BssDescriptor, bss_dscp,
-			pIes, false)) {
+			pIes)) {
 			/*
 			 * Following is mathematically a = (aX + b(100-X))/100
 			 * where:
@@ -4461,7 +4460,7 @@ static tCsrScanResult *csr_scan_save_bss_description_to_interim_list(
 bool csr_is_duplicate_bss_description(tpAniSirGlobal pMac,
 				      tSirBssDescription *pSirBssDesc1,
 				      tSirBssDescription *pSirBssDesc2,
-				      tDot11fBeaconIEs *pIes2, bool fForced)
+				      tDot11fBeaconIEs *pIes2)
 {
 	bool fMatch = false;
 	tSirMacCapabilityInfo *pCap1, *pCap2;
@@ -4472,15 +4471,20 @@ bool csr_is_duplicate_bss_description(tpAniSirGlobal pMac,
 	pCap1 = (tSirMacCapabilityInfo *) &pSirBssDesc1->capabilityInfo;
 	pCap2 = (tSirMacCapabilityInfo *) &pSirBssDesc2->capabilityInfo;
 
-	if (pCap1->ess != pCap2->ess)
+	if (pCap1->ess != pCap2->ess) {
+		if (qdf_is_macaddr_equal(
+			(struct qdf_mac_addr *) pSirBssDesc1->bssId,
+			(struct qdf_mac_addr *) pSirBssDesc2->bssId))
+			sms_log(pMac, LOGE,
+			   FL("ess mismatch for same BSSID "MAC_ADDRESS_STR""),
+			   MAC_ADDR_ARRAY(pSirBssDesc1->bssId));
+
 		goto free_ies;
+	}
 
 	if (pCap1->ess &&
 	    qdf_is_macaddr_equal((struct qdf_mac_addr *) pSirBssDesc1->bssId,
-				 (struct qdf_mac_addr *) pSirBssDesc2->bssId)
-	    && (fForced
-		|| (cds_chan_to_band(pSirBssDesc1->channelId) ==
-		    cds_chan_to_band((pSirBssDesc2->channelId))))) {
+				 (struct qdf_mac_addr *) pSirBssDesc2->bssId)) {
 		fMatch = true;
 		/* Check for SSID match, if exists */
 		status = csr_get_parsed_bss_description_ies(pMac, pSirBssDesc1,
@@ -4494,13 +4498,6 @@ bool csr_is_duplicate_bss_description(tpAniSirGlobal pMac,
 			if (!QDF_IS_STATUS_SUCCESS(status))
 				goto free_ies;
 		}
-		if (pIes1->SSID.present && pIesTemp->SSID.present) {
-			fMatch = csr_is_ssid_match(pMac, pIes1->SSID.ssid,
-						   pIes1->SSID.num_ssid,
-						   pIesTemp->SSID.ssid,
-						   pIesTemp->SSID.num_ssid,
-						   true);
-		}
 	} else if (pCap1->ibss && (pSirBssDesc1->channelId ==
 					pSirBssDesc2->channelId)) {
 		status = csr_get_parsed_bss_description_ies(pMac, pSirBssDesc1,
@@ -4513,15 +4510,6 @@ bool csr_is_duplicate_bss_description(tpAniSirGlobal pMac,
 						pSirBssDesc2, &pIesTemp);
 			if (!QDF_IS_STATUS_SUCCESS(status))
 				goto free_ies;
-		}
-
-		/* Same channel cannot have same SSID for different IBSS */
-		if (pIes1->SSID.present && pIesTemp->SSID.present) {
-			fMatch = csr_is_ssid_match(pMac, pIes1->SSID.ssid,
-						   pIes1->SSID.num_ssid,
-						   pIesTemp->SSID.ssid,
-						   pIesTemp->SSID.num_ssid,
-						   true);
 		}
 	}
 	/* In case of P2P devices, ess and ibss will be set to zero */
@@ -4978,7 +4966,7 @@ static bool csr_scan_age_out_bss(tpAniSirGlobal pMac, tCsrScanResult *pResult)
 		    && (NULL != pSession->pConnectBssDesc)
 		    && (csr_is_duplicate_bss_description(pMac,
 			&pResult->Result.BssDescriptor,
-			pSession->pConnectBssDesc, NULL, false))) {
+			pSession->pConnectBssDesc, NULL))) {
 			isConnBssfound = true;
 			break;
 		}
@@ -7279,7 +7267,7 @@ QDF_STATUS csr_scan_save_preferred_network_found(tpAniSirGlobal pMac,
 
 	fDupBss = csr_remove_dup_bss_description(pMac,
 			&pScanResult->Result.BssDescriptor,
-			local_ie, &tmpSsid, &timer, false);
+			local_ie, &tmpSsid, &timer);
 	/* Check whether we have reach out limit */
 	if (CSR_SCAN_IS_OVER_BSS_LIMIT(pMac)) {
 		/* Limit reach */
@@ -7408,9 +7396,10 @@ QDF_STATUS csr_scan_create_entry_in_scan_cache(tpAniSirGlobal pMac,
 			sizeof(tSirMacAddr));
 	pNewBssDescriptor->channelId = channel;
 	if (NULL == csr_scan_append_bss_description(pMac, pNewBssDescriptor,
-						pNewIes, true, sessionId)) {
+						pNewIes, sessionId)) {
 		sms_log(pMac, LOGE,
 			FL("csr_scan_append_bss_description failed"));
+
 		status = QDF_STATUS_E_FAILURE;
 		goto free_mem;
 	}
@@ -7490,7 +7479,7 @@ QDF_STATUS csr_scan_save_roam_offload_ap_to_scan_cache(tpAniSirGlobal pMac,
 
 	dup_bss = csr_remove_dup_bss_description(pMac,
 			&scan_res_ptr->Result.BssDescriptor,
-			ies_local_ptr, &tmpSsid, &timer, true);
+			ies_local_ptr, &tmpSsid, &timer);
 	if (CSR_SCAN_IS_OVER_BSS_LIMIT(pMac)) {
 		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
 				"%s:BSS Limit Exceed", __func__);

@@ -1444,6 +1444,7 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 	case eWNI_SME_SET_DUAL_MAC_CFG_REQ:
 	case eWNI_SME_SET_ANTENNA_MODE_REQ:
 	case eWNI_SME_UPDATE_ACCESS_POLICY_VENDOR_IE:
+	case eWNI_SME_UPDATE_CONFIG:
 		/* These messages are from HDD. Need to respond to HDD */
 		lim_process_normal_hdd_msg(mac_ctx, msg, true);
 		break;
@@ -1974,6 +1975,11 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 		break;
 	case eWNI_SME_DEFAULT_SCAN_IE:
 		lim_process_set_default_scan_ie_request(mac_ctx, msg->bodyptr);
+		qdf_mem_free((void *)msg->bodyptr);
+		msg->bodyptr = NULL;
+		break;
+	case eWNI_SME_DEL_ALL_TDLS_PEERS:
+		lim_process_sme_del_all_tdls_peers(mac_ctx, msg->bodyptr);
 		qdf_mem_free((void *)msg->bodyptr);
 		msg->bodyptr = NULL;
 		break;

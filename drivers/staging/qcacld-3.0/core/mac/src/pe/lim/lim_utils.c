@@ -1125,10 +1125,14 @@ uint8_t lim_is_null_ssid(tSirMacSSid *ssid)
 	/* If the first charactes is space, then check if all
 	 * characters in SSID are spaces to consider it as NULL SSID
 	 */
-	if ((ASCII_SPACE_CHARACTER == ssid->ssId[0]) &&
-		(ssid->length == 1)) {
-			fnull_ssid = true;
-			return fnull_ssid;
+	//#ifdef VENDOR_EDIT
+	//if ((ASCII_SPACE_CHARACTER == ssid->ssId[0]) &&
+	//	(ssid->length == 1)) {
+	//#else
+	if (0) {
+	//#endif /* VENDOR_EDIT */
+		fnull_ssid = true;
+		return fnull_ssid;
 	} else {
 		/* check if all the charactes in SSID are NULL */
 		ssid_len = ssid->length;

@@ -813,6 +813,7 @@ typedef struct sAniSirLim {
 	uint8_t deferredMsgCnt;
 	tSirDFSChannelList dfschannelList;
 	uint8_t deauthMsgCnt;
+	uint8_t disassocMsgCnt;
 	uint8_t gLimIbssStaLimit;
 
 	/* Number of channel switch IEs sent so far */
@@ -958,6 +959,9 @@ typedef struct sAniSirGlobal {
 	/* 802.11p enable */
 	bool enable_dot11p;
 
+	/* DBS capability based on INI and FW capability */
+	uint8_t hw_dbs_capable;
+	/* Based on INI parameter */
 	uint32_t dual_mac_feature_disable;
 	sir_mgmt_frame_ind_callback mgmt_frame_ind_cb;
 	sir_p2p_ack_ind_callback p2p_ack_ind_cb;
@@ -967,6 +971,7 @@ typedef struct sAniSirGlobal {
 	uint8_t user_configured_nss;
 	bool sta_prefer_80MHz_over_160MHz;
 	enum  country_src reg_hint_src;
+	uint32_t rx_packet_drop_counter;
 } tAniSirGlobal;
 
 typedef enum {

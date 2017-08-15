@@ -37,11 +37,7 @@
 #include "qdf_atomic.h"
 
 #define WMI_UNIFIED_MAX_EVENT 0x100
-#ifdef CONFIG_MCL
-#define WMI_MAX_CMDS  256
-#else
 #define WMI_MAX_CMDS 1024
-#endif
 
 typedef qdf_nbuf_t wmi_buf_t;
 
@@ -179,8 +175,8 @@ QDF_STATUS (*send_vdev_delete_cmd)(wmi_unified_t wmi_handle,
 QDF_STATUS (*send_vdev_stop_cmd)(wmi_unified_t wmi,
 					uint8_t vdev_id);
 
-QDF_STATUS (*send_enable_broadcast_filter_cmd)(wmi_unified_t wmi_handle,
-			   uint8_t vdev_id, bool enable);
+QDF_STATUS (*send_conf_hw_filter_mode_cmd)(wmi_unified_t wmi, uint8_t vdev_id,
+					   uint8_t mode_bitmap);
 
 QDF_STATUS (*send_vdev_down_cmd)(wmi_unified_t wmi,
 			uint8_t vdev_id);

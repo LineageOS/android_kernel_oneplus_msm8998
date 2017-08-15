@@ -199,6 +199,7 @@ typedef enum {
  * @SIR_ROAMING_START: Firmware started roaming operation
  * @SIR_ROAMING_ABORT: Firmware aborted roaming operation, still connected.
  * @SIR_ROAM_SYNCH_COMPLETE: Roam sync propagation is complete.
+ * @SIR_ROAMING_INVOKE_FAIL: Firmware roaming failed.
  */
 enum sir_roam_op_code {
 	SIR_ROAM_SYNCH_PROPAGATION = 1,
@@ -207,6 +208,7 @@ enum sir_roam_op_code {
 	SIR_ROAMING_ABORT,
 	SIR_ROAM_SYNCH_COMPLETE,
 	SIR_ROAM_SYNCH_NAPI_OFF,
+	SIR_ROAMING_INVOKE_FAIL,
 };
 /**
  * Module ID definitions.
@@ -1200,8 +1202,8 @@ typedef struct sSirSmeJoinReq {
 	tAniBool spectrumMgtIndicator;
 	tSirMacPowerCapInfo powerCap;
 	tSirSupChnl supportedChannels;
+	bool enable_bcast_probe_rsp;
 	tSirBssDescription bssDescription;
-
 } tSirSmeJoinReq, *tpSirSmeJoinReq;
 
 /* / Definition for reponse message to previously issued join request */
@@ -2559,6 +2561,14 @@ typedef struct sSirUpdateAPWPSIEsReq {
 	tSirAPWPSIEs APWPSIEs;
 } tSirUpdateAPWPSIEsReq, *tpSirUpdateAPWPSIEsReq;
 
+struct update_config {
+	uint16_t messageType;   /* eWNI_SME_UPDATE_CONFIG */
+	uint16_t length;
+	uint8_t sme_session_id;
+	uint16_t capab;
+	uint32_t value;
+};
+
 /*
  * enum sir_update_session_param_type - session param type
  * @SIR_PARAM_SSID_HIDDEN: ssidHidden parameter
@@ -2699,12 +2709,12 @@ typedef struct sSirNsOffloadReq {
 #endif /* WLAN_NS_OFFLOAD */
 
 /**
- * struct broadcast_filter_request - For enable/disable HW Broadcast Filter
- * @enable: value to enable disable feature
- * @bss_id: bss_id for get session.
+ * struct hw_filter_request - For enable/disable HW Filter
+ * @mode_bitmap: the hardware filter mode to configure
+ * @bssid: bss_id for get session.
  */
-struct broadcast_filter_request {
-	bool enable;
+struct hw_filter_request {
+	uint8_t mode_bitmap;
 	struct qdf_mac_addr bssid;
 };
 
@@ -7006,5 +7016,17 @@ struct set_arp_stats_params {
 struct get_arp_stats_params {
 	uint8_t pkt_type;
 	uint32_t vdev_id;
+};
+
+/**
+ * struct sir_del_all_tdls_peers - delete all tdls peers
+ * @msg_type: type of message
+ * @msg_len: length of message
+ * @bssid: bssid of peer device
+ */
+struct sir_del_all_tdls_peers {
+	uint16_t msg_type;
+	uint16_t msg_len;
+	struct qdf_mac_addr bssid;
 };
 #endif /* __SIR_API_H */

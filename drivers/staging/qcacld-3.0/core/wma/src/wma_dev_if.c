@@ -2467,7 +2467,7 @@ void wma_hold_req_timer(void *data)
 	wma = cds_get_context(QDF_MODULE_ID_WMA);
 	if (NULL == wma) {
 		WMA_LOGE(FL("Failed to get wma"));
-		goto free_tgt_req;
+		return;
 	}
 
 	WMA_LOGA(FL("request %d is timed out for vdev_id - %d"),
@@ -2477,7 +2477,11 @@ void wma_hold_req_timer(void *data)
 	if (!msg) {
 		WMA_LOGE(FL("Failed to lookup request message - %d"),
 			 tgt_req->msg_type);
-		goto free_tgt_req;
+		/*
+		 * if find request failed, then firmware rsp should have
+		 * consumed the buffer. Do not free.
+		 */
+		return;
 	}
 
 	if (tgt_req->msg_type == WMA_ADD_STA_REQ) {
@@ -2529,9 +2533,6 @@ void wma_hold_req_timer(void *data)
 				tgt_req->msg_type, tgt_req->type);
 		QDF_BUG(0);
 	}
-free_tgt_req:
-	qdf_mc_timer_destroy(&tgt_req->event_timeout);
-	qdf_mem_free(tgt_req);
 }
 
 /**
@@ -3098,7 +3099,7 @@ static void wma_add_bss_ap_mode(tp_wma_handle wma, tpAddBssParams add_bss)
 	if (!QDF_IS_STATUS_SUCCESS(status))
 		WMA_LOGE("wma_get_current_hw_mode failed");
 
-	if ((add_bss->nss == 2) && !hw_mode.dbs_cap) {
+	if (add_bss->nss == 2) {
 		req.preferred_rx_streams = 2;
 		req.preferred_tx_streams = 2;
 	} else {
@@ -3243,7 +3244,7 @@ static void wma_add_bss_ibss_mode(tp_wma_handle wma, tpAddBssParams add_bss)
 	if (!QDF_IS_STATUS_SUCCESS(status))
 		WMA_LOGE("wma_get_current_hw_mode failed");
 
-	if ((add_bss->nss == 2) && !hw_mode.dbs_cap) {
+	if (add_bss->nss == 2) {
 		req.preferred_rx_streams = 2;
 		req.preferred_tx_streams = 2;
 	} else {
@@ -3424,7 +3425,7 @@ static void wma_add_bss_sta_mode(tp_wma_handle wma, tpAddBssParams add_bss)
 			if (!QDF_IS_STATUS_SUCCESS(status))
 				WMA_LOGE("wma_get_current_hw_mode failed");
 
-			if ((add_bss->nss == 2) && !hw_mode.dbs_cap) {
+			if (add_bss->nss == 2) {
 				req.preferred_rx_streams = 2;
 				req.preferred_tx_streams = 2;
 			} else {

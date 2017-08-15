@@ -1185,6 +1185,23 @@ QDF_STATUS hdd_hostapd_sap_event_cb(tpSap_Event pSapEvent,
 
 		pHostapdState->qdf_status =
 			pSapEvent->sapevt.sapStartBssCompleteEvent.status;
+
+		qdf_atomic_set(&pHddCtx->dfs_radar_found, 0);
+		wlansap_get_dfs_ignore_cac(pHddCtx->hHal, &ignoreCAC);
+
+		/* DFS requirement: DO NOT transmit during CAC. */
+		if ((CHANNEL_STATE_DFS !=
+			cds_get_channel_state(pHddApCtx->operatingChannel))
+			|| ignoreCAC
+			|| pHddCtx->dev_dfs_cac_status == DFS_CAC_ALREADY_DONE)
+			pHddApCtx->dfs_cac_block_tx = false;
+		else
+			pHddApCtx->dfs_cac_block_tx = true;
+
+		hdd_debug("The value of dfs_cac_block_tx[%d] for ApCtx[%p]:%d",
+				pHddApCtx->dfs_cac_block_tx, pHddApCtx,
+				pHostapdAdapter->sessionId);
+
 		if (pHostapdState->qdf_status) {
 			hdd_err("ERROR: startbss event failed!!");
 			/*
@@ -1303,22 +1320,6 @@ QDF_STATUS hdd_hostapd_sap_event_cb(tpSap_Event pSapEvent,
 			}
 		}
 
-		qdf_atomic_set(&pHddCtx->dfs_radar_found, 0);
-
-		wlansap_get_dfs_ignore_cac(pHddCtx->hHal, &ignoreCAC);
-
-		/* DFS requirement: DO NOT transmit during CAC. */
-		if ((CHANNEL_STATE_DFS !=
-			cds_get_channel_state(pHddApCtx->operatingChannel))
-			|| ignoreCAC
-			|| pHddCtx->dev_dfs_cac_status == DFS_CAC_ALREADY_DONE)
-			pHddApCtx->dfs_cac_block_tx = false;
-		else
-			pHddApCtx->dfs_cac_block_tx = true;
-
-		hdd_info("The value of dfs_cac_block_tx[%d] for ApCtx[%p]:%d",
-				pHddApCtx->dfs_cac_block_tx, pHddApCtx,
-				pHostapdAdapter->sessionId);
 
 		if ((CHANNEL_STATE_DFS ==
 		     cds_get_channel_state(pHddApCtx->operatingChannel))
@@ -5119,14 +5120,14 @@ int __iw_get_softap_linkspeed(struct net_device *dev,
 	struct qdf_mac_addr macAddress;
 	char pmacAddress[MAC_ADDRESS_STR_LEN + 1];
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
-	int rc, valid, i;
+	int rc, errno, i;
 
 	ENTER_DEV(dev);
 
 	hdd_ctx = WLAN_HDD_GET_CTX(pHostapdAdapter);
-	valid = wlan_hdd_validate_context(hdd_ctx);
-	if (0 != valid)
-		return valid;
+	errno = wlan_hdd_validate_context(hdd_ctx);
+	if (errno)
+		return errno;
 
 	hdd_notice("wrqu->data.length(%d)", wrqu->data.length);
 
@@ -5173,11 +5174,11 @@ int __iw_get_softap_linkspeed(struct net_device *dev,
 		hdd_err("Invalid peer macaddress");
 		return -EINVAL;
 	}
-	status = wlan_hdd_get_linkspeed_for_peermac(pHostapdAdapter,
-						    macAddress);
-	if (!QDF_IS_STATUS_SUCCESS(status)) {
-		hdd_err("Unable to retrieve SME linkspeed");
-		return -EINVAL;
+	errno = wlan_hdd_get_linkspeed_for_peermac(pHostapdAdapter,
+						   macAddress);
+	if (errno) {
+		hdd_err("Unable to retrieve SME linkspeed: %d", errno);
+		return errno;
 	}
 
 	link_speed = pHostapdAdapter->ls_stats.estLinkSpeed;
@@ -7316,6 +7317,7 @@ int wlan_hdd_cfg80211_start_bss(hdd_adapter_t *pHostapdAdapter,
 		return -EINVAL;
 	}
 
+	wlan_hdd_tdls_disable_offchan_and_teardown_links(pHddCtx);
 	if (cds_is_hw_mode_change_in_progress()) {
 		status = qdf_wait_for_connection_update();
 		if (!QDF_IS_STATUS_SUCCESS(status)) {
@@ -7873,6 +7875,8 @@ int wlan_hdd_cfg80211_start_bss(hdd_adapter_t *pHostapdAdapter,
 		}
 	}
 #endif
+	/* Check and restart SAP if it is on unsafe channel */
+	hdd_unsafe_channel_restart_sap(pHddCtx);
 
 	cds_set_connection_in_progress(false);
 	pHostapdState->bCommit = true;
@@ -8411,7 +8415,6 @@ static int __wlan_hdd_cfg80211_change_beacon(struct wiphy *wiphy,
 	hdd_context_t *pHddCtx;
 	beacon_data_t *old, *new;
 	int status;
-	bool update_beacon;
 
 	ENTER();
 
@@ -8459,11 +8462,9 @@ static int __wlan_hdd_cfg80211_change_beacon(struct wiphy *wiphy,
 	}
 
 	pAdapter->sessionCtx.ap.beacon = new;
-	update_beacon = (pAdapter->device_mode ==
-			     QDF_P2P_GO_MODE) ? true : false;
-	hdd_info("update beacon for P2P GO: %d", update_beacon);
+	hdd_debug("update beacon for P2P GO/SAP");
 	status = wlan_hdd_cfg80211_start_bss(pAdapter, params, NULL,
-					0, 0, false, update_beacon);
+					0, 0, false, true);
 
 	EXIT();
 	return status;

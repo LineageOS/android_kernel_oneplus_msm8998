@@ -1669,7 +1669,8 @@ __lim_process_sme_join_req(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
 		session->limWmeEnabled = sme_join_req->isWMEenabled;
 		session->limQosEnabled = sme_join_req->isQosEnabled;
 		session->wps_registration = sme_join_req->wps_registration;
-
+		session->enable_bcast_probe_rsp =
+				sme_join_req->enable_bcast_probe_rsp;
 		/* Store vendor specfic IE for CISCO AP */
 		ie_len = (bss_desc->length + sizeof(bss_desc->length) -
 			 GET_FIELD_OFFSET(tSirBssDescription, ieFields));
@@ -3684,6 +3685,9 @@ static void __lim_process_sme_addts_req(tpAniSirGlobal pMac, uint32_t *pMsgBuf)
 						 &sessionId);
 	if (psessionEntry == NULL) {
 		lim_log(pMac, LOGE, "Session Does not exist for given bssId");
+		lim_send_sme_addts_rsp(pMac, pSirAddts->rspReqd, eSIR_FAILURE,
+				       NULL, pSirAddts->req.tspec,
+				       smesessionId, smetransactionId);
 		return;
 	}
 #ifdef FEATURE_WLAN_DIAG_SUPPORT_LIM    /* FEATURE_WLAN_DIAG_SUPPORT */
@@ -4086,6 +4090,48 @@ end:
 	return;
 }
 
+static void lim_process_sme_update_config(tpAniSirGlobal mac_ctx,
+					  struct update_config *msg)
+{
+	tpPESession pe_session;
+
+	pr_debug("received eWNI_SME_UPDATE_HT_CONFIG message");
+	if (msg == NULL) {
+		pr_err("Buffer is Pointing to NULL");
+		return;
+	}
+
+	pe_session = pe_find_session_by_sme_session_id(mac_ctx,
+						       msg->sme_session_id);
+	if (pe_session == NULL) {
+		pr_warn("Session does not exist for given BSSID");
+		return;
+	}
+
+	switch (msg->capab) {
+	case WNI_CFG_HT_CAP_INFO_ADVANCE_CODING:
+		pe_session->htConfig.ht_rx_ldpc = msg->value;
+		break;
+	case WNI_CFG_HT_CAP_INFO_TX_STBC:
+		pe_session->htConfig.ht_tx_stbc = msg->value;
+		break;
+	case WNI_CFG_HT_CAP_INFO_RX_STBC:
+		pe_session->htConfig.ht_rx_stbc = msg->value;
+		break;
+	case WNI_CFG_HT_CAP_INFO_SHORT_GI_20MHZ:
+		pe_session->htConfig.ht_sgi20 = msg->value;
+		break;
+	case WNI_CFG_HT_CAP_INFO_SHORT_GI_40MHZ:
+		pe_session->htConfig.ht_sgi40 = msg->value;
+		break;
+	}
+
+	if (LIM_IS_AP_ROLE(pe_session)) {
+		sch_set_fixed_beacon_fields(mac_ctx, pe_session);
+		lim_send_beacon_ind(mac_ctx, pe_session);
+	}
+}
+
 void
 lim_send_vdev_restart(tpAniSirGlobal pMac,
 		      tpPESession psessionEntry, uint8_t sessionId)
@@ -4154,6 +4200,7 @@ static void __lim_process_roam_scan_offload_req(tpAniSirGlobal mac_ctx,
 	if (!local_ie_buf) {
 		lim_log(mac_ctx, LOGE,
 			FL("Mem Alloc failed for local_ie_buf"));
+		qdf_mem_free(req_buffer);
 		return;
 	}
 
@@ -5402,6 +5449,10 @@ bool lim_process_sme_req_messages(tpAniSirGlobal pMac, tpSirMsgQ pMsg)
 		break;
 	case eWNI_SME_UPDATE_ACCESS_POLICY_VENDOR_IE:
 		lim_process_sme_update_access_policy_vendor_ie(pMac, pMsgBuf);
+		break;
+	case eWNI_SME_UPDATE_CONFIG:
+		lim_process_sme_update_config(pMac,
+					(struct update_config *)pMsgBuf);
 		break;
 	default:
 		qdf_mem_free((void *)pMsg->bodyptr);

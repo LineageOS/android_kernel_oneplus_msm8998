@@ -114,7 +114,9 @@
 #define WMA_LOGP(args ...) \
 	QDF_TRACE(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_FATAL, ## args)
 
-#define WMA_DEBUG_ALWAYS
+//#ifdef VENDOR_EDIT
+//#define WMA_DEBUG_ALWAYS
+//#endif VENDOR_EDIT
 
 #ifdef WMA_DEBUG_ALWAYS
 #define WMA_LOGA(args ...) \
@@ -262,13 +264,10 @@ enum ds_mode {
 #define WMA_VDEV_START_REQUEST_TIMEOUT (6000)   /* 6 seconds */
 #define WMA_VDEV_STOP_REQUEST_TIMEOUT  (6000)   /* 6 seconds */
 
-/*
- * The firmware value has been changed recently to 0x127
- * But, to maintain backward compatibility, the old
- * value is also preserved.
- */
-#define WMA_TGT_INVALID_SNR_OLD (-1)
-#define WMA_TGT_INVALID_SNR_NEW 0x127
+#define WMA_TGT_INVALID_SNR (0)
+
+#define WMA_TGT_IS_VALID_SNR(x)  ((x) >= 0 && (x) < WMA_TGT_MAX_SNR)
+#define WMA_TGT_IS_INVALID_SNR(x) (!WMA_TGT_IS_VALID_SNR(x))
 
 #define WMA_TX_Q_RECHECK_TIMER_WAIT      2      /* 2 ms */
 #define WMA_TX_Q_RECHECK_TIMER_MAX_WAIT  20     /* 20 ms */
@@ -290,6 +289,9 @@ enum ds_mode {
 
 /* Default InActivity Time is 200 ms */
 #define POWERSAVE_DEFAULT_INACTIVITY_TIME 200
+
+/* Default WOW InActivity Time is 50 ms */
+#define WOW_POWERSAVE_DEFAULT_INACTIVITY_TIME 50
 
 /* Default Listen Interval */
 #define POWERSAVE_DEFAULT_LISTEN_INTERVAL 1
@@ -1460,6 +1462,7 @@ struct peer_debug_info {
  * @wmi_cmd_rsp_runtime_lock: wmi command response bus lock
  * @saved_chan: saved channel list sent as part of WMI_SCAN_CHAN_LIST_CMDID
  * @fw_mem_dump_enabled: Fw memory dump support
+ * @ito_repeat_count: Indicates ito repeated count
  */
 typedef struct {
 	void *wmi_handle;
@@ -1654,6 +1657,7 @@ typedef struct {
 	bool fw_mem_dump_enabled;
 	tSirAddonPsReq ps_setting;
 	struct peer_debug_info *peer_dbg;
+	uint8_t  ito_repeat_count;
 } t_wma_handle, *tp_wma_handle;
 
 /**

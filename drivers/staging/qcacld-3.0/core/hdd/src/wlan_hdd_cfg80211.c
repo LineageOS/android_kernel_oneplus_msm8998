@@ -2534,6 +2534,10 @@ __wlan_hdd_cfg80211_set_ext_roam_params(struct wiphy *wiphy,
 			goto fail;
 		}
 		hdd_debug("Num of Preferred BSSID (%d)", count);
+		if (!tb[QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PREFS]) {
+			hdd_err("attr Preferred BSSID failed");
+			goto fail;
+		}
 		i = 0;
 		nla_for_each_nested(curr_attr,
 			tb[QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PREFS],
@@ -4660,7 +4664,7 @@ static int __wlan_hdd_cfg80211_wifi_logger_get_ring_data(struct wiphy *wiphy,
 	} else {
 		wlan_report_log_completion(WLAN_LOG_TYPE_NON_FATAL,
 					   WLAN_LOG_INDICATOR_FRAMEWORK,
-					   WLAN_LOG_REASON_CODE_UNUSED);
+					   WLAN_LOG_REASON_CODE_UNUSED, ring_id);
 	}
 	return 0;
 }
@@ -8623,9 +8627,9 @@ static int __wlan_hdd_cfg80211_set_nud_stats(struct wiphy *wiphy,
 	if (arp_stats_params.flag) {
 		QDF_TRACE(QDF_MODULE_ID_HDD, QDF_TRACE_LEVEL_INFO,
 			  "%s STATS_SET_START Cleared!!", __func__);
-		qdf_mem_zero(&adapter->hdd_stats.hdd_arp_stats,
-			     sizeof(adapter->hdd_stats.hdd_arp_stats));
 	}
+	qdf_mem_zero(&adapter->hdd_stats.hdd_arp_stats,
+		     sizeof(adapter->hdd_stats.hdd_arp_stats));
 
 	arp_stats_params.pkt_type = WLAN_NUD_STATS_ARP_PKT_TYPE;
 	arp_stats_params.vdev_id = adapter->sessionId;
@@ -9423,6 +9427,7 @@ const struct wiphy_vendor_command hdd_wiphy_vendor_commands[] = {
 		.doit = wlan_hdd_cfg80211_get_bus_size
 	},
 	{
+		.info.vendor_id = QCA_NL80211_VENDOR_ID,
 		.info.subcmd = QCA_NL80211_VENDOR_SUBCMD_SETBAND,
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
 					WIPHY_VENDOR_CMD_NEED_NETDEV |
@@ -10183,6 +10188,27 @@ uint8_t *wlan_hdd_cfg80211_get_ie_ptr(const uint8_t *ies_ptr, int length,
 		ptr += (elem_len + 2);
 	}
 	return NULL;
+}
+
+bool wlan_hdd_is_ap_supports_immediate_power_save(uint8_t *ies, int length)
+{
+	uint8_t *vendor_ie;
+
+	if (length < 2) {
+		hdd_debug("bss size is less than expected");
+		return true;
+	}
+	if (!ies) {
+		hdd_debug("invalid IE pointer");
+		return true;
+	}
+	vendor_ie = wlan_hdd_get_vendor_oui_ie_ptr(VENDOR1_AP_OUI_TYPE,
+				VENDOR1_AP_OUI_TYPE_SIZE, ies, length);
+	if (vendor_ie) {
+		hdd_debug("AP can't support immediate powersave. defer it");
+		return false;
+	}
+	return true;
 }
 
 /*
@@ -12351,6 +12377,8 @@ static int wlan_hdd_cfg80211_connect_start(hdd_adapter_t *pAdapter,
 		goto ret_status;
 	}
 
+	wlan_hdd_tdls_disable_offchan_and_teardown_links(pHddCtx);
+
 	pRoamProfile = &pWextState->roamProfile;
 	qdf_mem_zero(&hdd_sta_ctx->conn_info.conn_flag,
 		     sizeof(hdd_sta_ctx->conn_info.conn_flag));
@@ -13449,6 +13477,7 @@ static bool wlan_hdd_reassoc_bssid_hint(hdd_adapter_t *adapter,
 	bool reassoc = false;
 	const uint8_t *bssid = NULL;
 	uint16_t channel = 0;
+	hdd_wext_state_t *wext_state = WLAN_HDD_GET_WEXT_STATE_PTR(adapter);
 
 	if (req->bssid)
 		bssid = req->bssid;
@@ -13464,6 +13493,15 @@ static bool wlan_hdd_reassoc_bssid_hint(hdd_adapter_t *adapter,
 		reassoc = true;
 		hdd_info(FL("REASSOC Attempt on channel %d to "MAC_ADDRESS_STR),
 				channel, MAC_ADDR_ARRAY(bssid));
+		/*
+		 * Save BSSID in a separate variable as
+		 * pRoamProfile's BSSID is getting zeroed out in the
+		 * association process. In case of join failure
+		 * we should send valid BSSID to supplicant
+		 */
+		qdf_mem_copy((void *)(wext_state->req_bssId.bytes), bssid,
+			     QDF_MAC_ADDR_SIZE);
+
 		*status = hdd_reassoc(adapter, bssid, channel,
 				      CONNECT_CMD_USERSPACE);
 		hdd_debug("hdd_reassoc: status: %d", *status);
@@ -14624,14 +14662,6 @@ int __wlan_hdd_cfg80211_del_station(struct wiphy *wiphy,
 						pAdapter->aStaInfo[i].
 							macAddrSTA.bytes,
 						QDF_MAC_ADDR_SIZE);
-					if (hdd_ipa_uc_is_enabled(pHddCtx)) {
-						hdd_ipa_wlan_evt(pAdapter,
-							pAdapter->
-								 aStaInfo[i].
-								 ucSTAId,
-							HDD_IPA_CLIENT_DISCONNECT,
-							mac);
-					}
 					hdd_notice("Delete STA with MAC::"
 						  MAC_ADDRESS_STR,
 					       MAC_ADDR_ARRAY(mac));
@@ -14670,11 +14700,6 @@ int __wlan_hdd_cfg80211_del_station(struct wiphy *wiphy,
 					  MAC_ADDRESS_STR,
 				       MAC_ADDR_ARRAY(mac));
 				return -ENOENT;
-			}
-
-			if (hdd_ipa_uc_is_enabled(pHddCtx)) {
-				hdd_ipa_wlan_evt(pAdapter, staId,
-					HDD_IPA_CLIENT_DISCONNECT, mac);
 			}
 
 			if (pAdapter->aStaInfo[staId].isDeauthInProgress ==
