@@ -994,3 +994,9 @@ config EXT_ANC
 	 on Sensor DSP.
 
 source "drivers/soc/qcom/memshare/Kconfig"
+
+config ONEPLUS_PROJECT_INFO
+	bool "Enable OnePlus Project Info"
+	default y
+	help
+	  Used by various OnePlus drivers, disable this and you will have a hard time.
