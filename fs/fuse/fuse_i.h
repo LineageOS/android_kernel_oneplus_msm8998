@@ -649,6 +649,10 @@ struct fuse_conn {
 	/** number of dentries used in the above array */
 	int ctl_ndents;
 
+#ifdef CONFIG_VENDOR_ONEPLUS
+	unsigned reserved_mem;
+#endif
+
 	/** Key for lock owner ID scrambling */
 	u32 scramble_key[4];
 
