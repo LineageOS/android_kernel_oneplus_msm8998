@@ -8,4 +8,9 @@ config SRCARCH
 	string
 	option env="SRCARCH"
 
+config VENDOR_ONEPLUS
+	bool "ONEPLUS support"
+	help
+	  This feature enables OnePlus specific hacks
+
 source "arch/$SRCARCH/Kconfig"
