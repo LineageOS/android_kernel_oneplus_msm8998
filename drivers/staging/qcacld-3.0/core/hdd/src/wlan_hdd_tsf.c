@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -120,6 +120,7 @@ static int hdd_tsf_reset_gpio(struct hdd_adapter_s *adapter)
 static int hdd_tsf_reset_gpio(struct hdd_adapter_s *adapter)
 {
 	int ret;
+
 	ret = wma_cli_set_command((int)adapter->sessionId,
 			(int)GEN_PARAM_RESET_TSF_GPIO, adapter->sessionId,
 			GEN_CMD);
@@ -215,9 +216,8 @@ int hdd_get_tsf_cb(void *pcb_cxt, struct stsf *ptsf)
 
 	hddctx = (struct hdd_context_s *)pcb_cxt;
 	status = wlan_hdd_validate_context(hddctx);
-	if (0 != status) {
+	if (0 != status)
 		return -EINVAL;
-	}
 
 	adapter = hdd_get_adapter_by_vdev(hddctx, ptsf->vdev_id);
 
@@ -239,6 +239,10 @@ int hdd_get_tsf_cb(void *pcb_cxt, struct stsf *ptsf)
 		adapter->tsf_sync_soc_timer);
 	return 0;
 }
+
+static const struct nla_policy tsf_policy[QCA_WLAN_VENDOR_ATTR_TSF_MAX + 1] = {
+	[QCA_WLAN_VENDOR_ATTR_TSF_CMD] = {.type = NLA_U32},
+};
 
 /**
  * __wlan_hdd_cfg80211_handle_tsf_cmd(): Setup TSF operations
@@ -271,7 +275,7 @@ static int __wlan_hdd_cfg80211_handle_tsf_cmd(struct wiphy *wiphy,
 		return -EINVAL;
 
 	if (nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_TSF_MAX, data,
-		      data_len, NULL)) {
+		      data_len, tsf_policy)) {
 		hdd_err("Invalid TSF cmd");
 		return -EINVAL;
 	}

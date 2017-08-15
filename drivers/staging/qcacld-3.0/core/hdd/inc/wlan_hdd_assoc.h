@@ -84,14 +84,14 @@ typedef enum {
 } eConnectionState;
 
 /**
- * typedef ePeerStatus - Peer status
+ * enum peer_status - Peer status
  * @ePeerConnected: peer connected
  * @ePeerDisconnected: peer disconnected
  */
-typedef enum {
+enum peer_status {
 	ePeerConnected = 1,
 	ePeerDisconnected
-} ePeerStatus;
+};
 
 /**
  * struct hdd_conn_flag - connection flags
@@ -174,6 +174,7 @@ struct hdd_conn_flag {
  * @roam_count: roaming counter
  * @signal: holds rssi info
  * @assoc_status_code: holds assoc fail reason
+ * @congestion: holds congestion percentage
  */
 typedef struct connection_info_s {
 	eConnectionState connState;
@@ -205,6 +206,7 @@ typedef struct connection_info_s {
 	uint32_t roam_count;
 	int8_t signal;
 	int32_t assoc_status_code;
+	uint32_t cca;
 } connection_info_t;
 
 /* Forward declarations */
@@ -212,7 +214,6 @@ typedef struct hdd_adapter_s hdd_adapter_t;
 typedef struct hdd_context_s hdd_context_t;
 typedef struct hdd_station_ctx hdd_station_ctx_t;
 typedef struct hdd_ap_ctx_s hdd_ap_ctx_t;
-typedef struct hdd_mon_ctx_s hdd_mon_ctx_t;
 
 /**
  * hdd_is_connecting() - Function to check connection progress
@@ -289,6 +290,8 @@ QDF_STATUS hdd_roam_register_tdlssta(hdd_adapter_t *pAdapter,
 				     const uint8_t *peerMac, uint16_t staId,
 				     uint8_t ucastSig, uint8_t qos);
 #endif
+
+QDF_STATUS hdd_roam_deregister_tdlssta(hdd_adapter_t *pAdapter, uint8_t staId);
 
 /**
  * hdd_perform_roam_set_key_complete() - perform set key complete

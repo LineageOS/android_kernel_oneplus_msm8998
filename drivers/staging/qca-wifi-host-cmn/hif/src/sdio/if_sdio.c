@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -54,6 +54,7 @@
 #include "pktlog_ac.h"
 #endif
 #include "epping_main.h"
+#include "sdio_api.h"
 
 #ifndef ATH_BUS_PM
 #ifdef CONFIG_PM
@@ -62,11 +63,11 @@
 #endif /* ATH_BUS_PM */
 
 #ifndef REMOVE_PKT_LOG
-struct ol_pl_os_dep_funcs *g_ol_pl_os_dep_funcs = NULL;
+struct ol_pl_os_dep_funcs *g_ol_pl_os_dep_funcs;
 #endif
 #define HIF_SDIO_LOAD_TIMEOUT 1000
 
-struct hif_sdio_softc *scn = NULL;
+struct hif_sdio_softc *scn;
 struct hif_softc *ol_sc;
 static atomic_t hif_sdio_load_state;
 /* Wait queue for MC thread */
@@ -86,8 +87,8 @@ static A_STATUS hif_sdio_probe(void *context, void *hif_handle)
 	struct sdio_func *func = NULL;
 	const struct sdio_device_id *id;
 	uint32_t target_type;
-	HIF_ENTER();
 
+	HIF_ENTER();
 	scn = (struct hif_sdio_softc *)qdf_mem_malloc(sizeof(*scn));
 	if (!scn) {
 		ret = -ENOMEM;
@@ -141,6 +142,7 @@ static A_STATUS hif_sdio_probe(void *context, void *hif_handle)
 		} else if ((id->device & MANUFACTURER_ID_AR6K_BASE_MASK) ==
 				MANUFACTURER_ID_AR6320_BASE) {
 			int ar6kid = id->device & MANUFACTURER_ID_AR6K_REV_MASK;
+
 			if (ar6kid >= 1) {
 				/* v2 or higher silicon */
 				hif_register_tbl_attach(ol_sc,
@@ -194,27 +196,6 @@ err_attach:
 	qdf_mem_free(scn);
 	scn = NULL;
 err_alloc:
-	return ret;
-}
-
-/**
- * ol_ath_sdio_configure() - configure sdio device
- * @hif_sc: pointer to sdio softc structure
- * @dev: pointer to net device
- * @hif_handle: pointer to sdio function
- *
- * Return: 0 for success and non-zero for failure
- */
-int
-ol_ath_sdio_configure(void *hif_sc, struct net_device *dev,
-		      hif_handle_t *hif_hdl)
-{
-	struct hif_sdio_softc *sc = (struct hif_sdio_softc *)hif_sc;
-	int ret = 0;
-
-	sc->aps_osdev.netdev = dev;
-	*hif_hdl = sc->hif_handle;
-
 	return ret;
 }
 
@@ -304,8 +285,8 @@ static int init_ath_hif_sdio(void)
 	static int probed;
 	QDF_STATUS status;
 	struct osdrv_callbacks osdrv_callbacks;
-	HIF_ENTER();
 
+	HIF_ENTER();
 	qdf_mem_zero(&osdrv_callbacks, sizeof(osdrv_callbacks));
 	osdrv_callbacks.device_inserted_handler = hif_sdio_probe;
 	osdrv_callbacks.device_removed_handler = hif_sdio_remove;
@@ -329,21 +310,6 @@ static int init_ath_hif_sdio(void)
 		 "%s: %s\n", dev_info, version);
 
 	return 0;
-}
-
-/**
- * hif_targ_is_awake(): check if target is awake
- *
- * This function returns true if the target is awake
- *
- * @scn: struct hif_softc
- * @mem: mapped mem base
- *
- * Return: bool
- */
-bool hif_targ_is_awake(struct hif_softc *scn, void *__iomem *mem)
-{
-	return true;
 }
 
 /**
@@ -384,24 +350,6 @@ int hif_sdio_bus_resume(struct hif_softc *hif_ctx)
 }
 
 /**
- * hif_enable_power_gating() - enable HW power gating
- *
- * Return: n/a
- */
-void hif_enable_power_gating(void *hif_ctx)
-{
-}
-
-/**
- * hif_disable_aspm() - hif_disable_aspm
- *
- * Return: n/a
- */
-void hif_disable_aspm(void)
-{
-}
-
-/**
  * hif_sdio_close() - hif_bus_close
  *
  * Return: None
@@ -426,28 +374,6 @@ QDF_STATUS hif_sdio_open(struct hif_softc *hif_sc,
 	status = init_ath_hif_sdio();
 
 	return status;
-}
-
-/**
- * hif_get_target_type() - Get the target type
- *
- * This function is used to query the target type.
- *
- * @ol_sc: ol_softc struct pointer
- * @dev: device pointer
- * @bdev: bus dev pointer
- * @bid: bus id pointer
- * @hif_type: HIF type such as HIF_TYPE_QCA6180
- * @target_type: target type such as TARGET_TYPE_QCA6180
- *
- * Return: 0 for success
- */
-int hif_get_target_type(struct hif_softc *ol_sc, struct device *dev,
-	void *bdev, const hif_bus_id *bid, uint32_t *hif_type,
-	uint32_t *target_type)
-{
-
-	return 0;
 }
 
 void hif_get_target_revision(struct hif_softc *ol_sc)
@@ -478,7 +404,8 @@ void hif_get_target_revision(struct hif_softc *ol_sc)
  * Return: QDF_STATUS
  */
 QDF_STATUS hif_sdio_enable_bus(struct hif_softc *hif_sc,
-			struct device *dev, void *bdev, const hif_bus_id *bid,
+			struct device *dev, void *bdev,
+			const struct hif_bus_id *bid,
 			enum hif_enable_type type)
 {
 	int ret = 0;
@@ -487,8 +414,7 @@ QDF_STATUS hif_sdio_enable_bus(struct hif_softc *hif_sc,
 
 	init_waitqueue_head(&sync_wait_queue);
 	if (hif_sdio_device_inserted(dev, id)) {
-			HIF_ERROR("wlan: %s hif_sdio_device_inserted"
-					  "failed", __func__);
+		HIF_ERROR("wlan: %s hif_sdio_device_inserted failed", __func__);
 		return QDF_STATUS_E_NOMEM;
 	}
 
@@ -557,8 +483,8 @@ void hif_sdio_set_mailbox_swap(struct hif_softc *hif_sc)
 {
 	struct hif_sdio_softc *scn = HIF_GET_SDIO_SOFTC(hif_sc);
 	struct hif_sdio_dev *hif_device = scn->hif_handle;
+
 	hif_device->swap_mailbox = true;
-	return;
 }
 
 /**
@@ -571,8 +497,8 @@ void hif_sdio_claim_device(struct hif_softc *hif_sc)
 {
 	struct hif_sdio_softc *scn = HIF_GET_SDIO_SOFTC(hif_sc);
 	struct hif_sdio_dev *hif_device = scn->hif_handle;
+
 	hif_device->claimed_ctx = hif_sc;
-	return;
 }
 
 /**
@@ -585,8 +511,8 @@ void hif_sdio_mask_interrupt_call(struct hif_softc *scn)
 {
 	struct hif_sdio_softc *hif_ctx = HIF_GET_SDIO_SOFTC(scn);
 	struct hif_sdio_dev *hif_device = hif_ctx->hif_handle;
+
 	hif_mask_interrupt(hif_device);
-	return;
 }
 
 /**
@@ -621,16 +547,4 @@ int hif_check_fw_reg(struct hif_opaque_softc *scn)
  */
 void hif_wlan_disable(struct hif_softc *scn)
 {
-}
-
-/**
- * hif_config_target() - configure hif bus
- * @hif_hdl: hif handle
- * @state:
- *
- * Return: int
- */
-int hif_config_target(void *hif_hdl)
-{
-	return 0;
 }

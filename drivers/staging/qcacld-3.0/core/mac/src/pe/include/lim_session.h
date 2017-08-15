@@ -493,6 +493,15 @@ typedef struct sPESession       /* Added to Support BT-AMP */
 	bool ignore_assoc_disallowed;
 	bool send_p2p_conf_frame;
 	bool process_ho_fail;
+	/* Number of STAs that do not support ECSA capability */
+	uint8_t lim_non_ecsa_cap_num;
+#ifdef WLAN_FEATURE_FILS_SK
+	struct pe_fils_session *fils_info;
+#endif
+	uint8_t deauthmsgcnt;
+	uint8_t disassocmsgcnt;
+	bool enable_bcast_probe_rsp;
+	uint8_t ht_client_cnt;
 } tPESession, *tpPESession;
 
 /*-------------------------------------------------------------------------
@@ -617,4 +626,13 @@ void pe_delete_session(tpAniSirGlobal pMac, tpPESession psessionEntry);
 tpPESession pe_find_session_by_sme_session_id(tpAniSirGlobal mac_ctx,
 					      uint8_t sme_session_id);
 uint8_t pe_get_active_session_count(tpAniSirGlobal mac_ctx);
+#ifdef WLAN_FEATURE_FILS_SK
+/**
+ * pe_delete_fils_info: API to delete fils session info
+ * @session: pe session
+ *
+ * Return: void
+ */
+void pe_delete_fils_info(tpPESession session);
+#endif
 #endif /* #if !defined( __LIM_SESSION_H ) */

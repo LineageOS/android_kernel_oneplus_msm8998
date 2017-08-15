@@ -36,6 +36,7 @@
 #include <cds_api.h>
 #endif
 #include <i_qdf_lock.h>
+#include <qdf_module.h>
 
 /* Function declarations and documenation */
 typedef __qdf_mutex_t qdf_mutex_t;
@@ -82,7 +83,7 @@ QDF_STATUS qdf_mutex_create(qdf_mutex_t *lock, const char *func, int line)
 
 	return QDF_STATUS_SUCCESS;
 }
-EXPORT_SYMBOL(qdf_mutex_create);
+qdf_export_symbol(qdf_mutex_create);
 
 /**
  * qdf_mutex_acquire() - acquire a QDF lock
@@ -151,16 +152,16 @@ QDF_STATUS qdf_mutex_acquire(qdf_mutex_t *lock)
 		lock->refcount++;
 		lock->state = LOCK_ACQUIRED;
 		return QDF_STATUS_SUCCESS;
-	} else {
-		/* lock is already destroyed */
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "%s: Lock is already destroyed", __func__);
-		mutex_unlock(&lock->m_lock);
-		QDF_ASSERT(0);
-		return QDF_STATUS_E_FAILURE;
 	}
+
+	/* lock is already destroyed */
+	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
+		  "%s: Lock is already destroyed", __func__);
+	mutex_unlock(&lock->m_lock);
+	QDF_ASSERT(0);
+	return QDF_STATUS_E_FAILURE;
 }
-EXPORT_SYMBOL(qdf_mutex_acquire);
+qdf_export_symbol(qdf_mutex_acquire);
 
 /**
  * qdf_mutex_release() - release a QDF lock
@@ -241,7 +242,7 @@ QDF_STATUS qdf_mutex_release(qdf_mutex_t *lock)
 #endif
 	return QDF_STATUS_SUCCESS;
 }
-EXPORT_SYMBOL(qdf_mutex_release);
+qdf_export_symbol(qdf_mutex_release);
 
 /**
  * qdf_wake_lock_name() - This function returns the name of the wakelock
@@ -264,7 +265,7 @@ const char *qdf_wake_lock_name(qdf_wake_lock_t *lock)
 	return "NO_WAKELOCK_SUPPORT";
 }
 #endif
-EXPORT_SYMBOL(qdf_wake_lock_name);
+qdf_export_symbol(qdf_wake_lock_name);
 
 /**
  * qdf_wake_lock_create() - initializes a wake lock
@@ -287,7 +288,7 @@ QDF_STATUS qdf_wake_lock_create(qdf_wake_lock_t *lock, const char *name)
 	return QDF_STATUS_SUCCESS;
 }
 #endif
-EXPORT_SYMBOL(qdf_wake_lock_create);
+qdf_export_symbol(qdf_wake_lock_create);
 
 /**
  * qdf_wake_lock_acquire() - acquires a wake lock
@@ -315,7 +316,7 @@ QDF_STATUS qdf_wake_lock_acquire(qdf_wake_lock_t *lock, uint32_t reason)
 	return QDF_STATUS_SUCCESS;
 }
 #endif
-EXPORT_SYMBOL(qdf_wake_lock_acquire);
+qdf_export_symbol(qdf_wake_lock_acquire);
 
 /**
  * qdf_wake_lock_timeout_acquire() - acquires a wake lock with a timeout
@@ -341,7 +342,7 @@ QDF_STATUS qdf_wake_lock_timeout_acquire(qdf_wake_lock_t *lock, uint32_t msec)
 	return QDF_STATUS_SUCCESS;
 }
 #endif
-EXPORT_SYMBOL(qdf_wake_lock_timeout_acquire);
+qdf_export_symbol(qdf_wake_lock_timeout_acquire);
 
 /**
  * qdf_wake_lock_release() - releases a wake lock
@@ -369,7 +370,7 @@ QDF_STATUS qdf_wake_lock_release(qdf_wake_lock_t *lock, uint32_t reason)
 	return QDF_STATUS_SUCCESS;
 }
 #endif
-EXPORT_SYMBOL(qdf_wake_lock_release);
+qdf_export_symbol(qdf_wake_lock_release);
 
 /**
  * qdf_wake_lock_destroy() - destroys a wake lock
@@ -391,7 +392,7 @@ QDF_STATUS qdf_wake_lock_destroy(qdf_wake_lock_t *lock)
 	return QDF_STATUS_SUCCESS;
 }
 #endif
-EXPORT_SYMBOL(qdf_wake_lock_destroy);
+qdf_export_symbol(qdf_wake_lock_destroy);
 
 #ifdef CONFIG_MCL
 /**
@@ -427,7 +428,7 @@ QDF_STATUS qdf_runtime_pm_get(void)
 		return QDF_STATUS_E_FAILURE;
 	return QDF_STATUS_SUCCESS;
 }
-EXPORT_SYMBOL(qdf_runtime_pm_get);
+qdf_export_symbol(qdf_runtime_pm_get);
 
 /**
  * qdf_runtime_pm_put() - do a put opperation on the device
@@ -460,7 +461,7 @@ QDF_STATUS qdf_runtime_pm_put(void)
 		return QDF_STATUS_E_FAILURE;
 	return QDF_STATUS_SUCCESS;
 }
-EXPORT_SYMBOL(qdf_runtime_pm_put);
+qdf_export_symbol(qdf_runtime_pm_put);
 
 /**
  * qdf_runtime_pm_prevent_suspend() - prevent a runtime bus suspend
@@ -490,7 +491,7 @@ QDF_STATUS qdf_runtime_pm_prevent_suspend(qdf_runtime_lock_t *lock)
 		return QDF_STATUS_E_FAILURE;
 	return QDF_STATUS_SUCCESS;
 }
-EXPORT_SYMBOL(qdf_runtime_pm_prevent_suspend);
+qdf_export_symbol(qdf_runtime_pm_prevent_suspend);
 
 /**
  * qdf_runtime_pm_allow_suspend() - prevent a runtime bus suspend
@@ -504,8 +505,8 @@ QDF_STATUS qdf_runtime_pm_allow_suspend(qdf_runtime_lock_t *lock)
 {
 	void *ol_sc;
 	int ret;
-	ol_sc = cds_get_context(QDF_MODULE_ID_HIF);
 
+	ol_sc = cds_get_context(QDF_MODULE_ID_HIF);
 	if (ol_sc == NULL) {
 		QDF_ASSERT(0);
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
@@ -516,9 +517,10 @@ QDF_STATUS qdf_runtime_pm_allow_suspend(qdf_runtime_lock_t *lock)
 	ret = hif_pm_runtime_allow_suspend(ol_sc, lock->lock);
 	if (ret)
 		return QDF_STATUS_E_FAILURE;
+
 	return QDF_STATUS_SUCCESS;
 }
-EXPORT_SYMBOL(qdf_runtime_pm_allow_suspend);
+qdf_export_symbol(qdf_runtime_pm_allow_suspend);
 
 /**
  * qdf_runtime_lock_init() - initialize runtime lock
@@ -539,7 +541,7 @@ QDF_STATUS __qdf_runtime_lock_init(qdf_runtime_lock_t *lock, const char *name)
 
 	return QDF_STATUS_SUCCESS;
 }
-EXPORT_SYMBOL(__qdf_runtime_lock_init);
+qdf_export_symbol(__qdf_runtime_lock_init);
 
 /**
  * qdf_runtime_lock_deinit() - deinitialize runtime pm lock
@@ -552,9 +554,10 @@ EXPORT_SYMBOL(__qdf_runtime_lock_init);
 void qdf_runtime_lock_deinit(qdf_runtime_lock_t *lock)
 {
 	void *hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
+
 	hif_runtime_lock_deinit(hif_ctx, lock->lock);
 }
-EXPORT_SYMBOL(qdf_runtime_lock_deinit);
+qdf_export_symbol(qdf_runtime_lock_deinit);
 
 #endif /* CONFIG_MCL */
 
@@ -570,7 +573,7 @@ QDF_STATUS qdf_spinlock_acquire(qdf_spinlock_t *lock)
 	spin_lock(&lock->lock.spinlock);
 	return QDF_STATUS_SUCCESS;
 }
-EXPORT_SYMBOL(qdf_spinlock_acquire);
+qdf_export_symbol(qdf_spinlock_acquire);
 
 
 /**
@@ -585,7 +588,7 @@ QDF_STATUS qdf_spinlock_release(qdf_spinlock_t *lock)
 	spin_unlock(&lock->lock.spinlock);
 	return QDF_STATUS_SUCCESS;
 }
-EXPORT_SYMBOL(qdf_spinlock_release);
+qdf_export_symbol(qdf_spinlock_release);
 
 /**
  * qdf_mutex_destroy() - destroy a QDF lock
@@ -644,7 +647,7 @@ QDF_STATUS qdf_mutex_destroy(qdf_mutex_t *lock)
 
 	return QDF_STATUS_SUCCESS;
 }
-EXPORT_SYMBOL(qdf_mutex_destroy);
+qdf_export_symbol(qdf_mutex_destroy);
 
 /**
  * qdf_spin_trylock_bh_outline() - spin trylock bottomhalf
@@ -655,7 +658,7 @@ int qdf_spin_trylock_bh_outline(qdf_spinlock_t *lock)
 {
 	return qdf_spin_trylock_bh(lock);
 }
-EXPORT_SYMBOL(qdf_spin_trylock_bh_outline);
+qdf_export_symbol(qdf_spin_trylock_bh_outline);
 
 /**
  * qdf_spin_lock_bh_outline() - locks the spinlock in soft irq context
@@ -666,7 +669,7 @@ void qdf_spin_lock_bh_outline(qdf_spinlock_t *lock)
 {
 	qdf_spin_lock_bh(lock);
 }
-EXPORT_SYMBOL(qdf_spin_lock_bh_outline);
+qdf_export_symbol(qdf_spin_lock_bh_outline);
 
 /**
  * qdf_spin_unlock_bh_outline() - unlocks spinlock in soft irq context
@@ -677,7 +680,7 @@ void qdf_spin_unlock_bh_outline(qdf_spinlock_t *lock)
 {
 	qdf_spin_unlock_bh(lock);
 }
-EXPORT_SYMBOL(qdf_spin_unlock_bh_outline);
+qdf_export_symbol(qdf_spin_unlock_bh_outline);
 
 #if QDF_LOCK_STATS_LIST
 struct qdf_lock_cookie {
@@ -769,8 +772,9 @@ void qdf_lock_stats_init(void)
 		__qdf_put_lock_cookie(&lock_cookies[i]);
 
 	/* stats must be allocated for the spinlock before the cookie,
-	   otherwise this qdf_lock_list_spinlock wouldnt get intialized
-	   propperly */
+	 * otherwise this qdf_lock_list_spinlock wouldnt get initialized
+	 * properly
+	 */
 	qdf_spinlock_create(&qdf_lock_list_spinlock);
 	qdf_atomic_init(&lock_cookie_get_failures);
 	qdf_atomic_init(&lock_cookie_untracked_num);
@@ -791,8 +795,9 @@ void qdf_lock_stats_deinit(void)
 }
 
 /* allocated separate memory in case the lock memory is freed without
-	   running the deinitialization code.  The cookie list will not be
-	   corrupted. */
+ * running the deinitialization code.  The cookie list will not be
+ * corrupted.
+ */
 void qdf_lock_stats_cookie_create(struct lock_stats *stats,
 				  const char *func, int line)
 {
@@ -800,10 +805,11 @@ void qdf_lock_stats_cookie_create(struct lock_stats *stats,
 
 	if (cookie == NULL) {
 		int count;
+
 		qdf_atomic_inc(&lock_cookie_get_failures);
 		count = qdf_atomic_inc_return(&lock_cookie_untracked_num);
 		stats->cookie = (void *) DUMMY_LOCK_COOKIE;
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
+		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_DEBUG,
 			  "%s: cookie allocation failure, using dummy (%s:%d) count %d",
 			  __func__, func, line, count);
 		return;

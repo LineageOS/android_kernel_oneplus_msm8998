@@ -53,9 +53,9 @@
 
 #include <cds_utils.h>
 
-/* IPA Micro controler TX data packet HTT Header Preset */
-/* 31 | 30  29 | 28 | 27 | 26  22  | 21   16 | 15  13   | 12  8      | 7 0
-   *----------------------------------------------------------------------------
+/* IPA Micro controler TX data packet HTT Header Preset
+ * 31 | 30  29 | 28 | 27 | 26  22  | 21   16 | 15  13   | 12  8      | 7 0
+ ***----------------------------------------------------------------------------
  * R  | CS  OL | R  | PP | ext TID | vdev ID | pkt type | pkt subtyp | msg type
  * 0  | 0      | 0  |    | 0x1F    | 0       | 2        | 0          | 0x01
  ***----------------------------------------------------------------------------
@@ -151,7 +151,6 @@ static void htt_tx_frag_desc_field_update(struct htt_pdev_t *pdev,
 	*fptr = (uint32_t)(dma_page->page_p_addr +
 		offset * pdev->frag_descs.size);
 	HTT_TX_DESC_FRAG_FIELD_HI_UPDATE(fptr);
-	return;
 }
 
 /**
@@ -172,8 +171,7 @@ static int htt_tx_frag_desc_attach(struct htt_pdev_t *pdev,
 		qdf_get_dma_mem_context((&pdev->frag_descs), memctx), false);
 	if ((0 == pdev->frag_descs.desc_pages.num_pages) ||
 		(NULL == pdev->frag_descs.desc_pages.dma_pages)) {
-		TXRX_PRINT(TXRX_PRINT_LEVEL_ERR,
-			"FRAG descriptor alloc fail");
+		ol_txrx_err("FRAG descriptor alloc fail");
 		return -ENOBUFS;
 	}
 	return 0;
@@ -211,8 +209,10 @@ int htt_tx_frag_alloc(htt_pdev_handle pdev,
 	uint16_t frag_elem_index;
 	struct qdf_mem_dma_page_t *dma_page;
 
-	/** Index should never be 0, since its used by the hardware
-	    to terminate the link. */
+	/*
+	 * Index should never be 0, since its used by the hardware
+	 * to terminate the link.
+	 */
 	if (index >= pdev->tx_descs.pool_elems) {
 		*frag_ptr = NULL;
 		return 1;
@@ -354,8 +354,7 @@ int htt_tx_attach(struct htt_pdev_t *pdev, int desc_pool_elems)
 							  memctx), true);
 	if ((0 == pdev->tx_descs.desc_pages.num_pages) ||
 	    (NULL == pdev->tx_descs.desc_pages.cacheable_pages)) {
-		TXRX_PRINT(TXRX_PRINT_LEVEL_ERR,
-			   "HTT desc alloc fail");
+		ol_txrx_err("HTT desc alloc fail");
 		goto out_fail;
 	}
 	num_page = pdev->tx_descs.desc_pages.num_pages;
@@ -374,8 +373,7 @@ int htt_tx_attach(struct htt_pdev_t *pdev, int desc_pool_elems)
 				 * should point next page
 				 */
 				if (!cacheable_pages[i + 1]) {
-					TXRX_PRINT(TXRX_PRINT_LEVEL_ERR,
-						   "over flow num link %d\n",
+					ol_txrx_err("over flow num link %d\n",
 						   num_link);
 					goto free_htt_desc;
 				}
@@ -394,8 +392,7 @@ int htt_tx_attach(struct htt_pdev_t *pdev, int desc_pool_elems)
 	*p = NULL;
 
 	if (htt_tx_frag_desc_attach(pdev, desc_pool_elems)) {
-		TXRX_PRINT(TXRX_PRINT_LEVEL_ERR,
-			   "HTT Frag descriptor alloc fail");
+		ol_txrx_err("HTT Frag descriptor alloc fail");
 		goto free_htt_desc;
 	}
 
@@ -437,7 +434,6 @@ htt_tx_set_frag_desc_addr(struct htt_pdev_t *pdev,
 			  struct htt_tx_msdu_desc_t *htt_tx_desc,
 			  uint16_t index)
 {
-	return;
 }
 
 /**
@@ -458,7 +454,6 @@ void htt_tx_desc_frags_table_set(htt_pdev_handle pdev,
 				 int reset)
 {
 	/* fragments table only applies to LL systems */
-	return;
 }
 
 /**
@@ -471,6 +466,7 @@ void htt_tx_desc_frags_table_set(htt_pdev_handle pdev,
 int htt_tx_credit_update(struct htt_pdev_t *pdev)
 {
 	int credit_delta;
+
 	credit_delta = QDF_MIN(qdf_atomic_read(
 			&pdev->htt_tx_credit.target_delta),
 			qdf_atomic_read(&pdev->htt_tx_credit.bus_delta));
@@ -526,8 +522,7 @@ int htt_tx_attach(struct htt_pdev_t *pdev, int desc_pool_elems)
 		qdf_get_dma_mem_context((&pdev->tx_descs), memctx), false);
 	if ((0 == pdev->tx_descs.desc_pages.num_pages) ||
 		(NULL == pdev->tx_descs.desc_pages.dma_pages)) {
-		TXRX_PRINT(TXRX_PRINT_LEVEL_ERR,
-			"HTT desc alloc fail");
+		ol_txrx_err("HTT desc alloc fail");
 		goto out_fail;
 	}
 	num_page = pdev->tx_descs.desc_pages.num_pages;
@@ -542,10 +537,10 @@ int htt_tx_attach(struct htt_pdev_t *pdev, int desc_pool_elems)
 			if (i_int == (num_desc_per_page - 1)) {
 				/*
 				 * Last element on this page,
-				 * should pint next page */
+				 * should pint next page
+				 */
 				if (!page_info->page_v_addr_start) {
-					TXRX_PRINT(TXRX_PRINT_LEVEL_ERR,
-						"over flow num link %d\n",
+					ol_txrx_err("over flow num link %d\n",
 						num_link);
 					goto free_htt_desc;
 				}
@@ -565,8 +560,7 @@ int htt_tx_attach(struct htt_pdev_t *pdev, int desc_pool_elems)
 	*p = NULL;
 
 	if (htt_tx_frag_desc_attach(pdev, desc_pool_elems)) {
-		TXRX_PRINT(TXRX_PRINT_LEVEL_ERR,
-			"HTT Frag descriptor alloc fail");
+		ol_txrx_err("HTT Frag descriptor alloc fail");
 		goto free_htt_desc;
 	}
 
@@ -598,6 +592,7 @@ htt_tx_set_frag_desc_addr(struct htt_pdev_t *pdev,
 			  uint16_t index)
 {
 	uint32_t *fragmentation_descr_field_ptr;
+
 	fragmentation_descr_field_ptr = (uint32_t *)
 		((uint32_t *)htt_tx_desc) +
 		HTT_TX_DESC_FRAGS_DESC_PADDR_OFFSET_DWORD;
@@ -660,7 +655,7 @@ static qdf_dma_addr_t htt_tx_get_paddr(htt_pdev_handle pdev,
 	}
 
 	if (!page_info) {
-		TXRX_PRINT(TXRX_PRINT_LEVEL_ERR, "invalid page_info");
+		ol_txrx_err("invalid page_info");
 		return 0;
 	}
 
@@ -702,7 +697,8 @@ void *htt_tx_desc_alloc(htt_pdev_handle pdev, qdf_dma_addr_t *paddr,
 	 * Include the headroom for the HTC frame header when specifying the
 	 * physical address for the HTT tx descriptor.
 	 */
-	*paddr = (qdf_dma_addr_t)htt_tx_get_paddr(pdev, (char *)htt_host_tx_desc);
+	*paddr = (qdf_dma_addr_t)htt_tx_get_paddr(pdev,
+						  (char *)htt_host_tx_desc);
 	/*
 	 * The allocated tx descriptor space includes headroom for a
 	 * HTC frame header.  Hide this headroom, so that we don't have
@@ -741,8 +737,10 @@ void htt_tx_desc_flag_batch_more(htt_pdev_handle pdev, void *desc)
 
 #ifdef ATH_11AC_TXCOMPACT
 
-/* Scheduling the Queued packets in HTT which could not be sent out
-   because of No CE desc*/
+/*
+ * Scheduling the Queued packets in HTT which could not be sent out
+ * because of No CE desc
+ */
 void htt_tx_sched(htt_pdev_handle pdev)
 {
 	qdf_nbuf_t msdu;
@@ -964,6 +962,7 @@ htt_tx_send_batch(htt_pdev_handle pdev, qdf_nbuf_t head_msdu, int num_msdus)
 	uint16_t *msdu_id_storage;
 	uint16_t msdu_id;
 	qdf_nbuf_t msdu;
+
 	/*
 	 * FOR NOW, iterate through the batch, sending the frames singly.
 	 * Eventually HTC and HIF should be able to accept a batch of
@@ -1137,18 +1136,20 @@ static int htt_tx_ipa_uc_wdi_tx_buf_alloc(struct htt_pdev_t *pdev,
 	tx_buffer_count_pwr2 = qdf_rounddown_pow_of_two(tx_buffer_count + 1)
 			       - 1;
 	if (tx_buffer_count > tx_buffer_count_pwr2) {
-		qdf_print(
-		    "%s: Allocated Tx buffer count %d is rounded down to %d",
-		    __func__, tx_buffer_count, tx_buffer_count_pwr2);
+		QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO,
+			  "%s: Allocated Tx buffer count %d is rounded down to %d",
+			  __func__, tx_buffer_count, tx_buffer_count_pwr2);
 
 		/* Free over allocated buffers below power of 2 */
 		for (idx = tx_buffer_count_pwr2; idx < tx_buffer_count; idx++) {
 			if (pdev->ipa_uc_tx_rsc.tx_buf_pool_vaddr_strg[idx]) {
-			    qdf_mem_free_consistent(
-				pdev->osdev, pdev->osdev->dev,
-				ol_cfg_ipa_uc_tx_buf_size(pdev->ctrl_pdev),
-				pdev->ipa_uc_tx_rsc.tx_buf_pool_vaddr_strg[idx],
-				pdev->ipa_uc_tx_rsc.paddr_strg[idx], 0);
+				qdf_mem_free_consistent(
+					pdev->osdev, pdev->osdev->dev,
+					ol_cfg_ipa_uc_tx_buf_size(
+						pdev->ctrl_pdev),
+					pdev->ipa_uc_tx_rsc.
+						tx_buf_pool_vaddr_strg[idx],
+					pdev->ipa_uc_tx_rsc.paddr_strg[idx], 0);
 			}
 		}
 	}
@@ -1174,6 +1175,7 @@ static int htt_tx_ipa_uc_wdi_tx_buf_alloc(struct htt_pdev_t *pdev,
 	uint32_t *header_ptr;
 	uint32_t *ring_vaddr;
 	uint16_t idx;
+	QDF_STATUS status;
 
 	ring_vaddr = pdev->ipa_uc_tx_rsc.tx_comp_base.vaddr;
 	/* Allocate TX buffers as many as possible */
@@ -1199,7 +1201,16 @@ static int htt_tx_ipa_uc_wdi_tx_buf_alloc(struct htt_pdev_t *pdev,
 		*header_ptr |= ((uint16_t) uc_tx_partition_base +
 				tx_buffer_count) << 16;
 
-		qdf_nbuf_map(pdev->osdev, buffer_vaddr, QDF_DMA_BIDIRECTIONAL);
+		status = qdf_nbuf_map(pdev->osdev, buffer_vaddr,
+				      QDF_DMA_BIDIRECTIONAL);
+		if (status != QDF_STATUS_SUCCESS) {
+			QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_ERROR,
+			  "%s: nbuf map failed, loop index: %d",
+			  __func__, tx_buffer_count);
+			qdf_nbuf_free(buffer_vaddr);
+			return tx_buffer_count;
+		}
+
 		buffer_paddr = qdf_nbuf_get_frag_paddr(buffer_vaddr, 0);
 		header_ptr++;
 		*header_ptr = (uint32_t) (buffer_paddr +
@@ -1227,18 +1238,20 @@ static int htt_tx_ipa_uc_wdi_tx_buf_alloc(struct htt_pdev_t *pdev,
 	tx_buffer_count_pwr2 = qdf_rounddown_pow_of_two(tx_buffer_count + 1)
 			       - 1;
 	if (tx_buffer_count > tx_buffer_count_pwr2) {
-		qdf_print(
-		    "%s: Allocated Tx buffer count %d is rounded down to %d",
-		    __func__, tx_buffer_count, tx_buffer_count_pwr2);
+		QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO,
+			  "%s: Allocated Tx buffer count %d is rounded down to %d",
+			  __func__, tx_buffer_count, tx_buffer_count_pwr2);
 
 		/* Free over allocated buffers below power of 2 */
 		for (idx = tx_buffer_count_pwr2; idx < tx_buffer_count; idx++) {
 			if (pdev->ipa_uc_tx_rsc.tx_buf_pool_vaddr_strg[idx]) {
-			    qdf_mem_free_consistent(
-				pdev->osdev, pdev->osdev->dev,
-				ol_cfg_ipa_uc_tx_buf_size(pdev->ctrl_pdev),
-				pdev->ipa_uc_tx_rsc.tx_buf_pool_vaddr_strg[idx],
-				pdev->ipa_uc_tx_rsc.paddr_strg[idx], 0);
+				qdf_mem_free_consistent(
+					pdev->osdev, pdev->osdev->dev,
+					ol_cfg_ipa_uc_tx_buf_size(
+						pdev->ctrl_pdev),
+					pdev->ipa_uc_tx_rsc.
+						tx_buf_pool_vaddr_strg[idx],
+					pdev->ipa_uc_tx_rsc.paddr_strg[idx], 0);
 			}
 		}
 	}
@@ -1312,7 +1325,7 @@ int htt_tx_ipa_uc_attach(struct htt_pdev_t *pdev,
 	if (!pdev->ipa_uc_tx_rsc.paddr_strg) {
 		qdf_print("%s: TX BUF POOL paddr storage alloc fail", __func__);
 		return_code = -ENOBUFS;
-		goto free_tx_comp_base;
+		goto free_tx_buf_pool_vaddr_strg;
 	}
 
 	pdev->ipa_uc_tx_rsc.alloc_tx_buf_cnt = htt_tx_ipa_uc_wdi_tx_buf_alloc(
@@ -1321,6 +1334,8 @@ int htt_tx_ipa_uc_attach(struct htt_pdev_t *pdev,
 
 	return 0;
 
+free_tx_buf_pool_vaddr_strg:
+	qdf_mem_free(pdev->ipa_uc_tx_rsc.tx_buf_pool_vaddr_strg);
 free_tx_comp_base:
 	qdf_mem_free_consistent(pdev->osdev, pdev->osdev->dev,
 				   tx_comp_ring_size,
@@ -1414,11 +1429,13 @@ htt_tx_desc_fill_tso_info(htt_pdev_handle pdev, void *desc,
 		 tso_seg->seg.tso_flags;
 
 	/* First 24 bytes (6*4) contain the TSO flags */
-	TSO_DEBUG("%s seq# %u l2 len %d, ip len %d flags 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
+	TSO_DEBUG("%s seq# %u l2 len %d, ip len %d\n",
 		  __func__,
 		  tso_seg->seg.tso_flags.tcp_seq_num,
 		  tso_seg->seg.tso_flags.l2_len,
-		  tso_seg->seg.tso_flags.ip_len,
+		  tso_seg->seg.tso_flags.ip_len);
+	TSO_DEBUG("%s flags 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
+		  __func__,
 		  *word,
 		  *(word + 1),
 		  *(word + 2),
@@ -1431,6 +1448,7 @@ htt_tx_desc_fill_tso_info(htt_pdev_handle pdev, void *desc,
 	for (i = 0; i < tso_seg->seg.num_frags; i++) {
 		uint32_t lo = 0;
 		uint32_t hi = 0;
+
 		qdf_dmaaddr_to_32s(tso_seg->seg.tso_frags[i].paddr,
 						&lo, &hi);
 		/* [31:0] first 32 bits of the buffer pointer  */
@@ -1445,12 +1463,10 @@ htt_tx_desc_fill_tso_info(htt_pdev_handle pdev, void *desc,
 			msdu_ext_desc->frags[i].u.frag32.ptr_low,
 			msdu_ext_desc->frags[i].u.frag32.ptr_hi,
 			msdu_ext_desc->frags[i].u.frag32.len);
-
 	}
 
-	if (tso_seg->seg.num_frags < FRAG_NUM_MAX) {
+	if (tso_seg->seg.num_frags < FRAG_NUM_MAX)
 		*word = 0;
-	}
 }
 #endif /* FEATURE_TSO */
 
@@ -1511,12 +1527,12 @@ void htt_fill_ocb_ext_header(qdf_nbuf_t msdu,
 	if (tx_ctrl->all_flags == 0)
 		return;
 	/*
-	  * Copy the info that was read from TX control header from the
-	  * user application to the extended HTT header.
-	  * First copy everything
-	  * to a local temp structure, and then copy everything to the
-	  * actual uncached structure in one go to save memory writes.
-	  */
+	 * Copy the info that was read from TX control header from the
+	 * user application to the extended HTT header.
+	 * First copy everything
+	 * to a local temp structure, and then copy everything to the
+	 * actual uncached structure in one go to save memory writes.
+	 */
 	local_desc_ext->valid_pwr = tx_ctrl->valid_pwr;
 	local_desc_ext->valid_mcs_mask = tx_ctrl->valid_datarate;
 	local_desc_ext->valid_retries = tx_ctrl->valid_retries;
@@ -1693,7 +1709,7 @@ htt_tx_desc_init(htt_pdev_handle pdev,
 
 		ce_pkt_type = htt_to_ce_pkt_type[pkt_type];
 		if (0xffffffff == ce_pkt_type) {
-			QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_DEBUG,
+			QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_INFO_HIGH,
 			"Invalid HTT pkt type %d\n", pkt_type);
 			return QDF_STATUS_E_INVAL;
 		}
@@ -1731,7 +1747,7 @@ htt_tx_desc_init(htt_pdev_handle pdev,
 		uint32_t total_len = tso_info->curr_seg->seg.total_len;
 
 		HTT_TX_DESC_FRM_LEN_SET(local_word1, total_len);
-		TSO_DEBUG("%s setting HTT TX DESC Len = curr_seg->seg.total_len %d\n",
+		TSO_DEBUG("%s setting HTT TX DESC Len = %d\n",
 			  __func__, total_len);
 	} else {
 		HTT_TX_DESC_FRM_LEN_SET(local_word1, qdf_nbuf_len(msdu));
@@ -1740,8 +1756,10 @@ htt_tx_desc_init(htt_pdev_handle pdev,
 	HTT_TX_DESC_FRM_ID_SET(local_word1, msdu_id);
 	*word1 = local_word1;
 
-	/* Initialize peer_id to INVALID_PEER because
-	   this is NOT Reinjection path */
+	/*
+	 * Initialize peer_id to INVALID_PEER because
+	 * this is NOT Reinjection path
+	 */
 	local_word3 = HTT_INVALID_PEER;
 	channel_freq = htt_get_channel_freq(type, ext_header_data);
 	if (channel_freq != HTT_INVALID_CHANNEL)
@@ -1831,6 +1849,7 @@ void htt_tx_group_credit_process(struct htt_pdev_t *pdev, u_int32_t *msg_word)
 	u_int32_t group_credit_abs, vdev_id_mask, ac_mask;
 	u_int8_t group_abs, group_id;
 	u_int8_t group_offset = 0, more_group_present = 0;
+
 	more_group_present = HTT_TX_CREDIT_TXQ_GRP_GET(*msg_word);
 
 	while (more_group_present) {
