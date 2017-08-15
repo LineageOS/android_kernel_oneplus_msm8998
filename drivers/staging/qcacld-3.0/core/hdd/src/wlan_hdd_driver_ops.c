@@ -335,6 +335,7 @@ static int wlan_hdd_probe(struct device *dev, void *bdev, const hif_bus_id *bid,
 {
 	int ret = 0;
 
+	mutex_lock(&hdd_init_deinit_lock);
 	pr_info("%s: %sprobing driver v%s\n", WLAN_MODULE_NAME,
 		reinit ? "re-" : "", QWLAN_VERSIONSTR);
 
@@ -374,6 +375,7 @@ static int wlan_hdd_probe(struct device *dev, void *bdev, const hif_bus_id *bid,
 	hdd_allow_suspend(WIFI_POWER_EVENT_WAKELOCK_DRIVER_INIT);
 	hdd_remove_pm_qos(dev);
 
+	mutex_unlock(&hdd_init_deinit_lock);
 	return 0;
 
 
@@ -384,6 +386,7 @@ err_hdd_deinit:
 		cds_set_load_in_progress(false);
 	hdd_allow_suspend(WIFI_POWER_EVENT_WAKELOCK_DRIVER_INIT);
 	hdd_remove_pm_qos(dev);
+	mutex_unlock(&hdd_init_deinit_lock);
 	return ret;
 }
 
@@ -461,6 +464,12 @@ static inline void hdd_wlan_ssr_shutdown_event(void)
 static void wlan_hdd_shutdown(void)
 {
 	void *hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
+
+	if (hdd_get_conparam() == QDF_GLOBAL_FTM_MODE) {
+		hdd_err("Crash recovery is not allowed in FTM mode");
+		QDF_BUG(0);
+		return;
+	}
 
 	if (cds_is_load_or_unload_in_progress()) {
 		hdd_warn("Load/unload in progress, ignore SSR shutdown");
@@ -1039,7 +1048,11 @@ static int wlan_hdd_pld_probe(struct device *dev,
 static void wlan_hdd_pld_remove(struct device *dev,
 		     enum pld_bus_type bus_type)
 {
+	ENTER();
+	mutex_lock(&hdd_init_deinit_lock);
 	wlan_hdd_remove(dev);
+	mutex_unlock(&hdd_init_deinit_lock);
+	EXIT();
 }
 
 /**
@@ -1052,7 +1065,11 @@ static void wlan_hdd_pld_remove(struct device *dev,
 static void wlan_hdd_pld_shutdown(struct device *dev,
 		       enum pld_bus_type bus_type)
 {
+	ENTER();
+	mutex_lock(&hdd_init_deinit_lock);
 	wlan_hdd_shutdown();
+	mutex_unlock(&hdd_init_deinit_lock);
+	EXIT();
 }
 
 /**
