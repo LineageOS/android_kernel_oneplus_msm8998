@@ -175,6 +175,10 @@ enum {
 	RX_GAIN_OFFSET_0_DB,
 };
 
+#ifdef CONFIG_VENDOR_ONEPLUS
+extern struct regulator *bob_power;
+#endif
+
 extern void *tasha_get_afe_config(struct snd_soc_codec *codec,
 				  enum afe_config_type config_type);
 extern int tasha_cdc_mclk_enable(struct snd_soc_codec *codec, int enable,
