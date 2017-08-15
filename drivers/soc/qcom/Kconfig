@@ -947,4 +947,10 @@ config MSM_CACHE_M4M_ERP64_PANIC_ON_UE
          Say 'Y' here to cause kernel panic when uncorrectable cache/M4M errors
          are detected.
 
+config ONEPLUS_PROJECT_INFO
+	bool "Enable OnePlus Project Info"
+	default y
+	help
+	  Used by various OnePlus drivers, disable this and you will have a hard time.
+
 source "drivers/soc/qcom/memshare/Kconfig"
