@@ -417,16 +417,18 @@
 			};
 		};
 	};
+
 	qcom,pm8998@0{
 		qcom,power-on@800 {
 		    qcom,pon-dbc-delay = <31250>;
 		    qcom,kpdpwr-sw-debounce;
 	    };
 	};
+
 	qcom,pmi8998@3 {
-		/* RGB LED blink */
-		#address-cells = <1>;
-		#size-cells = <1>;
+		qcom,leds@d000 {
+			qcom,rgb-sync;
+		};
 	};
 };
 
