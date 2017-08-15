@@ -674,6 +674,9 @@ static ssize_t mdss_fb_force_panel_dead(struct device *dev,
 		return len;
 	}
 
+#ifdef CONFIG_VENDOR_ONEPLUS
+	mdss_fb_report_panel_dead(mfd);
+#endif
 	if (kstrtouint(buf, 0, &pdata->panel_info.panel_force_dead))
 		pr_err("kstrtouint buf error!\n");
 
@@ -1994,6 +1997,11 @@ static int mdss_fb_blank_unblank(struct msm_fb_data_type *mfd)
 	}
 
 error:
+#ifdef CONFIG_VENDOR_ONEPLUS
+	if (!mfd->panel_info->cont_splash_enabled) {
+		mfd->panel_post_on = 1;
+	}
+#endif
 	return ret;
 }
 
@@ -3739,6 +3747,12 @@ static int __mdss_fb_perform_commit(struct msm_fb_data_type *mfd)
 	}
 
 skip_commit:
+#ifdef CONFIG_VENDOR_ONEPLUS
+	if (mfd->panel_post_on == 1) {
+		mfd->panel_post_on = 0;
+		mdss_fb_send_panel_event(mfd, MDSS_EVENT_POST_PANEL_ON, NULL);
+	}
+#endif
 	if (!ret)
 		mdss_fb_update_backlight(mfd);
 

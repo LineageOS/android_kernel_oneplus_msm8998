@@ -122,10 +122,10 @@ irqreturn_t hw_vsync_handler(int irq, void *data)
 			msecs_to_jiffies(interval));
 	else
 		pr_err("Pstatus data is NULL\n");
-
+#ifndef CONFIG_VENDOR_ONEPLUS
 	if (!atomic_read(&ctrl_pdata->te_irq_ready))
 		atomic_inc(&ctrl_pdata->te_irq_ready);
-
+#endif
 	return IRQ_HANDLED;
 }
 
