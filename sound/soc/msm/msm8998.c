@@ -527,9 +527,15 @@ static struct wcd_mbhc_config wcd_mbhc_cfg = {
 	.swap_gnd_mic = NULL,
 	.hs_ext_micbias = true,
 	.key_code[0] = KEY_MEDIA,
+#ifdef CONFIG_VENDOR_ONEPLUS
+	.key_code[1] = KEY_VOLUMEUP,
+	.key_code[2] = KEY_VOLUMEDOWN,
+	.key_code[3] = 0,
+#else
 	.key_code[1] = KEY_VOICECOMMAND,
 	.key_code[2] = KEY_VOLUMEUP,
 	.key_code[3] = KEY_VOLUMEDOWN,
+#endif
 	.key_code[4] = 0,
 	.key_code[5] = 0,
 	.key_code[6] = 0,
@@ -3732,7 +3738,11 @@ static void *def_tasha_mbhc_cal(void)
 		return NULL;
 
 #define S(X, Y) ((WCD_MBHC_CAL_PLUG_TYPE_PTR(tasha_wcd_cal)->X) = (Y))
+#ifdef CONFIG_VENDOR_ONEPLUS
+	S(v_hs_max, 1700);
+#else
 	S(v_hs_max, 1600);
+#endif
 #undef S
 #define S(X, Y) ((WCD_MBHC_CAL_BTN_DET_PTR(tasha_wcd_cal)->X) = (Y))
 	S(num_btn, WCD_MBHC_DEF_BUTTONS);
@@ -3743,9 +3753,15 @@ static void *def_tasha_mbhc_cal(void)
 		(sizeof(btn_cfg->_v_btn_low[0]) * btn_cfg->num_btn);
 
 	btn_high[0] = 75;
+#ifdef CONFIG_VENDOR_ONEPLUS
+	btn_high[1] = 213;
+	btn_high[2] = 450;
+	btn_high[3] = 470;
+#else
 	btn_high[1] = 150;
 	btn_high[2] = 237;
 	btn_high[3] = 500;
+#endif
 	btn_high[4] = 500;
 	btn_high[5] = 500;
 	btn_high[6] = 500;
@@ -4204,6 +4220,14 @@ static int msm_set_pinctrl(struct msm_pinctrl_info *pinctrl_info,
 		ret = -EINVAL;
 		goto err;
 	}
+
+#ifdef CONFIG_VENDOR_ONEPLUS
+	if (pinctrl_info->pinctrl == NULL) {
+		pr_debug("%s: pinctrl_info->pinctrl is NULL\n", __func__);
+		goto err;
+	}
+#endif
+
 	curr_state = pinctrl_info->curr_state;
 	pinctrl_info->curr_state = new_state;
 	pr_debug("%s: curr_state = %s new_state = %s\n", __func__,
@@ -6257,8 +6281,13 @@ static struct snd_soc_dai_link msm_mi2s_be_dai_links[] = {
 		.stream_name = "Quaternary MI2S Playback",
 		.cpu_dai_name = "msm-dai-q6-mi2s.3",
 		.platform_name = "msm-pcm-routing",
+#ifdef CONFIG_VENDOR_ONEPLUS
+		.codec_name = "tfa98xx.9-0036",
+		.codec_dai_name = "tfa98xx_codec-9-36",
+#else
 		.codec_name = "msm-stub-codec.1",
 		.codec_dai_name = "msm-stub-rx",
+#endif
 		.no_pcm = 1,
 		.dpcm_playback = 1,
 		.be_id = MSM_BACKEND_DAI_QUATERNARY_MI2S_RX,
@@ -6970,6 +6999,10 @@ static int msm_init_wsa_dev(struct platform_device *pdev,
 	char *dev_name_str = NULL;
 	int found = 0;
 	int ret = 0;
+
+#ifdef CONFIG_VENDOR_ONEPLUS
+	return ret;
+#endif
 
 	/* Get maximum WSA device count for this platform */
 	ret = of_property_read_u32(pdev->dev.of_node,
