@@ -994,6 +994,16 @@ config SND_SOC_MSM_HDMI_CODEC_RX
 	HDMI audio drivers should be built only if the platform
         supports hdmi panel.
 
+config SND_SOC_SMART_PA_TFA9891
+	tristate "SMARTPA TFA9891 AUDIO"
+	depends on I2C
+	default y
+	help
+	  Say Y here if you have the TFA9891 SMARTPA controller
+	  chip in your system.
+
+	  If unsure, say N.
+
 source "sound/soc/codecs/sdm660_cdc/Kconfig"
 source "sound/soc/codecs/msm_sdw/Kconfig"
 
