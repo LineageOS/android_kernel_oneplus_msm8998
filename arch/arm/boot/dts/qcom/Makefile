@@ -102,6 +102,8 @@ dtb-$(CONFIG_ARCH_MSM8996) += msm8996-v2-pmi8994-cdp.dtb \
 	apq8096-v3-pmi8996-mdm9x55-slimbus-mtp.dtb \
 	apq8096-v3-pmi8996-dragonboard.dtb
 
+# Disable to reduze kernel size
+ifeq (true,false)
 dtb-$(CONFIG_ARCH_MSM8998) += msm8998-sim.dtb \
 	msm8998-rumi.dtb \
 	msm8998-cdp.dtb \
@@ -135,6 +137,20 @@ dtb-$(CONFIG_ARCH_MSM8998) += msm8998-sim.dtb \
 	msm8998-v2.1-interposer-sdm660-cdp.dtb \
 	msm8998-v2.1-interposer-sdm660-mtp.dtb \
 	msm8998-v2.1-interposer-sdm660-qrd.dtb
+endif
+
+dtb-$(CONFIG_ARCH_MSM8998) += \
+	cheeseburger-evb.dtb \
+	cheeseburger-v2.1-backup.dtb \
+	cheeseburger-v2.1-dvt1.dtb \
+	cheeseburger-v2.1-evb.dtb \
+	cheeseburger-v2.1-evt1.dtb \
+	cheeseburger-v2.1-evt2.dtb \
+	cheeseburger-v2.1-evt3.dtb \
+	cheeseburger-v2.1-pvt.dtb \
+	cheeseburger-v2.1-pvt1.dtb \
+	cheeseburger-v2.1-t0.dtb \
+	cheeseburger-v2.1-t1.dtb
 
 dtb-$(CONFIG_ARCH_MSMHAMSTER) += msmhamster-rumi.dtb
 
