@@ -651,6 +651,9 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 		mbhc->zl = mbhc->zr = 0;
 		pr_debug("%s: Reporting removal %d(%x)\n", __func__,
 			 jack_type, mbhc->hph_status);
+#ifdef CONFIG_VENDOR_ONEPLUS
+		switch_set_state(&mbhc->wcd9xxx_sdev,0);
+#endif
 		wcd_mbhc_jack_report(mbhc, &mbhc->headset_jack,
 				mbhc->hph_status, WCD_MBHC_JACK_MASK);
 		wcd_mbhc_set_and_turnoff_hph_padac(mbhc);
@@ -762,6 +765,28 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 		}
 
 		mbhc->hph_status |= jack_type;
+
+#ifdef CONFIG_VENDOR_ONEPLUS
+	switch (mbhc->current_plug) {
+		case MBHC_PLUG_TYPE_HEADPHONE:
+		case MBHC_PLUG_TYPE_HIGH_HPH:
+			mbhc->mbhc_cfg->headset_type = 0;
+			switch_set_state(&mbhc->wcd9xxx_sdev,2);
+			break;
+		case MBHC_PLUG_TYPE_GND_MIC_SWAP:
+			mbhc->mbhc_cfg->headset_type = 0;
+			switch_set_state(&mbhc->wcd9xxx_sdev,1);
+			break;
+		case MBHC_PLUG_TYPE_HEADSET:
+			mbhc->mbhc_cfg->headset_type = 1;
+			switch_set_state(&mbhc->wcd9xxx_sdev,1);
+			break;
+		default:
+			mbhc->mbhc_cfg->headset_type = 0;
+			switch_set_state(&mbhc->wcd9xxx_sdev,0);
+			break;
+	}
+#endif
 
 		pr_debug("%s: Reporting insertion %d(%x)\n", __func__,
 			 jack_type, mbhc->hph_status);
