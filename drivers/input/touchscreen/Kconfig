@@ -1215,6 +1215,12 @@ config TOUCHSCREEN_IT7260_I2C
 	  To compile this driver as a module, choose M here: the
 	  module will be called it7258_ts_i2c.
 
+config TOUCHSCREEN_SYNAPTICS_S3320_I2C_RMI
+	tristate "Synaptics s3320 i2c touchscreen"
+	depends on I2C
+	help
+	  This enables support for Synaptics s1302 RMI over I2C based touch key.
+
 config TOUCHSCREEN_ST
 	bool "STMicroelectronics Touchscreen Driver"
 	depends on I2C
