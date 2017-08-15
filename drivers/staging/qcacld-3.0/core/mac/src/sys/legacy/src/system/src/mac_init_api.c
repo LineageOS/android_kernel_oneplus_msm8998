@@ -41,7 +41,6 @@
 #include "cfg_api.h"             /* cfg_cleanup */
 #include "lim_api.h"             /* lim_cleanup */
 #include "sir_types.h"
-#include "sys_debug.h"
 #include "sys_entry_func.h"
 #include "mac_init_api.h"
 
@@ -67,8 +66,6 @@ tSirRetStatus mac_start(tHalHandle hHal, void *pHalMacStartParams)
 
 	pMac->gDriverType =
 		((tHalMacStartParameters *) pHalMacStartParams)->driverType;
-
-	sys_log(pMac, LOG2, FL("called\n"));
 
 	if (ANI_DRIVER_TYPE(pMac) != eDRIVER_TYPE_MFG) {
 		status = pe_start(pMac);
@@ -129,17 +126,9 @@ tSirRetStatus mac_open(tHalHandle *pHalHandle, tHddHandle hHdd,
 		if (cds_cfg->driver_type)
 			p_mac->gDriverType = eDRIVER_TYPE_MFG;
 
-		/* Call various PE (and other layer init here) */
-		if (eSIR_SUCCESS != log_init(p_mac)) {
-			qdf_mem_free(p_mac);
-			return eSIR_FAILURE;
-		}
-
 		/* Call routine to initialize CFG data structures */
-		if (eSIR_SUCCESS != cfg_init(p_mac)) {
-			qdf_mem_free(p_mac);
+		if (eSIR_SUCCESS != cfg_init(p_mac))
 			return eSIR_FAILURE;
-		}
 
 		sys_init_globals(p_mac);
 	}
@@ -150,8 +139,8 @@ tSirRetStatus mac_open(tHalHandle *pHalHandle, tHddHandle hHdd,
 
 	status =  pe_open(p_mac, cds_cfg);
 	if (eSIR_SUCCESS != status) {
-		sys_log(p_mac, LOGE, FL("mac_open failure\n"));
-		qdf_mem_free(p_mac);
+		pe_err("pe_open() failure");
+		cfg_de_init(p_mac);
 	}
 
 	return status;
@@ -178,7 +167,7 @@ tSirRetStatus mac_close(tHalHandle hHal)
 	/* Call routine to free-up all CFG data structures */
 	cfg_de_init(pMac);
 
-	log_deinit(pMac);
+	qdf_mem_zero(pMac, sizeof(*pMac));
 
 	return eSIR_SUCCESS;
 }

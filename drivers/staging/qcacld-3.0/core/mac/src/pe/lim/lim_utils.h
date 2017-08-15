@@ -632,7 +632,8 @@ QDF_STATUS lim_send_ext_cap_ie(tpAniSirGlobal mac_ctx, uint32_t session_id,
 			       tDot11fIEExtCap *extracted_extcap, bool merge);
 
 QDF_STATUS lim_send_ies_per_band(tpAniSirGlobal mac_ctx,
-				 tpPESession session, uint8_t vdev_id);
+				 tpPESession session, uint8_t vdev_id,
+				 uint8_t is_hw_mode_dbs);
 
 tSirRetStatus lim_strip_extcap_ie(tpAniSirGlobal mac_ctx, uint8_t *addn_ie,
 			  uint16_t *addn_ielen, uint8_t *extracted_extcap);
@@ -695,6 +696,9 @@ tSirRetStatus lim_strip_ie(tpAniSirGlobal mac_ctx,
 		uint8_t eid, eSizeOfLenField size_of_len_field,
 		uint8_t *oui, uint8_t out_len, uint8_t *extracted_ie,
 		uint32_t eid_max_len);
+bool lim_get_rx_ldpc(tpAniSirGlobal mac_ctx, enum channel_enum ch,
+			   uint8_t is_hw_mode_dbs);
+
 /**
  * lim_decrement_pending_mgmt_count: Decrement mgmt frame count
  * @mac_ctx: Pointer to global MAC structure
@@ -705,4 +709,37 @@ tSirRetStatus lim_strip_ie(tpAniSirGlobal mac_ctx,
  * Return: None
  */
 void lim_decrement_pending_mgmt_count(tpAniSirGlobal mac_ctx);
+QDF_STATUS lim_util_get_type_subtype(void *pkt, uint8_t *type,
+					uint8_t *subtype);
+
+/**
+ * lim_send_chan_switch_action_frame()- function to send ECSA/CSA
+ * action frame for each sta connected to SAP/GO and AP in case of
+ * STA .
+ * @mac_ctx: pointer to global mac structure
+ * @new_channel: new channel to switch to.
+ * @ch_bandwidth: BW of channel to calculate op_class
+ * @session_entry: pe session
+ *
+ * This function is called to send ECSA/CSA frame for STA/CLI and SAP/GO.
+ *
+ * Return: void
+ */
+void lim_send_chan_switch_action_frame(tpAniSirGlobal mac_ctx,
+			uint16_t new_channel, uint8_t ch_bandwidth,
+			tpPESession session_entry);
+/**
+ * lim_check_if_vendor_oui_match() - Check if the given OUI match in IE buffer
+ * @mac_ctx: MAC context
+ * @ie: IE buffer
+ * @ie_len: length of @ie
+ *
+ * This API is used to check if given vendor OUI
+ * matches in given IE buffer
+ *
+ * Return: True, if mataches. False otherwise
+ */
+bool lim_check_if_vendor_oui_match(tpAniSirGlobal mac_ctx,
+				uint8_t *oui, uint8_t oui_len,
+				uint8_t *ie, uint8_t ie_len);
 #endif /* __LIM_UTILS_H */

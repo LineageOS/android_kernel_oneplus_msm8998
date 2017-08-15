@@ -44,6 +44,60 @@
 #include "rrm_api.h"
 #include "cds_utils.h"
 
+#ifdef WLAN_FEATURE_FILS_SK
+/**
+ * lim_update_bss_with_fils_data: update fils data to bss descriptor
+ * if available in probe/beacon.
+ * @pr: probe response/beacon
+ * @bss_descr: pointer to bss descriptor
+ *
+ * @Return: None
+ */
+static void lim_update_bss_with_fils_data(tpSirProbeRespBeacon pr,
+				tSirBssDescription *bss_descr)
+{
+	if (!pr->fils_ind.is_present)
+		return;
+
+	if (pr->fils_ind.realm_identifier.realm_cnt > SIR_MAX_REALM_COUNT)
+		pr->fils_ind.realm_identifier.realm_cnt = SIR_MAX_REALM_COUNT;
+
+	bss_descr->fils_info_element.realm_cnt =
+		pr->fils_ind.realm_identifier.realm_cnt;
+	qdf_mem_copy(bss_descr->fils_info_element.realm,
+		pr->fils_ind.realm_identifier.realm,
+		bss_descr->fils_info_element.realm_cnt * SIR_REALM_LEN);
+	if (pr->fils_ind.cache_identifier.is_present) {
+		bss_descr->fils_info_element.is_cache_id_present = true;
+		qdf_mem_copy(bss_descr->fils_info_element.cache_id,
+			pr->fils_ind.cache_identifier.identifier, CACHE_ID_LEN);
+	}
+	if (pr->fils_ind.is_fils_sk_auth_supported)
+		bss_descr->fils_info_element.is_fils_sk_supported = true;
+}
+#else
+static inline void lim_update_bss_with_fils_data(tpSirProbeRespBeacon pr,
+				tSirBssDescription *bss_descr)
+{
+}
+#endif
+
+#ifdef FEATURE_WLAN_ESE
+static inline void populate_qbss_load_status(tSirBssDescription *pBssDescr,
+				tpSirProbeRespBeacon pBPR)
+{
+	if (pBPR->QBSSLoad.present) {
+		pBssDescr->QBSSLoad_present = true;
+		pBssDescr->QBSSLoad_avail = pBPR->QBSSLoad.avail;
+		pBssDescr->qbss_chan_load = pBPR->QBSSLoad.chautil;
+	}
+}
+#else
+static inline void populate_qbss_load_status(tSirBssDescription *pBssDescr,
+				tpSirProbeRespBeacon pBPR)
+{
+}
+#endif
 
 /**
  * lim_collect_bss_description()
@@ -123,10 +177,25 @@ lim_collect_bss_description(tpAniSirGlobal pMac,
 	pBssDescr->capabilityInfo =
 		lim_get_u16((uint8_t *) &pBPR->capabilityInfo);
 
+	/* HT capability */
+	if (pBPR->HTCaps.present) {
+		pBssDescr->ht_caps_present = 1;
+		if (pBPR->HTCaps.supportedChannelWidthSet)
+			pBssDescr->chan_width = eHT_CHANNEL_WIDTH_40MHZ;
+	}
+	/* VHT Parameters */
+	if (pBPR->VHTCaps.present) {
+		pBssDescr->vht_caps_present = 1;
+		if (pBPR->VHTCaps.muBeamformerCap)
+			pBssDescr->beacomforming_capable = 1;
+	}
+	if (pBPR->VHTOperation.present)
+		if (pBPR->VHTOperation.chanWidth == 1)
+			pBssDescr->chan_width = eHT_CHANNEL_WIDTH_80MHZ;
+
 	if (!pBssDescr->beaconInterval) {
-		lim_log(pMac, LOGW,
-			FL("Beacon Interval is ZERO, making it to default 100 "
-			   MAC_ADDRESS_STR), MAC_ADDR_ARRAY(pHdr->bssId));
+		pe_warn("Beacon Interval is ZERO, making it to default 100 "
+			   MAC_ADDRESS_STR, MAC_ADDR_ARRAY(pHdr->bssId));
 		pBssDescr->beaconInterval = 100;
 	}
 	/*
@@ -162,18 +231,12 @@ lim_collect_bss_description(tpAniSirGlobal pMac,
 
 	/* Copy RSSI & SINR from BD */
 
-	lim_log(pMac, LOG4, "*********BSS Description for BSSID:********* ");
-	sir_dump_buf(pMac, SIR_LIM_MODULE_ID, LOG4, pBssDescr->bssId, 6);
-	sir_dump_buf(pMac, SIR_LIM_MODULE_ID, LOG4,
-		(uint8_t *) pRxPacketInfo, 36);
-
 	pBssDescr->rssi = (int8_t) WMA_GET_RX_RSSI_NORMALIZED(pRxPacketInfo);
 	pBssDescr->rssi_raw = (int8_t) WMA_GET_RX_RSSI_RAW(pRxPacketInfo);
 
 	/* SINR no longer reported by HW */
 	pBssDescr->sinr = 0;
-	lim_log(pMac, LOG3,
-		FL(MAC_ADDRESS_STR " rssi: normalized = %d, absolute = %d"),
+	pe_debug(MAC_ADDRESS_STR " rssi: normalized: %d, absolute: %d",
 		MAC_ADDR_ARRAY(pHdr->bssId), pBssDescr->rssi,
 		pBssDescr->rssi_raw);
 
@@ -181,13 +244,12 @@ lim_collect_bss_description(tpAniSirGlobal pMac,
 	pBssDescr->tsf_delta = WMA_GET_RX_TSF_DELTA(pRxPacketInfo);
 	pBssDescr->seq_ctrl = pHdr->seqControl;
 
-	lim_log(pMac, LOG1,
-		  FL("BSSID: "MAC_ADDRESS_STR " tsf_delta = %u ReceivedTime = %llu ssid = %s"),
+	pe_debug("BSSID: "MAC_ADDRESS_STR " tsf_delta: %u ReceivedTime: %llu ssid: %s",
 		  MAC_ADDR_ARRAY(pHdr->bssId), pBssDescr->tsf_delta,
 		  pBssDescr->received_time,
 		  ((pBPR->ssidPresent) ? (char *)pBPR->ssId.ssId : ""));
 
-	lim_log(pMac, LOG1, FL("Seq Ctrl: Frag Num: %d, Seq Num: LO:%02x HI:%02x"),
+	pe_debug("Seq Ctrl: Frag Num: %d Seq Num: LO: %02x HI: %02x",
 		pBssDescr->seq_ctrl.fragNum, pBssDescr->seq_ctrl.seqNumLo,
 		pBssDescr->seq_ctrl.seqNumHi);
 
@@ -210,14 +272,8 @@ lim_collect_bss_description(tpAniSirGlobal pMac,
 		pBssDescr->mdie[2] = pBPR->mdie[2];
 	}
 
-#ifdef FEATURE_WLAN_ESE
-	pBssDescr->QBSSLoad_present = false;
-	pBssDescr->QBSSLoad_avail = 0;
-	if (pBPR->QBSSLoad.present) {
-		pBssDescr->QBSSLoad_present = true;
-		pBssDescr->QBSSLoad_avail = pBPR->QBSSLoad.avail;
-	}
-#endif
+	populate_qbss_load_status(pBssDescr, pBPR);
+	lim_update_bss_with_fils_data(pBPR, pBssDescr);
 	/* Copy IE fields */
 	qdf_mem_copy((uint8_t *) &pBssDescr->ieFields,
 		     pBody + SIR_MAC_B_PR_SSID_OFFSET, ieLen);
@@ -225,8 +281,7 @@ lim_collect_bss_description(tpAniSirGlobal pMac,
 	/*set channel number in beacon in case it is not present */
 	pBPR->channelNumber = pBssDescr->channelId;
 
-	lim_log(pMac, LOG3,
-		FL("Collected BSS Description for Channel(%1d), length(%u), IE Fields(%u)"),
+	pe_debug("Collected BSS Description for Channel: %1d length: %u IE Fields: %u",
 		pBssDescr->channelId, pBssDescr->length, ieLen);
 	pMac->lim.beacon_probe_rsp_cnt_per_scan++;
 
@@ -259,9 +314,9 @@ lim_check_and_add_bss_description(tpAniSirGlobal mac_ctx,
 	uint32_t frame_len, ie_len = 0;
 	uint8_t rx_chan_in_beacon = 0;
 	QDF_STATUS status;
-	uint8_t dont_update_all = 0;
 	uint8_t rf_band = 0;
 	uint8_t rx_chan_bd = 0;
+	uint32_t flags = 0;
 
 	tSirMacAddr bssid_zero =  {0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 	tpSirMacDataHdr3a hdr;
@@ -301,20 +356,18 @@ lim_check_and_add_bss_description(tpAniSirGlobal mac_ctx,
 		rx_chan_bd = WMA_GET_RX_CH(rx_packet_info);
 
 		if (rx_chan_bd != rx_chan_in_beacon) {
-			/* BCAST Frame, if CH do not match, Drop */
-			if (WMA_IS_RX_BCAST(rx_packet_info)) {
-				lim_log(mac_ctx, LOG3,
-					FL("Beacon/Probe Rsp dropped. Channel in BD %d. Channel in beacon %d"),
+			/* Drop beacon, if CH do not match, Drop */
+			if (!fProbeRsp) {
+				pe_debug("Beacon Rsp dropped. Channel in BD: %d Channel in beacon: %d",
 					WMA_GET_RX_CH(rx_packet_info),
 					lim_get_channel_from_beacon(mac_ctx,
 						bpr));
 				return;
 			}
-			/* Unit cast frame, Probe RSP, do not drop */
+			/* Probe RSP, do not drop */
 			else {
-				dont_update_all = 1;
-				lim_log(mac_ctx, LOG3,
-					FL("SSID %s, CH in ProbeRsp %d, CH in BD %d, mismatch, Do Not Drop"),
+				flags |= WLAN_SKIP_RSSI_UPDATE;
+				pe_debug("SSID: %s CH in ProbeRsp: %d CH in BD: %d mismatch Do Not Drop",
 					bpr->ssId.ssId, rx_chan_in_beacon,
 					WMA_GET_RX_CH(rx_packet_info));
 				WMA_GET_RX_CH(rx_packet_info) =
@@ -331,8 +384,7 @@ lim_check_and_add_bss_description(tpAniSirGlobal mac_ctx,
 
 	ie_len = WMA_GET_RX_PAYLOAD_LEN(rx_packet_info);
 	if (ie_len <= SIR_MAC_B_PR_SSID_OFFSET) {
-		lim_log(mac_ctx, LOGP,
-			FL("RX packet has invalid length %d"), ie_len);
+		pe_err("RX packet has invalid length: %d", ie_len);
 		return;
 	}
 
@@ -344,8 +396,7 @@ lim_check_and_add_bss_description(tpAniSirGlobal mac_ctx,
 
 	if (NULL == bssdescr) {
 		/* Log error */
-		lim_log(mac_ctx, LOGE,
-			FL("qdf_mem_malloc(length=%d) failed"), frame_len);
+		pe_err("qdf_mem_malloc(length: %d) failed", frame_len);
 		return;
 	}
 
@@ -359,10 +410,10 @@ lim_check_and_add_bss_description(tpAniSirGlobal mac_ctx,
 	 * scan_id and flags parameters are currently unused and set to 0.
 	 */
 	if (mac_ctx->lim.add_bssdescr_callback) {
-		(mac_ctx->lim.add_bssdescr_callback) (mac_ctx, bssdescr, 0, 0);
+		(mac_ctx->lim.add_bssdescr_callback) (mac_ctx,
+			bssdescr, 0, flags);
 	} else {
-		lim_log(mac_ctx, LOGE,
-			FL("No CSR callback routine to send beacons"));
+		pe_warn("No CSR callback routine to send beacons");
 		status = QDF_STATUS_E_INVAL;
 	}
 	qdf_mem_free(bssdescr);

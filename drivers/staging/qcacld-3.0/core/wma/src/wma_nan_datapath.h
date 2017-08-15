@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -27,6 +27,8 @@
 #ifndef __WMA_NAN_DATAPATH_H
 #define __WMA_NAN_DATAPATH_H
 
+#include <sir_common.h>
+#include <ani_global.h>
 #include "wma.h"
 #include "sir_api.h"
 #include "sme_nan_datapath.h"
@@ -69,12 +71,10 @@ uint32_t wma_ndp_get_eventid_from_tlvtag(uint32_t tag);
 static inline void wma_update_hdd_cfg_ndp(tp_wma_handle wma_handle,
 					struct wma_tgt_cfg *tgt_cfg)
 {
-	return;
 }
 static inline void wma_add_bss_ndi_mode(tp_wma_handle wma,
 					tpAddBssParams add_bss)
 {
-	return;
 }
 static inline void wma_delete_all_nan_remote_peers(tp_wma_handle wma,
 							uint32_t vdev_id)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -39,6 +39,7 @@
 #include <wlan_hdd_debugfs.h>
 #include <wlan_hdd_wowl.h>
 #include <cds_sched.h>
+#include <wlan_hdd_debugfs_llstat.h>
 
 #define MAX_USER_COMMAND_SIZE_WOWL_ENABLE 8
 #define MAX_USER_COMMAND_SIZE_WOWL_PATTERN 512
@@ -74,8 +75,7 @@ static ssize_t __wcnss_wowenable_write(struct file *file,
 
 	pAdapter = (hdd_adapter_t *)file->private_data;
 	if ((NULL == pAdapter) || (WLAN_HDD_ADAPTER_MAGIC != pAdapter->magic)) {
-		hdd_alert("Invalid adapter or adapter has invalid magic.");
-
+		hdd_err("Invalid adapter or adapter has invalid magic");
 		return -EINVAL;
 	}
 
@@ -84,17 +84,17 @@ static ssize_t __wcnss_wowenable_write(struct file *file,
 	if (0 != ret)
 		return ret;
 
+	if (!wlan_hdd_modules_are_enabled(hdd_ctx))
+		return -EINVAL;
 
 	if (!sme_is_feature_supported_by_fw(WOW)) {
 		hdd_err("Wake-on-Wireless feature is not supported in firmware!");
-
 		return -EINVAL;
 	}
 
 	if (count > MAX_USER_COMMAND_SIZE_WOWL_ENABLE) {
-		hdd_err("Command length is larger than %d bytes.",
+		hdd_err("Command length is larger than %d bytes",
 			MAX_USER_COMMAND_SIZE_WOWL_ENABLE);
-
 		return -EINVAL;
 	}
 
@@ -115,7 +115,6 @@ static ssize_t __wcnss_wowenable_write(struct file *file,
 	if (!wow_enable) {
 		if (!hdd_exit_wowl(pAdapter)) {
 			hdd_err("hdd_exit_wowl failed!");
-
 			return -EFAULT;
 		}
 
@@ -142,7 +141,6 @@ static ssize_t __wcnss_wowenable_write(struct file *file,
 
 	if (!hdd_enter_wowl(pAdapter, wow_mp, wow_pbm)) {
 		hdd_err("hdd_enter_wowl failed!");
-
 		return -EFAULT;
 	}
 	EXIT();
@@ -197,8 +195,7 @@ static ssize_t __wcnss_wowpattern_write(struct file *file,
 	ENTER();
 
 	if ((NULL == pAdapter) || (WLAN_HDD_ADAPTER_MAGIC != pAdapter->magic)) {
-		hdd_alert("Invalid adapter or adapter has invalid magic.");
-
+		hdd_err("Invalid adapter or adapter has invalid magic");
 		return -EINVAL;
 	}
 
@@ -207,16 +204,17 @@ static ssize_t __wcnss_wowpattern_write(struct file *file,
 	if (0 != ret)
 		return ret;
 
+	if (!wlan_hdd_modules_are_enabled(hdd_ctx))
+		return -EINVAL;
+
 	if (!sme_is_feature_supported_by_fw(WOW)) {
 		hdd_err("Wake-on-Wireless feature is not supported in firmware!");
-
 		return -EINVAL;
 	}
 
 	if (count > MAX_USER_COMMAND_SIZE_WOWL_PATTERN) {
-		hdd_err("Command length is larger than %d bytes.",
+		hdd_err("Command length is larger than %d bytes",
 			MAX_USER_COMMAND_SIZE_WOWL_PATTERN);
-
 		return -EINVAL;
 	}
 
@@ -321,8 +319,7 @@ static ssize_t __wcnss_patterngen_write(struct file *file,
 
 	pAdapter = (hdd_adapter_t *)file->private_data;
 	if ((NULL == pAdapter) || (WLAN_HDD_ADAPTER_MAGIC != pAdapter->magic)) {
-		hdd_alert("Invalid adapter or adapter has invalid magic.");
-
+		hdd_err("Invalid adapter or adapter has invalid magic");
 		return -EINVAL;
 	}
 
@@ -330,6 +327,9 @@ static ssize_t __wcnss_patterngen_write(struct file *file,
 	ret = wlan_hdd_validate_context(pHddCtx);
 	if (0 != ret)
 		return ret;
+
+	if (!wlan_hdd_modules_are_enabled(pHddCtx))
+		return -EINVAL;
 
 	if (!sme_is_feature_supported_by_fw(WLAN_PERIODIC_TX_PTRN)) {
 		hdd_err("Periodic Tx Pattern Offload feature is not supported in firmware!");
@@ -340,7 +340,7 @@ static ssize_t __wcnss_patterngen_write(struct file *file,
 	if (count <= MAX_USER_COMMAND_SIZE_FRAME)
 		cmd = qdf_mem_malloc(count + 1);
 	else {
-		hdd_err("Command length is larger than %d bytes.",
+		hdd_err("Command length is larger than %d bytes",
 			MAX_USER_COMMAND_SIZE_FRAME);
 
 		return -EINVAL;
@@ -366,7 +366,7 @@ static ssize_t __wcnss_patterngen_write(struct file *file,
 		goto failure;
 
 	if (pattern_idx > (MAXNUM_PERIODIC_TX_PTRNS - 1)) {
-		hdd_err("Pattern index %d is not in the range (0 ~ %d).",
+		hdd_err("Pattern index: %d is not in the range (0 ~ %d)",
 			pattern_idx, MAXNUM_PERIODIC_TX_PTRNS - 1);
 
 		goto failure;
@@ -412,7 +412,7 @@ static ssize_t __wcnss_patterngen_write(struct file *file,
 	 * In STA mode check if it's in connected state before adding
 	 * patterns
 	 */
-	hdd_info("device mode %d", pAdapter->device_mode);
+	hdd_debug("device mode %d", pAdapter->device_mode);
 	if ((QDF_STA_MODE == pAdapter->device_mode) &&
 	    (!hdd_conn_is_connected(WLAN_HDD_GET_STATION_CTX_PTR(pAdapter)))) {
 			hdd_err("Not in Connected state!");
@@ -611,6 +611,9 @@ static ssize_t __wlan_hdd_read_power_debugfs(struct file *file,
 	if (0 != ret_cnt)
 		return ret_cnt;
 
+	if (!wlan_hdd_modules_are_enabled(hdd_ctx))
+		return -EINVAL;
+
 	if (adapter->chip_power_stats)
 		qdf_mem_free(adapter->chip_power_stats);
 
@@ -762,7 +765,7 @@ static int __wcnss_debugfs_open(struct inode *inode, struct file *file)
 
 	adapter = (hdd_adapter_t *)file->private_data;
 	if ((NULL == adapter) || (WLAN_HDD_ADAPTER_MAGIC != adapter->magic)) {
-		hdd_alert("Invalid adapter or adapter has invalid magic.");
+		hdd_err("Invalid adapter or adapter has invalid magic");
 		return -EINVAL;
 	}
 
@@ -882,6 +885,9 @@ QDF_STATUS hdd_debugfs_init(hdd_adapter_t *adapter)
 	if (QDF_STATUS_SUCCESS != wlan_hdd_create_power_stats_file(adapter))
 		return QDF_STATUS_E_FAILURE;
 
+	if (0 != wlan_hdd_create_ll_stats_file(adapter))
+		return QDF_STATUS_E_FAILURE;
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -900,6 +906,6 @@ void hdd_debugfs_exit(hdd_adapter_t *adapter)
 	if (adapter->debugfs_phy)
 		debugfs_remove_recursive(adapter->debugfs_phy);
 	else
-		hdd_info("Interface %s has no debugfs entry", dev->name);
+		hdd_debug("Interface %s has no debugfs entry", dev->name);
 }
 #endif /* #ifdef WLAN_OPEN_SOURCE */

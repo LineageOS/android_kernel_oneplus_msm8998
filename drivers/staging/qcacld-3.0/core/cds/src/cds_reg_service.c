@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -204,13 +204,7 @@ QDF_STATUS cds_read_default_country(uint8_t *def_ctry)
 	return QDF_STATUS_SUCCESS;
 }
 
-/**
- * cds_get_channel_enum() - get the channel enumeration
- * @chan_num: channel number
- *
- * Return: enum for the channel
- */
-static enum channel_enum cds_get_channel_enum(uint32_t chan_num)
+enum channel_enum cds_get_channel_enum(uint32_t chan_num)
 {
 	uint32_t loop;
 
@@ -534,8 +528,8 @@ static void cds_set_5g_channel_params(uint16_t oper_ch,
 				(bonded_chan_ptr->start_ch +
 				 bonded_chan_ptr->end_ch)/2;
 	}
-	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_INFO,
-			"ch %d ch_wd %d freq0 %d freq1 %d", oper_ch,
+	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_DEBUG,
+			"ch: %d ch_wd: %d freq0: %d freq1: %d", oper_ch,
 			ch_params->ch_width, ch_params->center_freq_seg0,
 			ch_params->center_freq_seg1);
 }
