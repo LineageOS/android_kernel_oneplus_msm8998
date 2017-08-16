@@ -6879,6 +6879,8 @@ void msm_pcie_fixup_resume(struct pci_dev *dev)
 DECLARE_PCI_FIXUP_RESUME(PCIE_VENDOR_ID_RCP, PCIE_DEVICE_ID_RCP,
 				 msm_pcie_fixup_resume);
 
+#ifndef CONFIG_VENDOR_ONEPLUS
+/* comment out for reduce resume time according to QCT CASE#02401320  */
 void msm_pcie_fixup_resume_early(struct pci_dev *dev)
 {
 	int ret;
@@ -6900,6 +6902,7 @@ void msm_pcie_fixup_resume_early(struct pci_dev *dev)
 }
 DECLARE_PCI_FIXUP_RESUME_EARLY(PCIE_VENDOR_ID_RCP, PCIE_DEVICE_ID_RCP,
 				 msm_pcie_fixup_resume_early);
+#endif
 
 int msm_pcie_pm_control(enum msm_pcie_pm_opt pm_opt, u32 busnr, void *user,
 			void *data, u32 options)
