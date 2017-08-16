@@ -574,6 +574,11 @@ struct mdss_dsi_ctrl_pdata {
 
 	struct dsi_err_container err_cont;
 
+#ifdef CONFIG_VENDOR_ONEPLUS
+	struct delayed_work techeck_work;
+	struct completion te_comp;
+#endif
+
 	struct kobject *kobj;
 	int fb_node;
 

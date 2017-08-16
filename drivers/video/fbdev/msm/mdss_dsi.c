@@ -720,6 +720,9 @@ struct buf_data {
 	char *string_buf; /* cmd buf as string, 3 bytes per number */
 	int sblen; /* string buffer length */
 	int sync_flag;
+#ifdef CONFIG_VENDOR_ONEPLUS
+	struct mdss_dsi_ctrl_pdata *ctrl;
+#endif
 	struct mutex dbg_mutex; /* mutex to synchronize read/write/flush */
 };
 
@@ -924,6 +927,9 @@ static int mdss_dsi_cmd_flush(struct file *file, fl_owner_t id)
 	int blen, len, i;
 	char *buf, *bufp, *bp;
 	struct dsi_ctrl_hdr *dchdr;
+#ifdef CONFIG_VENDOR_ONEPLUS
+	struct mdss_dsi_ctrl_pdata * ctrl_data = pcmds->ctrl;
+#endif
 
 	mutex_lock(&pcmds->dbg_mutex);
 
@@ -993,6 +999,11 @@ static int mdss_dsi_cmd_flush(struct file *file, fl_owner_t id)
 		pcmds->buf = buf;
 		pcmds->blen = blen;
 	}
+#ifdef CONFIG_VENDOR_ONEPLUS
+	if ((ctrl_data != NULL) && (ctrl_data->debugfs_info != NULL)){
+		ctrl_data->debugfs_info->override_flag = 1;
+	}
+#endif
 	mutex_unlock(&pcmds->dbg_mutex);
 	return 0;
 }
@@ -1064,6 +1075,11 @@ static int mdss_dsi_debugfs_setup(struct mdss_panel_data *pdata,
 				ctrl_pdata->on_cmds);
 	DEBUGFS_CREATE_DCS_CMD("dsi_off_cmd", dfs->root, &dfs->off_cmd,
 				ctrl_pdata->off_cmds);
+
+#ifdef CONFIG_VENDOR_ONEPLUS
+	dfs->on_cmd.ctrl = ctrl_pdata;
+	dfs->off_cmd.ctrl = ctrl_pdata;
+#endif
 
 	debugfs_create_u32("dsi_err_counter", 0644, dfs->root,
 			   &dfs_ctrl->err_cont.max_err_index);
@@ -1694,7 +1710,11 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 		mipi->vsync_enable && mipi->hw_vsync_mode) {
 		mdss_dsi_set_tear_on(ctrl_pdata);
 		if (mdss_dsi_is_te_based_esd(ctrl_pdata))
+#ifdef CONFIG_VENDOR_ONEPLUS
+			schedule_delayed_work(&ctrl_pdata->techeck_work, msecs_to_jiffies(3000));
+#else
 			enable_irq(gpio_to_irq(ctrl_pdata->disp_te_gpio));
+#endif
 	}
 
 	ctrl_pdata->ctrl_state |= CTRL_STATE_PANEL_INIT;
@@ -1765,8 +1785,12 @@ static int mdss_dsi_blank(struct mdss_panel_data *pdata, int power_state)
 	if ((pdata->panel_info.type == MIPI_CMD_PANEL) &&
 		mipi->vsync_enable && mipi->hw_vsync_mode) {
 		if (mdss_dsi_is_te_based_esd(ctrl_pdata)) {
+#ifdef CONFIG_VENDOR_ONEPLUS
+				cancel_delayed_work_sync(&ctrl_pdata->techeck_work);
+#else
 				disable_irq(gpio_to_irq(
 					ctrl_pdata->disp_te_gpio));
+#endif
 				atomic_dec(&ctrl_pdata->te_irq_ready);
 		}
 		mdss_dsi_set_tear_off(ctrl_pdata);
@@ -3293,6 +3317,39 @@ error:
 	return rc;
 }
 
+#ifdef CONFIG_VENDOR_ONEPLUS
+static void techeck_work_func(struct work_struct *work )
+{
+	int ret = 0;
+	int irq = 0;
+	struct mdss_dsi_ctrl_pdata *pdata = NULL;
+	pdata = container_of(to_delayed_work(work),
+		struct mdss_dsi_ctrl_pdata, techeck_work);
+
+	if (gpio_is_valid(pdata->disp_te_gpio)) {
+		irq = gpio_to_irq(pdata->disp_te_gpio);
+	} else {
+		return;
+	}
+
+	pdata->te_comp.done = 0;
+	enable_irq(irq);
+	ret = wait_for_completion_killable_timeout(&pdata->te_comp,
+						msecs_to_jiffies(300));
+	if (!atomic_read(&pdata->te_irq_ready)){
+		atomic_inc(&pdata->te_irq_ready);
+	}
+
+	if (ret == 0){
+		disable_irq(irq);
+		return;
+	}
+
+	disable_irq(irq);
+	schedule_delayed_work(&pdata->techeck_work, msecs_to_jiffies(3000));
+}
+#endif
+
 static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 {
 	int rc = 0;
@@ -3414,6 +3471,13 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 		pr_err("%s: Failed to set dsi splash config\n", __func__);
 		return rc;
 	}
+
+#ifdef CONFIG_VENDOR_ONEPLUS
+	if (mdss_dsi_is_te_based_esd(ctrl_pdata)) {
+		init_completion(&ctrl_pdata->te_comp);
+		INIT_DELAYED_WORK(&ctrl_pdata->techeck_work, techeck_work_func);
+	}
+#endif
 
 	if (mdss_dsi_is_te_based_esd(ctrl_pdata)) {
 		rc = devm_request_irq(&pdev->dev,

@@ -22,6 +22,10 @@
 #include "mdss_mdp.h"
 #include "mdss_debug.h"
 
+#ifdef VENDOR_CONFIG_ONEPLUS
+#define XLOG_DEFAULT_ENABLE 0
+#define XLOG_DEFAULT_PANIC  0
+#else
 #ifdef CONFIG_FB_MSM_MDSS_XLOG_DEBUG
 #define XLOG_DEFAULT_ENABLE 1
 #else
@@ -29,6 +33,7 @@
 #endif
 
 #define XLOG_DEFAULT_PANIC 1
+#endif
 #define XLOG_DEFAULT_REGDUMP 0x2 /* dump in RAM */
 #define XLOG_DEFAULT_DBGBUSDUMP 0x2 /* dump in RAM */
 #define XLOG_DEFAULT_VBIF_DBGBUSDUMP 0x2 /* dump in RAM */
