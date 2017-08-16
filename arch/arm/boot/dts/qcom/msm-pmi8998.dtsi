@@ -606,8 +606,8 @@
 				<0xd900 0x100>;
 			reg-names = "qpnp-wled-ctrl-base",
 					"qpnp-wled-sink-base";
-			interrupts = <0x3 0xd8 0x1 IRQ_TYPE_EDGE_RISING>,
-					<0x3 0xd8 0x2 IRQ_TYPE_EDGE_RISING>;
+			interrupts = <0x3 0xd8 0x1 IRQ_TYPE_EDGE_BOTH>,
+					<0x3 0xd8 0x2 IRQ_TYPE_EDGE_BOTH>;
 			interrupt-names = "ovp-irq", "sc-irq";
 			linux,name = "wled";
 			linux,default-trigger = "bkl-trigger";
@@ -634,8 +634,8 @@
 			status = "disabled";
 			compatible = "qcom,qpnp-haptic";
 			reg = <0xc000 0x100>;
-			interrupts = <0x3 0xc0 0x0 IRQ_TYPE_EDGE_BOTH>,
-				     <0x3 0xc0 0x1 IRQ_TYPE_EDGE_BOTH>;
+			interrupts = <0x3 0xc0 0x0 IRQ_TYPE_NONE>,
+				     <0x3 0xc0 0x1 IRQ_TYPE_NONE>;
 			interrupt-names = "sc-irq", "play-irq";
 			qcom,pmic-revid = <&pmi8998_revid>;
 			qcom,pmic-misc = <&pmi8998_misc>;
@@ -650,6 +650,8 @@
 			qcom,sc-deb-cycles = <8>;
 			qcom,en-brake;
 			qcom,brake-pattern = [03 03 00 00];
+			qcom,use-play-irq;
+			qcom,use-sc-irq;
 			qcom,lra-high-z = "opt1";
 			qcom,lra-auto-res-mode = "qwd";
 			qcom,lra-res-cal-period = <4>;
