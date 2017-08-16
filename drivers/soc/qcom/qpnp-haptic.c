@@ -2991,6 +2991,8 @@ static int qpnp_haptic_probe(struct platform_device *pdev)
 		return rc;
 	}
 
+	mutex_init(&hap->lock);
+	mutex_init(&hap->wf_lock);
 	spin_lock_init(&hap->bus_lock);
 	rc = qpnp_hap_config(hap);
 	if (rc) {
@@ -2998,8 +3000,6 @@ static int qpnp_haptic_probe(struct platform_device *pdev)
 		return rc;
 	}
 
-	mutex_init(&hap->lock);
-	mutex_init(&hap->wf_lock);
 	INIT_WORK(&hap->work, qpnp_hap_worker);
 	INIT_DELAYED_WORK(&hap->sc_work, qpnp_handle_sc_irq);
 	init_completion(&hap->completion);
