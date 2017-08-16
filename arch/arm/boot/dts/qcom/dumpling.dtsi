@@ -17,18 +17,6 @@
 			reg = <0 0xAC000000 0 0x00200000>;
 			label = "ramoops_mem";
 		};
-		param_mem: param_mem@ac200000 {
-			reg = <0 0xAC200000 0 0x00100000>;
-			label = "param_mem";
-		};
-		mtp_mem: mtp_mem@ac400000 {
-			reg = <0 0xAC400000 0 0x00B00000>;
-			label = "mtp_mem";
-		};
-		bootloader_log_mem: bootloader_log_mem@9fff7000 {
-			reg = <0 0x9FFF7000 0 0x00100000>;
-			label = "bootloader_log_mem";
-		};
 	};
 };
 
@@ -317,6 +305,11 @@
 		compatible = "ramoops";
 		status = "ok";
 		memory-region = <&ramoops_mem>;
+
+		console-size = <0x0 0x00080000>;
+		pmsg-size    = <0x0 0x00040000>;
+		record-size  = <0x0 0x00008000>;
+		ftrace-size  = <0x0 0x00020000>;
 	};
 
 	/* Add  0x9c 0x21C, 0xf0 0x23C */
@@ -342,10 +335,6 @@
 		"uart_pinctrl_deactive";
 		pinctrl-0 = <&uart_console_active>;
 		pinctrl-1 = <&uart_console_deactive>;
-	};
-	bootloader_log {
-		compatible = "bootloader_log";
-		linux,contiguous-region = <&bootloader_log_mem>;
 	};
 };
 
