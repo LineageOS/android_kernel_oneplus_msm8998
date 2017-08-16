@@ -22,6 +22,30 @@
       "revId": "c3c1cc3112becccf7550598cfeabb930ca592be9",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a871a18e_7b86ced6",
+        "filename": "fs/pstore/ram.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 48,
+      "author": {
+        "id": 8328
+      },
+      "writtenOn": "2017-08-16T15:33:36Z",
+      "side": 1,
+      "message": "i am on it, this is not meant to be reviewed yet :)",
+      "parentUuid": "4e032b54_3b5e52e7",
+      "range": {
+        "startLine": 48,
+        "startChar": 7,
+        "endLine": 48,
+        "endChar": 28
+      },
+      "revId": "c3c1cc3112becccf7550598cfeabb930ca592be9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
