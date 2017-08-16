@@ -1785,6 +1785,14 @@ static int autosuspend_check(struct usb_device *udev)
 			 * or else their drivers don't support autosuspend
 			 * and so they are permanently active.
 			 */
+
+#ifdef CONFIG_VENDOR_ONEPLUS
+			if (intf == NULL) {
+				dev_err(&udev->dev, "%s intf = NULL\n", __func__);
+				return -EIO;
+			}
+#endif
+
 			if (intf->dev.power.disable_depth)
 				continue;
 			if (atomic_read(&intf->dev.power.usage_count) > 0)
