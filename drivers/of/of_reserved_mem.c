@@ -22,7 +22,11 @@
 #include <linux/of_reserved_mem.h>
 #include <linux/sort.h>
 
+#ifdef CONFIG_VENDOR_ONEPLUS
+#define MAX_RESERVED_REGIONS	32
+#else
 #define MAX_RESERVED_REGIONS	16
+#endif
 static struct reserved_mem reserved_mem[MAX_RESERVED_REGIONS];
 static int reserved_mem_count;
 
