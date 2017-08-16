@@ -12,6 +12,7 @@
 
 #include "pxlw-iris-settings.dtsi"
 #include "cheeseburger-panels.dtsi"
+#include "cheeseburger-pmi.dtsi"
 
 / {
 	reserved-memory {
