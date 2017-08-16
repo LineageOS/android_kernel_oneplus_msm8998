@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "4e032b54_3b5e52e7",
+        "filename": "fs/pstore/ram.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 48,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2017-08-16T15:32:15Z",
+      "side": 1,
+      "message": "-1, add the dts changes",
+      "range": {
+        "startLine": 48,
+        "startChar": 7,
+        "endLine": 48,
+        "endChar": 28
+      },
+      "revId": "c3c1cc3112becccf7550598cfeabb930ca592be9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
