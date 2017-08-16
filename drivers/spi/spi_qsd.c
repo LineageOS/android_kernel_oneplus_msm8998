@@ -1675,12 +1675,15 @@ static int msm_spi_transfer_one(struct spi_master *master,
 			__func__);
 		status_error = 1;
 	}
-
-
+#ifdef CONFIG_VENDOR_ONEPLUS
+	udelay(10);
+#endif
 	if (!status_error)
 		status_error =
 			msm_spi_process_transfer(dd);
-
+#ifdef CONFIG_VENDOR_ONEPLUS
+	udelay(10);
+#endif
 	spin_lock_irqsave(&dd->queue_lock, flags);
 	dd->transfer_pending = 0;
 	spin_unlock_irqrestore(&dd->queue_lock, flags);
