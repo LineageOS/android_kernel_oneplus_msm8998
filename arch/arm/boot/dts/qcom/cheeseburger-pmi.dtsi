@@ -1,0 +1,118 @@
+/* Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include <dt-bindings/interrupt-controller/irq.h>
+
+&spmi_bus {
+	qcom,pmi8998@2 {
+		/* button-backlight */
+		gpio-leds {
+			compatible = "gpio-leds";
+			status = "okay";
+			vdd-supply = <&pmi8998_bob>;
+			keypad-led-vbob-min = <3312000>;
+			keypad-led-vbob-max = <3600000>;
+			keypad-backlight {
+				gpios = <&pmi8998_gpios 5 0>; //here maybe pm8998_gpios, depends on what you use.
+				label = "button-backlight";
+				linux,default-trigger = "none";
+				default-state = "off";
+			};
+		};
+	};
+	//shankai@bsp, add debounce time 2017-3-18
+	qcom,pm8998@0{
+		qcom,power-on@800 {
+			qcom,pon-dbc-delay = <31250>;
+			qcom,kpd-dbc-enable;
+		};
+	};
+	qcom,pmi8998@3 {
+		qcom,leds@d000 {
+			qcom,rgb-sync;
+		};
+	};
+};
+
+&pmi8998_charger {
+	qcom,fcc-max-ua = <500000>; /*Set FCC MAX 500mA by default,FCC will be set again after check battery temperature*/
+	qcom,usb-icl-ua = <1800000>;
+	qcom,fv-max-uv = <4365000>;
+	/* ibatmax setting for different temp regions */
+	ibatmax-little-cold-ma = <325>;
+	ibatmax-cool-ma = <450>;
+	ibatmax-little-cool-ma = <775>;
+	ibatmax-pre-normal-ma = <1425>;
+	ibatmax-normal-ma = <1950>;
+	ibatmax-warm-ma = <750>;
+	/* vbatmax setting for different temp regions */
+	vbatmax-little-cold-mv = <3975>; //3980
+	vbatmax-cool-mv = <4380>;
+	vbatmax-little-cool-mv = <4380>;
+	vbatmax-pre-normal-mv = <4380>;
+	vbatmax-normal-mv = <4380>;
+	vbatmax-warm-mv = <4080>;
+	/* vbatdet setting for different temp regions */
+	vbatdet-little-cold-mv = <3700>;
+	vbatdet-cool-mv = <4150>;
+	vbatdet-little-cool-mv = <4270>;
+	vbatdet-pre-normal-mv = <4270>;
+	vbatdet-normal-mv = <4270>;
+	vbatdet-warm-mv = <3980>;
+	/* temp region settings */
+	cold-bat-decidegc = <30>;
+	little-cold-bat-decidegc = <0>;
+	cool-bat-decidegc = <50>;
+	little-cool-bat-decidegc = <120>;
+	pre-normal-bat-decidegc = <160>;
+	warm-bat-decidegc = <450>;
+	hot-bat-decidegc = <530>;
+	/* other settings */
+	qcom,cutoff-voltage-with-charger = <3250>;
+	disable-pd;
+};
+
+&pmi8998_fg {
+	oem,use_external_fg;
+	qcom,fg-rsense-sel = <0>;
+};
+
+&pmi8998_gpios {
+	/* button-backlight */
+	gpio@c400 {
+		qcom,mode = <1>;		/* Output */
+		qcom,pull = <4>;		/* Pull Down*/
+		qcom,master-en = <1>;	/* Enable GPIO */
+		qcom,invert = <1>;
+		qcom,out-strength = <1>;
+		status = "okay";
+	};
+};
+
+&pmi8998_haptics {
+	status = "okay";
+	interrupts = <0x3 0xc0 0x0 IRQ_TYPE_NONE>,
+				 <0x3 0xc0 0x1 IRQ_TYPE_NONE>;
+	qcom,wave-shape = "sine";
+	qcom,play-mode = "buffer";
+	qcom,wave-samples = [28 28 28 28 28 28 28 28];
+	qcom,wave-samples-overdrive = [7e 7e 7e 7e 7e 28 28 28];
+	qcom,brake-pattern = [03 03 03 03];
+	qcom,wave-rep-cnt = <1>;
+	qcom,wave-samp-rep-cnt = <1>;
+	qcom,vmax-mv = <2088>;
+	qcom,wave-play-rate-us = <4255>;
+	qcom,use-play-irq;
+	qcom,use-sc-irq;
+	qcom,lra-auto-res-mode = "zxd-eop";
+	qcom,lra-res-cal-period = <32>;
+};
