@@ -1220,6 +1220,11 @@ static int dwc3_probe(struct platform_device *pdev)
 	if (dwc->maximum_speed == USB_SPEED_UNKNOWN)
 		dwc->max_hw_supp_speed = dwc->maximum_speed = USB_SPEED_SUPER;
 
+#ifdef CONFIG_VENDOR_ONEPLUS
+	pr_info("Force USB running as High speed");
+	dwc->max_hw_supp_speed = dwc->maximum_speed = USB_SPEED_HIGH;
+#endif
+
 	dwc->lpm_nyet_threshold = lpm_nyet_threshold;
 	dwc->tx_de_emphasis = tx_de_emphasis;
 
