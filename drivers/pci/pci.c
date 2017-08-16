@@ -637,6 +637,14 @@ static int pci_raw_set_power_state(struct pci_dev *dev, pci_power_t state)
 		break;
 	}
 
+#ifdef CONFIG_VENDOR_ONEPLUS
+	if ((pci_write_config_word(dev, dev->pm_cap + PCI_PM_CTRL, pmcsr) != PCIBIOS_DEVICE_NOT_FOUND) &&
+			(state == PCI_D3hot || dev->current_state == PCI_D3hot)) {
+		pci_dev_d3_sleep(dev);
+	} else if (state == PCI_D2 || dev->current_state == PCI_D2) {
+		udelay(PCI_PM_D2_DELAY);
+	}
+#else
 	/* enter specified state */
 	pci_write_config_word(dev, dev->pm_cap + PCI_PM_CTRL, pmcsr);
 
@@ -646,6 +654,7 @@ static int pci_raw_set_power_state(struct pci_dev *dev, pci_power_t state)
 		pci_dev_d3_sleep(dev);
 	else if (state == PCI_D2 || dev->current_state == PCI_D2)
 		udelay(PCI_PM_D2_DELAY);
+#endif
 
 	pci_read_config_word(dev, dev->pm_cap + PCI_PM_CTRL, &pmcsr);
 	dev->current_state = (pmcsr & PCI_PM_CTRL_STATE_MASK);
