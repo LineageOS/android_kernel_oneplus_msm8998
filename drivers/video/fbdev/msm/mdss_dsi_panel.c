@@ -25,6 +25,10 @@
 
 #include "mdss_dsi.h"
 #include "mdss_dba_utils.h"
+#ifdef CONFIG_VENDOR_ONEPLUS
+#include <linux/clk.h>
+#include "mdss_dsi_iris2p_lightup.h"
+#endif
 #include "mdss_debug.h"
 
 #define DT_CMD_HDR 6
@@ -228,11 +232,22 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	}
 
 	pr_debug("%s: level=%d\n", __func__, level);
+    #ifdef CONFIG_VENDOR_ONEPLUS
+    if (ctrl->bklt_max > 255){
+        u8 ldata = level%4;
+        u8 hdata = level/4;
 
-	led_pwm1[1] = (unsigned char)level;
+        led_pwm2[2] = ldata;
+        led_pwm2[1] = hdata;
+    } else #endif CONFIG_VENDOR_ONEPLUS
+	    led_pwm1[1] = (unsigned char)level;
 
 	memset(&cmdreq, 0, sizeof(cmdreq));
-	cmdreq.cmds = &backlight_cmd;
+	#ifdef CONFIG_VENDOR_ONEPLUS
+    if (ctrl->bklt_max > 255){
+        cmdreq.cmds = &backlight_cmd2;
+    }else #endif CONFIG_VENDOR_ONEPLUS
+	    cmdreq.cmds = &backlight_cmd;
 	cmdreq.cmds_cnt = 1;
 	cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL;
 	cmdreq.rlen = 0;
@@ -462,11 +477,121 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 			gpio_set_value(ctrl_pdata->lcd_mode_sel_gpio, 0);
 			gpio_free(ctrl_pdata->lcd_mode_sel_gpio);
 		}
+#ifdef CONFIG_VENDOR_ONEPLUS
+		usleep_range(10* 1000, 10* 1000);
+#endif
 	}
 
 exit:
 	return rc;
 }
+
+#ifdef CONFIG_VENDOR_ONEPLUS
+int mdss_dsi_px_clk_req(struct mdss_panel_data *pdata, int enable)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	int rc = 0;
+
+	if (pdata == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+				panel_data);
+	if (enable) {
+        if(!IS_ERR(ctrl_pdata->px_clk_src) && (!ctrl_pdata->px_clk_enabled)){
+            clk_set_rate(ctrl_pdata->px_clk_src, 19200000);
+            rc = clk_prepare_enable(ctrl_pdata->px_clk_src);
+            if (rc){
+                pr_err("px clk_prepare_enable failed, rc=%d\n", rc);
+            }
+            ctrl_pdata->px_clk_enabled = 1;
+		}
+	} else{
+		if(!IS_ERR(ctrl_pdata->px_clk_src) && ctrl_pdata->px_clk_enabled){
+		    clk_disable_unprepare(ctrl_pdata->px_clk_src);
+		    ctrl_pdata->px_clk_enabled = 0;
+		}
+	}
+	return rc;
+}
+int mdss_dsi_disp_vci_en(struct mdss_panel_data *pdata, int enable)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	struct mdss_panel_info *pinfo = NULL;
+	int rc = 0;
+
+	if (pdata == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+				panel_data);
+
+    if (!gpio_is_valid(ctrl_pdata->disp_vci_en_gpio)) {
+		pr_debug("%s:%d, vci_en_gpio line not configured\n",
+			   __func__, __LINE__);
+		return rc;
+	}
+	pr_debug("%s: vci_en_gpio enable = %d\n", __func__, enable);
+	pinfo = &(ctrl_pdata->panel_data.panel_info);
+
+	if (enable) {
+	    rc = gpio_request(ctrl_pdata->disp_vci_en_gpio,
+					"disp_vci_en");
+		if (rc) {
+			pr_err("request vci_enable gpio failed, rc=%d\n",
+				       rc);
+			return rc;
+		}
+        rc = gpio_direction_output(ctrl_pdata->disp_vci_en_gpio, 1);
+        usleep_range(8000, 8000);
+	} else {
+	    gpio_set_value(ctrl_pdata->disp_vci_en_gpio, 0);
+	    gpio_free(ctrl_pdata->disp_vci_en_gpio);
+	}
+	return rc;
+}
+int mdss_dsi_px_1v1_en(struct mdss_panel_data *pdata, int enable)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	struct mdss_panel_info *pinfo = NULL;
+	int rc = 0;
+
+	if (pdata == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+				panel_data);
+
+    if (!gpio_is_valid(ctrl_pdata->px_1v1_en_gpio)) {
+		pr_debug("%s:%d, px_1v1_en line not configured\n",
+			   __func__, __LINE__);
+		return rc;
+	}
+	pr_debug("%s: px_1v1_en enable = %d\n", __func__, enable);
+	pinfo = &(ctrl_pdata->panel_data.panel_info);
+
+	if (enable) {
+	    rc = gpio_request(ctrl_pdata->px_1v1_en_gpio,
+					"px_1v1_en_gpio");
+		if (rc) {
+			pr_err("request px_1v1 gpio failed, rc=%d\n",
+				       rc);
+			return rc;
+		}
+        rc = gpio_direction_output(ctrl_pdata->px_1v1_en_gpio, 1);
+	} else {
+	    gpio_set_value(ctrl_pdata->px_1v1_en_gpio, 0);
+	    gpio_free(ctrl_pdata->px_1v1_en_gpio);
+	}
+	return rc;
+}
+#endif
 
 /**
  * mdss_dsi_roi_merge() -  merge two roi into single roi
@@ -907,6 +1032,11 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	pr_debug("%s: ndx=%d cmd_cnt=%d\n", __func__,
 				ctrl->ndx, on_cmds->cmd_cnt);
 
+    //#ifdef VENDOR_EDIT
+    if (ctrl->iris_enabled){
+        iris_init(ctrl);
+        iris_panel_cmds(ctrl, &ctrl->on_cmds);
+	}else//#endif VENDOR_EDIT
 	if (on_cmds->cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, on_cmds, CMD_REQ_COMMIT);
 
@@ -983,7 +1113,16 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		if (ctrl->ndx != DSI_CTRL_LEFT)
 			goto end;
 	}
+#ifdef CONFIG_VENDOR_ONEPLUS
+	mutex_lock(&ctrl->panel_mode_lock);
+	ctrl->is_panel_on = false;
+	mutex_unlock(&ctrl->panel_mode_lock);
 
+	if (ctrl->iris_enabled){
+		iris_lightoff(ctrl);
+		iris_panel_cmds(ctrl, &ctrl->off_cmds);
+	} else
+#endif
 	if (ctrl->off_cmds.cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, &ctrl->off_cmds, CMD_REQ_COMMIT);
 
