@@ -210,6 +210,13 @@ static inline int __msm_dma_map_sg(struct device *dev, struct scatterlist *sg,
 		iommu_map->sgl.dma_address = sg->dma_address;
 		iommu_map->sgl.dma_length = sg->dma_length;
 		iommu_map->dev = dev;
+#ifdef CONFIG_VENDOR_ONEPLUS
+		iommu_map->dir = dir;
+		iommu_map->nents = nents;
+		iommu_map->sgl.page_link = sg->page_link;
+		iommu_map->sgl.offset = sg->offset;
+		iommu_map->sgl.length = sg->length;
+#endif
 		msm_iommu_add(iommu_meta, iommu_map);
 
 	} else {
