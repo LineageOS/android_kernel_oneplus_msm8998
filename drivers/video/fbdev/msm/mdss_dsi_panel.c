@@ -216,6 +216,15 @@ static struct dsi_cmd_desc backlight_cmd = {
 	led_pwm1
 };
 
+#ifdef CONFIG_VENDOR_ONEPLUS
+// Samsung s6e3fa6 panel backlight
+static char led_pwm_s6e3fa6[3] = {0x51, 0x00, 0x00};	/* DTYPE_DCS_LWRITE */
+static struct dsi_cmd_desc backlight_cmd_s6e3fa6 = {
+	{DTYPE_DCS_LWRITE, 1, 0, 0, 1, sizeof(led_pwm_s6e3fa6)},
+	led_pwm_s6e3fa6
+};
+#endif
+
 static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 {
 	struct dcs_cmd_req cmdreq;
@@ -228,10 +237,23 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	}
 
 	pr_debug("%s: level=%d\n", __func__, level);
+#ifdef CONFIG_VENDOR_ONEPLUS
+	if (pinfo->panel_type == 4) {
+		u8 ldata = level%4;
+		u8 hdata = level/4;
 
+		led_pwm_s6e3fa6[2] = ldata;
+		led_pwm_s6e3fa6[1] = hdata;
+	} else
+#endif
 	led_pwm1[1] = (unsigned char)level;
 
 	memset(&cmdreq, 0, sizeof(cmdreq));
+#ifdef CONFIG_VENDOR_ONEPLUS
+	if (pinfo->panel_type == 4) {
+		cmdreq.cmds = &backlight_cmd_s6e3fa6;
+	} else
+#endif
 	cmdreq.cmds = &backlight_cmd;
 	cmdreq.cmds_cnt = 1;
 	cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL;
@@ -2956,6 +2978,12 @@ static int mdss_panel_parse_dt(struct device_node *np,
 	if (rc)
 		pinfo->esc_clk_rate_hz = MDSS_DSI_MAX_ESC_CLK_RATE_HZ;
 	pr_debug("%s: esc clk %d\n", __func__, pinfo->esc_clk_rate_hz);
+
+#ifdef CONFIG_VENDOR_ONEPLUS
+	rc = of_property_read_u32(np,
+		"oneplus,panel-type", &tmp);
+	pinfo->panel_type = (!rc ? tmp : 0);
+#endif
 
 	return 0;
 
