@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "2fd757c2_39f08c54",
+        "filename": "arch/arm/boot/dts/qcom/dsi-panel-samsung_s6e3fa3_1080p_cmd.dtsi",
+        "patchSetId": 1
+      },
+      "lineNbr": 65,
+      "author": {
+        "id": 7148
+      },
+      "writtenOn": "2017-08-17T05:34:54Z",
+      "side": 0,
+      "message": "OP3 dont have that code",
+      "range": {
+        "startLine": 63,
+        "startChar": 0,
+        "endLine": 65,
+        "endChar": 32
+      },
+      "revId": "ab42300248ca5ce5d2c54fbbcf21ab99bffbaa0b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
