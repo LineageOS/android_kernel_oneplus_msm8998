@@ -2467,6 +2467,10 @@ static int smb2_probe(struct platform_device *pdev)
 
 cleanup:
 	smb2_free_interrupts(chg);
+
+#ifdef CONFIG_VENDOR_ONEPLUS
+	smblib_deinit(chg);
+#endif
 	if (chg->batt_psy)
 		power_supply_unregister(chg->batt_psy);
 	if (chg->usb_main_psy)
@@ -2482,7 +2486,9 @@ cleanup:
 	if (chg->vbus_vreg && chg->vbus_vreg->rdev)
 		devm_regulator_unregister(chg->dev, chg->vbus_vreg->rdev);
 
+#ifndef CONFIG_VENDOR_ONEPLUS
 	smblib_deinit(chg);
+#endif
 
 	platform_set_drvdata(pdev, NULL);
 	return rc;
@@ -2493,11 +2499,25 @@ static int smb2_remove(struct platform_device *pdev)
 	struct smb2 *chip = platform_get_drvdata(pdev);
 	struct smb_charger *chg = &chip->chg;
 
+#ifdef CONFIG_VENDOR_ONEPLUS
+/* david.liu@bsp, 20170330 Fix system crash */
+	if (chg->batt_psy)
+		power_supply_unregister(chg->batt_psy);
+	if (chg->usb_psy)
+		power_supply_unregister(chg->usb_psy);
+	if (chg->usb_port_psy)
+		power_supply_unregister(chg->usb_port_psy);
+	if (chg->vconn_vreg && chg->vconn_vreg->rdev)
+		regulator_unregister(chg->vconn_vreg->rdev);
+	if (chg->vbus_vreg && chg->vbus_vreg->rdev)
+		regulator_unregister(chg->vbus_vreg->rdev);
+#else
 	power_supply_unregister(chg->batt_psy);
 	power_supply_unregister(chg->usb_psy);
 	power_supply_unregister(chg->usb_port_psy);
 	regulator_unregister(chg->vconn_vreg->rdev);
 	regulator_unregister(chg->vbus_vreg->rdev);
+#endif
 
 	platform_set_drvdata(pdev, NULL);
 	return 0;
