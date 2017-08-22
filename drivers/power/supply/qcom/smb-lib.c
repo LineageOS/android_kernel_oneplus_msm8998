@@ -4782,7 +4782,12 @@ int smblib_deinit(struct smb_charger *chg)
 		cancel_work_sync(&chg->legacy_detection_work);
 		cancel_delayed_work_sync(&chg->uusb_otg_work);
 		cancel_delayed_work_sync(&chg->bb_removal_work);
+#ifdef CONFIG_VENDOR_ONEPLUS
+		if (chg->nb.notifier_call)
+			power_supply_unreg_notifier(&chg->nb);
+#else
 		power_supply_unreg_notifier(&chg->nb);
+#endif
 		smblib_destroy_votables(chg);
 		qcom_batt_deinit();
 		break;
