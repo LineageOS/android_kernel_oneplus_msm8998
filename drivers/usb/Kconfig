@@ -106,7 +106,9 @@ source "drivers/usb/chipidea/Kconfig"
 
 source "drivers/usb/isp1760/Kconfig"
 
-source "drivers/usb/pd/Kconfig"
+# codeworkx: Use oneplus pd
+#source "drivers/usb/pd/Kconfig"
+source "drivers/usb/pd_oem/Kconfig"
 
 comment "USB port drivers"
 
