@@ -48,7 +48,15 @@ static ssize_t power_supply_show_property(struct device *dev,
 		"USB_CDP", "USB_ACA", "USB_HVDCP", "USB_HVDCP_3", "USB_PD",
 		"Wireless", "USB_FLOAT", "BMS", "Parallel", "Main", "Wipower",
 		"TYPEC", "TYPEC_UFP", "TYPEC_DFP"
+#ifdef CONFIG_VENDOR_ONEPLUS
+		, "DASH"
+#endif
 	};
+#ifdef CONFIG_VENDOR_ONEPLUS
+	static char *cc_orientation_text[] = {
+		"Unknown", "cc1", "cc2"
+	};
+#endif
 	static char *status_text[] = {
 		"Unknown", "Charging", "Discharging", "Not charging", "Full"
 	};
@@ -123,6 +131,10 @@ static ssize_t power_supply_show_property(struct device *dev,
 		return sprintf(buf, "%s\n", typec_text[value.intval]);
 	else if (off == POWER_SUPPLY_PROP_TYPEC_POWER_ROLE)
 		return sprintf(buf, "%s\n", typec_pr_text[value.intval]);
+#ifdef CONFIG_VENDOR_ONEPLUS
+	else if (off == POWER_SUPPLY_PROP_OEM_TYPEC_CC_ORIENTATION)
+		return sprintf(buf, "%s\n", cc_orientation_text[value.intval]);
+#endif
 	else if (off == POWER_SUPPLY_PROP_DIE_HEALTH)
 		return sprintf(buf, "%s\n", health_text[value.intval]);
 	else if (off == POWER_SUPPLY_PROP_CONNECTOR_HEALTH)
@@ -163,6 +175,24 @@ static ssize_t power_supply_store_property(struct device *dev,
 static struct device_attribute power_supply_attrs[] = {
 	/* Properties of type `int' */
 	POWER_SUPPLY_ATTR(status),
+#ifdef CONFIG_VENDOR_ONEPLUS
+	POWER_SUPPLY_ATTR(set_allow_read_extern_fg_iic),
+	POWER_SUPPLY_ATTR(cc_to_cv_point),
+	POWER_SUPPLY_ATTR(chg_protect_status),
+	POWER_SUPPLY_ATTR(fastchg_status),
+	POWER_SUPPLY_ATTR(fastchg_starting),
+	POWER_SUPPLY_ATTR(cutoff_volt_with_charger),
+	POWER_SUPPLY_ATTR(update_lcd_is_off),
+	POWER_SUPPLY_ATTR(check_usb_unplug),
+	POWER_SUPPLY_ATTR(otg_switch),
+	POWER_SUPPLY_ATTR(switch_dash),
+	POWER_SUPPLY_ATTR(notify_charger_set_parameter),
+	POWER_SUPPLY_ATTR(fg_capacity),
+	POWER_SUPPLY_ATTR(fg_current_now),
+	POWER_SUPPLY_ATTR(fg_voltage_now),
+	POWER_SUPPLY_ATTR(is_aging_test),
+	POWER_SUPPLY_ATTR(battery_health),
+#endif
 	POWER_SUPPLY_ATTR(charge_type),
 	POWER_SUPPLY_ATTR(health),
 	POWER_SUPPLY_ATTR(present),
@@ -277,6 +307,9 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(current_capability),
 	POWER_SUPPLY_ATTR(typec_mode),
 	POWER_SUPPLY_ATTR(typec_cc_orientation),
+#ifdef CONFIG_VENDOR_ONEPLUS
+	POWER_SUPPLY_ATTR(oem_cc_orientation),
+#endif
 	POWER_SUPPLY_ATTR(typec_power_role),
 	POWER_SUPPLY_ATTR(pd_allowed),
 	POWER_SUPPLY_ATTR(pd_active),

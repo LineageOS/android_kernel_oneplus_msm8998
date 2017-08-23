@@ -11,6 +11,7 @@
  */
 
 #include "pxlw-iris-settings.dtsi"
+#include "cheeseburger-mtp.dtsi"
 #include "cheeseburger-panels.dtsi"
 #include "cheeseburger-pmi.dtsi"
 
@@ -396,6 +397,7 @@
 		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
 	};
 };
+
 &pcie0_clkreq_default {
         mux {
             pins = "gpio36";
@@ -532,7 +534,6 @@
 &clock_audio_lnbb {
 	status = "disabled";
 };
-
 
 /* Camera */
 &cci {
@@ -881,4 +882,22 @@
 			"tcsr_clamp_dig_n_1p8";
 	/delete-property/ qcom,efuse-bit-pos;
 	/delete-property/ qcom,efuse-num-bits;
+};
+
+&smb138x_parallel_slave {
+	io-channels = <&smb138x_tadc 2>,
+		<&smb138x_tadc 3>,
+		<&smb138x_tadc 14>,
+		<&smb138x_tadc 15>,
+		<&smb138x_tadc 16>,
+		<&smb138x_tadc 17>;
+
+	io-channel-names = "charger_temp",
+		"batt_i",
+		"connector_temp_thr1",
+		"connector_temp_thr2",
+		"connector_temp_thr3",
+		"charger_temp_max";
+
+	/delete-node/ qcom,smb138x-vbus;
 };
