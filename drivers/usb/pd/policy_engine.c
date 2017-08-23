@@ -589,7 +589,9 @@ static int pd_eval_src_caps(struct usbpd *pd)
 
 static void pd_send_hard_reset(struct usbpd *pd)
 {
+#ifndef CONFIG_VENDOR_ONEPLUS
 	union power_supply_propval val = {0};
+#endif
 
 	usbpd_dbg(&pd->dev, "send hard reset");
 
@@ -598,7 +600,9 @@ static void pd_send_hard_reset(struct usbpd *pd)
 	pd->hard_reset_count++;
 	pd_phy_signal(HARD_RESET_SIG, 5); /* tHardResetComplete */
 	pd->in_pr_swap = false;
+#ifndef CONFIG_VENDOR_ONEPLUS
 	power_supply_set_property(pd->usb_psy, POWER_SUPPLY_PROP_PR_SWAP, &val);
+#endif
 }
 
 static void kick_sm(struct usbpd *pd, int ms)
@@ -614,7 +618,9 @@ static void kick_sm(struct usbpd *pd, int ms)
 
 static void phy_sig_received(struct usbpd *pd, enum pd_sig_type type)
 {
+#ifndef CONFIG_VENDOR_ONEPLUS
 	union power_supply_propval val = {1};
+#endif
 
 	if (type != HARD_RESET_SIG) {
 		usbpd_err(&pd->dev, "invalid signal (%d) received\n", type);
@@ -626,8 +632,10 @@ static void phy_sig_received(struct usbpd *pd, enum pd_sig_type type)
 	/* Force CC logic to source/sink to keep Rp/Rd unchanged */
 	set_power_role(pd, pd->current_pr);
 	pd->hard_reset_recvd = true;
+#ifndef CONFIG_VENDOR_ONEPLUS
 	power_supply_set_property(pd->usb_psy,
 			POWER_SUPPLY_PROP_PD_IN_HARD_RESET, &val);
+#endif
 
 	kick_sm(pd, 0);
 }
@@ -792,9 +800,11 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 
 		if (pd->in_pr_swap) {
 			pd->in_pr_swap = false;
+#ifndef CONFIG_VENDOR_ONEPLUS
 			val.intval = 0;
 			power_supply_set_property(pd->usb_psy,
 					POWER_SUPPLY_PROP_PR_SWAP, &val);
+#endif
 		}
 
 		/*
@@ -1627,9 +1637,11 @@ static void usbpd_sm(struct work_struct *w)
 			usleep_range(ERROR_RECOVERY_TIME * USEC_PER_MSEC,
 				(ERROR_RECOVERY_TIME + 5) * USEC_PER_MSEC);
 
+#ifndef CONFIG_VENDOR_ONEPLUS
 		val.intval = 0;
 		power_supply_set_property(pd->usb_psy,
 				POWER_SUPPLY_PROP_PR_SWAP, &val);
+#endif
 
 		/* set due to dual_role class "mode" change */
 		if (pd->forced_pr != POWER_SUPPLY_TYPEC_PR_NONE)
@@ -1666,9 +1678,11 @@ static void usbpd_sm(struct work_struct *w)
 				POWER_SUPPLY_PROP_VOLTAGE_MIN, &val);
 
 		pd->in_pr_swap = false;
+#ifndef CONFIG_VENDOR_ONEPLUS
 		val.intval = 0;
 		power_supply_set_property(pd->usb_psy,
 				POWER_SUPPLY_PROP_PR_SWAP, &val);
+#endif
 
 		pd->in_explicit_contract = false;
 		pd->selected_pdo = pd->requested_pdo = 0;
@@ -1726,7 +1740,14 @@ static void usbpd_sm(struct work_struct *w)
 				ARRAY_SIZE(default_src_caps), SOP_MSG);
 		if (ret) {
 			pd->caps_count++;
-
+#ifdef CONFIG_VENDOR_ONEPLUS
+			if (pd->caps_count < 10 && pd->current_dr == DR_DFP) {
+				start_usb_host(pd, true);
+			} else if (pd->caps_count >= 10) {
+				usbpd_set_state(pd, PE_SRC_DISABLED);
+				break;
+			}
+#else
 			if (pd->caps_count == 10 && pd->current_dr == DR_DFP) {
 				/* Likely not PD-capable, start host now */
 				start_usb_host(pd, true);
@@ -1740,7 +1761,7 @@ static void usbpd_sm(struct work_struct *w)
 						&val);
 				break;
 			}
-
+#endif
 			kick_sm(pd, SRC_CAP_TIME);
 			break;
 		}
@@ -1930,9 +1951,11 @@ static void usbpd_sm(struct work_struct *w)
 
 	case PE_SNK_WAIT_FOR_CAPABILITIES:
 		pd->in_pr_swap = false;
+#ifndef CONFIG_VENDOR_ONEPLUS
 		val.intval = 0;
 		power_supply_set_property(pd->usb_psy,
 				POWER_SUPPLY_PROP_PR_SWAP, &val);
+#endif
 
 		if (IS_DATA(rx_msg, MSG_SOURCE_CAPABILITIES)) {
 			val.intval = 0;
@@ -1952,6 +1975,17 @@ static void usbpd_sm(struct work_struct *w)
 					POWER_SUPPLY_PROP_PD_ACTIVE, &val);
 		} else if (pd->hard_reset_count < 3) {
 			usbpd_set_state(pd, PE_SNK_HARD_RESET);
+#ifdef CONFIG_VENDOR_ONEPLUS
+		} else if (pd->pd_connected) {
+			usbpd_info(&pd->dev, "Sink hard reset count exceeded, forcing reconnect\n");
+
+			val.intval = 0;
+			power_supply_set_property(pd->usb_psy,
+					POWER_SUPPLY_PROP_PD_IN_HARD_RESET,
+					&val);
+
+			usbpd_set_state(pd, PE_ERROR_RECOVERY);
+#endif
 		} else {
 			usbpd_dbg(&pd->dev, "Sink hard reset count exceeded, disabling PD\n");
 
@@ -2102,9 +2136,11 @@ static void usbpd_sm(struct work_struct *w)
 			}
 
 			pd->in_pr_swap = true;
+#ifndef CONFIG_VENDOR_ONEPLUS
 			val.intval = 1;
 			power_supply_set_property(pd->usb_psy,
 					POWER_SUPPLY_PROP_PR_SWAP, &val);
+#endif
 			usbpd_set_state(pd, PE_PRS_SNK_SRC_TRANSITION_TO_OFF);
 			break;
 		} else if (IS_CTRL(rx_msg, MSG_VCONN_SWAP)) {
@@ -2248,9 +2284,11 @@ static void usbpd_sm(struct work_struct *w)
 
 	case PE_PRS_SRC_SNK_TRANSITION_TO_OFF:
 		pd->in_pr_swap = true;
+#ifndef CONFIG_VENDOR_ONEPLUS
 		val.intval = 1;
 		power_supply_set_property(pd->usb_psy,
 				POWER_SUPPLY_PROP_PR_SWAP, &val);
+#endif
 		pd->in_explicit_contract = false;
 
 		if (pd->vbus_enabled) {
@@ -2291,9 +2329,11 @@ static void usbpd_sm(struct work_struct *w)
 		}
 
 		pd->in_pr_swap = true;
+#ifndef CONFIG_VENDOR_ONEPLUS
 		val.intval = 1;
 		power_supply_set_property(pd->usb_psy,
 				POWER_SUPPLY_PROP_PR_SWAP, &val);
+#endif
 		usbpd_set_state(pd, PE_PRS_SNK_SRC_TRANSITION_TO_OFF);
 		break;
 
@@ -2447,6 +2487,17 @@ static int psy_changed(struct notifier_block *nb, unsigned long evt, void *ptr)
 	if (pd->typec_mode == typec_mode)
 		return 0;
 
+#ifdef CONFIG_VENDOR_ONEPLUS
+	if ((typec_mode == POWER_SUPPLY_TYPEC_SOURCE_DEFAULT) ||
+		(typec_mode == POWER_SUPPLY_TYPEC_SOURCE_MEDIUM) ||
+		(typec_mode == POWER_SUPPLY_TYPEC_SOURCE_HIGH)) {
+		if (pd->psy_type == POWER_SUPPLY_TYPE_UNKNOWN) {
+			usbpd_err(&pd->dev, "typec_mode:%d, psy_type:%d\n", typec_mode, pd->psy_type);
+			return 0;
+		}
+	}
+#endif
+
 	pd->typec_mode = typec_mode;
 
 	usbpd_dbg(&pd->dev, "typec mode:%d present:%d type:%d orientation:%d\n",
@@ -2567,7 +2618,11 @@ static int usbpd_dr_set_property(struct dual_role_phy_instance *dual_role,
 {
 	struct usbpd *pd = dual_role_get_drvdata(dual_role);
 	bool do_swap = false;
+#ifdef CONFIG_VENDOR_ONEPLUS
+	int wait_count = 20;
+#else
 	int wait_count = 5;
+#endif
 
 	if (!pd)
 		return -ENODEV;
