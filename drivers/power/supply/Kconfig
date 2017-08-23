@@ -1,1 +1,3 @@
-source "drivers/power/supply/qcom/Kconfig"
+# codeworkx: Use oneplus supply
+#source "drivers/power/supply/qcom/Kconfig"
+source "drivers/power/supply/qcom_oem/Kconfig"
