@@ -396,6 +396,7 @@
 		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
 	};
 };
+
 &pcie0_clkreq_default {
         mux {
             pins = "gpio36";
@@ -528,7 +529,6 @@
 &clock_audio_lnbb {
 	status = "disabled";
 };
-
 
 /* Camera */
 &cci {
