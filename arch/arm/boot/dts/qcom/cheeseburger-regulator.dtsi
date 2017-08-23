@@ -1,0 +1,64 @@
+/* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&soc {
+	apc0_cpr: cprh-ctrl@179c8000 {
+		thread@0 {
+			apc0_pwrcl_vreg: regulator {
+				qcom,cpr-open-loop-voltage-fuse-adjustment =
+					<0 0 0 0>,
+					<60000 44000 20000 20000>,
+					<60000 44000 20000 20000>,
+					<60000 44000 20000 20000>,
+					<60000 44000 20000 20000>,
+					<60000 44000 20000 20000>,
+					<60000 44000 20000 20000>,
+					<60000 44000 20000 20000>;
+
+				qcom,cpr-closed-loop-voltage-fuse-adjustment =
+					<0 0 0 0>,
+					<40000 46000 20000 20000>,
+					<40000 46000 20000 20000>,
+					<40000 46000 20000 20000>,
+					<40000 46000 20000 20000>,
+					<40000 46000 20000 20000>,
+					<40000 46000 20000 20000>,
+					<40000 46000 20000 20000>;
+			};
+		};
+	};
+	apc1_cpr: cprh-ctrl@179c4000{
+		thread@0 {
+			apc1_perfcl_vreg: regulator {
+				qcom,cpr-open-loop-voltage-fuse-adjustment =
+					<0 0 0 0>,
+					<28000 20000 20000 72000>,
+					<28000 20000 20000 72000>,
+					<28000 20000 20000 72000>,
+					<28000 20000 20000 72000>,
+					<28000 20000 20000 72000>,
+					<28000 20000 20000 72000>,
+					<28000 20000 20000 72000>;
+
+				qcom,cpr-closed-loop-voltage-fuse-adjustment =
+					<0 0 0 0>,
+					<20000 20000 20000 70000>,
+					<20000 20000 20000 70000>,
+					<20000 20000 20000 70000>,
+					<20000 20000 20000 70000>,
+					<20000 20000 20000 70000>,
+					<20000 20000 20000 70000>,
+					<20000 20000 20000 70000>;
+			};
+		};
+	};
+};
