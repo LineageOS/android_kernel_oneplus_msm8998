@@ -18,7 +18,11 @@
 
 #define SET_DELAY (2 * HZ)
 #define PROC_AWAKE_ID 12 /* 12th bit */
+#ifdef CONFIG_VENDOR_ONEPLUS
+int slst_gpio_base_id;
+#else
 static int slst_gpio_base_id;
+#endif
 
 /**
  * sleepstate_pm_notifier() - PM notifier callback function.
@@ -34,11 +38,15 @@ static int sleepstate_pm_notifier(struct notifier_block *nb,
 {
 	switch (event) {
 	case PM_SUSPEND_PREPARE:
+#ifndef CONFIG_VENDOR_ONEPLUS
 		gpio_set_value(slst_gpio_base_id + PROC_AWAKE_ID, 0);
+#endif
 		break;
 
 	case PM_POST_SUSPEND:
+#ifndef CONFIG_VENDOR_ONEPLUS
 		gpio_set_value(slst_gpio_base_id + PROC_AWAKE_ID, 1);
+#endif
 		break;
 	}
 	return NOTIFY_DONE;
