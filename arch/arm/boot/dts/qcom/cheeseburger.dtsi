@@ -11,6 +11,7 @@
  */
 
 #include "pxlw-iris-settings.dtsi"
+#include "cheeseburger-panels.dtsi"
 
 / {
 	reserved-memory {
@@ -781,11 +782,10 @@
 	status = "disabled";
 };
 
-
 &i2c_6 { /* BLSP1 QUP6 (NFC) */
 	status = "disabled";
 };
-//&i2c_10
+
 &i2c_6 { /* BLSP1 QUP6 (NFC) */
 	status = "okay";
 	nq@28 {
@@ -818,4 +818,3 @@
 		clock-names = "ref_clk";
 	};
 };
-

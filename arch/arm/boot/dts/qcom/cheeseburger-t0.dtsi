@@ -10,8 +10,6 @@
  * GNU General Public License for more details.
  */
 
-#include "cheeseburger-panels.dtsi"
-
 &mdss_dsi_active {
 	mux {
 		pins = "gpio94", "gpio21", "gpio62";
