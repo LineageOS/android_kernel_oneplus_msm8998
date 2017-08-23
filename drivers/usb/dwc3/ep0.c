@@ -37,10 +37,30 @@
 #include "io.h"
 #include "debug.h"
 
+#ifdef CONFIG_VENDOR_ONEPLUS
+#include <linux/power/oem_external_fg.h>
+#endif
 
 static bool enable_dwc3_u1u2;
 module_param(enable_dwc3_u1u2, bool, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(enable_dwc3_u1u2, "Enable support for U1U2 low power modes");
+
+#ifdef CONFIG_VENDOR_ONEPLUS
+static struct notify_usb_enumeration_status
+		*usb_enumeration_status = NULL;
+
+void regsister_notify_usb_enumeration_status
+		(struct notify_usb_enumeration_status *status)
+{
+	if (usb_enumeration_status) {
+		usb_enumeration_status = status;
+		pr_err("multiple usb_enumeration_status called\n");
+	} else {
+		usb_enumeration_status = status;
+	}
+}
+EXPORT_SYMBOL(regsister_notify_usb_enumeration_status);
+#endif
 
 static void __dwc3_ep0_do_control_status(struct dwc3 *dwc, struct dwc3_ep *dep);
 static void __dwc3_ep0_do_control_data(struct dwc3 *dwc,
@@ -775,6 +795,12 @@ static int dwc3_ep0_std_request(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 		ret = dwc3_ep0_handle_feature(dwc, ctrl, 1);
 		break;
 	case USB_REQ_SET_ADDRESS:
+#ifdef CONFIG_VENDOR_ONEPLUS
+		if (usb_enumeration_status
+			&& usb_enumeration_status->notify_usb_enumeration) {
+			usb_enumeration_status->notify_usb_enumeration(true);
+		}
+#endif
 		dwc3_trace(trace_dwc3_ep0, "USB_REQ_SET_ADDRESS");
 		ret = dwc3_ep0_set_address(dwc, ctrl);
 		break;

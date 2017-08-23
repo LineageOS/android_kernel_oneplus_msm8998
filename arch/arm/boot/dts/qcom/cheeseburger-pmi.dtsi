@@ -29,13 +29,14 @@
 			};
 		};
 	};
-	//shankai@bsp, add debounce time 2017-3-18
+
 	qcom,pm8998@0{
 		qcom,power-on@800 {
 			qcom,pon-dbc-delay = <31250>;
 			qcom,kpd-dbc-enable;
 		};
 	};
+
 	qcom,pmi8998@3 {
 		qcom,leds@d000 {
 			qcom,rgb-sync;
@@ -79,11 +80,6 @@
 	/* other settings */
 	qcom,cutoff-voltage-with-charger = <3250>;
 	disable-pd;
-};
-
-&pmi8998_fg {
-	oem,use_external_fg;
-	qcom,fg-rsense-sel = <0>;
 };
 
 &pmi8998_gpios {
