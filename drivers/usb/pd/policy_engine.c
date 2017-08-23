@@ -1726,6 +1726,14 @@ static void usbpd_sm(struct work_struct *w)
 		if (ret) {
 			pd->caps_count++;
 
+#ifdef CONFIG_VENDOR_ONEPLUS
+			if (pd->caps_count < 10 && pd->current_dr == DR_DFP) {
+				start_usb_host(pd, true);
+			} else if (pd->caps_count >= 10) {
+				usbpd_set_state(pd, PE_SRC_DISABLED);
+				break;
+			}
+#else
 			if (pd->caps_count == 10 && pd->current_dr == DR_DFP) {
 				/* Likely not PD-capable, start host now */
 				start_usb_host(pd, true);
@@ -1739,6 +1747,7 @@ static void usbpd_sm(struct work_struct *w)
 						&val);
 				break;
 			}
+#endif
 
 			kick_sm(pd, SRC_CAP_TIME);
 			break;
@@ -2420,7 +2429,11 @@ static int psy_changed(struct notifier_block *nb, unsigned long evt, void *ptr)
 	pd->vbus_present = val.intval;
 
 	ret = power_supply_get_property(pd->usb_psy,
+#ifdef CONFIG_VENDOR_ONEPLUS
+			POWER_SUPPLY_PROP_TYPE, &val);
+#else
 			POWER_SUPPLY_PROP_REAL_TYPE, &val);
+#endif
 	if (ret) {
 		usbpd_err(&pd->dev, "Unable to read USB TYPE: %d\n", ret);
 		return ret;
@@ -2445,6 +2458,17 @@ static int psy_changed(struct notifier_block *nb, unsigned long evt, void *ptr)
 
 	if (pd->typec_mode == typec_mode)
 		return 0;
+
+#ifdef CONFIG_VENDOR_ONEPLUS
+	if ((typec_mode == POWER_SUPPLY_TYPEC_SOURCE_DEFAULT) ||
+		(typec_mode == POWER_SUPPLY_TYPEC_SOURCE_MEDIUM) ||
+		(typec_mode == POWER_SUPPLY_TYPEC_SOURCE_HIGH)) {
+		if (pd->psy_type == POWER_SUPPLY_TYPE_UNKNOWN) {
+			usbpd_err(&pd->dev, "typec_mode:%d, psy_type:%d\n", typec_mode, pd->psy_type);
+			return 0;
+		}
+	}
+#endif
 
 	pd->typec_mode = typec_mode;
 
@@ -2576,7 +2600,11 @@ static int usbpd_dr_set_property(struct dual_role_phy_instance *dual_role,
 {
 	struct usbpd *pd = dual_role_get_drvdata(dual_role);
 	bool do_swap = false;
+#ifdef CONFIG_VENDOR_ONEPLUS
+	int wait_count = 20;
+#else
 	int wait_count = 5;
+#endif
 
 	if (!pd)
 		return -ENODEV;
