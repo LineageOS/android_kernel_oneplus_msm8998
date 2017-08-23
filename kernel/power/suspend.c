@@ -34,6 +34,14 @@
 
 #include "power.h"
 
+#ifdef CONFIG_VENDOR_ONEPLUS
+#include <linux/gpio.h>
+
+extern int slst_gpio_base_id;
+#define PROC_AWAKE_ID 12 /* 12th bit */
+#endif
+
+extern bool need_show_pinctrl_irq;
 const char *pm_labels[] = { "mem", "standby", "freeze", NULL };
 const char *pm_states[PM_SUSPEND_MAX];
 
@@ -568,7 +576,17 @@ int pm_suspend(suspend_state_t state)
 		return -EINVAL;
 
 	pm_suspend_marker("entry");
+
+#ifdef CONFIG_VENDOR_ONEPLUS
+    gpio_set_value(slst_gpio_base_id + PROC_AWAKE_ID, 0);
+    pr_err("yyyyyy %s: PM_SUSPEND_PREPARE %d \n", __func__, slst_gpio_base_id + PROC_AWAKE_ID);
+#endif
 	error = enter_state(state);
+#ifdef VENDOR_EDIT
+    gpio_set_value(slst_gpio_base_id + PROC_AWAKE_ID, 1);
+    pr_err("yyyyyy %s: PM_POST_SUSPEND %d \n", __func__, slst_gpio_base_id + PROC_AWAKE_ID);
+#endif
+
 	if (error) {
 		suspend_stats.fail++;
 		dpm_save_failed_errno(error);
