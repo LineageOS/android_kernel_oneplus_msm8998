@@ -194,6 +194,7 @@ struct pon_regulator {
 	bool			enabled;
 };
 
+#ifndef CONFIG_VENDOR_ONEPLUS
 struct qpnp_pon {
 	struct platform_device	*pdev;
 	struct regmap		*regmap;
@@ -222,6 +223,7 @@ struct qpnp_pon {
 	bool			kpdpwr_dbc_enable;
 	ktime_t			kpdpwr_last_release_time;
 };
+#endif
 
 static int pon_ship_mode_en;
 module_param_named(
