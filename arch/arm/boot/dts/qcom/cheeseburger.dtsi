@@ -11,6 +11,7 @@
  */
 
 #include "pxlw-iris-settings.dtsi"
+#include "cheeseburger-mtp.dtsi"
 #include "cheeseburger-panels.dtsi"
 #include "cheeseburger-pmi.dtsi"
 
@@ -396,6 +397,7 @@
 		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
 	};
 };
+
 &pcie0_clkreq_default {
         mux {
             pins = "gpio36";
@@ -528,7 +530,6 @@
 &clock_audio_lnbb {
 	status = "disabled";
 };
-
 
 /* Camera */
 &cci {
