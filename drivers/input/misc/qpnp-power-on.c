@@ -30,6 +30,9 @@
 #include <linux/regulator/driver.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/of_regulator.h>
+#ifdef CONFIG_VENDOR_ONEPLUS
+#include <linux/power/oem_external_fg.h>
+#endif
 #include <linux/input/qpnp-power-on.h>
 #include <linux/power_supply.h>
 
@@ -194,6 +197,7 @@ struct pon_regulator {
 	bool			enabled;
 };
 
+#ifndef CONFIG_VENDOR_ONEPLUS
 struct qpnp_pon {
 	struct platform_device	*pdev;
 	struct regmap		*regmap;
@@ -222,6 +226,7 @@ struct qpnp_pon {
 	bool			kpdpwr_dbc_enable;
 	ktime_t			kpdpwr_last_release_time;
 };
+#endif
 
 static int pon_ship_mode_en;
 module_param_named(
