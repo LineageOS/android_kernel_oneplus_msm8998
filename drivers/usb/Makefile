@@ -61,8 +61,5 @@ obj-$(CONFIG_USB_GADGET)	+= gadget/
 obj-$(CONFIG_USB_COMMON)	+= common/
 
 obj-$(CONFIG_USBIP_CORE)	+= usbip/
-ifdef CONFIG_VENDOR_ONEPLUS
-obj-$(CONFIG_USB_PD)		+= pd_oem/
-else
+
 obj-$(CONFIG_USB_PD)		+= pd/
-endif
