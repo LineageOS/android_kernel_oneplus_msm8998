@@ -1,0 +1,199 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "034a0218_205ac61e",
+        "filename": "drivers/gpu/msm/adreno_dispatch.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 2107,
+      "author": {
+        "id": 523
+      },
+      "writtenOn": "2017-08-24T16:33:09Z",
+      "side": 1,
+      "message": "CONFIG_VENDOR_ONEPLUS",
+      "range": {
+        "startLine": 2107,
+        "startChar": 7,
+        "endLine": 2107,
+        "endChar": 25
+      },
+      "revId": "788bef1282f686897eec8ae0c58ac5d578809f70",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "23998a88_15ad8c5e",
+        "filename": "drivers/irqchip/irq-gic-v3.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 40,
+      "author": {
+        "id": 523
+      },
+      "writtenOn": "2017-08-24T16:33:09Z",
+      "side": 1,
+      "message": "CONFIG_VENDOR_ONEPLUS",
+      "range": {
+        "startLine": 40,
+        "startChar": 7,
+        "endLine": 40,
+        "endChar": 28
+      },
+      "revId": "788bef1282f686897eec8ae0c58ac5d578809f70",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "216856a2_8bb79688",
+        "filename": "drivers/irqchip/irq-gic-v3.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 448,
+      "author": {
+        "id": 523
+      },
+      "writtenOn": "2017-08-24T16:33:09Z",
+      "side": 1,
+      "message": "CONFIG_VENDOR_ONEPLUS",
+      "range": {
+        "startLine": 448,
+        "startChar": 7,
+        "endLine": 448,
+        "endChar": 28
+      },
+      "revId": "788bef1282f686897eec8ae0c58ac5d578809f70",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "78460755_d6a23f97",
+        "filename": "drivers/irqchip/msm_show_resume_irq.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 18,
+      "author": {
+        "id": 523
+      },
+      "writtenOn": "2017-08-24T16:33:09Z",
+      "side": 1,
+      "message": "CONFIG_VENDOR_ONEPLUS",
+      "range": {
+        "startLine": 18,
+        "startChar": 7,
+        "endLine": 18,
+        "endChar": 28
+      },
+      "revId": "788bef1282f686897eec8ae0c58ac5d578809f70",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d9e638c0_4acb80eb",
+        "filename": "drivers/perf/perf_event_armv8.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 587,
+      "author": {
+        "id": 523
+      },
+      "writtenOn": "2017-08-24T16:33:09Z",
+      "side": 1,
+      "message": "CONFIG_VENDOR_ONEPLUS",
+      "range": {
+        "startLine": 587,
+        "startChar": 7,
+        "endLine": 587,
+        "endChar": 28
+      },
+      "revId": "788bef1282f686897eec8ae0c58ac5d578809f70",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bd68053d_79592863",
+        "filename": "drivers/scsi/ufs/ufs.h",
+        "patchSetId": 5
+      },
+      "lineNbr": 157,
+      "author": {
+        "id": 523
+      },
+      "writtenOn": "2017-08-24T16:33:09Z",
+      "side": 1,
+      "message": "CONFIG_VENDOR_ONEPLUS",
+      "range": {
+        "startLine": 157,
+        "startChar": 7,
+        "endLine": 157,
+        "endChar": 28
+      },
+      "revId": "788bef1282f686897eec8ae0c58ac5d578809f70",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "515b2bd9_de6170b4",
+        "filename": "drivers/usb/core/hub.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 4221,
+      "author": {
+        "id": 523
+      },
+      "writtenOn": "2017-08-24T16:33:09Z",
+      "side": 1,
+      "message": "CONFIG_VENDOR_ONEPLUS",
+      "range": {
+        "startLine": 4221,
+        "startChar": 7,
+        "endLine": 4221,
+        "endChar": 28
+      },
+      "revId": "788bef1282f686897eec8ae0c58ac5d578809f70",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4a09fe11_4dae4657",
+        "filename": "drivers/usb/dwc3/core.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1223,
+      "author": {
+        "id": 523
+      },
+      "writtenOn": "2017-08-24T16:33:09Z",
+      "side": 1,
+      "message": "CONFIG_VENDOR_ONEPLUS",
+      "revId": "788bef1282f686897eec8ae0c58ac5d578809f70",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5d3634be_cf929701",
+        "filename": "drivers/usb/gadget/function/f_accessory.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 869,
+      "author": {
+        "id": 523
+      },
+      "writtenOn": "2017-08-24T16:33:09Z",
+      "side": 1,
+      "message": "CONFIG_VENDOR_ONEPLUS",
+      "revId": "788bef1282f686897eec8ae0c58ac5d578809f70",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
