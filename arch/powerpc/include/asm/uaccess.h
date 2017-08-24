@@ -454,10 +454,6 @@ static inline unsigned long clear_user(void __user *addr, unsigned long size)
 	might_fault();
 	if (likely(access_ok(VERIFY_WRITE, addr, size)))
 		return __clear_user(addr, size);
-	if ((unsigned long)addr < TASK_SIZE) {
-		unsigned long over = (unsigned long)addr + size - TASK_SIZE;
-		return __clear_user(addr, size - over) + over;
-	}
 	return size;
 }
 

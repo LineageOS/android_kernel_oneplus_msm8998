@@ -1680,6 +1680,7 @@ void transport_generic_request_failure(struct se_cmd *cmd,
 	case TCM_LOGICAL_BLOCK_GUARD_CHECK_FAILED:
 	case TCM_LOGICAL_BLOCK_APP_TAG_CHECK_FAILED:
 	case TCM_LOGICAL_BLOCK_REF_TAG_CHECK_FAILED:
+	case TCM_COPY_TARGET_DEVICE_NOT_REACHABLE:
 		break;
 	case TCM_OUT_OF_RESOURCES:
 		sense_reason = TCM_LOGICAL_UNIT_COMMUNICATION_FAILURE;
@@ -2509,8 +2510,10 @@ int target_get_sess_cmd(struct se_cmd *se_cmd, bool ack_kref)
 	 * fabric acknowledgement that requires two target_put_sess_cmd()
 	 * invocations before se_cmd descriptor release.
 	 */
-	if (ack_kref)
+	if (ack_kref) {
 		kref_get(&se_cmd->cmd_kref);
+		se_cmd->se_cmd_flags |= SCF_ACK_KREF;
+	}
 
 	spin_lock_irqsave(&se_sess->sess_cmd_lock, flags);
 	if (se_sess->sess_tearing_down) {
@@ -2833,6 +2836,12 @@ static const struct sense_info sense_info_table[] = {
 		.ascq = 0x03, /* LOGICAL BLOCK REFERENCE TAG CHECK FAILED */
 		.add_sector_info = true,
 	},
+	[TCM_COPY_TARGET_DEVICE_NOT_REACHABLE] = {
+		.key = COPY_ABORTED,
+		.asc = 0x0d,
+		.ascq = 0x02, /* COPY TARGET DEVICE NOT REACHABLE */
+
+	},
 	[TCM_LOGICAL_UNIT_COMMUNICATION_FAILURE] = {
 		/*
 		 * Returning ILLEGAL REQUEST would cause immediate IO errors on
@@ -3049,7 +3058,6 @@ static void target_tmr_work(struct work_struct *work)
 		spin_unlock_irqrestore(&cmd->t_state_lock, flags);
 		goto check_stop;
 	}
-	cmd->t_state = TRANSPORT_ISTATE_PROCESSING;
 	spin_unlock_irqrestore(&cmd->t_state_lock, flags);
 
 	cmd->se_tfo->queue_tm_rsp(cmd);
@@ -3062,10 +3070,24 @@ int transport_generic_handle_tmr(
 	struct se_cmd *cmd)
 {
 	unsigned long flags;
+	bool aborted = false;
 
 	spin_lock_irqsave(&cmd->t_state_lock, flags);
-	cmd->transport_state |= CMD_T_ACTIVE;
+	if (cmd->transport_state & CMD_T_ABORTED) {
+		aborted = true;
+	} else {
+		cmd->t_state = TRANSPORT_ISTATE_PROCESSING;
+		cmd->transport_state |= CMD_T_ACTIVE;
+	}
 	spin_unlock_irqrestore(&cmd->t_state_lock, flags);
+
+	if (aborted) {
+		pr_warn_ratelimited("handle_tmr caught CMD_T_ABORTED TMR %d"
+			"ref_tag: %llu tag: %llu\n", cmd->se_tmr_req->function,
+			cmd->se_tmr_req->ref_task_tag, cmd->tag);
+		transport_cmd_check_stop_to_fabric(cmd);
+		return 0;
+	}
 
 	INIT_WORK(&cmd->work, target_tmr_work);
 	queue_work(cmd->se_dev->tmr_wq, &cmd->work);
