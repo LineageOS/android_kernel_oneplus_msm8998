@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "b36f8565_30870754",
+        "filename": "drivers/power/supply/Kconfig",
+        "patchSetId": 10
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 8328
+      },
+      "writtenOn": "2017-08-24T07:27:29Z",
+      "side": 1,
+      "message": "should be # /** VENDOR_EDITIT 2017 add codeworkx for comment **/",
+      "range": {
+        "startLine": 1,
+        "startChar": 0,
+        "endLine": 1,
+        "endChar": 31
+      },
+      "revId": "352ecd3b07d74d2a88aff6266740cc351ee8a324",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
