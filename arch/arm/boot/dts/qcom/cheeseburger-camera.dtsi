@@ -1,0 +1,74 @@
+/* Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&cci {
+	qcom,eeprom@1 {
+		status = "disabled";
+	};
+
+	qcom,camera@1 {
+		status = "disabled";
+	};
+
+	qcom,eeprom@2 {
+		status = "ok";
+	};
+
+	qcom,eeprom@3 {
+		status = "disabled";
+	};
+
+	qcom,camera@3 {
+		status = "disabled";
+	};
+
+	tof0: qcom,tof@0 {
+		/delete-property/ stm,irq-gpio;
+	};
+};
+
+&soc {
+	qcom,ispif@ca31000 {
+			qcom,clock-control = "INIT_RATE", "NO_SET_RATE",
+				"NO_SET_RATE", "NO_SET_RATE",
+				"NO_SET_RATE",
+				"INIT_RATE", "INIT_RATE",
+				"INIT_RATE", "INIT_RATE",
+				"NO_SET_RATE", "NO_SET_RATE",
+				"NO_SET_RATE", "NO_SET_RATE",
+				"NO_SET_RATE", "NO_SET_RATE",
+				"NO_SET_RATE", "NO_SET_RATE",
+				"NO_SET_RATE", "NO_SET_RATE",
+				"NO_SET_RATE", "NO_SET_RATE",
+				"INIT_RATE",
+				"INIT_RATE", "NO_SET_RATE",
+				"INIT_RATE",
+				"INIT_RATE", "NO_SET_RATE";
+	};
+
+	tlmm: pinctrl@03400000 {
+		cam_tof_active {
+			config {
+				/delete-property/ bias-pull-up;
+				bias-disable;
+			};
+		};
+	};
+};
+
+&i2c_freq_400Khz {
+	qcom,hw-scl-stretch-en = <1>;
+};
+
+&i2c_freq_1Mhz {
+	qcom,hw-scl-stretch-en = <1>;
+};
