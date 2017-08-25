@@ -10,8 +10,9 @@
  * GNU General Public License for more details.
  */
 
-#include "pxlw-iris-settings.dtsi"
 #include "cheeseburger-mtp.dtsi"
+#include "pxlw-iris-settings.dtsi"
+#include "cheeseburger-camera.dtsi"
 #include "cheeseburger-panels.dtsi"
 #include "cheeseburger-pmi.dtsi"
 
@@ -533,22 +534,6 @@
 
 &clock_audio_lnbb {
 	status = "disabled";
-};
-
-/* Camera */
-&cci {
-	qcom,eeprom@1 {
-		status = "disabled";
-	};
-
-	qcom,camera@1 {
-		status = "disabled";
-	};
-
-	qcom,eeprom@2 {
-		status = "ok";
-	};
-
 };
 
 /* External Thermistors */
