@@ -22,6 +22,30 @@
       "revId": "7fa12dfe726ed9444feaf99618ddee8defb6934d",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b5fec50c_2c873df8",
+        "filename": "arch/arm/boot/dts/qcom/msm8998-pinctrl.dtsi",
+        "patchSetId": 5
+      },
+      "lineNbr": 1323,
+      "author": {
+        "id": 7148
+      },
+      "writtenOn": "2017-08-25T13:30:29Z",
+      "side": 1,
+      "message": ":D",
+      "parentUuid": "1c199183_6a0c31b7",
+      "range": {
+        "startLine": 1323,
+        "startChar": 4,
+        "endLine": 1323,
+        "endChar": 19
+      },
+      "revId": "7fa12dfe726ed9444feaf99618ddee8defb6934d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
