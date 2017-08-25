@@ -926,6 +926,15 @@ static void netlink_skb_set_owner_r(struct sk_buff *skb, struct sock *sk)
 
 static void netlink_sock_destruct(struct sock *sk)
 {
+	struct netlink_sock *nlk = nlk_sk(sk);
+
+	if (nlk->cb_running) {
+		if (nlk->cb.done)
+			nlk->cb.done(&nlk->cb);
+		module_put(nlk->cb.module);
+		kfree_skb(nlk->cb.skb);
+	}
+
 	skb_queue_purge(&sk->sk_receive_queue);
 #ifdef CONFIG_NETLINK_MMAP
 	if (1) {
@@ -2554,7 +2563,7 @@ static int netlink_recvmsg(struct socket *sock, struct msghdr *msg, size_t len,
 	/* Record the max length of recvmsg() calls for future allocations */
 	nlk->max_recvmsg_len = max(nlk->max_recvmsg_len, len);
 	nlk->max_recvmsg_len = min_t(size_t, nlk->max_recvmsg_len,
-				     16384);
+				     SKB_WITH_OVERHEAD(32768));
 
 	copied = data_skb->len;
 	if (len < copied) {
@@ -2807,14 +2816,13 @@ static int netlink_dump(struct sock *sk)
 	if (alloc_min_size < nlk->max_recvmsg_len) {
 		alloc_size = nlk->max_recvmsg_len;
 		skb = netlink_alloc_skb(sk, alloc_size, nlk->portid,
-					GFP_KERNEL |
-					__GFP_NOWARN |
-					__GFP_NORETRY);
+					(GFP_KERNEL & ~__GFP_DIRECT_RECLAIM) |
+					__GFP_NOWARN | __GFP_NORETRY);
 	}
 	if (!skb) {
 		alloc_size = alloc_min_size;
 		skb = netlink_alloc_skb(sk, alloc_size, nlk->portid,
-					GFP_KERNEL);
+					(GFP_KERNEL & ~__GFP_DIRECT_RECLAIM));
 	}
 	if (!skb)
 		goto errout_skb;
