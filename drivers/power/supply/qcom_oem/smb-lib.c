@@ -2212,6 +2212,10 @@ int smblib_get_prop_usb_voltage_now(struct smb_charger *chg,
 {
 	int rc = 0;
 
+        chg->dash_on = get_prop_fast_chg_started(chg);
+	if (chg->dash_on)
+                return 4000000;
+
 	rc = smblib_get_prop_usb_present(chg, val);
 	if (rc < 0 || !val->intval)
 		return rc;
