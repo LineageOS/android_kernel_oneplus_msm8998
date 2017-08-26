@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "620909da_de520ca6",
+        "filename": "drivers/power/supply/qcom_oem/smb-lib.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 2978,
+      "author": {
+        "id": 8328
+      },
+      "writtenOn": "2017-08-26T10:41:37Z",
+      "side": 1,
+      "message": "*total_current_ua \u003d 4000000;\nreturn rc;",
+      "range": {
+        "startLine": 2978,
+        "startChar": 15,
+        "endLine": 2978,
+        "endChar": 31
+      },
+      "revId": "c4ac461173611630db40d114ef382597321e2363",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
