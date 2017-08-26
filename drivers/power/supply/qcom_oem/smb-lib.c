@@ -2973,6 +2973,10 @@ int smblib_get_charge_current(struct smb_charger *chg,
 	bool non_compliant;
 	u8 stat5;
 
+	chg->dash_on = get_prop_fast_chg_started(chg);
+	if (chg->dash_on)
+                return 4000000;
+
 	if (chg->pd_active) {
 		*total_current_ua =
 			get_client_vote_locked(chg->usb_icl_votable, PD_VOTER);
