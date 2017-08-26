@@ -1724,6 +1724,9 @@ int smblib_get_prop_input_current_limited(struct smb_charger *chg,
 	u8 stat;
 	int rc;
 
+	chg->dash_on = get_prop_fast_chg_started(chg);
+	if (chg->dash_on)
+		return 4000000;
 	rc = smblib_read(chg, AICL_STATUS_REG, &stat);
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't read AICL_STATUS rc=%d\n", rc);
@@ -2211,7 +2214,6 @@ int smblib_get_prop_usb_voltage_now(struct smb_charger *chg,
 				    union power_supply_propval *val)
 {
 	int rc = 0;
-
 	rc = smblib_get_prop_usb_present(chg, val);
 	if (rc < 0 || !val->intval)
 		return rc;
