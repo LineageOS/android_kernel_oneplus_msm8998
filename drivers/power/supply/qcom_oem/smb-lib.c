@@ -6334,20 +6334,20 @@ int get_prop_chg_protect_status(struct smb_charger *chg)
 		return 0;
 }
 
-bool get_prop_fastchg_status(struct smb_charger *chg)
+static int get_prop_fastchg_status(struct smb_charger *chg)
 {
 	int capacity;
 
 	if (chg->dash_present)
-		return true;
+		return 4000000;
 
 	if (chg->hvdcp_present) {
 		capacity = get_prop_batt_capacity(chg);
 		if (capacity >= 1 && capacity <= 85)
-			return true;
+			return 4000000;
 	}
 
-	return false;
+	return 0;
 }
 
 static struct notify_dash_event notify_unplug_event  = {
