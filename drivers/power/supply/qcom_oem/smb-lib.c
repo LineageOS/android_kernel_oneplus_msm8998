@@ -6048,6 +6048,8 @@ static void op_heartbeat_work(struct work_struct *work)
 		/* add for disable normal charge */
 		fast_charging = op_get_fastchg_ing(chg);
 		if (fast_charging) {
+                        // fake voltage
+                        vbus_val.intval = 4000000;
 			if (!chg->disable_normal_chg_for_dash)
 				op_charging_en(chg, false);
 			chg->disable_normal_chg_for_dash = true;
