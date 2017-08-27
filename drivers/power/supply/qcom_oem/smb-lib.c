@@ -79,6 +79,7 @@ static int get_prop_fg_current_now(struct smb_charger *chg);
 static int get_prop_fg_voltage_now(struct smb_charger *chg);
 static void op_check_charger_collapse(struct smb_charger *chg);
 static int op_set_collapse_fet(struct smb_charger *chg, bool on);
+static void set_fakeIT(void);
 
 #define smblib_err(chg, fmt, ...)		\
 	pr_err("%s: %s: " fmt, chg->name,	\
@@ -5058,6 +5059,7 @@ static int set_dash_charger_present(int status)
 					DEFAULT_WALL_CHG_MA * 1000);
 		}
 		power_supply_changed(g_chg->batt_psy);
+                set_fakeIT();
 		pr_info("dash_present = %d, charger_present = %d\n",
 				g_chg->dash_present, charger_present);
 	} else {
@@ -6834,4 +6836,25 @@ int smblib_deinit(struct smb_charger *chg)
 	notify_dash_unplug_unregister(&notify_unplug_event);
 
 	return 0;
+}
+
+static void set_fakeIT()
+{
+	int rc;
+	static struct power_supply *usb;
+	union power_supply_propval ret = {0, };
+
+	if (!usb)
+		usb = power_supply_get_by_name("usb");
+
+	if (usb) {
+		ret.intval = 5000000;
+                pr_info("POWER_SUPPLY_PROP_CURRENT_MAX set to 5000000\n");
+		rc = power_supply_set_property(usb, POWER_SUPPLY_PROP_CURRENT_MAX, &ret);
+		if (rc)
+			pr_err("bms psy does not allow updating prop %d rc = %d\n",
+				POWER_SUPPLY_PROP_CURRENT_MAX, rc);
+	} else {
+		pr_err("no bms psy found\n");
+	}
 }
