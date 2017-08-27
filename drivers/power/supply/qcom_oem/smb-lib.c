@@ -79,6 +79,7 @@ static int get_prop_fg_current_now(struct smb_charger *chg);
 static int get_prop_fg_voltage_now(struct smb_charger *chg);
 static void op_check_charger_collapse(struct smb_charger *chg);
 static int op_set_collapse_fet(struct smb_charger *chg, bool on);
+static void set_spoof_aosp_fast_chg(bool enable);
 
 #define smblib_err(chg, fmt, ...)		\
 	pr_err("%s: %s: " fmt, chg->name,	\
@@ -4318,6 +4319,7 @@ static void op_handle_usb_removal(struct smb_charger *chg)
 {
 	op_set_fast_chg_allow(chg, false);
 	set_prop_fast_switch_to_normal_false(chg);
+	set_spoof_aosp_fast_chg(false);
 	set_usb_switch(chg, false);
 	set_dash_charger_present(false);
 
@@ -5058,6 +5060,7 @@ static int set_dash_charger_present(int status)
 					DEFAULT_WALL_CHG_MA * 1000);
 		}
 		power_supply_changed(g_chg->batt_psy);
+		set_spoof_aosp_fast_chg(true);
 		pr_info("dash_present = %d, charger_present = %d\n",
 				g_chg->dash_present, charger_present);
 	} else {
@@ -6834,4 +6837,28 @@ int smblib_deinit(struct smb_charger *chg)
 	notify_dash_unplug_unregister(&notify_unplug_event);
 
 	return 0;
+}
+
+static void set_spoof_aosp_fast_chg(bool enable)
+{
+	int rc;
+	static struct power_supply *usb;
+	union power_supply_propval ret = {0, };
+
+	if (!usb)
+		usb = power_supply_get_by_name("usb");
+
+	if (usb) {
+		if (enable)
+			ret.intval = 5000000;
+		else
+			ret.intval = 0;
+
+		rc = power_supply_set_property(usb, POWER_SUPPLY_PROP_CURRENT_MAX, &ret);
+		if (rc)
+			pr_err("usb psy does not allow updating prop %d rc = %d\n",
+				POWER_SUPPLY_PROP_CURRENT_MAX, rc);
+	} else {
+		pr_err("no usb psy found\n");
+	}
 }
