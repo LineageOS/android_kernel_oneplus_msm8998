@@ -125,8 +125,25 @@ void usb_sw_gpio_set(int value)
 static int set_property_on_smbcharger(enum power_supply_property prop, bool data)
 {
 	static struct power_supply *psy;
+	static struct power_supply *usb;
 	union power_supply_propval value = {data, };
 	int ret;
+
+	if (!usb) {
+		usb = power_supply_get_by_name("usb");
+		if (!usb) {
+			pr_err("failed to get ps usb\n");
+			return -EINVAL;
+		}
+	}
+
+	if (prop == POWER_SUPPLY_PROP_SWITCH_DASH && data == true)
+	{
+		value.intval = 5000000;
+		ret = power_supply_set_property(usb, POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX, &value);
+		if (ret)
+			return -EINVAL;
+	}
 
 	if (!psy) {
 		psy = power_supply_get_by_name("battery");
@@ -141,7 +158,6 @@ static int set_property_on_smbcharger(enum power_supply_property prop, bool data
 
 	return 0;
 }
-
 
 static int oneplus_dash_i2c_read(struct i2c_client *client, u8 addr, s32 len, u8 *rxbuf)
 {
