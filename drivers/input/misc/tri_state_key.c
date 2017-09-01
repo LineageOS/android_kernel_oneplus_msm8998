@@ -228,7 +228,7 @@ KEYCODE_FOPS(bottom);
 			goto err_set_gpio_input;\
 		}\
 		error = request_irq(switch_data->irq_##KEY, switch_dev_interrupt,\
-			IRQF_TRIGGER_FALLING, "tristate_" #KEY, switch_data);\
+			IRQF_TRIGGER_FALLING|IRQF_TRIGGER_RISING, "tristate_" #KEY, switch_data);\
 		if (error) {\
 			dev_err(dev, "%s: request_irq, err=%d\n", __func__, error);\
 			switch_data->irq_##KEY = -EINVAL;\
