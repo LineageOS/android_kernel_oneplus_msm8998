@@ -148,6 +148,15 @@ static void set_dload_mode(int on)
 	ret = scm_set_dload_mode(on ? dload_type : 0, 0);
 	if (ret)
 		pr_err("Failed to set secure DLOAD mode: %d\n", ret);
+	if(!on)
+		scm_disable_sdi();
+
+
+	if (on)
+		qpnp_pon_set_restart_reason(0x00);
+	else
+		qpnp_pon_set_restart_reason(PON_RESTART_REASON_PANIC);
+
 
 	dload_mode_enabled = on;
 }
@@ -293,6 +302,7 @@ static void msm_restart_prepare(const char *cmd)
 		need_warm_reset = (get_dload_mode() ||
 				(cmd != NULL && cmd[0] != '\0'));
 	}
+	qpnp_pon_set_restart_reason(0x00);
 
 	/* Hard reset the PMIC unless memory contents must be maintained. */
 	if (need_warm_reset) {
@@ -401,6 +411,7 @@ static void do_msm_poweroff(void)
 	pr_notice("Powering off the SoC\n");
 
 	set_dload_mode(0);
+	qpnp_pon_set_restart_reason(0x00);
 	scm_disable_sdi();
 	qpnp_pon_system_pwr_off(PON_POWER_OFF_SHUTDOWN);
 
