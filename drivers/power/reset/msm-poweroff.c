@@ -294,6 +294,9 @@ static void msm_restart_prepare(const char *cmd)
 				(cmd != NULL && cmd[0] != '\0'));
 	}
 
+	/* To preserve console-ramoops */
+	need_warm_reset = true;
+
 	/* Hard reset the PMIC unless memory contents must be maintained. */
 	if (need_warm_reset) {
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
@@ -301,7 +304,10 @@ static void msm_restart_prepare(const char *cmd)
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
 	}
 
-	if (cmd != NULL) {
+	if (in_panic) {
+		qpnp_pon_set_restart_reason(PON_RESTART_REASON_REBOOT);
+		__raw_writel(0x77665501, restart_reason);
+	} else if (cmd != NULL) {
 		if (!strncmp(cmd, "bootloader", 10)) {
 			qpnp_pon_set_restart_reason(
 				PON_RESTART_REASON_BOOTLOADER);
