@@ -10,8 +10,10 @@
  * GNU General Public License for more details.
  */
 
-#include "cheeseburger-mtp.dtsi"
+#include "msm8998-mdss-panels.dtsi"
 #include "pxlw-iris-settings.dtsi"
+
+#include "cheeseburger-mtp.dtsi"
 #include "cheeseburger-camera.dtsi"
 #include "cheeseburger-panels.dtsi"
 #include "cheeseburger-pmi.dtsi"
