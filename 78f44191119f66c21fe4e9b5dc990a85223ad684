@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "c488c34f_b977ff51",
+        "filename": "drivers/gpu/msm/adreno_dispatch.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2107,
+      "author": {
+        "id": 8328
+      },
+      "writtenOn": "2017-09-12T14:20:11Z",
+      "side": 1,
+      "message": "this is actually upstream\n\n\n        /*\n         * Deleting uninitialized timer will block for ever on kernel debug\n         * disable build. Hence skip del timer if it is not initialized.\n         */\n        if (adreno_is_preemption_enabled(adreno_dev))\n                del_timer_sync(\u0026adreno_dev-\u003epreempt.timer);",
+      "revId": "78f44191119f66c21fe4e9b5dc990a85223ad684",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
