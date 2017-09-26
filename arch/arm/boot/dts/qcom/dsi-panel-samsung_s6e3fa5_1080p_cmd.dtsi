@@ -172,5 +172,15 @@
 				39 01 00 00 00 00 03 F0 A5 A5
 				];
 				qcom,mdss-dsi-night-mode-command-state = "dsi_hs_mode";	
+
+		cm,mdss-livedisplay-cabc-cmd = [
+				15 01 00 00 00 00 02 55 00];
+		cm,mdss-livedisplay-cabc-ui-value = <0x01>;
+		cm,mdss-livedisplay-cabc-image-value = <0x02>;
+		cm,mdss-livedisplay-cabc-video-value = <0x03>;
+		cm,mdss-livedisplay-hbm-on-cmd = [
+				15 01 00 00 00 00 02 53 E8];
+		cm,mdss-livedisplay-hbm-off-cmd = [
+				15 01 00 00 00 00 02 53 28];
 	};
 };
