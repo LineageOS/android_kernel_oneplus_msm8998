@@ -106,11 +106,19 @@ struct gpio_chip {
 						unsigned offset, int value);
 	int			(*get)(struct gpio_chip *chip,
 						unsigned offset);
+#ifdef CONFIG_VENDOR_ONEPLUS
+	int			(*get_dash)(struct gpio_chip *chip,
+					unsigned offset);
+#endif
 	void			(*set)(struct gpio_chip *chip,
 						unsigned offset, int value);
 	void			(*set_multiple)(struct gpio_chip *chip,
 						unsigned long *mask,
 						unsigned long *bits);
+#ifdef CONFIG_VENDOR_ONEPLUS
+	void			(*set_dash)(struct gpio_chip *chip,
+						unsigned offset, int value);
+#endif
 	int			(*set_debounce)(struct gpio_chip *chip,
 						unsigned offset,
 						unsigned debounce);
