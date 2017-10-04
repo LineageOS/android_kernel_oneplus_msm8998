@@ -368,7 +368,7 @@
 				config {
 					pins = "gpio80";
 					drive-strength = <2>;
-					bias-disable;
+					bias-pull-down;
 				};
 			};
 		};
@@ -398,6 +398,16 @@
 		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend";
 		pinctrl-0 = <&ts_active>;
 		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+	};
+};
+
+&i2c_7 {
+	oneplus_fastcg@26 {
+		pinctrl-names = "mux_fastchg_active", "mux_fastchg_suspend", "mcu_data_active", "mcu_data_suspend";
+		pinctrl-0 = <&fastchg_active &usb_sw_active &ap_clk_active>;
+		pinctrl-1 = <&usb_sw_suspend &fastchg_suspend &ap_clk_suspend>;
+		pinctrl-2 =<&ap_data_active>;
+		pinctrl-3 =<&ap_data_suspend>;
 	};
 };
 
