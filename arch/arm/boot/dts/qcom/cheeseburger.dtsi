@@ -441,6 +441,10 @@
 	status = "disabled";
 };
 
+&snd_9335 {
+	qcom,mbhc-audio-jack-type = "4-pole-jack";
+};
+
 /* Audio */
 &soc {
 	i2c@c1b7000 {
