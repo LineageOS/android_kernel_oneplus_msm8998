@@ -146,6 +146,10 @@ struct cpufreq_policy {
 struct cpufreq_policy *cpufreq_cpu_get_raw(unsigned int cpu);
 struct cpufreq_policy *cpufreq_cpu_get(unsigned int cpu);
 void cpufreq_cpu_put(struct cpufreq_policy *policy);
+#ifdef CONFIG_VENDOR_ONEPLUS
+extern unsigned int cluster1_first_cpu;
+extern void c0_cpufreq_limit_queue(void);
+#endif
 #else
 static inline struct cpufreq_policy *cpufreq_cpu_get_raw(unsigned int cpu)
 {
