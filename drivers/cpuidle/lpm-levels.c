@@ -157,6 +157,13 @@ static bool sleep_disabled;
 module_param_named(sleep_disabled,
 	sleep_disabled, bool, S_IRUGO | S_IWUSR | S_IWGRP);
 
+#ifdef CONFIG_VENDOR_ONEPLUS
+void msm_cpuidle_set_sleep_disable(bool disable)
+{
+	sleep_disabled = disable;
+}
+#endif
+
 s32 msm_cpuidle_get_deep_idle_latency(void)
 {
 	return 10;
