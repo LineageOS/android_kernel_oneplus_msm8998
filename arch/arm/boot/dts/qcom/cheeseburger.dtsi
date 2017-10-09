@@ -18,11 +18,30 @@
 #include "cheeseburger-panels.dtsi"
 #include "cheeseburger-pmi.dtsi"
 
+/delete-node/ &firmware;
+
 / {
 	reserved-memory {
 		ramoops_mem: ramoops_mem@ac000000 {
 			reg = <0 0xAC000000 0 0x00200000>;
 			label = "ramoops_mem";
+		};
+	};
+
+	firmware: firmware {
+		android {
+			compatible = "android,firmware";
+			fstab {
+				compatible = "android,fstab";
+				system {
+					compatible = "android,system";
+					dev = "/dev/block/platform/soc/1da4000.ufshc/by-name/system";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,discard";
+					fsmgr_flags = "wait";
+					status = "ok";
+				};
+			};
 		};
 	};
 };
