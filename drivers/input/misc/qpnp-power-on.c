@@ -1129,7 +1129,7 @@ static int qpnp_config_reset(struct qpnp_pon *pon, struct qpnp_pon_config *cfg);
 static unsigned int pwr_dump_enabled = -1;
 static unsigned int long_pwr_dump_enabled = -1;
 
-static int param_set_pwr_dump_enabled(const char *val, struct kernel_param *kp)
+static int param_set_pwr_dump_enabled(const char *val, const struct kernel_param *kp)
 {
 	unsigned long enable;
 	struct qpnp_pon *pon = sys_reset_dev;
@@ -1161,7 +1161,7 @@ static int param_set_pwr_dump_enabled(const char *val, struct kernel_param *kp)
 }
 
 static int param_set_long_press_pwr_dump_enabled
-(const char *val, struct kernel_param *kp)
+(const char *val, const struct kernel_param *kp)
 {
 	unsigned long enable;
 	struct qpnp_pon *pon = sys_reset_dev;
