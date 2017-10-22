@@ -1310,10 +1310,6 @@ int mmc_hs400_to_hs200(struct mmc_card *card)
 	if (host->caps & MMC_CAP_WAIT_WHILE_BUSY)
 		send_status = false;
 
-	/* Reduce frequency to HS */
-	max_dtr = card->ext_csd.hs_max_dtr;
-	mmc_set_clock(host, max_dtr);
-
 	/* Switch HS400 to HS DDR */
 	val = EXT_CSD_TIMING_HS;
 	err = __mmc_switch(card, EXT_CSD_CMD_SET_NORMAL, EXT_CSD_HS_TIMING,
@@ -1323,6 +1319,10 @@ int mmc_hs400_to_hs200(struct mmc_card *card)
 		goto out_err;
 
 	mmc_set_timing(host, MMC_TIMING_MMC_DDR52);
+
+	/* Reduce frequency to HS */
+	max_dtr = card->ext_csd.hs_max_dtr;
+	mmc_set_clock(host, max_dtr);
 
 	if (!send_status) {
 		err = mmc_switch_status(card, false);
@@ -2043,11 +2043,11 @@ reinit:
 	}
 
 	card->clk_scaling_lowest = host->f_min;
-	if ((card->mmc_avail_type | EXT_CSD_CARD_TYPE_HS400) ||
-			(card->mmc_avail_type | EXT_CSD_CARD_TYPE_HS200))
+	if ((card->mmc_avail_type & EXT_CSD_CARD_TYPE_HS400) ||
+			(card->mmc_avail_type & EXT_CSD_CARD_TYPE_HS200))
 		card->clk_scaling_highest = card->ext_csd.hs200_max_dtr;
-	else if ((card->mmc_avail_type | EXT_CSD_CARD_TYPE_HS) ||
-			(card->mmc_avail_type | EXT_CSD_CARD_TYPE_DDR_52))
+	else if ((card->mmc_avail_type & EXT_CSD_CARD_TYPE_HS) ||
+			(card->mmc_avail_type & EXT_CSD_CARD_TYPE_DDR_52))
 		card->clk_scaling_highest = card->ext_csd.hs_max_dtr;
 	else
 		card->clk_scaling_highest = card->csd.max_dtr;
@@ -2604,6 +2604,9 @@ static int mmc_partial_init(struct mmc_host *host)
 	if (mmc_card_hs400(card)) {
 		if (card->ext_csd.strobe_support && host->ops->enhanced_strobe)
 			err = host->ops->enhanced_strobe(host);
+		else if (host->ops->execute_tuning)
+			err = host->ops->execute_tuning(host,
+				MMC_SEND_TUNING_BLOCK_HS200);
 	} else if (mmc_card_hs200(card) && host->ops->execute_tuning) {
 		err = host->ops->execute_tuning(host,
 			MMC_SEND_TUNING_BLOCK_HS200);

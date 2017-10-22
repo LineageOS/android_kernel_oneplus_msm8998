@@ -577,7 +577,8 @@ static void ipa3_wan_msg_free_cb(void *buff, u32 len, u32 type)
 	kfree(buff);
 }
 
-static int ipa3_send_wan_msg(unsigned long usr_param, uint8_t msg_type)
+static int ipa3_send_wan_msg(unsigned long usr_param, uint8_t msg_type,
+							bool is_cache)
 {
 	int retval;
 	struct ipa_wan_msg *wan_msg;
@@ -605,9 +606,27 @@ static int ipa3_send_wan_msg(unsigned long usr_param, uint8_t msg_type)
 		return retval;
 	}
 
+	if (is_cache) {
+		mutex_lock(&ipa3_ctx->ipa_cne_evt_lock);
+
+		/* cache the cne event */
+		memcpy(&ipa3_ctx->ipa_cne_evt_req_cache[
+			ipa3_ctx->num_ipa_cne_evt_req].wan_msg,
+			wan_msg,
+			sizeof(struct ipa_wan_msg));
+
+		memcpy(&ipa3_ctx->ipa_cne_evt_req_cache[
+			ipa3_ctx->num_ipa_cne_evt_req].msg_meta,
+			&msg_meta,
+			sizeof(struct ipa_msg_meta));
+
+		ipa3_ctx->num_ipa_cne_evt_req++;
+		ipa3_ctx->num_ipa_cne_evt_req %= IPA_MAX_NUM_REQ_CACHE;
+		mutex_unlock(&ipa3_ctx->ipa_cne_evt_lock);
+	}
+
 	return 0;
 }
-
 
 static long ipa3_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
@@ -1464,21 +1483,21 @@ static long ipa3_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 		break;
 	case IPA_IOC_NOTIFY_WAN_UPSTREAM_ROUTE_ADD:
-		retval = ipa3_send_wan_msg(arg, WAN_UPSTREAM_ROUTE_ADD);
+		retval = ipa3_send_wan_msg(arg, WAN_UPSTREAM_ROUTE_ADD, true);
 		if (retval) {
 			IPAERR("ipa3_send_wan_msg failed: %d\n", retval);
 			break;
 		}
 		break;
 	case IPA_IOC_NOTIFY_WAN_UPSTREAM_ROUTE_DEL:
-		retval = ipa3_send_wan_msg(arg, WAN_UPSTREAM_ROUTE_DEL);
+		retval = ipa3_send_wan_msg(arg, WAN_UPSTREAM_ROUTE_DEL, true);
 		if (retval) {
 			IPAERR("ipa3_send_wan_msg failed: %d\n", retval);
 			break;
 		}
 		break;
 	case IPA_IOC_NOTIFY_WAN_EMBMS_CONNECTED:
-		retval = ipa3_send_wan_msg(arg, WAN_EMBMS_CONNECT);
+		retval = ipa3_send_wan_msg(arg, WAN_EMBMS_CONNECT, false);
 		if (retval) {
 			IPAERR("ipa3_send_wan_msg failed: %d\n", retval);
 			break;
@@ -1649,6 +1668,21 @@ int ipa3_setup_dflt_rt_tables(void)
 	kfree(rt_rule);
 
 	return 0;
+}
+
+static int ipa3_clkon_cfg_wa(void)
+{
+	struct ipahal_reg_clkon_cfg clkon_cfg = { 0 };
+	int ret = 0;
+
+	clkon_cfg.cgc_open_misc = 1;
+
+	if (ipa3_cfg_clkon_cfg(&clkon_cfg)) {
+		IPAERR("fail to set cgc_open_misc = 1\n");
+		ret = -EPERM;
+	}
+
+	return ret;
 }
 
 static int ipa3_setup_exception_path(void)
@@ -4013,8 +4047,14 @@ static int ipa3_post_init(const struct ipa3_plat_drv_res *resource_p,
 
 	ipa3_trigger_ipa_ready_cbs();
 	complete_all(&ipa3_ctx->init_completion_obj);
-	pr_info("IPA driver initialization was successful.\n");
 
+	/* WA to disable MISC clock gating for IPA_HW_v3_1 */
+	if (ipa3_ctx->ipa_hw_type == IPA_HW_v3_1) {
+		pr_info(" WA to set cgc_open_misc = 1\n");
+		ipa3_clkon_cfg_wa();
+	}
+
+	pr_info("IPA driver initialization was successful\n");
 	return 0;
 
 fail_teth_bridge_driver_init:
@@ -4596,6 +4636,8 @@ static int ipa3_pre_init(const struct ipa3_plat_drv_res *resource_p,
 
 	mutex_init(&ipa3_ctx->lock);
 	mutex_init(&ipa3_ctx->nat_mem.lock);
+	mutex_init(&ipa3_ctx->ipa_cne_evt_lock);
+	mutex_init(&ipa3_ctx->q6_proxy_clk_vote_mutex);
 
 	idr_init(&ipa3_ctx->ipa_idr);
 	spin_lock_init(&ipa3_ctx->idr_lock);
