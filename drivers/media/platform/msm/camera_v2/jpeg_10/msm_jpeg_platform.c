@@ -33,12 +33,6 @@
 
 #define JPEG_DT_PROP_CNT 2
 
-#ifdef CONFIG_VENDOR_ONEPLUS
-#define MAX_JPEG_FDS 10
-
-int jpeg_fd[MAX_JPEG_FDS];
-int mapped_fd_cnt = 0;
-#endif
 
 int msm_jpeg_get_clock_index(struct msm_jpeg_device *pgmn_dev,
 	const char *clk_name)
@@ -75,20 +69,7 @@ int msm_jpeg_platform_set_clk_rate(struct msm_jpeg_device *pgmn_dev,
 
 void msm_jpeg_platform_p2v(int iommu_hdl, int fd)
 {
-#ifdef CONFIG_VENDOR_ONEPLUS
-	int fd_cnt;
 	cam_smmu_put_phy_addr(iommu_hdl, fd);
-
-	for (fd_cnt =0; fd_cnt < MAX_JPEG_FDS; fd_cnt ++) {
-		if (fd == jpeg_fd[fd_cnt]) {
-			jpeg_fd[fd_cnt] = -1;
-			mapped_fd_cnt--;
-			break;
-		}
-	}
-#else
-	cam_smmu_put_phy_addr(iommu_hdl, fd);
-#endif
 	return;
 }
 
@@ -98,9 +79,6 @@ uint32_t msm_jpeg_platform_v2p(struct msm_jpeg_device *pgmn_dev, int fd,
 	dma_addr_t paddr;
 	size_t size;
 	int rc;
-#ifdef CONFIG_VENDOR_ONEPLUS
-	int fd_cnt;
-#endif
 
 	rc = cam_smmu_get_phy_addr(pgmn_dev->iommu_hdl, fd, CAM_SMMU_MAP_RW,
 			&paddr, &size);
@@ -118,21 +96,6 @@ uint32_t msm_jpeg_platform_v2p(struct msm_jpeg_device *pgmn_dev, int fd,
 		JPEG_PR_ERR("%s: invalid offset + len\n", __func__);
 		goto err_size;
 	}
-
-#ifdef CONFIG_VENDOR_ONEPLUS
-	if (mapped_fd_cnt > MAX_JPEG_FDS) {
-		JPEG_PR_ERR("%s: Max possible mapped FDs are = %d but = %d\n",
-			__func__, MAX_JPEG_FDS, mapped_fd_cnt);
-	} else {
-		for (fd_cnt =0; fd_cnt < MAX_JPEG_FDS; fd_cnt ++) {
-			if (jpeg_fd[fd_cnt] == -1) {
-				jpeg_fd[fd_cnt] = fd;
-				mapped_fd_cnt++;
-				break;
-			}
-		}
-	}
-#endif
 
 	return paddr;
 err_size:
@@ -269,39 +232,13 @@ static int msm_jpeg_attach_iommu(struct msm_jpeg_device *pgmn_dev)
 	}
 	JPEG_DBG("%s:%d] handle %d attach\n",
 			__func__, __LINE__, pgmn_dev->iommu_hdl);
-
-#ifdef CONFIG_VENDOR_ONEPLUS
-	mapped_fd_cnt = 0;
-	memset (&jpeg_fd[0], -1, sizeof (int)*MAX_JPEG_FDS);
-#endif
-
 	return 0;
 }
 
 static int msm_jpeg_detach_iommu(struct msm_jpeg_device *pgmn_dev)
 {
-#ifdef CONFIG_VENDOR_ONEPLUS
-	int fd_cnt;
 	JPEG_DBG("%s:%d] handle %d detach\n",
 			__func__, __LINE__, pgmn_dev->iommu_hdl);
-
-	if (mapped_fd_cnt > 0) {
-		JPEG_PR_ERR("%s: This should never happen mapped_fd_cnt = %d \n",
-			__func__,mapped_fd_cnt);
-
-		for (fd_cnt =0; fd_cnt < MAX_JPEG_FDS; fd_cnt ++) {
-			if (jpeg_fd[fd_cnt] != -1) {
-				cam_smmu_put_phy_addr(pgmn_dev->iommu_hdl, jpeg_fd[fd_cnt]);
-				jpeg_fd[fd_cnt] = -1;
-				mapped_fd_cnt--;
-			}
-		}
-	}
-#else
-	JPEG_DBG("%s:%d] handle %d detach\n",
-			__func__, __LINE__, pgmn_dev->iommu_hdl);
-
-#endif
 	cam_smmu_ops(pgmn_dev->iommu_hdl, CAM_SMMU_DETACH);
 	return 0;
 }
