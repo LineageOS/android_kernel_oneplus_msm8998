@@ -53,6 +53,7 @@
 #endif
 
 #include <linux/project_info.h>
+#include "../fingerprint_detect/fingerprint_detect.h"
 
 static unsigned int ignor_home_for_ESD = 0;
 module_param(ignor_home_for_ESD, uint, S_IRUGO | S_IWUSR);
@@ -81,13 +82,14 @@ struct fpc1020_data {
 	struct pinctrl_state   *gpio_state_suspend;
 
 	#ifdef ONEPLUS_EDIT
-    int EN_VDD_gpio;
-    int id0_gpio;
-    int id1_gpio;
-    int id2_gpio;
-    struct input_dev	*input_dev;
-    int screen_state;//1: on 0:off
-    int sensor_version;//0x01:fpc1245 0x02:fpc1263
+	int EN_VDD_gpio;
+	int id0_gpio;
+	int id1_gpio;
+	int id2_gpio;
+	struct input_dev *input_dev;
+	int screen_state; //1: on 0:off
+	/*int sensor_version;*/ //0x01:fpc1245 0x02:fpc1263
+	int project_version;
 	#endif
 	#if defined(CONFIG_FB)
 	struct notifier_block fb_notif;
@@ -386,6 +388,16 @@ static ssize_t report_home_set(struct device *dev,
 }
 static DEVICE_ATTR(report_home, S_IWUSR, NULL, report_home_set);
 
+static ssize_t report_key_set(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct input_event *ev = (struct input_event *)buf;
+	struct  fpc1020_data *fpc1020 = dev_get_drvdata(dev);
+
+	input_event(fpc1020->input_dev, ev->type, ev->code, ev->value);
+	return count;
+}
+static DEVICE_ATTR(report_key, S_IWUSR, NULL, report_key_set);
 static ssize_t update_info_set(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -409,7 +421,7 @@ static ssize_t screen_state_get(struct device* device,
 }
 
 static DEVICE_ATTR(screen_state, S_IRUSR , screen_state_get, NULL);
-
+/*
 static ssize_t sensor_version_get(struct device* device,
 			     struct device_attribute* attribute,
 			     char* buffer)
@@ -419,7 +431,7 @@ static ssize_t sensor_version_get(struct device* device,
 }
 
 static DEVICE_ATTR(sensor_version, S_IRUSR , sensor_version_get, NULL);
-
+*/
 static ssize_t proximity_state_set(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -446,7 +458,8 @@ static struct attribute *attributes[] = {
 	&dev_attr_report_home.attr,
 	&dev_attr_update_info.attr,
 	&dev_attr_screen_state.attr,
-	&dev_attr_sensor_version.attr,
+	/*&dev_attr_sensor_version.attr,*/
+	&dev_attr_report_key.attr,
 	&dev_attr_proximity_state.attr,
 	NULL
 };
@@ -474,11 +487,24 @@ int fpc1020_input_init(struct fpc1020_data *fpc1020)
 
 		/* Set event bits according to what events we are generating */
 		set_bit(EV_KEY, fpc1020->input_dev->evbit);
+		set_bit(EV_SYN, fpc1020->input_dev->evbit);
+		set_bit(EV_ABS, fpc1020->input_dev->evbit);
 
-        set_bit(KEY_POWER, fpc1020->input_dev->keybit);
-        set_bit(KEY_F2, fpc1020->input_dev->keybit);
-        set_bit(KEY_HOME, fpc1020->input_dev->keybit);
-	set_bit(KEY_FINGERPRINT, fpc1020->input_dev->keybit);
+		set_bit(KEY_POWER, fpc1020->input_dev->keybit);
+		set_bit(KEY_F2, fpc1020->input_dev->keybit);
+		set_bit(KEY_HOME, fpc1020->input_dev->keybit);
+		set_bit(KEY_FINGERPRINT, fpc1020->input_dev->keybit);
+
+		/*
+		set_bit(BTN_A, fpc1020->input_dev->keybit);
+		set_bit(BTN_C, fpc1020->input_dev->keybit);
+		set_bit(BTN_B, fpc1020->input_dev->keybit);
+		set_bit(ABS_Z, fpc1020->input_dev->keybit);
+		set_bit(KEY_UP, fpc1020->input_dev->keybit);
+		set_bit(KEY_DOWN, fpc1020->input_dev->keybit);
+		set_bit(KEY_LEFT, fpc1020->input_dev->keybit);
+		set_bit(KEY_RIGHT, fpc1020->input_dev->keybit);
+		*/
 
 		/* Register the input device */
 		error = input_register_device(fpc1020->input_dev);
@@ -588,11 +614,15 @@ static int fpc1020_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	int rc = 0;
 	unsigned long irqf;
-	int id0, id1, id2;
+	struct device_node *np;
+	struct fpc1020_data *fpc1020;
 
-	struct device_node *np = dev->of_node;
+	pr_info("%s: fp version %x\n", __func__, fp_version);
+	if ((fp_version != 0x01) && (fp_version != 0x02))
+		return 0;
 
-	struct fpc1020_data *fpc1020 = devm_kzalloc(dev, sizeof(*fpc1020),
+	np = dev->of_node;
+	fpc1020 = devm_kzalloc(dev, sizeof(*fpc1020),
 			GFP_KERNEL);
 	if (!fpc1020) {
 		dev_err(dev,
@@ -611,6 +641,11 @@ static int fpc1020_probe(struct platform_device *pdev)
 		rc = -EINVAL;
 		goto exit;
 	}
+
+	if (of_property_read_bool(fpc1020->dev->of_node, "oem,dumpling"))
+		fpc1020->project_version = 0x02;
+	else
+		fpc1020->project_version = 0x01;
 
 	rc = fpc1020_request_named_gpio(fpc1020, "fpc,irq-gpio",
 			&fpc1020->irq_gpio);
@@ -631,29 +666,6 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto exit;*/
 
     #ifdef ONEPLUS_EDIT
-    rc = fpc1020_request_named_gpio(fpc1020, "fpc,gpio_id0",
-			&fpc1020->id0_gpio);
-	if(gpio_is_valid(fpc1020->id0_gpio))
-    {
-        dev_err(dev, "%s: gpio_is_valid(fpc1020->id0_gpio=%d)\n", __func__,fpc1020->id0_gpio);
-        gpio_direction_input(fpc1020->id0_gpio);
-    }
-
-	rc = fpc1020_request_named_gpio(fpc1020, "fpc,gpio_id1",
-			&fpc1020->id1_gpio);
-	if(gpio_is_valid(fpc1020->id1_gpio))
-    {
-        dev_err(dev, "%s: gpio_is_valid(fpc1020->id1_gpio=%d)\n", __func__,fpc1020->id1_gpio);
-        gpio_direction_input(fpc1020->id1_gpio);
-    }
-
-	rc = fpc1020_request_named_gpio(fpc1020, "fpc,gpio_id2",
-			&fpc1020->id2_gpio);
-	if(gpio_is_valid(fpc1020->id2_gpio))
-    {
-        dev_err(dev, "%s: gpio_is_valid(fpc1020->id2_gpio=%d)\n", __func__,fpc1020->id2_gpio);
-        gpio_direction_input(fpc1020->id2_gpio);
-    }
     /* in xbl
 	rc = fpc1020_request_named_gpio(fpc1020, "fpc,gpio_1V8_EN",
 			&fpc1020->EN_VDD_gpio);
@@ -748,33 +760,6 @@ static int fpc1020_probe(struct platform_device *pdev)
     *   Goodix   1            0             1
     *   
     */
-	fpc1020->sensor_version = 0x02;
-	id0 = gpio_get_value(fpc1020->id0_gpio);
-	id1 = gpio_get_value(fpc1020->id1_gpio);
-	id2 = gpio_get_value(fpc1020->id2_gpio);
-	if (id0 && id1 && id2) {
-		push_component_info(FINGERPRINTS, "fpc1245", "FPC(OF)");
-		fpc1020->sensor_version = 0x01;
-	} else if (id0 && !id1 && !id2) {
-		push_component_info(FINGERPRINTS, "fpc1245", "FPC(Primax)");
-		fpc1020->sensor_version = 0x01;
-	} else if (!id0 && !id1 && id2) {
-		push_component_info(FINGERPRINTS, "fpc1245", "FPC(truly)");
-		fpc1020->sensor_version = 0x01;
-	} else if (id0 && id1 && !id2) {
-		push_component_info(FINGERPRINTS, "fpc1263", "FPC(OF)");
-	} else if (!id0 && !id1 && !id2) {
-		push_component_info(FINGERPRINTS, "fpc1263", "FPC(Primax)");
-	} else if (!id0 && id1 && id2) {
-		push_component_info(FINGERPRINTS, "fpc1263", "FPC(truly)");
-	} else if (!id0 && id1 && !id2) {
-		push_component_info(FINGERPRINTS, "fpc1263", "FPC(f/p)");
-	} else if (id0 && !id1 && id2) {
-		push_component_info(FINGERPRINTS, "fpc1263", "FPC(Goodix)");
-	} else {
-		push_component_info(FINGERPRINTS, "fpc", "PC");
-    }
-
 	dev_info(dev, "%s: ok\n", __func__);
 exit:
 	return rc;
