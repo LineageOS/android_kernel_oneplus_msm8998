@@ -28,6 +28,7 @@
 #include <sound/q6core.h>
 #include "msm-dts-srs-tm-config.h"
 #include <sound/adsp_err.h>
+#include "msm-pcm-routing-v2.h"
 
 #define TIMEOUT_MS 1000
 
@@ -3377,6 +3378,10 @@ int adm_close(int port_id, int perf_mode, int copp_idx)
 
 	int ret = 0, port_idx;
 	int copp_id = RESET_COPP_ID;
+
+#ifdef CONFIG_VENDOR_ONEPLUS
+	gis_24bits = 0;
+#endif
 
 	pr_debug("%s: port_id=0x%x perf_mode: %d copp_idx: %d\n", __func__,
 		 port_id, perf_mode, copp_idx);
