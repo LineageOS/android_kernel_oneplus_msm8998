@@ -187,6 +187,10 @@ dtb-$(CONFIG_VENDOR_ONEPLUS) += \
 	cheeseburger-v2.1-pvt.dtb \
 	cheeseburger-v2.1-pvt1.dtb
 
+dtb-$(CONFIG_VENDOR_ONEPLUS) += \
+	dumpling-v2.1-dvt.dtb \
+	dumpling-v2.1-pvt.dtb \
+
 dtb-$(CONFIG_ARCH_MSMHAMSTER) += msmhamster-rumi.dtb
 
 dtb-$(CONFIG_ARCH_SDM660) += sdm660-sim.dtb \
