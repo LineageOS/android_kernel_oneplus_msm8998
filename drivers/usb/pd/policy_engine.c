@@ -615,6 +615,10 @@ static void kick_sm(struct usbpd *pd, int ms)
 static void phy_sig_received(struct usbpd *pd, enum pd_sig_type sig)
 {
 	union power_supply_propval val = {1};
+#ifdef CONFIG_VENDOR_ONEPLUS
+	usbpd_info(&pd->dev, "%s return by oem\n", __func__);
+	return;
+#endif
 
 	if (sig != HARD_RESET_SIG) {
 		usbpd_err(&pd->dev, "invalid signal (%d) received\n", sig);
