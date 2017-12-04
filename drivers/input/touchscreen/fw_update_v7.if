@@ -1565,7 +1565,7 @@ static int fwu_write_ui_configuration(void)
 static int fwu_write_flash_configuration(void)
 {
 	int retval;
-    
+
 	TPD_ERR("%s: enter!!\n",__func__);
 	fwu->config_area = FLASH_CONFIG_AREA;
 	fwu->config_data = fwu->img.fl_config.data;
@@ -1825,7 +1825,7 @@ int fwu_start_reflash(const unsigned char *fw_image, struct i2c_client *client)
 	retval = fwu_read_flash_status();
 	if (retval < 0)
                 goto exit_free_fwu;
-  
+
 	msleep(INT_DISABLE_WAIT_MS);
 
 	retval = fwu_write_f34_command(CMD_ENABLE_FLASH_PROG);
@@ -1867,7 +1867,7 @@ int fwu_start_reflash(const unsigned char *fw_image, struct i2c_client *client)
 		retval = fwu_do_reflash();
 	}
 	retval = fwu_write_ui_configuration();
-	synaptics_rmi4_i2c_write_byte(fwu->client,fwu->bl_reset_add,0x01);//reset tp   
+	synaptics_rmi4_i2c_write_byte(fwu->client,fwu->bl_reset_add,0x01);//reset tp
 	return retval;
 
 exit_free_fwu:
