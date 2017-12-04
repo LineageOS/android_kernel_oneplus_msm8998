@@ -183,17 +183,9 @@ endif
 endif
 
 dtb-$(CONFIG_VENDOR_ONEPLUS) += \
-	cheeseburger-evb.dtb \
-	cheeseburger-v2.1-backup.dtb \
 	cheeseburger-v2.1-dvt1.dtb \
-	cheeseburger-v2.1-evb.dtb \
-	cheeseburger-v2.1-evt1.dtb \
-	cheeseburger-v2.1-evt2.dtb \
-	cheeseburger-v2.1-evt3.dtb \
 	cheeseburger-v2.1-pvt.dtb \
-	cheeseburger-v2.1-pvt1.dtb \
-	cheeseburger-v2.1-t0.dtb \
-	cheeseburger-v2.1-t1.dtb
+	cheeseburger-v2.1-pvt1.dtb
 
 dtb-$(CONFIG_ARCH_MSMHAMSTER) += msmhamster-rumi.dtb
 
