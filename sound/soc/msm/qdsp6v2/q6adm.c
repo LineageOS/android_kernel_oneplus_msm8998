@@ -26,6 +26,7 @@
 #include <sound/asound.h>
 #include "msm-dts-srs-tm-config.h"
 #include <sound/adsp_err.h>
+#include "msm-pcm-routing-v2.h"
 
 #define TIMEOUT_MS 1000
 
@@ -2368,6 +2369,13 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 	int copp_idx = -1;
 	int tmp_port = q6audio_get_port_id(port_id);
 
+#ifdef CONFIG_VENDOR_ONEPLUS
+	if (gis_24bits) {
+		bit_width = 24;
+		//pr_err("adm_open oneplus Open adm gis_24bits sepcially for offload\n");
+	}
+#endif
+
 	pr_debug("%s:port %#x path:%d rate:%d mode:%d perf_mode:%d,topo_id %d\n",
 		 __func__, port_id, path, rate, channel_mode, perf_mode,
 		 topology);
@@ -2998,6 +3006,10 @@ int adm_close(int port_id, int perf_mode, int copp_idx)
 
 	int ret = 0, port_idx;
 	int copp_id = RESET_COPP_ID;
+
+#ifdef CONFIG_VENDOR_ONEPLUS
+	gis_24bits = 0;
+#endif
 
 	pr_debug("%s: port_id=0x%x perf_mode: %d copp_idx: %d\n", __func__,
 		 port_id, perf_mode, copp_idx);
