@@ -20,9 +20,86 @@
 		compatible = "fpc,fpc1020";
 		interrupt-parent = <&tlmm>;
 		fpc,irq-gpio    = <&tlmm 121 0>;
-		fpc,gpio_id0    = <&tlmm 39 0>;
-		fpc,gpio_id1    = <&tlmm 41 0>;
-		fpc,gpio_id2    = <&tlmm 63 0>;
+		/*
+		*fpc,gpio_id0    = <&tlmm 39 0>;
+		*fpc,gpio_id1    = <&tlmm 41 0>;
+		*fpc,gpio_id2    = <&tlmm 63 0>;
+		*/
+	};
+
+	goodix_fp {
+		compatible = "goodix,fingerprint";
+		interrupt-parent = <&tlmm>;
+		fp-gpio-irq = <&tlmm 121 0x00>;
+		fp-gpio-reset = <&tlmm 75 0x00>;
+		status = "okay";
+	};
+
+	tlmm: pinctrl@03400000 {
+		fp_enable: fp_enable {
+			mux {
+				pins = "gpio25";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio25";
+				drive-strength = <2>;
+				bias-pull-up;
+				output-enable;
+				output-high;
+			};
+		};
+		fp_id0_init: fp_id0_init {
+			mux {
+				pins = "gpio39";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio39";
+				drive-strength = <2>;
+				bias-disable;
+				input-enable;
+			};
+		};
+		fp_id1_init: fp_id1_init {
+			mux {
+				pins = "gpio41";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio41";
+				drive-strength = <2>;
+				bias-disable;
+				input-enable;
+			};
+		};
+		fp_id2_init: fp_id2_init {
+			mux {
+				pins = "gpio63";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio63";
+				drive-strength = <2>;
+				bias-disable;
+				input-enable;
+			};
+		};
+	};
+
+	fingerprint_detect {
+		compatible = "oneplus,fpdetect";
+		fp-gpio-enable    = <&tlmm 25 0>;
+		fp-gpio-id0    = <&tlmm 39 0>;
+		fp-gpio-id1    = <&tlmm 41 0>;
+		fp-gpio-id2    = <&tlmm 63 0>;
+		pinctrl-names = "fp_enable", "fp_id_init";
+		pinctrl-0 = <&fp_enable>;
+		pinctrl-1 = <&fp_id0_init &fp_id1_init &fp_id2_init>;
 	};
 
 };
