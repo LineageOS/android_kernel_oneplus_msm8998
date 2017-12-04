@@ -73,8 +73,8 @@ static void remote_rmi4_delay_work(struct work_struct *work);
 static struct remotepanel_data *remote_free_panel_data(struct remotepanel_data *pdata);
 
 
-#define MASK_8BIT 0xFF ;
-#define SYN_I2C_RETRY_TIMES 3;
+#define MASK_8BIT 0xFF
+#define SYN_I2C_RETRY_TIMES 3
 #define BUFFER_SIZE 252
 struct rmidev_handle {
 	dev_t dev_no;
@@ -108,7 +108,7 @@ static struct device_attribute attrs[] = {
 	__ATTR(open, S_IRUSR | S_IWUSR,
 			NULL,
 			rmidev_sysfs_open_store),
-	__ATTR(release,S_IRUSR | S_IWUSR,
+	__ATTR(release, S_IRUSR | S_IWUSR,
 			NULL,
 			rmidev_sysfs_release_store),
 	__ATTR(address, S_IRUSR | S_IWUSR,
@@ -201,8 +201,8 @@ static ssize_t rmidev_sysfs_open_store(struct device *dev,
 {
 	unsigned int input;
 
-	if (sscanf(buf, "%u", &input) != 1)
-			return -EINVAL;
+	if (kstrtouint(buf, 10, &input) != 1)
+		return -EINVAL;
 
 	if (input != 1)
 		return -EINVAL;
@@ -220,8 +220,8 @@ static ssize_t rmidev_sysfs_release_store(struct device *dev,
 {
 	unsigned int input;
 
-	if (sscanf(buf, "%u", &input) != 1)
-			return -EINVAL;
+	if (kstrtouint(buf, 10, &input) != 1)
+		return -EINVAL;
 
 	if (input != 1)
 		return -EINVAL;
@@ -239,8 +239,8 @@ static ssize_t rmidev_sysfs_address_store(struct device *dev,
 {
 	unsigned int input;
 
-	if (sscanf(buf, "%u", &input) != 1)
-			return -EINVAL;
+	if (kstrtouint(buf, 10, &input) != 1)
+		return -EINVAL;
 
 	if (input > REG_ADDR_LIMIT)
 		return -EINVAL;
@@ -255,8 +255,8 @@ static ssize_t rmidev_sysfs_length_store(struct device *dev,
 {
 	unsigned int input;
 
-	if (sscanf(buf, "%u", &input) != 1)
-			return -EINVAL;
+	if (kstrtouint(buf, 10, &input) != 1)
+		return -EINVAL;
 
 	if (input > REG_ADDR_LIMIT)
 		return -EINVAL;
@@ -279,23 +279,27 @@ static ssize_t rmidev_sysfs_attn_state_show(struct device *dev,
 static int remote_rmi4_get_irq_gpio(void)
 {
 	struct rmidev_data *dev_data = (struct rmidev_data *)rmidev->data;
+
 	return dev_data->pdata->irq_gpio;
 }
 
 static struct input_dev *remote_rmi4_get_input(void)
 {
 	struct rmidev_data *dev_data = (struct rmidev_data *)rmidev->data;
+
 	return dev_data->pdata->input_dev;
 }
 
-static struct i2c_client* remote_rmi4_get_i2c_client(void)
+static struct i2c_client *remote_rmi4_get_i2c_client(void)
 {
 	struct rmidev_data *dev_data = (struct rmidev_data *)rmidev->data;
+
 	return dev_data->pdata->client;
 }
 
-static int remote_rmit_set_page(unsigned int address){
-	struct i2c_client* i2c_client = remote_rmi4_get_i2c_client();
+static int remote_rmit_set_page(unsigned int address)
+{
+	struct i2c_client *i2c_client = remote_rmi4_get_i2c_client();
 	unsigned char retry;
 	unsigned char buf[2];
 	struct i2c_msg msg[] = {
@@ -310,22 +314,20 @@ static int remote_rmit_set_page(unsigned int address){
 	buf[1] = ((address >> 8) & 0xFF);
 
 	for (retry = 0; retry < 2; retry++) {
-		if (i2c_transfer(i2c_client->adapter, msg, 1) == 1) {
+		if (i2c_transfer(i2c_client->adapter, msg, 1) == 1)
 			break;
-		}
-		msleep(5);
+		msleep(20);
 	}
 
-	if (retry == 2) {
+	if (retry == 2)
 		return -EIO;
-	}
 
 	return 0;
 }
 
 static int remote_rmit_put_page(void)
 {
-	struct i2c_client* i2c_client = remote_rmi4_get_i2c_client();
+	struct i2c_client *i2c_client = remote_rmi4_get_i2c_client();
 	unsigned char retry;
 	unsigned char buf[2];
 	struct i2c_msg msg[] = {
@@ -340,26 +342,25 @@ static int remote_rmit_put_page(void)
 	buf[1] = 0x00;
 
 	for (retry = 0; retry < 2; retry++) {
-		if (i2c_transfer(i2c_client->adapter, msg, 1) == 1) {
+		if (i2c_transfer(i2c_client->adapter, msg, 1) == 1)
 			break;
-		}
-		msleep(5);
+		msleep(20);
 	}
 
-	if (retry == 2) {
+	if (retry == 2)
 		return -EIO;
-	}
 
 	return 0;
 }
 
 
-int remote_rmi4_i2c_read(unsigned short addr, unsigned char *data, unsigned short length)
+int remote_rmi4_i2c_read(unsigned short addr,
+		unsigned char *data, unsigned short length)
 {
 	int retval;
 	unsigned char retry;
 	unsigned char buf;
-	struct i2c_client* i2c_client = remote_rmi4_get_i2c_client();
+	struct i2c_client *i2c_client = remote_rmi4_get_i2c_client();
 	struct i2c_msg msg[] = {
 		{
 			.addr = i2c_client->addr,
@@ -377,7 +378,7 @@ int remote_rmi4_i2c_read(unsigned short addr, unsigned char *data, unsigned shor
 
 	buf = addr & 0xff;
 
-    retval = remote_rmit_set_page(addr);
+	retval = remote_rmit_set_page(addr);
 	if (retval < 0)
 		goto exit;
 
@@ -386,12 +387,11 @@ int remote_rmi4_i2c_read(unsigned short addr, unsigned char *data, unsigned shor
 			retval = length;
 			break;
 		}
-		msleep(5);
+		msleep(20);
 	}
 
-	if (retry == 2) {
+	if (retry == 2)
 		retval = -EIO;
-	}
 
 exit:
 	remote_rmit_put_page();
@@ -399,12 +399,13 @@ exit:
 	return retval;
 }
 
-int remote_rmi4_i2c_write(unsigned short addr, unsigned char *data, unsigned short length)
+int remote_rmi4_i2c_write(unsigned short addr,
+		unsigned char *data, unsigned short length)
 {
 	int retval;
 	unsigned char retry;
 	unsigned char buf[length + 1];
-	struct i2c_client* i2c_client = remote_rmi4_get_i2c_client();
+	struct i2c_client *i2c_client = remote_rmi4_get_i2c_client();
 	struct i2c_msg msg[] = {
 		{
 			.addr = i2c_client->addr,
@@ -415,7 +416,7 @@ int remote_rmi4_i2c_write(unsigned short addr, unsigned char *data, unsigned sho
 	};
 
 
-    retval = remote_rmit_set_page(addr);
+	retval = remote_rmit_set_page(addr);
 	if (retval < 0)
 		goto exit;
 
@@ -427,12 +428,11 @@ int remote_rmi4_i2c_write(unsigned short addr, unsigned char *data, unsigned sho
 			retval = length;
 			break;
 		}
-		msleep(5);
+		msleep(20);
 	}
-	msleep(10);
-	if (retry == 2) {
+	msleep(20);
+	if (retry == 2)
 		retval = -EIO;
-	}
 
 exit:
 	remote_rmit_put_page();
@@ -444,12 +444,12 @@ int remote_rmi4_i2c_enable(bool enable)
 {
 	struct rmidev_data *dev_data = (struct rmidev_data *)rmidev->data;
 
-	if(enable){
+	if (enable)
 		*(dev_data->pdata->enable_remote) = 0;
-	}else{
+	else
 		*(dev_data->pdata->enable_remote) = 1;
-	}
-	return 0 ;
+
+	return 0;
 }
 
 
@@ -471,7 +471,7 @@ static loff_t rmidev_llseek(struct file *filp, loff_t off, int whence)
 {
 	loff_t newpos;
 	struct rmidev_data *dev_data = filp->private_data;
-    //printk("synap %s\n",__func__);
+
 	if (IS_ERR(dev_data)) {
 		pr_err("%s: Pointer of char device data is invalid", __func__);
 		return -EBADF;
@@ -525,7 +525,7 @@ static ssize_t rmidev_read(struct file *filp, char __user *buf,
 	ssize_t retval;
 	unsigned char tmpbuf[count + 1];
 	struct rmidev_data *dev_data = filp->private_data;
-    //printk("synap %s\n",__func__);
+
 	if (IS_ERR(dev_data)) {
 		pr_err("%s: Pointer of char device data is invalid", __func__);
 		return -EBADF;
@@ -574,7 +574,8 @@ static ssize_t rmidev_write(struct file *filp, const char __user *buf,
 	ssize_t retval;
 	unsigned char tmpbuf[count + 1];
 	struct rmidev_data *dev_data = filp->private_data;
-    printk("synap %s\n",__func__);
+
+	//printk("synap %s\n", __func__);
 
 	if (IS_ERR(dev_data)) {
 		pr_err("%s: Pointer of char device data is invalid", __func__);
@@ -608,43 +609,29 @@ static ssize_t rmidev_write(struct file *filp, const char __user *buf,
 	return retval;
 }
 
-static int rmidev_create_attr(bool create) {
+static int rmidev_create_attr(bool create)
+{
 	int retval = 0;
 	unsigned char attr_count;
 	struct input_dev *input_dev = remote_rmi4_get_input();
 
-    printk("synap %s\n",__func__);
-	if(!create)
-		goto err_sysfs_attrs ;
+	//printk("synap %s\n", __func__);
+	if (!create)
+		goto err_sysfs_attrs;
 
-	if(rmidev->sysfs_dir)
-		return 0 ;
+	if (rmidev->sysfs_dir)
+		return 0;
 
-	if(!input_dev)
-		return -1;
-	/*
-	retval = gpio_export(remote_rmi4_get_irq_gpio(), false);
-	if (retval < 0) {
-		dev_err(device_ptr,
-				"%s: Failed to export attention gpio\n",
-				__func__);
-	} else {
-		retval = gpio_export_link(&(input_dev->dev),
-				"attn", remote_rmi4_get_irq_gpio());
-		if (retval < 0) {
-			dev_err(device_ptr,
-					"%s Failed to create gpio symlink\n",
-					__func__);
-		}
-	}
-	*/
+	if (!input_dev)
+		return -ENOMEM;
+
 	rmidev->sysfs_dir = kobject_create_and_add("rmidev",
 			&input_dev->dev.kobj);
 	if (!rmidev->sysfs_dir) {
 		dev_err(device_ptr,
 				"%s: Failed to create sysfs directory\n",
 				__func__);
-		return -1;
+		return -ENOMEM;
 	}
 
 
@@ -670,14 +657,13 @@ static int rmidev_create_attr(bool create) {
 		}
 	}
 
-	return 0 ;
+	return 0;
 
 err_sysfs_attrs:
-	if(!rmidev->sysfs_dir)
-		return 0 ;
-	for (attr_count = 0; attr_count < ARRAY_SIZE(attrs); attr_count++) {
+	if (!rmidev->sysfs_dir)
+		return 0;
+	for (attr_count = 0; attr_count < ARRAY_SIZE(attrs); attr_count++)
 		sysfs_remove_file(rmidev->sysfs_dir, &attrs[attr_count].attr);
-	}
 
 	sysfs_remove_bin_file(rmidev->sysfs_dir, &attr_data);
 
@@ -698,7 +684,7 @@ static int rmidev_open(struct inode *inp, struct file *filp)
 	int retval = 0;
 	struct rmidev_data *dev_data =
 			container_of(inp->i_cdev, struct rmidev_data, main_dev);
-    printk("synap %s\n",__func__);
+	//printk("synap %s\n", __func__);
 
 	if (!dev_data)
 		return -EACCES;
@@ -785,8 +771,6 @@ static void rmidev_device_cleanup(struct rmidev_data *dev_data)
 				"%s: rmidev device removed\n",
 				__func__);
 	}
-
-	return;
 }
 
 static char *rmi_char_devnode(struct device *dev, umode_t *mode)
@@ -814,22 +798,24 @@ static int rmidev_create_device_class(void)
 	return 0;
 }
 
-static void remote_rmi4_delay_work(struct work_struct *work) {
-	rmidev_create_attr(true) ;
+static void remote_rmi4_delay_work(struct work_struct *work)
+{
+	rmidev_create_attr(true);
 }
 
 struct remotepanel_data *remote_alloc_panel_data(void)
 {
-	if(rmidev)
-	{
-		printk("%s:remote panel data has alloc already null\n",__func__);
+	if (rmidev) {
+		//printk("%s:remote panel data has alloc already null\n",
+		//__func__);
 		return NULL;
 	}
 
 	return kzalloc(sizeof(struct remotepanel_data), GFP_KERNEL);
 }
 
-static struct remotepanel_data *remote_free_panel_data(struct remotepanel_data *pdata)
+static struct remotepanel_data *remote_free_panel_data
+		(struct remotepanel_data *pdata)
 {
 	if(pdata)
 		kfree(pdata);
@@ -846,15 +832,14 @@ int register_remote_device(struct remotepanel_data *pdata)
 	dev_t dev_no;
 	struct rmidev_data *dev_data = NULL;
 
-	if(pdata == NULL)
-	{
-		printk("%s:pdata is null\n",__func__);
-		return -1;
+	if (pdata == NULL) {
+		//printk("%s:pdata is null\n", __func__);
+		return -ENOMEM;
 	}
-	if(rmidev)
-	{
-		printk("%s:remote device has register already null\n",__func__);
-		return -1;
+	if (rmidev) {
+		//printk("%s:remote device has register already null\n",
+		//__func__);
+		return -ENOMEM;
 	}
 	rmidev = kzalloc(sizeof(*rmidev), GFP_KERNEL);
 	if (!rmidev) {
@@ -863,19 +848,16 @@ int register_remote_device(struct remotepanel_data *pdata)
 	}
 
 	retval = rmidev_create_device_class();
-	if (retval < 0) {
+	if (retval < 0)
 		goto err_device_class;
-	}
-
 
 	if (rmidev_major_num) {
 		dev_no = MKDEV(rmidev_major_num, DEV_NUMBER);
 		retval = register_chrdev_region(dev_no, 1, CHAR_DEVICE_NAME);
 	} else {
 		retval = alloc_chrdev_region(&dev_no, 1, 1, CHAR_DEVICE_NAME);
-		if (retval < 0) {
+		if (retval < 0)
 			goto err_device_region;
-		}
 
 		rmidev_major_num = MAJOR(dev_no);
 	}
@@ -896,10 +878,8 @@ int register_remote_device(struct remotepanel_data *pdata)
 	cdev_init(&dev_data->main_dev, &rmidev_fops);
 
 	retval = cdev_add(&dev_data->main_dev, dev_no, 1);
-	if (retval < 0) {
+	if (retval < 0)
 		goto err_char_device;
-	}
-
 
 	dev_set_name(&rmidev->dev, "rmidev%d", MINOR(dev_no));
 	dev_data->device_class = rmidev_device_class;
@@ -907,7 +887,7 @@ int register_remote_device(struct remotepanel_data *pdata)
 	device_ptr = device_create(dev_data->device_class, NULL, dev_no,
 			NULL, CHAR_DEVICE_NAME"%d", MINOR(dev_no));
 	if (IS_ERR(device_ptr)) {
-		pr_err("%s: Failed to create rmi char device\n",__func__);
+		pr_err("%s: Failed to create rmi char device\n", __func__);
 		retval = -ENODEV;
 		goto err_char_device;
 	}
@@ -954,31 +934,4 @@ void unregister_remote_device(void)
 	class_destroy(rmidev_device_class);
 
 	kfree(rmidev);
-
-
-	return;
 }
-
-/*
-static int __init rmidev_module_init(void)
-{
-	rmidev_init_device();
-
-	return 0;
-}
-
-static void __exit rmidev_module_exit(void)
-{
-	rmidev_remove_device();
-
-	return;
-}
-
-module_init(rmidev_module_init);
-module_exit(rmidev_module_exit);
-
-MODULE_AUTHOR("Synaptics, Inc.");
-MODULE_DESCRIPTION("Synaptics DSX RMI Dev Module");
-MODULE_LICENSE("GPL v2");
-*/
-
