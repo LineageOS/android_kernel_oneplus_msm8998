@@ -421,17 +421,16 @@ static ssize_t screen_state_get(struct device* device,
 }
 
 static DEVICE_ATTR(screen_state, S_IRUSR , screen_state_get, NULL);
-/*
+
 static ssize_t sensor_version_get(struct device* device,
 			     struct device_attribute* attribute,
 			     char* buffer)
 {
-	struct fpc1020_data* fpc1020 = dev_get_drvdata(device);
-	return scnprintf(buffer, PAGE_SIZE, "%i\n", fpc1020->sensor_version);
+	return scnprintf(buffer, PAGE_SIZE, "%i\n", fp_version);
 }
 
 static DEVICE_ATTR(sensor_version, S_IRUSR , sensor_version_get, NULL);
-*/
+
 static ssize_t proximity_state_set(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -458,7 +457,7 @@ static struct attribute *attributes[] = {
 	&dev_attr_report_home.attr,
 	&dev_attr_update_info.attr,
 	&dev_attr_screen_state.attr,
-	/*&dev_attr_sensor_version.attr,*/
+	&dev_attr_sensor_version.attr,
 	&dev_attr_report_key.attr,
 	&dev_attr_proximity_state.attr,
 	NULL
