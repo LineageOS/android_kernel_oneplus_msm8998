@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -18,8 +18,6 @@
 #include "cheeseburger-panels.dtsi"
 #include "cheeseburger-pmi.dtsi"
 
-/delete-node/ &firmware;
-
 / {
 	reserved-memory {
 		ramoops_mem: ramoops_mem@ac000000 {
@@ -27,48 +25,38 @@
 			label = "ramoops_mem";
 		};
 	};
-
-	firmware: firmware {
-		android {
-			compatible = "android,firmware";
-			fstab {
-				compatible = "android,fstab";
-				system {
-					compatible = "android,system";
-					dev = "/dev/block/platform/soc/1da4000.ufshc/by-name/system";
-					type = "ext4";
-					mnt_flags = "ro,barrier=1,discard";
-					fsmgr_flags = "wait";
-					status = "ok";
-				};
-			};
-		};
-	};
 };
 
 &pil_ipa_gpu_mem{
-	reg = <0 0x95600000 0 0x100000>;//move start address +4M to match modem aligned
+	//move start address +4M to match modem aligned
+	reg = <0 0x95600000 0 0x100000>;
 };
 
 &pil_slpi_mem{
-	reg = <0 0x94700000 0 0xf00000>;//move start address +4M to match modem aligned
+	//move start address +4M to match modem aligned
+	reg = <0 0x94700000 0 0xf00000>;
 };
 
 &pil_mba_mem{
-	reg = <0 0x94500000 0 0x200000>;//move start address +4M to match modem aligned
+	//move start address +4M to match modem aligned
+	reg = <0 0x94500000 0 0x200000>;
 };
 
 &pil_video_mem{
-	reg = <0 0x94000000 0 0x500000>;//move start address +4M to match modem aligned
+	//move start address +4M to match modem aligned
+	reg = <0 0x94000000 0 0x500000>;
 };
 
 &modem_mem{
-	reg = <0 0x8d000000 0 0x7000000>;//move start address +4M to match modem aligned
+	//move start address +4M to match modem aligned
+	reg = <0 0x8d000000 0 0x7000000>;
 };
 
 &pil_adsp_mem{
-	reg = <0 0x8b200000 0 0x1e00000>; //increae 4M size by oneplus
+	//increae 4M size by oneplus
+	reg = <0 0x8b200000 0 0x1e00000>;
 };
+
 /* I/O */
 &soc {
 	gpio_keys {
@@ -98,12 +86,12 @@
 		tri_state_key_mux {
 			tri_state_key_active: tri_state_key_active {
 				mux {
-					pins = "gpio42","gpio9","gpio40";
+					pins = "gpio42","gpio26","gpio40";
 					function = "gpio";
 				};
 
 				config {
-					pins = "gpio42","gpio9","gpio40";
+					pins = "gpio42","gpio26","gpio40";
 					drive-strength = <2>;
 					bias-disable;
 				};
@@ -111,62 +99,46 @@
 
 			tri_state_key_suspend: tri_state_key_suspend {
 				mux {
-					pins = "gpio42","gpio9","gpio40";
+					pins = "gpio42","gpio26","gpio40";
 					function = "gpio";
 				};
 
 				config {
-					pins = "gpio42","gpio9","gpio40";
+					pins = "gpio42","gpio26","gpio40";
 					drive-strength = <2>;
 					bias-disable;
 				};
 			};
 		};
 
-           oem_rf_cable_mux {
-            oem_rf_cable_active: oem_rf_cable_active {
-                mux {
-                    pins = "gpio36";
-                    function = "gpio";
-                };
+		oem_rf_cable_mux {
+			oem_rf_cable_active: oem_rf_cable_active {
+				mux {
+					pins = "gpio36";
+					function = "gpio";
+				};
 
-                config {
-                    pins = "gpio36";
-                    drive-strength = <2>;
-                    bias-pull-up;
-                };
-            };
+				config {
+					pins = "gpio36";
+					drive-strength = <2>;
+					bias-pull-up;
+				};
+			};
 
-            oem_rf_cable_suspend: oem_rf_cable_suspend {
-                    mux {
-                        pins = "gpio36";
-                        function = "gpio";
-                    };
+			oem_rf_cable_suspend: oem_rf_cable_suspend {
+				mux {
+					pins = "gpio36";
+					function = "gpio";
+				};
 
-                    config {
-                        pins = "gpio36";
-                        drive-strength = <2>;
-                        bias-pull-up;
-                    };
+				config {
+					pins = "gpio36";
+					drive-strength = <2>;
+					bias-pull-up;
+				};
 
-            };
-        };
-    /* shankai@bsp ,comment out for do not use it,2017-4-7
-        oem_at_cable_mux {
-            at_cable_default: at_cable_default {
-                mux {
-                    pins = "gpio7";
-                    function = "gpio";
-                };
-
-                config {
-                    pins = "gpio7";
-                    drive-strength = <2>;
-                    bias-pull-down;
-                };
-            };
-         };
-        */
+			};
+		};
 	};
 
 	/* Tri-state key */
@@ -176,24 +148,25 @@
 		interrupt-parent = <&tlmm>;
 		tristate,gpio_key1 = <&tlmm 40 0x00>;
 		tristate,gpio_key2 = <&tlmm 42 0x00>;
-		tristate,gpio_key3 = <&tlmm 9 0x00>;
+		tristate,gpio_key3 = <&tlmm 26 0x00>;
 
 		pinctrl-names = "pmx_tri_state_key_active", "pmx_tri_state_key_suspend";
 		pinctrl-0 = <&tri_state_key_active>;
 		pinctrl-1 = <&tri_state_key_suspend>;
 	};
 
-    oem_rf_cable {
+	oem_rf_cable {
 		compatible = "oem,rf_cable";
 		interrupt-parent = <&tlmm>;
 		rf,cable-gpio    = <&tlmm 36 0>;
-		//at,cable-gpio  = <&tlmm 7 0>;
-		//pinctrl-names = "oem_rf_cable_active", "oem_rf_cable_suspend", "default";
 		pinctrl-names = "oem_rf_cable_active", "oem_rf_cable_suspend";
 		pinctrl-0 = <&oem_rf_cable_active >;
 		pinctrl-1 = <&oem_rf_cable_suspend>;
-		//pinctrl-2 = <&at_cable_default>;
-    };
+	};
+
+	qcom,qbt1000 {
+		status = "disabled";
+	};
 
 	/* Fingerprint */
 	fpc_fpc1020 {
@@ -223,7 +196,7 @@
 		ftrace-size  = <0x0 0x00020000>;
 	};
 
-	/* Add  0x8c 0x21C, 0xf0 0x23C */
+	/* Add  0x9c 0x21C, 0xf0 0x23C */
 	qusb_phy0: qusb@c012000 {
 	qcom,qusb-phy-init-seq =
 			/* <value reg_offset> */
@@ -232,21 +205,19 @@
 				0x7c 0x18c
 				0x80 0x2c
 				0x0a 0x184
-				0x8c 0x21C
+				0x9c 0x21C
 				0xf0 0x23C
 				0x0f 0x240>;
-   };
-
-   force_enable_serial {
-        compatible = "oem,force_serial";
-   };
-   oem_serial_pinctrl {
-        compatible = "oem,oem_serial_pinctrl";
-        pinctrl-names = "uart_pinctrl_active", "uart_pinctrl_deactive";
-	    pinctrl-0 = <&uart_console_active>;
-	    pinctrl-1 = <&uart_console_deactive>;
-   };
-
+	};
+	force_enable_serial {
+		compatible = "oem,force_serial";
+	};
+	oem_serial_pinctrl {
+		compatible = "oem,oem_serial_pinctrl";
+		pinctrl-names = "uart_pinctrl_active", "uart_pinctrl_deactive";
+		pinctrl-0 = <&uart_console_active>;
+		pinctrl-1 = <&uart_console_deactive>;
+	};
 };
 
 &pm8998_gpios {
@@ -262,8 +233,8 @@
 };
 
 &pm8998_rtc {
-  compatible = "qcom,qpnp-rtc";
-  qcom,qpnp-rtc-alarm-pwrup = <1>;
+	compatible = "qcom,qpnp-rtc";
+	qcom,qpnp-rtc-alarm-pwrup = <1>;
 };
 
 &sdhc_2 {
@@ -310,6 +281,63 @@
 };
 
 /* Charging */
+&soc {
+	tlmm: pinctrl@03400000 {
+		oneplus_fastchg {
+			usb_sw_active: usb_sw_active {
+				mux {
+					pins = "gpio90", "gpio91";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio90", "gpio91";
+					drive-strength = <16>;
+					bias-pull-up;
+				};
+			};
+
+			usb_sw_suspend: usb_sw_suspend {
+				mux {
+					pins = "gpio90", "gpio91";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio90", "gpio91";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+		};
+	};
+};
+
+&i2c_7 {
+	bq27541-battery@55 {
+		status = "ok";
+		compatible = "ti,bq27541-battery";
+		reg = <0x55>;
+		qcom,modify-soc-smooth;
+	};
+	oneplus_fastcg@26{
+		status = "ok";
+		compatible = "microchip,oneplus_fastcg";
+		reg = <0x26>;
+		microchip,mcu-en-gpio = <&tlmm 96 0x00>;
+		microchip,usb-sw-1-gpio = <&tlmm 90 0x00>;
+		microchip,usb-sw-2-gpio = <&tlmm 91 0x00>;
+		microchip,ap-clk = <&tlmm 79 0x00>;
+		microchip,ap-data = <&tlmm 80 0x00>;
+		pinctrl-names = "mux_fastchg_active", "mux_fastchg_suspend", "mcu_data_active", "mcu_data_suspend";
+		pinctrl-0 = <&fastchg_active &usb_sw_active &ap_clk_active >;
+		pinctrl-1 = <&usb_sw_suspend &fastchg_suspend &ap_clk_suspend>;
+		pinctrl-2 =<&ap_data_active>;
+		pinctrl-3 =<&ap_data_suspend>;
+		clocks = <&clock_gcc clk_uart_snoc_msmbus_a_clk>, <&clock_gcc clk_uart_cnoc_msmbus_a_clk>;
+		clock-names = "snoc", "cnoc";
+	};
+};
 &soc {
 	tlmm: pinctrl@03400000 {
 		oneplus_fastchg {
@@ -394,6 +422,7 @@
 	};
 };
 
+/* Display */
 &i2c_5 {
 	synaptics@20 {
 		status = "disabled";
@@ -420,31 +449,18 @@
 	};
 };
 
-&i2c_7 {
-	oneplus_fastcg@26 {
-		pinctrl-names = "mux_fastchg_active", "mux_fastchg_suspend", "mcu_data_active", "mcu_data_suspend";
-		pinctrl-0 = <&fastchg_active &usb_sw_active &ap_clk_active>;
-		pinctrl-1 = <&usb_sw_suspend &fastchg_suspend &ap_clk_suspend>;
-		pinctrl-2 =<&ap_data_active>;
-		pinctrl-3 =<&ap_data_suspend>;
-		clocks = <&clock_gcc clk_uart_snoc_msmbus_a_clk>, <&clock_gcc clk_uart_cnoc_msmbus_a_clk>;
-		clock-names = "snoc", "cnoc";
+&pcie0_clkreq_default {
+	mux {
+		pins = "gpio36";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio36";
+		drive-strength = <2>;
+		bias-pull-up;
 	};
 };
-
-&pcie0_clkreq_default {
-        mux {
-            pins = "gpio36";
-            function = "gpio";
-        };
-
-        config {
-            pins = "gpio36";
-            drive-strength = <2>;
-            bias-pull-up;
-        };
-    };
-
 
 &mdss_dp_ctrl {
 	status = "disabled";
@@ -569,6 +585,52 @@
 	status = "disabled";
 };
 
+&firmware {
+	android {
+		compatible = "android,firmware";
+		fstab {
+			compatible = "android,fstab";
+			vendor {
+				status = "disabled";
+			};
+
+			system {
+				compatible = "android,system";
+				dev = "/dev/block/platform/soc/1da4000.ufshc/by-name/system";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,discard";
+				fsmgr_flags = "wait";
+				status = "ok";
+			};
+		};
+	};
+};
+
+/*Anderson-Config_UARTPIN_as_GPIO*[*/
+&soc {
+	tlmm: pinctrl@03400000 {
+		uart_console_deactive: uart_console_deactive {
+			mux {
+				pins = "gpio4", "gpio5";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio4", "gpio5";
+				drive-strength = <2>;
+				bias-pull-down;
+			};
+		};
+	};
+};
+
+&uartblsp2dm1 {
+	pinctrl-names = "uart_active", "uart_deactive";
+	pinctrl-0 = <&uart_console_active>;
+	pinctrl-1 = <&uart_console_deactive>;
+};
+/*Anderson-Config_UARTPIN_as_GPIO*]**/
+
 /* External Thermistors */
 &pm8998_vadc {
 	chan@4e {
@@ -640,6 +702,26 @@
 	};
 };
 
+/*  wangdongdong@MultiMediaService,2017/02/23,add adsp qos configuration start
+ *  CRs-Fixed: 2009756
+ */
+&soc {
+	qcom,glink-smem-native-xprt-adsp@86000000 {
+		qcom,qos-config = <&glink_qos_adsp>;
+		qcom,ramp-time = <0xaf>;
+	};
+	glink_qos_adsp: qcom,glink-qos-config-adsp {
+		compatible = "qcom,glink-qos-config";
+		qcom,flow-info = <0x3c 0x0>,
+				<0x3c 0x0>,
+				<0x3c 0x0>,
+				<0x3c 0x0>;
+		qcom,mtu-size = <0x800>;
+		qcom,tput-stats-cycle = <0xa>;
+	};
+};
+/*  wangdongdong@MultiMediaService,2017/02/23,end  */
+
 &rpm_bus {
 	rpm-regulator-ldoa25 {
 		pm8998_l25: regulator-l25 {
@@ -651,51 +733,6 @@
 		};
 	};
 };
-
-/*  wangdongdong@MultiMediaService,2017/02/23,add adsp qos configuration start
- *  CRs-Fixed: 2009756
- */
-&soc {
-        qcom,glink-smem-native-xprt-adsp@86000000 {
-                qcom,qos-config = <&glink_qos_adsp>;
-                qcom,ramp-time = <0xaf>;
-        };
-        glink_qos_adsp: qcom,glink-qos-config-adsp {
-                compatible = "qcom,glink-qos-config";
-                qcom,flow-info = <0x3c 0x0>,
-                                 <0x3c 0x0>,
-                                 <0x3c 0x0>,
-                                 <0x3c 0x0>;
-                qcom,mtu-size = <0x800>;
-                qcom,tput-stats-cycle = <0xa>;
-        };
-};
-/*  wangdongdong@MultiMediaService,2017/02/23,end  */
-
-/*Anderson-Config_UARTPIN_as_GPIO*[*/
-&soc {
-	tlmm: pinctrl@03400000 {
-		uart_console_deactive: uart_console_deactive {
-			mux {
-				pins = "gpio4", "gpio5";
-				function = "gpio";
-			};
-
-			config {
-				pins = "gpio4", "gpio5";
-				drive-strength = <2>;
-				bias-pull-down;
-			};
-		};
-	};
-};
-
-&uartblsp2dm1 {
-	pinctrl-names = "uart_active", "uart_deactive";
-	pinctrl-0 = <&uart_console_active>;
-	pinctrl-1 = <&uart_console_deactive>;
-};
-/*Anderson-Config_UARTPIN_as_GPIO*]**/
 
 /*pcie 0 don't used,gpio 37 will used in nfc. but gpio37 will request in pcie0. so disable it*/
 &pcie0 {
