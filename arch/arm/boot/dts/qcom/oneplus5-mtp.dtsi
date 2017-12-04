@@ -599,7 +599,7 @@
 };
 
 /{
-	cheeseburger_batterydata: qcom,battery-data {
+	oneplus5_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <15>;
 		#include "OP-batterydata-3300mah.dtsi"
 		#include "fg-gen3-batterydata-itech-3000mah.dtsi"
@@ -609,7 +609,7 @@
 };
 
 &pmi8998_fg {
-	qcom,battery-data = <&cheeseburger_batterydata>;
+	qcom,battery-data = <&oneplus5_batterydata>;
 	oem,use_external_fg;
 	qcom,fg-rsense-sel = <0>;
 	qcom,fg-esr-timer-awake = <96>;
