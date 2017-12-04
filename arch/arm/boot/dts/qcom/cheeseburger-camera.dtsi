@@ -23,6 +23,14 @@
 		status = "ok";
 	};
 
+	qcom,camera@2 {
+		gpios = <&tlmm 14 0>, <&tlmm 28 0>, <&pm8998_gpios 9 0>;
+		/delete-property/ qcom,gpio-flash-en;
+		qcom,gpio-req-tbl-num = <0 1 2>;
+		qcom,gpio-req-tbl-flags = <1 0 0>;
+		qcom,gpio-req-tbl-label = "CAMIF_MCLK2", "CAM_RESET2", "CAM_VDIG";
+	};
+
 	qcom,eeprom@3 {
 		status = "disabled";
 	};
