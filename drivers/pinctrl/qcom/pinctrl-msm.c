@@ -462,7 +462,6 @@ static int msm_gpio_get_dash(struct gpio_chip *chip, unsigned offset)
 	g = &pctrl->soc->groups[offset];
 
 	val = readl_dash(pctrl->regs + g->io_reg);
-	/*pr_err("pctrl->regs + g->io_reg=%p,g->in_bit=%d\n",pctrl->regs + g->io_reg,g->in_bit);*/
 	return !!(val & BIT(g->in_bit));
 }
 #endif
@@ -544,6 +543,10 @@ static void msm_gpio_dbg_show_one(struct seq_file *s,
 	pull = (ctl_reg >> g->pull_bit) & 3;
 
 	seq_printf(s, " %-8s: %-3s %d", g->name, is_out ? "out" : "in", func);
+#ifdef CONFIG_VENDOR_ONEPLUS
+	if (gpio <= 149)
+		seq_printf(s, " %s", chip->get(chip, offset) ? "hi":"lo");
+#endif
 	seq_printf(s, " %dmA", msm_regval_to_drive(drive));
 	seq_printf(s, " %s", pulls[pull]);
 }
@@ -554,6 +557,13 @@ static void msm_gpio_dbg_show(struct seq_file *s, struct gpio_chip *chip)
 	unsigned i;
 
 	for (i = 0; i < chip->ngpio; i++, gpio++) {
+#ifdef CONFIG_VENDOR_ONEPLUS
+		if (gpio == 0 || gpio == 1 ||
+		gpio == 2 || gpio == 3 ||
+		gpio == 81 || gpio == 82 ||
+		gpio == 83 || gpio == 84)
+			continue;
+#endif
 		msm_gpio_dbg_show_one(s, NULL, chip, i, gpio);
 		seq_puts(s, "\n");
 	}
@@ -832,6 +842,9 @@ static void msm_gpio_irq_handler(struct irq_desc *desc)
 	int handled = 0;
 	u32 val;
 	int i;
+#ifdef CONFIG_VENDOR_ONEPLUS
+	char irq_name[16] = {0};
+#endif
 
 	chained_irq_enter(chip, desc);
 
@@ -849,13 +862,16 @@ static void msm_gpio_irq_handler(struct irq_desc *desc)
 #ifdef CONFIG_VENDOR_ONEPLUS
 			if (!!need_show_pinctrl_irq) {
 				need_show_pinctrl_irq = false;
-
-				if (strstr(irq_to_desc(irq_pin)->action->name, "soc:fpc_fpc1020") != NULL) { //it is fpc irq
+				strlcpy(irq_name,
+				irq_to_desc(irq_pin)->action->name, 16);
+				if (strnstr(irq_name,
+					"soc:fpc_fpc1020", 16) != NULL ||
+					strnstr(irq_name, "gf_fp", 6) != NULL) {
 					fp_irq_cnt = true;
 					c0_cpufreq_limit_queue();
 				}
-
-				//printk(KERN_ERR "hwirq %s [irq_num=%d ]triggered\n",irq_to_desc(irq_pin)->action->name,irq_pin);
+				pr_warn("hwirq %s [irq_num=%d ]triggered\n",
+				irq_to_desc(irq_pin)->action->name, irq_pin);
 				log_wakeup_reason(irq_pin);
 			}
 #endif
@@ -974,7 +990,7 @@ static int pm_pm_event(struct notifier_block *notifier,
 {
 	switch (pm_event) {
 	case PM_SUSPEND_PREPARE:
-                //do nothing
+		/* do nothing */
 		break;
 	case PM_POST_SUSPEND:
 		need_show_pinctrl_irq = false;
@@ -1046,7 +1062,7 @@ int msm_pinctrl_probe(struct platform_device *pdev,
 #ifdef CONFIG_VENDOR_ONEPLUS
 	ret = register_pm_notifier(&pinctrl_pm_notifier_block);
 	if (ret)
-		printk(KERN_WARNING "[%s] failed to register PM notifier %d\n",
+		pr_warn("[%s] failed to register PM notifier %d\n",
 				__func__, ret);
 #endif
 
