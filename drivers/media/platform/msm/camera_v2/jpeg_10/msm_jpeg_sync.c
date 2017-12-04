@@ -784,9 +784,7 @@ int __msm_jpeg_release(struct msm_jpeg_device *pgmn_dev)
 		return -EINVAL;
 	}
 	pgmn_dev->open_count--;
-#ifndef CONFIG_VENDOR_ONEPLUS
 	mutex_unlock(&pgmn_dev->lock);
-#endif
 
 	msm_jpeg_core_release(pgmn_dev);
 	msm_jpeg_q_cleanup(&pgmn_dev->evt_q);
@@ -801,10 +799,6 @@ int __msm_jpeg_release(struct msm_jpeg_device *pgmn_dev)
 
 	/* release the platform resources */
 	msm_jpeg_platform_release(pgmn_dev);
-
-#ifdef CONFIG_VENDOR_ONEPLUS
-	mutex_unlock(&pgmn_dev->lock);
-#endif
 
 	JPEG_DBG("%s:%d]\n", __func__, __LINE__);
 
