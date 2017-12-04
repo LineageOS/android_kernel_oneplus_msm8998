@@ -50,104 +50,6 @@
 		"byte_intf_clk";
 };
 
-/* Charging */
-&soc {
-	tlmm: pinctrl@03400000 {
-		oneplus_fastchg {
-			usb_sw_active: usb_sw_active {
-				mux {
-					pins = "gpio90", "gpio91";
-					function = "gpio";
-				};
-
-				config {
-					pins = "gpio90", "gpio91";
-					drive-strength = <16>;
-					bias-pull-up;
-				};
-			};
-
-			usb_sw_suspend: usb_sw_suspend {
-				mux {
-					pins = "gpio90", "gpio91";
-					function = "gpio";
-				};
-
-				config {
-					pins = "gpio90", "gpio91";
-					drive-strength = <2>;
-					bias-disable;
-				};
-			};
-		};
-	};
-};
-
-&i2c_7 {
-        bq27541-battery@55 {
-                status = "ok";
-                compatible = "ti,bq27541-battery";
-                reg = <0x55>;
-                qcom,modify-soc-smooth;
-        };
-        oneplus_fastcg@26{
-                status = "ok";
-                compatible = "microchip,oneplus_fastcg";
-                reg = <0x26>;
-                microchip,mcu-en-gpio = <&tlmm 96 0x00>;
-                microchip,usb-sw-1-gpio = <&tlmm 90 0x00>;
-                microchip,usb-sw-2-gpio = <&tlmm 91 0x00>;
-                microchip,ap-clk = <&tlmm 79 0x00>;
-                microchip,ap-data = <&tlmm 80 0x00>;
-        };
-};
-
-&soc {
-        tlmm: pinctrl@03400000 {
-                tri_state_key_mux {
-                        tri_state_key_active: tri_state_key_active {
-                                mux {
-                                        pins = "gpio42","gpio26","gpio40";
-                                        function = "gpio";
-                                };
-
-                                config {
-                                        pins = "gpio42","gpio26","gpio40";
-                                        drive-strength = <2>;
-                                        bias-disable;
-                                };
-                        };
-
-                        tri_state_key_suspend: tri_state_key_suspend {
-                                mux {
-                                        pins = "gpio42","gpio26","gpio40";
-                                        function = "gpio";
-                                };
-
-                                config {
-                                        pins = "gpio42","gpio26","gpio40";
-                                        drive-strength = <2>;
-                                        bias-disable;
-                                };
-                        };
-                };
-        };
-        /* Tri-state key */
-        tri_state_key {
-                compatible = "oneplus,tri-state-key";
-                status = "okay";
-                interrupt-parent = <&tlmm>;
-                tristate,gpio_key1 = <&tlmm 40 0x00>;
-                tristate,gpio_key2 = <&tlmm 42 0x00>;
-                tristate,gpio_key3 = <&tlmm 26 0x00>;
-
-                pinctrl-names = "pmx_tri_state_key_active", "pmx_tri_state_key_suspend";
-                pinctrl-0 = <&tri_state_key_active>;
-                pinctrl-1 = <&tri_state_key_suspend>;
-        };
-
-};
-
 //camera
 &soc {
 	tlmm: pinctrl@03400000 {
@@ -544,6 +446,7 @@
 		reg = <0>;
 		compatible = "qcom,eeprom";
 //		qcom,eeprom-name = "sony_imx398";// eeprom will be probed in userspace
+		position = <0x00>;
 		qcom,slave-addr = <0xa0>;
 		qcom,cci-master = <0>;
 		qcom,i2c-freq-mode = <1>;
@@ -635,6 +538,7 @@
 		reg = <0x1>;
 		compatible = "qcom,eeprom";
 		//qcom,eeprom-name = "sony_imx350";// eeprom will be probed in userspace
+		position = <0x01>;
 		qcom,slave-addr = <0xa2>;
 		qcom,cci-master = <1>;
 		qcom,num-blocks = <24>;
@@ -816,6 +720,7 @@
 		reg = <0x2>;
 		compatible = "qcom,eeprom";
 		//qcom,eeprom-name = "sony_imx371";// eeprom will be probed in userspace
+		position = <0x02>;
 		qcom,slave-addr = <0xa2>;
 		qcom,cci-master = <0>;
 		qcom,num-blocks = <24>;

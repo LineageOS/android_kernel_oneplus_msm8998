@@ -33,7 +33,7 @@
 	qcom,pm8998@0{
 		qcom,power-on@800 {
 			qcom,pon-dbc-delay = <31250>;
-			qcom,kpd-dbc-enable;
+			qcom,kpdpwr-sw-debounce;
 		};
 	};
 
@@ -45,7 +45,9 @@
 };
 
 &pmi8998_charger {
-	qcom,fcc-max-ua = <500000>; /*Set FCC MAX 500mA by default,FCC will be set again after check battery temperature*/
+ 	/*Set FCC MAX 500mA by default,FCC will*/
+ 	/*be set again after check battery temperature*/
+	qcom,fcc-max-ua = <500000>;
 	qcom,usb-icl-ua = <1800000>;
 	qcom,fv-max-uv = <4365000>;
 	/* ibatmax setting for different temp regions */
@@ -87,7 +89,7 @@
 	gpio@c400 {
 		qcom,mode = <1>;		/* Output */
 		qcom,pull = <4>;		/* Pull Down*/
-		qcom,master-en = <1>;	/* Enable GPIO */
+		qcom,master-en = <1>;		/* Enable GPIO */
 		qcom,invert = <1>;
 		qcom,out-strength = <1>;
 		status = "okay";
@@ -97,7 +99,7 @@
 &pmi8998_haptics {
 	status = "okay";
 	interrupts = <0x3 0xc0 0x0 IRQ_TYPE_NONE>,
-				 <0x3 0xc0 0x1 IRQ_TYPE_NONE>;
+			<0x3 0xc0 0x1 IRQ_TYPE_NONE>;
 	qcom,wave-shape = "sine";
 	qcom,play-mode = "buffer";
 	qcom,wave-samples = [28 28 28 28 28 28 28 28];
@@ -107,8 +109,6 @@
 	qcom,wave-samp-rep-cnt = <1>;
 	qcom,vmax-mv = <2088>;
 	qcom,wave-play-rate-us = <4255>;
-	qcom,use-play-irq;
-	qcom,use-sc-irq;
 	qcom,lra-auto-res-mode = "zxd-eop";
 	qcom,lra-res-cal-period = <32>;
 };
