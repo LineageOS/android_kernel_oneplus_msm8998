@@ -218,11 +218,10 @@ static struct dsi_cmd_desc backlight_cmd = {
 };
 
 #ifdef CONFIG_VENDOR_ONEPLUS
-// Samsung s6e3fa6 panel backlight
-static char led_pwm_s6e3fa6[3] = {0x51, 0x00, 0x00};	/* DTYPE_DCS_LWRITE */
-static struct dsi_cmd_desc backlight_cmd_s6e3fa6 = {
-	{DTYPE_DCS_LWRITE, 1, 0, 0, 1, sizeof(led_pwm_s6e3fa6)},
-	led_pwm_s6e3fa6
+static char led_pwm_oneplus[3] = {0x51, 0x00, 0x00};	/* DTYPE_DCS_LWRITE */
+static struct dsi_cmd_desc backlight_cmd_oneplus = {
+	{DTYPE_DCS_LWRITE, 1, 0, 0, 1, sizeof(led_pwm_oneplus)},
+	led_pwm_oneplus
 };
 #endif
 
@@ -239,20 +238,29 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 
 	pr_debug("%s: level=%d\n", __func__, level);
 #ifdef CONFIG_VENDOR_ONEPLUS
-	if (pinfo->panel_type == 4) {
-		u8 ldata = level%4;
-		u8 hdata = level/4;
+	if (pinfo->panel_type == 4 || pinfo->panel_type == 5) {
+		u8 ldata = 0;
+		u8 hdata = 0;
 
-		led_pwm_s6e3fa6[2] = ldata;
-		led_pwm_s6e3fa6[1] = hdata;
+		if (pinfo->panel_type == 5) {
+			ldata = level & 0x0ff;
+			hdata = (level >> 8) & 0x03;
+			led_pwm_oneplus[2] = ldata;
+			led_pwm_oneplus[1] = hdata;
+		} else {
+			ldata = level & 0x03;
+			hdata = (level >> 2) & 0x0ff;
+			led_pwm_oneplus[2] = ldata;
+			led_pwm_oneplus[1] = hdata;
+		}
 	} else
 #endif
 	led_pwm1[1] = (unsigned char)level;
 
 	memset(&cmdreq, 0, sizeof(cmdreq));
 #ifdef CONFIG_VENDOR_ONEPLUS
-	if (pinfo->panel_type == 4) {
-		cmdreq.cmds = &backlight_cmd_s6e3fa6;
+	if (pinfo->panel_type == 4 || pinfo->panel_type == 5) {
+		cmdreq.cmds = &backlight_cmd_oneplus;
 	} else
 #endif
 	cmdreq.cmds = &backlight_cmd;
