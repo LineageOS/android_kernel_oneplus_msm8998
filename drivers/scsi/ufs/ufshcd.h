@@ -953,7 +953,8 @@ struct ufs_hba {
 	struct pinctrl *pctrl;
 	
 	int			latency_hist_enabled;
-	struct io_latency_state io_lat_s;
+	struct io_latency_state io_lat_read;
+	struct io_latency_state io_lat_write;
 };
 
 static inline void ufshcd_mark_shutdown_ongoing(struct ufs_hba *hba)
