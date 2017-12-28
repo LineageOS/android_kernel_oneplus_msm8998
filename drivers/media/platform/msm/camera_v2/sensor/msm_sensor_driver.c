@@ -18,7 +18,7 @@
 #include "msm_cci.h"
 #include "msm_camera_dt_util.h"
 
-#ifdef CONFIG_VENDOR_ONEPLUS
+/* chenneng@camera 20151117 add for product information */
 #include <linux/project_info.h>
 struct camera_vendor_match_tbl {
     char sensor_name[32];
@@ -33,7 +33,6 @@ static struct camera_vendor_match_tbl match_tbl[] = {
     {"s5k3p8sp","SAMSUNG"},
     {"imx376k","Sony"},
 };
-#endif
 
 /* Logging macro */
 #undef CDBG
@@ -309,6 +308,45 @@ static int32_t msm_sensor_fill_actuator_subdevid_by_name(
 		*actuator_subdev_id = val;
 		of_node_put(src_node);
 		src_node = NULL;
+	}
+
+	return rc;
+}
+
+static int32_t msm_sensor_fill_laser_led_subdevid_by_name(
+				struct msm_sensor_ctrl_t *s_ctrl)
+{
+	int32_t rc = 0;
+	struct device_node *src_node = NULL;
+	uint32_t val = 0;
+	int32_t *laser_led_subdev_id;
+	struct  msm_sensor_info_t *sensor_info;
+	struct device_node *of_node = s_ctrl->of_node;
+
+	if (!of_node)
+		return -EINVAL;
+
+	sensor_info = s_ctrl->sensordata->sensor_info;
+	laser_led_subdev_id = &sensor_info->subdev_id[SUB_MODULE_LASER_LED];
+	/* set sudev id to -1 and try to found new id */
+	*laser_led_subdev_id = -1;
+
+
+	src_node = of_parse_phandle(of_node, "qcom,laserled-src", 0);
+	if (!src_node) {
+		CDBG("%s:%d src_node NULL\n", __func__, __LINE__);
+	} else {
+		rc = of_property_read_u32(src_node, "cell-index", &val);
+		CDBG("%s qcom,laser led cell index %d, rc %d\n", __func__,
+			val, rc);
+		of_node_put(src_node);
+		src_node = NULL;
+		if (rc < 0) {
+			pr_err("%s cell index not found %d\n",
+				__func__, __LINE__);
+			return -EINVAL;
+		}
+		*laser_led_subdev_id = val;
 	}
 
 	return rc;
@@ -728,10 +766,9 @@ int32_t msm_sensor_driver_probe(void *setting,
 	struct msm_camera_cci_client        *cci_client = NULL;
 	struct msm_camera_sensor_slave_info *slave_info = NULL;
 	struct msm_camera_slave_info        *camera_info = NULL;
-#ifdef CONFIG_VENDOR_ONEPLUS
+/* chenneng@camera 20151117 add for product information */
 	uint32_t count = 0,i;
 	enum COMPONENT_TYPE CameraID;
-#endif
 
 	unsigned long                        mount_pos = 0;
 	uint32_t                             is_yuv;
@@ -1002,6 +1039,11 @@ CSID_TG:
 		pr_err("%s failed %d\n", __func__, __LINE__);
 		goto free_camera_info;
 	}
+	rc = msm_sensor_fill_laser_led_subdevid_by_name(s_ctrl);
+	if (rc < 0) {
+		pr_err("%s failed %d\n", __func__, __LINE__);
+		goto free_camera_info;
+	}
 
 	rc = msm_sensor_fill_ois_subdevid_by_name(s_ctrl);
 	if (rc < 0) {
@@ -1069,7 +1111,7 @@ CSID_TG:
 	/*Save sensor info*/
 	s_ctrl->sensordata->cam_slave_info = slave_info;
 
-#ifdef CONFIG_VENDOR_ONEPLUS
+/* chenneng@camera 20151117 add for product information */
     if (0 == slave_info->camera_id)
         CameraID = R_CAMERA;
     else if (1 == slave_info->camera_id)
@@ -1088,7 +1130,6 @@ CSID_TG:
     else
         push_component_info(CameraID,slave_info->sensor_name,
             match_tbl[i].vendor_name);
-#endif
 
 	msm_sensor_fill_sensor_info(s_ctrl, probed_info, entity_name);
 

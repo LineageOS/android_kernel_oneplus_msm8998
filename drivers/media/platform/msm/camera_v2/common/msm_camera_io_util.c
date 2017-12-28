@@ -577,15 +577,6 @@ disable_vreg:
 				continue;
 		} else
 			j = i;
-
-#ifdef CONFIG_VENDOR_ONEPLUS
-		if (NULL == reg_ptr[j]) {
-			pr_err("%s: reg_ptr[%d] null regulator\n",
-				__func__, j);
-			return rc;
-		}
-#endif
-
 		regulator_disable(reg_ptr[j]);
 		if (cam_vreg[j].delay > 20)
 			msleep(cam_vreg[j].delay);

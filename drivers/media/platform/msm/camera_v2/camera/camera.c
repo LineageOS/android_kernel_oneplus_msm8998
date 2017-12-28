@@ -459,9 +459,7 @@ static int camera_v4l2_subscribe_event(struct v4l2_fh *fh,
 	int rc = 0;
 	struct camera_v4l2_private *sp = fh_to_private(fh);
 
-	mutex_lock(&sp->lock);
 	rc = v4l2_event_subscribe(&sp->fh, sub, 5, NULL);
-	mutex_unlock(&sp->lock);
 
 	return rc;
 }
@@ -472,9 +470,7 @@ static int camera_v4l2_unsubscribe_event(struct v4l2_fh *fh,
 	int rc = 0;
 	struct camera_v4l2_private *sp = fh_to_private(fh);
 
-	mutex_lock(&sp->lock);
 	rc = v4l2_event_unsubscribe(&sp->fh, sub);
-	mutex_unlock(&sp->lock);
 
 	return rc;
 }
