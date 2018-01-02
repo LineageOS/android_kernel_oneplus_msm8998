@@ -231,5 +231,51 @@
 			qcom,mdss-dsi-adaption-mode-command-state = "dsi_hs_mode";
 
 /**************************************************************************/
+
+		cm,mdss-livedisplay-cabc-cmd = [
+				15 01 00 00 00 00 02 55 00];
+		cm,mdss-livedisplay-cabc-ui-value = <0x01>;
+		cm,mdss-livedisplay-cabc-image-value = <0x02>;
+		cm,mdss-livedisplay-cabc-video-value = <0x03>;
+		cm,mdss-livedisplay-hbm-on-cmd = [
+				15 01 00 00 00 00 02 53 E8];
+		cm,mdss-livedisplay-hbm-off-cmd = [
+				15 01 00 00 00 00 02 53 28];
+		cm,mdss-livedisplay-srgb-on-cmd = [
+				39 01 00 00 00 00 03 f0 5A 5A
+				39 01 00 00 00 00 02 BC 01
+				39 01 00 00 00 00 02 B0 01
+				39 01 00 00 00 00 02 BC 12
+				39 01 00 00 00 00 02 B0 2C
+				39 01 00 00 00 00 16 bc A3 05 04 48 CE 10 05 0A B1 55 EE CF BB 11 BF E1 DC 17 FD FE DC
+				39 01 00 00 00 00 02 b0 42
+				39 01 00 00 00 00 02 bc 03
+				39 01 00 00 00 00 02 b0 4B
+				39 01 00 00 00 00 02 bc AA
+				39 01 00 00 00 00 03 f0 A5 A5
+				];
+		cm,mdss-livedisplay-srgb-off-cmd = [
+				39 01 00 00 00 00 03 F0 5A 5A
+				39 01 00 00 00 00 03 BC E0 00
+				39 01 00 00 00 00 03 F0 A5 A5
+				];
+		cm,mdss-livedisplay-dci-p3-on-cmd = [
+				39 01 00 00 00 00 03 f0 5A 5A
+				39 01 00 00 00 00 02 BC 01
+				39 01 00 00 00 00 02 B0 01
+				39 01 00 00 00 00 02 BC 12
+				39 01 00 00 00 00 02 B0 2C
+				39 01 00 00 00 00 16 BC C6 00 00 1E CF 00 06 0A C3 26 EF CD E0 04 CE E9 DF 00 FD FE DC
+				39 01 00 00 00 00 02 b0 42
+				39 01 00 00 00 00 02 bc 03
+				39 01 00 00 00 00 02 b0 4B
+				39 01 00 00 00 00 02 bc AA
+				39 01 00 00 00 00 03 f0 A5 A5
+				];
+		cm,mdss-livedisplay-dci-p3-off-cmd = [
+				39 01 00 00 00 00 03 F0 5A 5A
+				39 01 00 00 00 00 03 BC E0 00
+				39 01 00 00 00 00 03 F0 A5 A5
+				];
 	};
 };
