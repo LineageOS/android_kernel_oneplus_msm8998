@@ -2793,7 +2793,4 @@ void hdd_pld_ipa_uc_shutdown_pipes(void);
 hdd_station_info_t *hdd_get_stainfo(hdd_station_info_t *aStaInfo,
 				    struct qdf_mac_addr mac_addr);
 
-int hdd_driver_memdump_init(void);
-void hdd_driver_memdump_deinit(void);
-
 #endif /* end #if !defined(WLAN_HDD_MAIN_H) */
