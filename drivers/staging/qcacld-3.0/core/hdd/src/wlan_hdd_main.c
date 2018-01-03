@@ -5953,8 +5953,6 @@ void __hdd_wlan_exit(void)
 		return;
 	}
 
-	hdd_driver_memdump_deinit();
-
 	/* Do all the cleanup before deregistering the driver */
 	hdd_wlan_exit(hdd_ctx);
 
@@ -10000,7 +9998,6 @@ int hdd_wlan_startup(struct device *dev)
 		goto err_close_adapters;
 
 	hdd_runtime_suspend_context_init(hdd_ctx);
-	hdd_driver_memdump_init();
 
 	if (hdd_ctx->config->fIsImpsEnabled)
 		hdd_set_idle_ps_config(hdd_ctx, true);
