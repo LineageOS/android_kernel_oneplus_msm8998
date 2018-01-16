@@ -62,7 +62,9 @@
 #include <linux/regulator/consumer.h>
 #include <linux/project_info.h>
 #include <linux/syscalls.h>
+#if 0
 #include <linux/wakelock.h>
+#endif
 
 #include "pn544_oem.h"
 
@@ -75,7 +77,9 @@ struct pn544_dev    {
     struct mutex        read_mutex;
     struct i2c_client   *client;
     struct miscdevice   pn544_device;
+#if 0
     struct wake_lock    pn544_wake_lock; /*NFC CLK_REQ*/
+#endif
     unsigned int        ven_gpio;
     unsigned int        firm_gpio;
     unsigned int        irq_gpio;
@@ -185,7 +189,9 @@ static irqreturn_t clk_req_handler(int irq, void *dev_id)
     printk("%s ", __func__);
     if (!gpio_get_value(pn544_dev->clk_gpio)) {
         pn544_disable_clk(pn544_dev);
+#if 0
         wake_unlock(&pn544_dev->pn544_wake_lock);
+#endif
     }
 
     return IRQ_HANDLED;
@@ -1033,8 +1039,10 @@ static int pn544_probe(struct i2c_client *client,
 
     /*NFC CLK_REQ*/
     spin_lock_init(&pn544_dev->clk_enabled_lock);
+#if 0
     wake_lock_init(&pn544_dev->pn544_wake_lock,
     WAKE_LOCK_SUSPEND, "pn544_wake_lock");
+#endif
     /* End, NFC CLK_REQ*/
 
     pn544_dev->pn544_device.minor = MISC_DYNAMIC_MINOR;
@@ -1162,7 +1170,9 @@ static int pn544_suspend(struct device *dev)
     struct pn544_dev *pn544_dev = i2c_get_clientdata(client);
     printk("%s pn544_dev->clk_gpio = %d\n", __func__, gpio_get_value(pn544_dev->clk_gpio));
     if (gpio_get_value(pn544_dev->clk_gpio)) {
+#if 0
         wake_lock(&pn544_dev->pn544_wake_lock);
+#endif
         pn544_enable_clk(pn544_dev);
     }
     return 0;
