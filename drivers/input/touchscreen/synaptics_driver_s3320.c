@@ -3733,7 +3733,7 @@ static const struct file_operations key_disable_proc_fops = {
 #define CREATE_GESTURE_NODE(NAME)\
 	CREATE_PROC_NODE(touchpanel, NAME##_enable, 0666)
 
-static int init_synaptics_proc(void)
+static int init_synaptics_proc(struct synaptics_ts_data *ts)
 {
 	int ret = 0;
 
@@ -3802,8 +3802,11 @@ static int init_synaptics_proc(void)
 	CREATE_PROC_NODE(touchpanel, touch_press, 0666);
 
 #ifdef SUPPORT_TP_TOUCHKEY
-	CREATE_PROC_NODE(s1302, key_rep, 0666);
-	CREATE_PROC_NODE(touchpanel, key_disable, 0666);
+	// disable button swap and key disabler proc nodes for 17801 (dumpling)
+	if (!ts->support_1080x2160_tp) {
+		CREATE_PROC_NODE(s1302, key_rep, 0666);
+		CREATE_PROC_NODE(touchpanel, key_disable, 0666);
+	}
 #endif
 
 	return ret;
@@ -4873,7 +4876,7 @@ static int synaptics_ts_probe(struct i2c_client *client,
 
 	}
 #endif
-	init_synaptics_proc();
+	init_synaptics_proc(ts);
 	TPDTM_DMESG("synaptics_ts_probe 3203: normal end\n");
 	return 0;
 
