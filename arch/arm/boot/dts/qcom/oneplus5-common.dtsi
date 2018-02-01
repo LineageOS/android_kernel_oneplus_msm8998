@@ -511,6 +511,11 @@
 	status = "disabled";
 };
 
+&wsa_spkr_sd2 {
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
 &firmware {
 	android {
 		compatible = "android,firmware";
