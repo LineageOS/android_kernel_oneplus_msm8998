@@ -194,6 +194,7 @@ MODULE_PARM_DESC(sido_buck_svs_voltage,
 
 #ifdef CONFIG_VENDOR_ONEPLUS
 #define TASHA_TX_UNMUTE_DELAY_MS        50
+#define HEADSET_TYPE_NAME_LEN    64
 #else
 #define TASHA_TX_UNMUTE_DELAY_MS	40
 #endif
@@ -915,20 +916,19 @@ struct tasha_priv *priv_headset_type;
 static ssize_t wcd9xxx_print_name(struct switch_dev *sdev, char *buf)
 {
 
-	switch (switch_get_state(sdev))
-	{
+	switch (switch_get_state(sdev)) {
 		case NO_DEVICE:
-			return sprintf(buf, "No Device\n");
+			return snprintf(buf, HEADSET_TYPE_NAME_LEN, "No Device\n");
 		case HS_WITH_MIC:
-            if(priv_headset_type->mbhc.mbhc_cfg->headset_type == 1) {
-		        return sprintf(buf, "American Headset\n");
-            } else {
-                return sprintf(buf, "Headset\n");
-            }
-
+			if (priv_headset_type->mbhc.mbhc_cfg->headset_type == 1)
+				return snprintf(buf, HEADSET_TYPE_NAME_LEN,
+								"American Headset\n");
+			else
+				return snprintf(buf, HEADSET_TYPE_NAME_LEN,
+								"Headset\n");
 		case HS_WITHOUT_MIC:
-			return sprintf(buf, "Handset\n");
-
+			return snprintf(buf, HEADSET_TYPE_NAME_LEN,
+								"Handset\n");
 	}
 	return -EINVAL;
 }
@@ -2359,9 +2359,7 @@ static int tasha_put_Bob_Power(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	int ret = 0;
-
 	int mode;
-
 	pr_err("%s value = %d\n",
 	__func__, (uint32_t)ucontrol->value.integer.value[0]);
 
@@ -13820,11 +13818,10 @@ static int tasha_codec_probe(struct snd_soc_codec *codec)
 	}
 
 #ifdef CONFIG_VENDOR_ONEPLUS
-		tasha->mbhc.wcd9xxx_sdev.name= "h2w";
+		tasha->mbhc.wcd9xxx_sdev.name = "h2w";
 		tasha->mbhc.wcd9xxx_sdev.print_name = wcd9xxx_print_name;
 		ret = switch_dev_register(&tasha->mbhc.wcd9xxx_sdev);
-		if (ret)
-		{
+		if (ret) {
 			goto err_switch_dev_register;
 		}
 #endif
@@ -13953,7 +13950,7 @@ err_pdata:
 	control->tx_chs = NULL;
 #ifdef CONFIG_VENDOR_ONEPLUS
 	switch_dev_unregister(&tasha->mbhc.wcd9xxx_sdev);
-	err_switch_dev_register:
+err_switch_dev_register:
 #endif
 err_hwdep:
 	devm_kfree(codec->dev, tasha->fw_data);
