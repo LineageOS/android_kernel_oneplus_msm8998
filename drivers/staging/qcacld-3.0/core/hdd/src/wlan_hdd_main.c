@@ -161,6 +161,24 @@ static struct attribute *attrs[] = {
 #define MODULE_INITIALIZED 1
 #endif
 
+static struct gwlan_state *wlan_state;
+static ssize_t wlan_state_probe_show(struct kobject *kobj,
+			    struct kobj_attribute *attr,
+			    char *buf);
+struct gwlan_state {
+	bool state_probe;
+	struct kobject *wlan_state_obj;
+	struct attribute_group *attr_group;
+};
+
+static struct kobj_attribute wlan_state_attribute =
+	__ATTR(probe, S_IRUGO, wlan_state_probe_show, NULL);
+
+static struct attribute *wlan_state_attrs[] = {
+	&wlan_state_attribute.attr,
+	NULL,
+};
+
 #define HDD_OPS_INACTIVITY_TIMEOUT (120000)
 #define MAX_OPS_NAME_STRING_SIZE 20
 
@@ -10053,6 +10071,8 @@ err_hdd_free_context:
 	return -EIO;
 
 success:
+	if (wlan_state)
+		wlan_state->state_probe = 1;
 	EXIT();
 	return 0;
 }
@@ -11260,6 +11280,82 @@ static void wlan_hdd_state_ctrl_param_destroy(void)
 	pr_info("Device node unregistered");
 }
 
+static ssize_t wlan_state_probe_show(struct kobject *kobj,
+			    struct kobj_attribute *attr,
+			    char *buf)
+{
+	return sprintf(buf, "%u\n", wlan_state->state_probe);
+}
+
+static void wlan_state_sysfs_cleanup(void)
+{
+	/* remove from group */
+	if (wlan_state->wlan_state_obj && wlan_state->attr_group)
+		sysfs_remove_group(wlan_state->wlan_state_obj,
+				   wlan_state->attr_group);
+
+	/* unlink the object from parent */
+	kobject_del(wlan_state->wlan_state_obj);
+
+	/* free the object */
+	kobject_put(wlan_state->wlan_state_obj);
+
+	kfree(wlan_state->attr_group);
+	kfree(wlan_state);
+
+	wlan_state = NULL;
+}
+
+static int wlan_state_sysfs_init(void)
+{
+	int ret = -ENOMEM;
+
+	wlan_state = kzalloc(sizeof(*wlan_state), GFP_KERNEL);
+	if (!wlan_state)
+		return -ENOMEM;
+
+	wlan_state->wlan_state_obj = NULL;
+	wlan_state->attr_group = kzalloc(sizeof(*(wlan_state->attr_group)),
+					  GFP_KERNEL);
+	if (!wlan_state->attr_group)
+		goto error_return;
+
+	wlan_state->state_probe = 0;
+	wlan_state->attr_group->attrs = wlan_state_attrs;
+
+	wlan_state->wlan_state_obj = kobject_create_and_add("wlan_state",
+							    kernel_kobj);
+	if (!wlan_state->wlan_state_obj) {
+		pr_err("%s: sysfs create and add failed\n", __func__);
+		goto error_return;
+	}
+
+	ret = sysfs_create_group(wlan_state->wlan_state_obj,
+				 wlan_state->attr_group);
+	if (ret) {
+		pr_err("%s: sysfs create group failed %d\n", __func__, ret);
+		goto error_return;
+	}
+
+	return 0;
+
+error_return:
+	wlan_state_sysfs_cleanup();
+
+	return ret;
+}
+
+static int wlan_state_sysfs_deinit(void)
+{
+	if (!wlan_state) {
+		hdd_err("wlan state context is Null!");
+		return -EINVAL;
+	}
+
+	wlan_state_sysfs_cleanup();
+	return 0;
+}
+
 #ifndef MODULE
 static int hdd_wait_for_probe_complete(void)
 {
@@ -11298,6 +11394,12 @@ static int __hdd_module_init(void)
 	       QWLAN_VERSIONSTR,
 	       g_wlan_driver_timestamp,
 	       TIMER_MANAGER_STR MEMORY_DEBUG_STR);
+
+	ret = wlan_state_sysfs_init();
+	if (ret) {
+		pr_err("wlan_state_sysfs_init: %x\n", ret);
+		goto err_dev_state;
+	}
 
 	ret = wlan_hdd_state_ctrl_param_create();
 	if (ret) {
@@ -11365,6 +11467,7 @@ static void __hdd_module_exit(void)
 	hdd_deinit();
 	pld_deinit();
 	wlan_hdd_state_ctrl_param_destroy();
+	wlan_state_sysfs_deinit();
 }
 
 #ifndef MODULE
