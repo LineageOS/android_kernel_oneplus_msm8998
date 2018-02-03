@@ -793,23 +793,6 @@ QDF_STATUS qdf_state_info_dump_all(char *buf, uint16_t size,
 }
 qdf_export_symbol(qdf_state_info_dump_all);
 
-#ifdef CONFIG_KALLSYMS
-inline int qdf_sprint_symbol(char *buffer, void *addr)
-{
-	return sprint_symbol(buffer, (unsigned long)addr);
-}
-#else
-int qdf_sprint_symbol(char *buffer, void *addr)
-{
-	if (!buffer)
-		return 0;
-
-	buffer[0] = '\0';
-	return 1;
-}
-#endif
-qdf_export_symbol(qdf_sprint_symbol);
-
 #ifdef FEATURE_DP_TRACE
 static void qdf_dp_unused(struct qdf_dp_trace_record_s *record,
 			  uint16_t index, bool live)
@@ -865,7 +848,7 @@ void qdf_dp_trace_init(bool live_mode_config, uint8_t thresh,
 	qdf_dp_trace_cb_table[QDF_DP_TRACE_DHCP_PACKET_RECORD] =
 	qdf_dp_trace_cb_table[QDF_DP_TRACE_ARP_PACKET_RECORD] =
 	qdf_dp_trace_cb_table[QDF_DP_TRACE_ICMP_PACKET_RECORD] =
-	qdf_dp_trace_cb_table[QDF_DP_TRACE_ICMPv6_PACKET_RECORD] =
+	qdf_dp_trace_cb_table[QDF_DP_TRACE_ICMPV6_PACKET_RECORD] =
 						qdf_dp_display_proto_pkt;
 	qdf_dp_trace_cb_table[QDF_DP_TRACE_MGMT_PACKET_RECORD] =
 					qdf_dp_display_mgmt_pkt;
@@ -1020,8 +1003,8 @@ const char *qdf_dp_code_to_string(enum QDF_DP_TRACE_ID code)
 		return "ARP:";
 	case QDF_DP_TRACE_ICMP_PACKET_RECORD:
 		return "ICMP:";
-	case QDF_DP_TRACE_ICMPv6_PACKET_RECORD:
-		return "ICMPv6:";
+	case QDF_DP_TRACE_ICMPV6_PACKET_RECORD:
+		return "ICMPV6:";
 	case QDF_DP_TRACE_MGMT_PACKET_RECORD:
 		return "MGMT:";
 	case QDF_DP_TRACE_EVENT_RECORD:
@@ -1102,8 +1085,8 @@ static const char *qdf_dp_type_to_str(enum qdf_proto_type type)
 		return "ARP";
 	case QDF_PROTO_TYPE_ICMP:
 		return "ICMP";
-	case QDF_PROTO_TYPE_ICMPv6:
-		return "ICMPv6";
+	case QDF_PROTO_TYPE_ICMPV6:
+		return "ICMPV6";
 	case QDF_PROTO_TYPE_MGMT:
 		return "MGMT";
 	case QDF_PROTO_TYPE_EVENT:
@@ -1291,7 +1274,7 @@ static void qdf_dp_add_record(enum QDF_DP_TRACE_ID code,
 }
 
 /**
- * qdf_log_icmpv6_pkt() - log ICMPv6 packet
+ * qdf_log_icmpv6_pkt() - log ICMPV6 packet
  * @session_id: vdev_id
  * @skb: skb pointer
  * @dir: direction
@@ -1303,17 +1286,17 @@ static bool qdf_log_icmpv6_pkt(uint8_t session_id, struct sk_buff *skb,
 {
 	enum qdf_proto_subtype subtype;
 
-	if ((qdf_dp_get_proto_bitmap() & QDF_NBUF_PKT_TRAC_TYPE_ICMPv6) &&
-		((dir == QDF_TX && QDF_NBUF_CB_PACKET_TYPE_ICMPv6 ==
+	if ((qdf_dp_get_proto_bitmap() & QDF_NBUF_PKT_TRAC_TYPE_ICMPV6) &&
+		((dir == QDF_TX && QDF_NBUF_CB_PACKET_TYPE_ICMPV6 ==
 			QDF_NBUF_CB_GET_PACKET_TYPE(skb)) ||
 		 (dir == QDF_RX && qdf_nbuf_is_icmpv6_pkt(skb) == true))) {
 
 		subtype = qdf_nbuf_get_icmpv6_subtype(skb);
 		DPTRACE(qdf_dp_trace_proto_pkt(
-			QDF_DP_TRACE_ICMPv6_PACKET_RECORD,
+			QDF_DP_TRACE_ICMPV6_PACKET_RECORD,
 			session_id, (skb->data + QDF_NBUF_SRC_MAC_OFFSET),
 			(skb->data + QDF_NBUF_DEST_MAC_OFFSET),
-			QDF_PROTO_TYPE_ICMPv6, subtype, dir, true));
+			QDF_PROTO_TYPE_ICMPV6, subtype, dir, true));
 		if (dir == QDF_TX)
 			QDF_NBUF_CB_TX_DP_TRACE(skb) = 1;
 		else if (dir == QDF_RX)

@@ -2407,6 +2407,8 @@ static void lim_tdls_update_hash_node_info(tpAniSirGlobal pMac,
 	tDot11fIEVHTCaps *pVhtCaps_txbf = NULL;
 	tDot11fIEVHTCaps vhtCap;
 	uint8_t cbMode;
+	tpDphHashNode pSessStaDs = NULL;
+	uint16_t aid;
 
 	if (pTdlsAddStaReq->tdlsAddOper == TDLS_OPER_ADD) {
 		populate_dot11f_ht_caps(pMac, psessionEntry, &htCap);
@@ -2505,6 +2507,8 @@ static void lim_tdls_update_hash_node_info(tpAniSirGlobal pMac,
 		else
 			pStaDs->htSecondaryChannelOffset = cbMode;
 	}
+	pSessStaDs = dph_lookup_hash_entry(pMac, psessionEntry->bssId, &aid,
+					   &psessionEntry->dph.dphHashTable);
 	/* Lets enable QOS parameter */
 	pStaDs->qosMode = (pTdlsAddStaReq->capability & CAPABILITIES_QOS_OFFSET)
 				|| pTdlsAddStaReq->htcap_present;
@@ -3344,20 +3348,18 @@ tSirRetStatus lim_process_sme_del_all_tdls_peers(tpAniSirGlobal mac_ctx,
 
 	lim_check_aid_and_delete_peer(mac_ctx, session_entry);
 
-	if (msg->disable_tdls_state) {
-		if (mac_ctx->lim.sme_msg_callback) {
-			tdls_state_disable = qdf_mem_malloc(
-					sizeof(*tdls_state_disable));
-			if (NULL == tdls_state_disable) {
-				pe_err("memory allocation failed");
-				return eSIR_FAILURE;
-			}
-			tdls_state_disable->session_id = session_entry->smeSessionId;
-			cds_msg.type = eWNI_SME_TDLS_NOTIFY_SET_STATE_DISABLE;
-			cds_msg.bodyptr = tdls_state_disable;
-			cds_msg.bodyval = 0;
-			mac_ctx->lim.sme_msg_callback(mac_ctx, &cds_msg);
+	if (mac_ctx->lim.sme_msg_callback) {
+		tdls_state_disable = qdf_mem_malloc(
+						sizeof(*tdls_state_disable));
+		if (NULL == tdls_state_disable) {
+			pe_err("memory allocation failed");
+			return eSIR_FAILURE;
 		}
+		tdls_state_disable->session_id = session_entry->smeSessionId;
+		cds_msg.type = eWNI_SME_TDLS_NOTIFY_SET_STATE_DISABLE;
+		cds_msg.bodyptr = tdls_state_disable;
+		cds_msg.bodyval = 0;
+		mac_ctx->lim.sme_msg_callback(mac_ctx, &cds_msg);
 	}
 
 	return eSIR_SUCCESS;

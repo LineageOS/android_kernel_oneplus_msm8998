@@ -41,7 +41,6 @@
 #include <ol_txrx.h>
 #include <cdp_txrx_peer_ops.h>
 #include <cds_utils.h>
-#include <wlan_hdd_regulatory.h>
 
 #ifdef IPA_OFFLOAD
 #include <wlan_hdd_ipa.h>
@@ -63,11 +62,11 @@
 static void hdd_softap_dump_sk_buff(struct sk_buff *skb)
 {
 	QDF_TRACE(QDF_MODULE_ID_HDD_SAP_DATA, QDF_TRACE_LEVEL_INFO,
-		  "%s: head = %pK ", __func__, skb->head);
+		  "%s: head = %p ", __func__, skb->head);
 	QDF_TRACE(QDF_MODULE_ID_HDD_SAP_DATA, QDF_TRACE_LEVEL_INFO,
-		  "%s: tail = %pK ", __func__, skb->tail);
+		  "%s: tail = %p ", __func__, skb->tail);
 	QDF_TRACE(QDF_MODULE_ID_HDD_SAP_DATA, QDF_TRACE_LEVEL_INFO,
-		  "%s: end = %pK ", __func__, skb->end);
+		  "%s: end = %p ", __func__, skb->end);
 	QDF_TRACE(QDF_MODULE_ID_HDD_SAP_DATA, QDF_TRACE_LEVEL_INFO,
 		  "%s: len = %d ", __func__, skb->len);
 	QDF_TRACE(QDF_MODULE_ID_HDD_SAP_DATA, QDF_TRACE_LEVEL_INFO,
@@ -214,12 +213,9 @@ static inline struct sk_buff *hdd_skb_orphan(hdd_adapter_t *pAdapter,
 		struct sk_buff *skb) {
 
 	struct sk_buff *nskb;
-	hdd_context_t *hdd_ctx = pAdapter->pHddCtx;
-
-	hdd_skb_fill_gso_size(pAdapter->dev, skb);
 
 	nskb = skb_unshare(skb, GFP_ATOMIC);
-	if (unlikely(hdd_ctx->config->tx_orphan_enable) && (nskb == skb)) {
+	if (nskb == skb) {
 		/*
 		 * For UDP packets we want to orphan the packet to allow the app
 		 * to send more packets. The flow would ultimately be controlled
@@ -253,11 +249,8 @@ static int __hdd_softap_hard_start_xmit(struct sk_buff *skb,
 	hdd_ap_ctx_t *pHddApCtx = WLAN_HDD_GET_AP_CTX_PTR(pAdapter);
 	struct qdf_mac_addr *pDestMacAddress;
 	uint8_t STAId;
-	uint32_t num_seg;
 
 	++pAdapter->hdd_stats.hddTxRxStats.txXmitCalled;
-	pAdapter->hdd_stats.hddTxRxStats.cont_txtimeout_cnt = 0;
-
 	/* Prevent this function from being called during SSR since TL
 	 * context may not be reinitialized at this time which may
 	 * lead to a crash.
@@ -401,17 +394,11 @@ static int __hdd_softap_hard_start_xmit(struct sk_buff *skb,
 	qdf_net_buf_debug_acquire_skb(skb, __FILE__, __LINE__);
 
 	pAdapter->stats.tx_bytes += skb->len;
-	pAdapter->aStaInfo[STAId].tx_bytes += skb->len;
 
-	if (qdf_nbuf_is_tso(skb)) {
-		num_seg = qdf_nbuf_get_tso_num_seg(skb);
-		pAdapter->stats.tx_packets += num_seg;
-		pAdapter->aStaInfo[STAId].tx_packets += num_seg;
-	} else {
+	if (qdf_nbuf_is_tso(skb))
+		pAdapter->stats.tx_packets += qdf_nbuf_get_tso_num_seg(skb);
+	else
 		++pAdapter->stats.tx_packets;
-		pAdapter->aStaInfo[STAId].tx_packets++;
-	}
-	pAdapter->aStaInfo[STAId].last_tx_rx_ts = qdf_system_ticks();
 
 	hdd_event_eapol_log(skb, QDF_TX);
 	qdf_dp_trace_log_pkt(pAdapter->sessionId, skb, QDF_TX);
@@ -481,6 +468,30 @@ int hdd_softap_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	return ret;
 }
 
+#ifdef FEATURE_WLAN_DIAG_SUPPORT
+/**
+ * hdd_wlan_datastall_sap_event()- Send SAP datastall information
+ *
+ * This Function send send SAP datastall diag event
+ *
+ * Return: void.
+ */
+static void hdd_wlan_datastall_sap_event(void)
+{
+	WLAN_HOST_DIAG_EVENT_DEF(sap_data_stall,
+					struct host_event_wlan_datastall);
+	qdf_mem_zero(&sap_data_stall, sizeof(sap_data_stall));
+	sap_data_stall.reason = SOFTAP_TX_TIMEOUT;
+	WLAN_HOST_DIAG_EVENT_REPORT(&sap_data_stall,
+						EVENT_WLAN_SOFTAP_DATASTALL);
+}
+#else
+static inline void hdd_wlan_datastall_sap_event(void)
+{
+
+}
+#endif
+
 /**
  * __hdd_softap_tx_timeout() - TX timeout handler
  * @dev: pointer to network device
@@ -527,22 +538,7 @@ static void __hdd_softap_tx_timeout(struct net_device *dev)
 	ol_tx_dump_flow_pool_info();
 	QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_DEBUG,
 			"carrier state: %d", netif_carrier_ok(dev));
-
-	++adapter->hdd_stats.hddTxRxStats.tx_timeout_cnt;
-	++adapter->hdd_stats.hddTxRxStats.cont_txtimeout_cnt;
-
-	if (adapter->hdd_stats.hddTxRxStats.cont_txtimeout_cnt >
-	    HDD_TX_STALL_THRESHOLD) {
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_ERROR,
-			  "Detected data stall due to continuous TX timeouts");
-		adapter->hdd_stats.hddTxRxStats.cont_txtimeout_cnt = 0;
-		if (hdd_ctx->config->enable_data_stall_det)
-			ol_txrx_post_data_stall_event(
-					DATA_STALL_LOG_INDICATOR_HOST_DRIVER,
-					DATA_STALL_LOG_HOST_SOFTAP_TX_TIMEOUT,
-					0xFF, 0XFF,
-					DATA_STALL_LOG_RECOVERY_TRIGGER_PDR);
-	}
+	hdd_wlan_datastall_sap_event();
 }
 
 /**
@@ -676,8 +672,6 @@ QDF_STATUS hdd_softap_rx_packet_cbk(void *context, qdf_nbuf_t rxBuf)
 	struct sk_buff *skb = NULL;
 	hdd_context_t *pHddCtx = NULL;
 	bool proto_pkt_logged = false;
-	struct qdf_mac_addr src_mac;
-	uint8_t staid;
 
 	/* Sanity check on inputs */
 	if (unlikely((NULL == context) || (NULL == rxBuf))) {
@@ -718,18 +712,6 @@ QDF_STATUS hdd_softap_rx_packet_cbk(void *context, qdf_nbuf_t rxBuf)
 	++pAdapter->hdd_stats.hddTxRxStats.rxPackets[cpu_index];
 	++pAdapter->stats.rx_packets;
 	pAdapter->stats.rx_bytes += skb->len;
-
-	qdf_mem_copy(&src_mac, skb->data + QDF_NBUF_SRC_MAC_OFFSET,
-		sizeof(src_mac));
-	if (QDF_STATUS_SUCCESS ==
-		hdd_softap_get_sta_id(pAdapter, &src_mac, &staid)) {
-		if (staid < WLAN_MAX_STA_COUNT) {
-			pAdapter->aStaInfo[staid].rx_packets++;
-			pAdapter->aStaInfo[staid].rx_bytes += skb->len;
-			pAdapter->aStaInfo[staid].last_tx_rx_ts =
-				qdf_system_ticks();
-		}
-	}
 
 	hdd_event_eapol_log(skb, QDF_RX);
 	proto_pkt_logged = qdf_dp_trace_log_pkt(pAdapter->sessionId,
@@ -1016,13 +998,6 @@ QDF_STATUS hdd_softap_stop_bss(hdd_adapter_t *pAdapter)
 			}
 		}
 	}
-
-	/* Mark the indoor channel (passive) to enable */
-	if (pHddCtx->config->disable_indoor_channel) {
-		hdd_update_indoor_channel(pHddCtx, false);
-		sme_update_channel_list(pHddCtx->hHal);
-	}
-
 	return qdf_status;
 }
 

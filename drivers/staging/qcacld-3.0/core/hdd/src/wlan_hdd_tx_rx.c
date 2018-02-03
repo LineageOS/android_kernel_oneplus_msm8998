@@ -57,7 +57,7 @@
 #include "wlan_hdd_nan_datapath.h"
 #include "pld_common.h"
 #include "wlan_hdd_power.h"
-#include <wlan_hdd_tsf.h>
+
 
 #ifdef QCA_LL_TX_FLOW_CONTROL_V2
 /*
@@ -164,18 +164,6 @@ static inline struct sk_buff *hdd_skb_orphan(hdd_adapter_t *pAdapter,
 	return skb;
 }
 
-bool hdd_tx_flow_control_is_pause(void *adapter_context)
-{
-	hdd_adapter_t *pAdapter = (hdd_adapter_t *) adapter_context;
-
-	if ((NULL == pAdapter) || (WLAN_HDD_ADAPTER_MAGIC != pAdapter->magic)) {
-		/* INVALID ARG */
-		hdd_err("invalid adapter %p", pAdapter);
-		return false;
-	}
-
-	return pAdapter->pause_map & (1 << WLAN_DATA_FLOW_CONTROL);
-}
 /**
  * hdd_tx_resume_cb() - Resume OS TX Q.
  * @adapter_context: pointer to vdev apdapter
@@ -212,10 +200,17 @@ void hdd_tx_resume_cb(void *adapter_context, bool tx_resume)
 	hdd_tx_resume_false(pAdapter, tx_resume);
 }
 
+/**
+ * hdd_register_tx_flow_control() - Register TX Flow control
+ * @adapter: adapter handle
+ * @timer_callback: timer callback
+ * @flow_control_fp: txrx flow control
+ *
+ * Return: none
+ */
 void hdd_register_tx_flow_control(hdd_adapter_t *adapter,
 		qdf_mc_timer_callback_t timer_callback,
-		ol_txrx_tx_flow_control_fp flow_control_fp,
-		ol_txrx_tx_flow_control_is_pause_fp flow_control_is_pause_fp)
+		ol_txrx_tx_flow_control_fp flow_control_fp)
 {
 	if (adapter->tx_flow_timer_initialized == false) {
 		qdf_mc_timer_init(&adapter->tx_flow_control_timer,
@@ -226,8 +221,7 @@ void hdd_register_tx_flow_control(hdd_adapter_t *adapter,
 	}
 	ol_txrx_register_tx_flow_control(adapter->sessionId,
 					flow_control_fp,
-					adapter,
-					flow_control_is_pause_fp);
+					adapter);
 }
 
 /**
@@ -291,12 +285,9 @@ static inline struct sk_buff *hdd_skb_orphan(hdd_adapter_t *pAdapter,
 		struct sk_buff *skb) {
 
 	struct sk_buff *nskb;
-	hdd_context_t *hdd_ctx = pAdapter->pHddCtx;
-
-	hdd_skb_fill_gso_size(pAdapter->dev, skb);
 
 	nskb = skb_unshare(skb, GFP_ATOMIC);
-	if (unlikely(hdd_ctx->config->tx_orphan_enable) && (nskb == skb)) {
+	if (nskb == skb) {
 		/*
 		 * For UDP packets we want to orphan the packet to allow the app
 		 * to send more packets. The flow would ultimately be controlled
@@ -387,7 +378,7 @@ void wlan_hdd_classify_pkt(struct sk_buff *skb)
 			QDF_NBUF_CB_PACKET_TYPE_ICMP;
 	else if (qdf_nbuf_is_icmpv6_pkt(skb))
 		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
-			QDF_NBUF_CB_PACKET_TYPE_ICMPv6;
+			QDF_NBUF_CB_PACKET_TYPE_ICMPV6;
 }
 
 /**
@@ -412,9 +403,6 @@ wlan_hdd_latency_opt(hdd_adapter_t *adapter, struct sk_buff *skb)
 				QDF_NBUF_CB_PACKET_TYPE_ICMP) {
 		wlan_hdd_set_powersave(adapter, false,
 				hdd_ctx->config->icmp_disable_ps_val);
-		sme_ps_enable_auto_ps_timer(WLAN_HDD_GET_HAL_CTX(adapter),
-					  adapter->sessionId,
-					  hdd_ctx->config->icmp_disable_ps_val);
 	}
 }
 #else
@@ -509,7 +497,6 @@ static int __hdd_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	wlan_hdd_latency_opt(pAdapter, skb);
 
 	++pAdapter->hdd_stats.hddTxRxStats.txXmitCalled;
-	pAdapter->hdd_stats.hddTxRxStats.cont_txtimeout_cnt = 0;
 
 	if (QDF_NBUF_CB_GET_PACKET_TYPE(skb) == QDF_NBUF_CB_PACKET_TYPE_ARP) {
 		is_arp = true;
@@ -807,6 +794,28 @@ QDF_STATUS hdd_get_peer_sta_id(hdd_station_ctx_t *pHddStaCtx,
 	return QDF_STATUS_E_FAILURE;
 }
 
+#ifdef FEATURE_WLAN_DIAG_SUPPORT
+/**
+ * hdd_wlan_datastall_sta_event()- send sta datastall information
+ *
+ * This Function send send sta datastall status diag event
+ *
+ * Return: void.
+ */
+static void hdd_wlan_datastall_sta_event(void)
+{
+	WLAN_HOST_DIAG_EVENT_DEF(sta_data_stall,
+				struct host_event_wlan_datastall);
+	qdf_mem_zero(&sta_data_stall, sizeof(sta_data_stall));
+	sta_data_stall.reason = STA_TX_TIMEOUT;
+	WLAN_HOST_DIAG_EVENT_REPORT(&sta_data_stall, EVENT_WLAN_STA_DATASTALL);
+}
+#else
+static inline void hdd_wlan_datastall_sta_event(void)
+{
+}
+#endif
+
 /**
  * __hdd_tx_timeout() - TX timeout handler
  * @dev: pointer to network device
@@ -822,7 +831,6 @@ static void __hdd_tx_timeout(struct net_device *dev)
 	hdd_adapter_t *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
 	hdd_context_t *hdd_ctx;
 	struct netdev_queue *txq;
-	u64 diff_jiffies;
 	int i = 0;
 
 	TX_TIMEOUT_TRACE(dev, QDF_MODULE_ID_HDD_DATA);
@@ -848,46 +856,7 @@ static void __hdd_tx_timeout(struct net_device *dev)
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	wlan_hdd_display_netif_queue_history(hdd_ctx);
 	ol_tx_dump_flow_pool_info();
-
-	++adapter->hdd_stats.hddTxRxStats.tx_timeout_cnt;
-	++adapter->hdd_stats.hddTxRxStats.cont_txtimeout_cnt;
-
-	diff_jiffies = jiffies -
-		       adapter->hdd_stats.hddTxRxStats.jiffies_last_txtimeout;
-
-	if ((adapter->hdd_stats.hddTxRxStats.cont_txtimeout_cnt > 1) &&
-	    (diff_jiffies > (HDD_TX_TIMEOUT * 2))) {
-		/*
-		 * In case when there is no traffic is running, it may
-		 * possible tx time-out may once happen and later system
-		 * recovered then continuous tx timeout count has to be
-		 * reset as it is gets modified only when traffic is running.
-		 * If over a period of time if this count reaches to threshold
-		 * then host triggers a false subsystem restart. In genuine
-		 * time out case kernel will call the tx time-out back to back
-		 * at interval of HDD_TX_TIMEOUT. Here now check if previous
-		 * TX TIME out has occurred more than twice of HDD_TX_TIMEOUT
-		 * back then host may recovered here from data stall.
-		 */
-		adapter->hdd_stats.hddTxRxStats.cont_txtimeout_cnt = 0;
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_DEBUG,
-			  "Reset continous tx timeout stat");
-	}
-
-	adapter->hdd_stats.hddTxRxStats.jiffies_last_txtimeout = jiffies;
-
-	if (adapter->hdd_stats.hddTxRxStats.cont_txtimeout_cnt >
-	    HDD_TX_STALL_THRESHOLD) {
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_ERROR,
-			  "Detected data stall due to continuous TX timeout");
-		adapter->hdd_stats.hddTxRxStats.cont_txtimeout_cnt = 0;
-		if (hdd_ctx->config->enable_data_stall_det)
-			ol_txrx_post_data_stall_event(
-					DATA_STALL_LOG_INDICATOR_HOST_DRIVER,
-					DATA_STALL_LOG_HOST_STA_TX_TIMEOUT,
-					0xFF, 0XFF,
-					DATA_STALL_LOG_RECOVERY_TRIGGER_PDR);
-	}
+	hdd_wlan_datastall_sta_event();
 }
 
 /**
@@ -976,7 +945,7 @@ static QDF_STATUS hdd_mon_rx_packet_cbk(void *context, qdf_nbuf_t rxbuf)
 	adapter = (hdd_adapter_t *)context;
 	if ((NULL == adapter) || (WLAN_HDD_ADAPTER_MAGIC != adapter->magic)) {
 		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_ERROR,
-			  "invalid adapter %pK", adapter);
+			  "invalid adapter %p", adapter);
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -1252,15 +1221,10 @@ QDF_STATUS hdd_rx_packet_cbk(void *context, qdf_nbuf_t rxBuf)
 	pHddStaCtx = WLAN_HDD_GET_STATION_CTX_PTR(pAdapter);
 	if ((pHddStaCtx->conn_info.proxyARPService) &&
 	    cfg80211_is_gratuitous_arp_unsolicited_na(skb)) {
-		uint32_t rx_dropped;
-
-		rx_dropped = ++pAdapter->hdd_stats.hddTxRxStats.
-							rxDropped[cpu_index];
-		/* rate limit error messages to 1/8th */
-		if ((rx_dropped & 0x07) == 0)
-			QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_INFO,
-			  "%s: Dropping HS 2.0 Gratuitous ARP or Unsolicited NA count=%u",
-			  __func__, rx_dropped);
+		++pAdapter->hdd_stats.hddTxRxStats.rxDropped[cpu_index];
+		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_INFO,
+			  "%s: Dropping HS 2.0 Gratuitous ARP or Unsolicited NA",
+			  __func__);
 		/* Remove SKB from internal tracking table before submitting
 		 * it to stack
 		 */
@@ -1325,8 +1289,6 @@ QDF_STATUS hdd_rx_packet_cbk(void *context, qdf_nbuf_t rxBuf)
 	 * it to stack
 	 */
 	qdf_net_buf_debug_release_skb(rxBuf);
-
-	hdd_rx_timestamp(skb, ktime_to_us(skb->tstamp));
 
 	if (HDD_LRO_NO_RX ==
 		 hdd_lro_rx(pHddCtx, pAdapter, skb)) {
@@ -1570,24 +1532,6 @@ void wlan_hdd_netif_queue_control(hdd_adapter_t *adapter,
 		spin_unlock_bh(&adapter->pause_map_lock);
 		break;
 
-	case WLAN_NETIF_PRIORITY_QUEUE_ON:
-		spin_lock_bh(&adapter->pause_map_lock);
-		temp_map = adapter->pause_map;
-		adapter->pause_map &= ~(1 << reason);
-		netif_wake_subqueue(adapter->dev, HDD_LINUX_AC_HI_PRIO);
-		wlan_hdd_update_pause_time(adapter, temp_map);
-		spin_unlock_bh(&adapter->pause_map_lock);
-		break;
-
-	case WLAN_NETIF_PRIORITY_QUEUE_OFF:
-		spin_lock_bh(&adapter->pause_map_lock);
-		netif_stop_subqueue(adapter->dev, HDD_LINUX_AC_HI_PRIO);
-		wlan_hdd_update_txq_timestamp(adapter->dev);
-		wlan_hdd_update_unpause_time(adapter);
-		adapter->pause_map |= (1 << reason);
-		spin_unlock_bh(&adapter->pause_map_lock);
-		break;
-
 	case WLAN_START_ALL_NETIF_QUEUE:
 		spin_lock_bh(&adapter->pause_map_lock);
 		temp_map = adapter->pause_map;
@@ -1671,6 +1615,10 @@ int hdd_set_mon_rx_cb(struct net_device *dev)
 	QDF_STATUS qdf_status;
 	struct ol_txrx_desc_type sta_desc = {0};
 	struct ol_txrx_ops txrx_ops;
+
+	ret = wlan_hdd_validate_context(hdd_ctx);
+	if (0 != ret)
+		return ret;
 
 	qdf_mem_zero(&txrx_ops, sizeof(txrx_ops));
 	txrx_ops.rx.rx = hdd_mon_rx_packet_cbk;

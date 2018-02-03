@@ -187,8 +187,7 @@ static int wlan_hdd_qcmbr_command(hdd_adapter_t *adapter,
 	switch (pqcmbr_data->cmd) {
 	case ATH_XIOCTL_UNIFIED_UTF_CMD: {
 		pqcmbr_data->copy_to_user = 0;
-		if (pqcmbr_data->length &&
-			pqcmbr_data->length <= sizeof(pqcmbr_data->buf)) {
+		if (pqcmbr_data->length) {
 			if (wlan_hdd_ftm_testmode_cmd(pqcmbr_data->buf,
 						      pqcmbr_data->
 						      length)
@@ -335,9 +334,6 @@ static void wlanqcmbr_mc_process_msg(void *message)
 	uint32_t data_len;
 
 	data_len = *((uint32_t *) message) + sizeof(uint32_t);
-	if (data_len > MAX_UTF_LENGTH + 4)
-		return;
-
 	qcmbr_buf = qdf_mem_malloc(sizeof(qcmbr_queue_t));
 	if (qcmbr_buf != NULL) {
 		memcpy(qcmbr_buf->utf_buf, message, data_len);

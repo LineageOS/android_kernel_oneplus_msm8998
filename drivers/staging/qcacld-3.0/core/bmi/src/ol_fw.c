@@ -493,10 +493,7 @@ int ol_copy_ramdump(struct hif_opaque_softc *scn)
 		BMI_ERR("%s qdf_dev is NULL", __func__);
 		return -EINVAL;
 	}
-	if (pld_is_fw_dump_skipped(qdf_dev->dev)) {
-		BMI_INFO("%s ssr enabled, skip ramdump", __func__);
-		return 0;
-	}
+
 	info = qdf_mem_malloc(sizeof(struct ramdump_info));
 	if (!info) {
 		BMI_ERR("%s Memory for Ramdump Allocation failed", __func__);
@@ -786,8 +783,6 @@ QDF_STATUS ol_configure_target(struct ol_context *ol_ctx)
 	if (hif_get_bus_type(scn) == QDF_BUS_TYPE_PCI) {
 		if (ol_disable_cdc_max_perf(ol_ctx))
 			return QDF_STATUS_E_FAILURE;
-
-		qdf_mem_zero(&cap, sizeof(cap));
 
 		ret = pld_get_platform_cap(qdf_dev->dev, &cap);
 		if (ret)

@@ -844,8 +844,8 @@ uint16_t csr_check_concurrent_channel_overlap(tpAniSirGlobal mac_ctx,
 		}
 	}
 
-	sme_debug("intf_ch:%d sap_ch:%d cc_switch_mode:%d, dbs:%d",
-			intf_ch, sap_ch, cc_switch_mode, wma_is_dbs_enable());
+	sme_debug("intf_ch:%d sap_ch:%d cc_switch_mode:%d",
+		intf_ch, sap_ch, cc_switch_mode);
 
 	if (intf_ch && sap_ch != intf_ch &&
 	    cc_switch_mode != QDF_MCC_TO_SCC_SWITCH_FORCE &&
@@ -876,17 +876,16 @@ uint16_t csr_check_concurrent_channel_overlap(tpAniSirGlobal mac_ctx,
 			QDF_MCC_TO_SCC_SWITCH_FORCE_WITHOUT_DISCONNECTION) ||
 		(cc_switch_mode ==
 			QDF_MCC_TO_SCC_SWITCH_WITH_FAVORITE_CHANNEL))) {
-		if (!((intf_ch <= 14 && sap_ch <= 14) ||
-			(intf_ch > 14 && sap_ch > 14))) {
-			if (wma_is_hw_dbs_capable())
-				intf_ch = 0;
-		}
+		if (!((intf_ch < 14 && sap_ch < 14) ||
+			(intf_ch > 14 && sap_ch > 14)))
+			intf_ch = 0;
 		else if (cc_switch_mode ==
 			QDF_MCC_TO_SCC_SWITCH_WITH_FAVORITE_CHANNEL) {
 			status =
 			    cds_get_sap_mandatory_channel((uint32_t *)&intf_ch);
 			if (QDF_IS_STATUS_ERROR(status)) {
 				sme_err("no mandatory channel");
+				intf_ch = sap_ch;
 			}
 		}
 	} else if ((intf_ch == sap_ch) && (cc_switch_mode ==
@@ -897,6 +896,7 @@ uint16_t csr_check_concurrent_channel_overlap(tpAniSirGlobal mac_ctx,
 						(uint32_t *)&intf_ch);
 			if (QDF_IS_STATUS_ERROR(status)) {
 				sme_err("no mandatory channel");
+				intf_ch = sap_ch;
 			}
 		}
 	}
@@ -2378,6 +2378,10 @@ bool csr_is_profile11r(tCsrRoamProfile *pProfile)
 				   pProfile->MDID.mdiePresent);
 }
 
+
+#ifdef FEATURE_WLAN_ESE
+
+/* Function to return true if the authtype is ESE */
 bool csr_is_auth_type_ese(eCsrAuthType AuthType)
 {
 	switch (AuthType) {
@@ -2389,8 +2393,6 @@ bool csr_is_auth_type_ese(eCsrAuthType AuthType)
 	}
 	return false;
 }
-
-#ifdef FEATURE_WLAN_ESE
 
 /* Function to return true if the profile is ESE */
 bool csr_is_profile_ese(tCsrRoamProfile *pProfile)
@@ -2511,12 +2513,9 @@ static bool csr_match_wpaoui_index(tpAniSirGlobal pMac,
 				   uint8_t cAllCyphers, uint8_t ouiIndex,
 				   uint8_t Oui[])
 {
-	if (ouiIndex < QDF_ARRAY_SIZE(csr_wpa_oui))
-		return csr_is_oui_match
-			(pMac, AllCyphers, cAllCyphers,
-			 csr_wpa_oui[ouiIndex], Oui);
-	else
-		return false;
+	return csr_is_oui_match
+		(pMac, AllCyphers, cAllCyphers, csr_wpa_oui[ouiIndex], Oui);
+
 }
 
 #ifdef FEATURE_WLAN_WAPI
@@ -3322,7 +3321,6 @@ uint8_t csr_construct_rsn_ie(tHalHandle hHal, uint32_t sessionId,
 	tDot11fBeaconIEs *pIesLocal = pIes;
 	eCsrAuthType negAuthType = eCSR_AUTH_TYPE_UNKNOWN;
 
-	qdf_mem_zero(&pmkid_cache, sizeof(pmkid_cache));
 	do {
 		if (!csr_is_profile_rsn(pProfile))
 			break;
@@ -3796,7 +3794,6 @@ static bool csr_get_wpa_cyphers(tpAniSirGlobal mac_ctx, tCsrAuthList *auth_type,
 	uint8_t authentication[CSR_WPA_OUI_SIZE];
 	uint8_t mccipher_arr[1][CSR_WPA_OUI_SIZE];
 	uint8_t i;
-	uint8_t index;
 	eCsrAuthType neg_authtype = eCSR_AUTH_TYPE_UNKNOWN;
 
 	if (!wpa_ie->present)
@@ -3806,38 +3803,20 @@ static bool csr_get_wpa_cyphers(tpAniSirGlobal mac_ctx, tCsrAuthList *auth_type,
 	c_ucast_cipher = (uint8_t) (wpa_ie->unicast_cipher_count);
 	c_auth_suites = (uint8_t) (wpa_ie->auth_suite_count);
 
-	/*
-	 * csr_match_wpaoui_index will provide the index of the
-	 * array csr_wpa_oui to be read and determine if it is
-	 * accepatable cipher or not. Below check ensures that
-	 * the index will not be out of range of the array size.
-	 */
-	index = csr_get_oui_index_from_cipher(encr_type);
-	if (!(index < (sizeof(csr_wpa_oui)/CSR_WPA_OUI_SIZE))) {
-		sme_debug("Unacceptable index: %d", index);
-		goto end;
-	}
-
-	sme_debug("kw_dbg: index: %d", index);
 	/* Check - Is requested unicast Cipher supported by the BSS. */
 	acceptable_cipher = csr_match_wpaoui_index(mac_ctx,
 				wpa_ie->unicast_ciphers, c_ucast_cipher,
-				index, unicast);
+				csr_get_oui_index_from_cipher(encr_type),
+				unicast);
 	if (!acceptable_cipher)
 		goto end;
 	/* unicast is supported. Pick the first matching Group cipher, if any */
 	for (i = 0; i < mc_encryption->numEntries; i++) {
-		index = csr_get_oui_index_from_cipher(
-				mc_encryption->encryptionType[i]);
-		sme_debug("kw_dbg: index: %d", index);
-		if (!(index < (sizeof(csr_wpa_oui)/CSR_WPA_OUI_SIZE))) {
-			sme_debug("Unacceptable MC index: %d", index);
-			acceptable_cipher = false;
-			continue;
-		}
 		acceptable_cipher = csr_match_wpaoui_index(mac_ctx,
 					mccipher_arr, c_mcast_cipher,
-					index, multicast);
+					csr_get_oui_index_from_cipher(
+					    mc_encryption->encryptionType[i]),
+					multicast);
 		if (acceptable_cipher)
 			break;
 	}
@@ -4245,7 +4224,6 @@ static bool csr_validate_wep(tpAniSirGlobal mac_ctx,
 	bool match = false;
 	eCsrAuthType negotiated_auth = eCSR_AUTH_TYPE_OPEN_SYSTEM;
 	eCsrEncryptionType negotiated_mccipher = eCSR_ENCRYPT_TYPE_UNKNOWN;
-	uint8_t oui_index;
 
 	/* If privacy bit is not set, consider no match */
 	if (!csr_is_privacy(bss_descr))
@@ -4311,11 +4289,10 @@ static bool csr_validate_wep(tpAniSirGlobal mac_ctx,
 
 	/* else we can use the encryption type directly */
 	if (ie_ptr->WPA.present) {
-		oui_index = csr_get_oui_index_from_cipher(uc_encry_type);
-		if (oui_index < QDF_ARRAY_SIZE(csr_wpa_oui))
-			match = (!qdf_mem_cmp(ie_ptr->WPA.multicast_cipher,
-					csr_wpa_oui[oui_index],
-					CSR_WPA_OUI_SIZE));
+		match = (!qdf_mem_cmp(ie_ptr->WPA.multicast_cipher,
+				csr_wpa_oui[csr_get_oui_index_from_cipher(
+					uc_encry_type)],
+				CSR_WPA_OUI_SIZE));
 		if (match)
 			goto end;
 	}
@@ -5570,12 +5547,6 @@ static inline void csr_free_fils_profile_info(tCsrRoamProfile *profile)
 		qdf_mem_free(profile->fils_con_info);
 		profile->fils_con_info = NULL;
 	}
-
-	if (profile->hlp_ie) {
-		qdf_mem_free(profile->hlp_ie);
-		profile->hlp_ie = NULL;
-		profile->hlp_ie_len = 0;
-	}
 }
 #else
 static inline void csr_free_fils_profile_info(tCsrRoamProfile *profile)
@@ -5976,43 +5947,6 @@ void csr_disconnect_all_active_sessions(tpAniSirGlobal pMac)
 	}
 }
 
-struct lim_channel_status *csr_get_channel_status(
-	void *p_mac, uint32_t channel_id)
-{
-	uint8_t i;
-	struct lim_scan_channel_status *channel_status;
-	tpAniSirGlobal mac_ptr = (tpAniSirGlobal)p_mac;
-
-	if (!ACS_FW_REPORT_PARAM_CONFIGURED)
-		return NULL;
-
-	channel_status = (struct lim_scan_channel_status *)
-				&mac_ptr->lim.scan_channel_status;
-	for (i = 0; i < channel_status->total_channel; i++) {
-		if (channel_status->channel_status_list[i].channel_id ==
-		    channel_id)
-			return &channel_status->channel_status_list[i];
-	}
-	sme_warn("Channel %d status info not exist", channel_id);
-
-	return NULL;
-}
-
-void csr_clear_channel_status(void *p_mac)
-{
-	tpAniSirGlobal mac_ptr = (tpAniSirGlobal)p_mac;
-	struct lim_scan_channel_status *channel_status;
-
-	if (!ACS_FW_REPORT_PARAM_CONFIGURED)
-		return;
-
-	channel_status = (struct lim_scan_channel_status *)
-			&mac_ptr->lim.scan_channel_status;
-	channel_status->total_channel = 0;
-
-	return;
-}
-
 bool csr_is_channel_present_in_list(uint8_t *pChannelList,
 				    int numChannels, uint8_t channel)
 {
@@ -6048,7 +5982,6 @@ const char *sme_request_type_to_string(const uint8_t request_type)
 	CASE_RETURN_STRING(eCSR_SCAN_P2P_DISCOVERY);
 	CASE_RETURN_STRING(eCSR_SCAN_SOFTAP_CHANNEL_RANGE);
 	CASE_RETURN_STRING(eCSR_SCAN_P2P_FIND_PEER);
-	CASE_RETURN_STRING(eCSR_SCAN_RRM);
 	default:
 		return "Unknown Scan Request Type";
 	}

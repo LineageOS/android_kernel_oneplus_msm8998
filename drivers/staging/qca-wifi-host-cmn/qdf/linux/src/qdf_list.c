@@ -173,6 +173,10 @@ QDF_STATUS qdf_list_remove_node(qdf_list_t *list,
 	if (list_empty(&list->anchor))
 		return QDF_STATUS_E_EMPTY;
 
+	/* verify that node_to_remove is indeed part of list list */
+	if (!qdf_list_has_node(list, node_to_remove))
+		return QDF_STATUS_E_INVAL;
+
 	list_del(node_to_remove);
 	list->count--;
 
@@ -208,20 +212,35 @@ qdf_export_symbol(qdf_list_peek_front);
  *
  * Return: QDF status
  */
-QDF_STATUS qdf_list_peek_next(qdf_list_t *list,
-			      qdf_list_node_t *node,
+QDF_STATUS qdf_list_peek_next(qdf_list_t *list, qdf_list_node_t *node,
 			      qdf_list_node_t **node2)
 {
-	if (!list || !node || !node2)
+	struct list_head *listptr;
+	int found = 0;
+	qdf_list_node_t *tmp;
+
+	if ((list == NULL) || (node == NULL) || (node2 == NULL))
 		return QDF_STATUS_E_FAULT;
 
 	if (list_empty(&list->anchor))
 		return QDF_STATUS_E_EMPTY;
 
-	if (node->next == &list->anchor)
+	/* verify that node is indeed part of list list */
+	list_for_each(tmp, &list->anchor) {
+		if (tmp == node) {
+			found = 1;
+			break;
+		}
+	}
+
+	if (found == 0)
+		return QDF_STATUS_E_INVAL;
+
+	listptr = node->next;
+	if (listptr == &list->anchor)
 		return QDF_STATUS_E_EMPTY;
 
-	*node2 = node->next;
+	*node2 = listptr;
 
 	return QDF_STATUS_SUCCESS;
 }

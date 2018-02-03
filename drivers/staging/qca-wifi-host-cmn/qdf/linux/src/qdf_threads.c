@@ -40,8 +40,6 @@
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/export.h>
-#include <stacktrace.h>
-#include <qdf_defer.h>
 
 /* Function declarations and documenation */
 
@@ -108,32 +106,3 @@ void qdf_busy_wait(uint32_t us_interval)
 	udelay(us_interval);
 }
 qdf_export_symbol(qdf_busy_wait);
-
-#if defined(CONFIG_MCL) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0))
-/* save_stack_trace_tsk is not generally exported for arm architectures */
-#define QDF_PRINT_TRACE_COUNT 32
-void qdf_print_thread_trace(qdf_thread_t *thread)
-{
-	const int spaces = 4;
-	struct task_struct *task = (struct task_struct *)thread;
-	unsigned long entries[QDF_PRINT_TRACE_COUNT] = {0};
-	struct stack_trace trace = {
-		.nr_entries = 0,
-		.skip = 0,
-		.entries = &entries[0],
-		.max_entries = QDF_PRINT_TRACE_COUNT,
-	};
-
-	save_stack_trace_tsk(task, &trace);
-	print_stack_trace(&trace, spaces);
-}
-#else
-void qdf_print_thread_trace(qdf_thread_t *thread) { }
-#endif /* CONFIG_MCL */
-qdf_export_symbol(qdf_print_thread_trace);
-
-qdf_thread_t *qdf_get_current_task(void)
-{
-	return current;
-}
-EXPORT_SYMBOL(qdf_get_current_task);

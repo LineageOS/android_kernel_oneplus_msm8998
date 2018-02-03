@@ -532,9 +532,6 @@ void dfs_detach(struct ieee80211com *ic)
 	}
 	dfs_nol_timer_cleanup(dfs);
 
-	ATH_DFSQ_LOCK_DEINIT(dfs);
-	ATH_ARQ_LOCK_DEINIT(dfs);
-	ATH_DFSEVENTQ_LOCK_DEINIT(dfs);
 	/* XXX? */
 	ic->ic_dfs = NULL;
 }
@@ -703,7 +700,7 @@ dfs_control(struct ieee80211com *ic, u_int id,
 	case DFS_SET_THRESH:
 		if (insize < sizeof(struct dfs_ioctl_params) || !indata) {
 			DFS_DPRINTK(dfs, ATH_DEBUG_DFS1,
-				    "%s: insize=%d, expected=%zu bytes, indata=%pK\n",
+				    "%s: insize=%d, expected=%zu bytes, indata=%p\n",
 				    __func__, insize,
 				    sizeof(struct dfs_ioctl_params), indata);
 			error = -EINVAL;

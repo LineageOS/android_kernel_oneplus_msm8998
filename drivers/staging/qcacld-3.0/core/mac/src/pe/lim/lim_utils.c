@@ -56,7 +56,6 @@
 #include "lim_ft_defs.h"
 #include "lim_session.h"
 #include "cds_reg_service.h"
-#include "cds_concurrency.h"
 #include "nan_datapath.h"
 #include "wma.h"
 
@@ -401,6 +400,10 @@ char *lim_msg_str(uint32_t msgType)
 		return "WNI_CFG_DNLD_RSP";
 	case WNI_CFG_GET_REQ:
 		return "WNI_CFG_GET_REQ";
+	case WNI_CFG_SET_REQ:
+		return "WNI_CFG_SET_REQ";
+	case WNI_CFG_SET_REQ_NO_RSP:
+		return "WNI_CFG_SET_REQ_NO_RSP";
 	case eWNI_PMC_ENTER_IMPS_RSP:
 		return "eWNI_PMC_ENTER_IMPS_RSP";
 	case eWNI_PMC_EXIT_IMPS_RSP:
@@ -541,74 +544,38 @@ tSirRetStatus lim_init_mlm(tpAniSirGlobal pMac)
 	return eSIR_SUCCESS;
 } /*** end lim_init_mlm() ***/
 
-void lim_deactivate_timers(tpAniSirGlobal mac_ctx)
+#ifdef WLAN_FEATURE_11W
+/**
+ * lim_deactivate_del_sta() - This function deactivate/delete associates STA
+ * @mac_ctx: pointer to Global Mac Structure
+ * @bss_entry: index for bss_entry
+ * @psession_entry: pointer to session entry
+ * @sta_ds: pointer to tpDphHashNode
+ *
+ * Function deactivate/delete associates STA
+ *
+ * Return: none
+ */
+static void lim_deactivate_del_sta(tpAniSirGlobal mac_ctx, uint32_t bss_entry,
+		tpPESession psession_entry, tpDphHashNode sta_ds)
 {
-	uint32_t n;
-	tLimTimers *lim_timer = &mac_ctx->lim.limTimers;
+	uint32_t sta_entry;
 
-	lim_deactivate_timers_host_roam(mac_ctx);
+	for (sta_entry = 1; sta_entry < mac_ctx->lim.gLimAssocStaLimit;
+				sta_entry++) {
+		psession_entry = &mac_ctx->lim.gpSession[bss_entry];
+		sta_ds = dph_get_hash_entry(mac_ctx, sta_entry,
+					&psession_entry->dph.dphHashTable);
+		if (NULL == sta_ds)
+			continue;
 
-	/* Deactivate Periodic Probe channel timers. */
-	tx_timer_deactivate(&lim_timer->gLimPeriodicProbeReqTimer);
-
-	/* Deactivate channel switch timer. */
-	tx_timer_deactivate(&lim_timer->gLimChannelSwitchTimer);
-
-	/* Deactivate addts response timer. */
-	tx_timer_deactivate(&lim_timer->gLimAddtsRspTimer);
-
-	/* Deactivate Join failure timer. */
-	tx_timer_deactivate(&lim_timer->gLimJoinFailureTimer);
-
-	/* Deactivate Periodic Join Probe Request timer. */
-	tx_timer_deactivate(&lim_timer->gLimPeriodicJoinProbeReqTimer);
-
-	/* Deactivate Auth Retry timer. */
-	tx_timer_deactivate
-			(&lim_timer->g_lim_periodic_auth_retry_timer);
-
-	/* Deactivate Association failure timer. */
-	tx_timer_deactivate(&lim_timer->gLimAssocFailureTimer);
-
-	/* Deactivate Open system auth timer. */
-	tx_timer_deactivate(&lim_timer->open_sys_auth_timer);
-
-	/* Deactivate Authentication failure timer. */
-	tx_timer_deactivate(&lim_timer->gLimAuthFailureTimer);
-
-	/* Deactivate wait-for-probe-after-Heartbeat timer. */
-	tx_timer_deactivate(&lim_timer->gLimProbeAfterHBTimer);
-
-	/* Deactivate and delete Quiet timer. */
-	tx_timer_deactivate(&lim_timer->gLimQuietTimer);
-
-	/* Deactivate Quiet BSS timer. */
-	tx_timer_deactivate(&lim_timer->gLimQuietBssTimer);
-
-	/* Deactivate cnf wait timer */
-	for (n = 0; n < (mac_ctx->lim.maxStation + 1); n++)
-		tx_timer_deactivate(&lim_timer->gpLimCnfWaitTimer[n]);
-
-	/* Deactivate any Authentication response timers */
-	lim_delete_pre_auth_list(mac_ctx);
-
-	tx_timer_deactivate(&lim_timer->gLimUpdateOlbcCacheTimer);
-	tx_timer_deactivate(&lim_timer->gLimPreAuthClnupTimer);
-
-	/* Deactivate remain on channel timer */
-	tx_timer_deactivate(&lim_timer->gLimRemainOnChannelTimer);
-
-	tx_timer_deactivate(&lim_timer->gLimDisassocAckTimer);
-
-	tx_timer_deactivate(&lim_timer->gLimDeauthAckTimer);
-
-	tx_timer_deactivate(&lim_timer->
-			gLimP2pSingleShotNoaInsertTimer);
-
-	tx_timer_deactivate(&lim_timer->
-			gLimActiveToPassiveChannelTimer);
+		pe_err("Deleting pmfSaQueryTimer for staid: %d",
+				sta_ds->staIndex);
+		tx_timer_deactivate(&sta_ds->pmfSaQueryTimer);
+		tx_timer_delete(&sta_ds->pmfSaQueryTimer);
+	}
 }
-
+#endif
 
 /**
  * lim_cleanup_mlm() - This function is called to cleanup
@@ -623,80 +590,121 @@ void lim_cleanup_mlm(tpAniSirGlobal mac_ctx)
 {
 	uint32_t n;
 	tLimPreAuthNode **pAuthNode;
+#ifdef WLAN_FEATURE_11W
+	uint32_t bss_entry;
+	tpDphHashNode sta_ds = NULL;
+	tpPESession psession_entry = NULL;
+#endif
 	tLimTimers *lim_timer = NULL;
 
 	if (mac_ctx->lim.gLimTimersCreated == 1) {
 		lim_timer = &mac_ctx->lim.limTimers;
 
-		lim_deactivate_timers(mac_ctx);
-
 		lim_delete_timers_host_roam(mac_ctx);
-		/* Delete Periodic Probe channel timers. */
+		/* Deactivate and delete Periodic Probe channel timers. */
+		tx_timer_deactivate(&lim_timer->gLimPeriodicProbeReqTimer);
 		tx_timer_delete(&lim_timer->gLimPeriodicProbeReqTimer);
 
-		/* Delete channel switch timer. */
+		/* Deactivate and delete channel switch timer. */
+		tx_timer_deactivate(&lim_timer->gLimChannelSwitchTimer);
 		tx_timer_delete(&lim_timer->gLimChannelSwitchTimer);
 
-		/* Delete addts response timer. */
+		/* Deactivate and delete addts response timer. */
+		tx_timer_deactivate(&lim_timer->gLimAddtsRspTimer);
 		tx_timer_delete(&lim_timer->gLimAddtsRspTimer);
 
-		/* Delete Join failure timer. */
+		/* Deactivate and delete Join failure timer. */
+		tx_timer_deactivate(&lim_timer->gLimJoinFailureTimer);
 		tx_timer_delete(&lim_timer->gLimJoinFailureTimer);
 
-		/* Delete Periodic Join Probe Request timer. */
+		/* Deactivate and delete Periodic Join Probe Request timer. */
+		tx_timer_deactivate(&lim_timer->gLimPeriodicJoinProbeReqTimer);
 		tx_timer_delete(&lim_timer->gLimPeriodicJoinProbeReqTimer);
 
-		/* Delete Auth Retry timer. */
+		/* Deactivate and delete Auth Retry timer. */
+		tx_timer_deactivate
+				(&lim_timer->g_lim_periodic_auth_retry_timer);
 		tx_timer_delete(&lim_timer->g_lim_periodic_auth_retry_timer);
 
-		/* Delete Association failure timer. */
+		/* Deactivate and delete Association failure timer. */
+		tx_timer_deactivate(&lim_timer->gLimAssocFailureTimer);
 		tx_timer_delete(&lim_timer->gLimAssocFailureTimer);
 
-		/* Delete Open system auth timer. */
-		tx_timer_delete(&lim_timer->open_sys_auth_timer);
-
-		/* Delete Authentication failure timer. */
+		/* Deactivate and delete Authentication failure timer. */
+		tx_timer_deactivate(&lim_timer->gLimAuthFailureTimer);
 		tx_timer_delete(&lim_timer->gLimAuthFailureTimer);
 
-		/* Delete wait-for-probe-after-Heartbeat timer. */
+		/* Deactivate and delete wait-for-probe-after-Heartbeat timer. */
+		tx_timer_deactivate(&lim_timer->gLimProbeAfterHBTimer);
 		tx_timer_delete(&lim_timer->gLimProbeAfterHBTimer);
 
-		/* Delete Quiet timer. */
+		/* Deactivate and delete Quiet timer. */
+		tx_timer_deactivate(&lim_timer->gLimQuietTimer);
 		tx_timer_delete(&lim_timer->gLimQuietTimer);
 
-		/* Delete Quiet BSS timer. */
+		/* Deactivate and delete Quiet BSS timer. */
+		tx_timer_deactivate(&lim_timer->gLimQuietBssTimer);
 		tx_timer_delete(&lim_timer->gLimQuietBssTimer);
 
-		/* Delete cnf wait timer */
+		/* Deactivate and delete cnf wait timer */
 		for (n = 0; n < (mac_ctx->lim.maxStation + 1); n++) {
+			tx_timer_deactivate(&lim_timer->gpLimCnfWaitTimer[n]);
 			tx_timer_delete(&lim_timer->gpLimCnfWaitTimer[n]);
 		}
 
 		pAuthNode = mac_ctx->lim.gLimPreAuthTimerTable.pTable;
+
+		/* Deactivate any Authentication response timers */
+		lim_delete_pre_auth_list(mac_ctx);
 
 		/* Delete any Auth rsp timers, which might have been started */
 		for (n = 0; n < mac_ctx->lim.gLimPreAuthTimerTable.numEntry;
 				n++)
 			tx_timer_delete(&pAuthNode[n]->timer);
 
+		tx_timer_deactivate(&lim_timer->gLimUpdateOlbcCacheTimer);
 		tx_timer_delete(&lim_timer->gLimUpdateOlbcCacheTimer);
+		tx_timer_deactivate(&lim_timer->gLimPreAuthClnupTimer);
 		tx_timer_delete(&lim_timer->gLimPreAuthClnupTimer);
 
-		/* Delete remain on channel timer */
+		/* Deactivate and delete remain on channel timer */
+		tx_timer_deactivate(&lim_timer->gLimRemainOnChannelTimer);
 		tx_timer_delete(&lim_timer->gLimRemainOnChannelTimer);
 
+
+		tx_timer_deactivate(&lim_timer->gLimDisassocAckTimer);
 		tx_timer_delete(&lim_timer->gLimDisassocAckTimer);
 
+		tx_timer_deactivate(&lim_timer->gLimDeauthAckTimer);
 		tx_timer_delete(&lim_timer->gLimDeauthAckTimer);
 
+		tx_timer_deactivate(&lim_timer->
+				gLimP2pSingleShotNoaInsertTimer);
 		tx_timer_delete(&lim_timer->
 				gLimP2pSingleShotNoaInsertTimer);
 
+		tx_timer_deactivate(&lim_timer->
+				gLimActiveToPassiveChannelTimer);
 		tx_timer_delete(&lim_timer->
 				gLimActiveToPassiveChannelTimer);
 
 		mac_ctx->lim.gLimTimersCreated = 0;
 	}
+#ifdef WLAN_FEATURE_11W
+	/*
+	 * When SSR is triggered, we need to loop through
+	 * each STA associated per BSSId and deactivate/delete
+	 * the pmfSaQueryTimer for it
+	 */
+	for (bss_entry = 0; bss_entry < mac_ctx->lim.maxBssId;
+					bss_entry++) {
+		if (!mac_ctx->lim.gpSession[bss_entry].valid)
+			continue;
+		lim_deactivate_del_sta(mac_ctx, bss_entry,
+				psession_entry, sta_ds);
+	}
+#endif
+
 } /*** end lim_cleanup_mlm() ***/
 
 /**
@@ -3105,7 +3113,7 @@ lim_disable_11a_protection(tpAniSirGlobal mac_ctx,
 
 	/* for station role */
 	if (!LIM_IS_AP_ROLE(pe_session)) {
-		pe_debug("===> Protection from 11A Disabled");
+		pe_warn("===> Protection from 11A Disabled");
 		bcn_prms->llaCoexist = false;
 		pe_session->beaconParams.llaCoexist = false;
 		bcn_prms->paramChangeBitmap |= PARAM_llACOEXIST_CHANGED;
@@ -4356,12 +4364,6 @@ void lim_update_sta_run_time_ht_switch_chnl_params(tpAniSirGlobal pMac,
 		    (pMac, eHT_SUPPORTED_CHANNEL_WIDTH_SET, psessionEntry))
 		return;
 
-	if (CDS_IS_CHANNEL_24GHZ(psessionEntry->currentOperChannel) &&
-		psessionEntry->force_24ghz_in_ht20) {
-		pe_debug("force_24ghz_in_ht20 is set and channel is 2.4 Ghz");
-		return;
-	}
-
 	if (psessionEntry->ftPEContext.ftPreAuthSession) {
 		pe_err("FT PREAUTH channel change is in progress");
 		return;
@@ -4378,16 +4380,6 @@ void lim_update_sta_run_time_ht_switch_chnl_params(tpAniSirGlobal pMac,
 	 */
 	if (pMac->lim.gpLimRemainOnChanReq) {
 		pe_debug("RoC is in progress");
-		return;
-	}
-
-	if (psessionEntry->ch_switch_in_progress == true) {
-		pe_debug("ch switch is in progress, ignore HT IE BW update");
-		return;
-	}
-
-	if (!pHTInfo->primaryChannel) {
-		pe_debug("Ignore as primary channel is 0 in HT info");
 		return;
 	}
 
@@ -4966,60 +4958,6 @@ void lim_resset_scan_channel_info(tpAniSirGlobal pMac)
 	qdf_mem_set(&pMac->lim.scanChnInfo, sizeof(tLimScanChnInfo), 0);
 }
 
-void lim_add_channel_status_info(tpAniSirGlobal p_mac,
-				 struct lim_channel_status *channel_stat,
-				 uint8_t channel_id)
-{
-	uint8_t i;
-	bool found = false;
-	struct lim_scan_channel_status *channel_info =
-		&p_mac->lim.scan_channel_status;
-	struct lim_channel_status *channel_status_list =
-		channel_info->channel_status_list;
-	uint8_t total_channel = channel_info->total_channel;
-
-	if (!ACS_FW_REPORT_PARAM_CONFIGURED)
-		return;
-
-	for (i = 0; i < total_channel; i++) {
-		if (channel_status_list[i].channel_id == channel_id) {
-			if (channel_stat->cmd_flags ==
-			    WMA_CHAN_END_RESP &&
-			    channel_status_list[i].cmd_flags ==
-			    WMA_CHAN_START_RESP) {
-				/* adjust to delta value for counts */
-				channel_stat->rx_clear_count -=
-				    channel_status_list[i].rx_clear_count;
-				channel_stat->cycle_count -=
-				    channel_status_list[i].cycle_count;
-				channel_stat->rx_frame_count -=
-				    channel_status_list[i].rx_frame_count;
-				channel_stat->tx_frame_count -=
-				    channel_status_list[i].tx_frame_count;
-				channel_stat->bss_rx_cycle_count -=
-				    channel_status_list[i].bss_rx_cycle_count;
-			}
-			qdf_mem_copy(&channel_status_list[i], channel_stat,
-				     sizeof(*channel_status_list));
-			found = true;
-			break;
-		}
-	}
-
-	if (!found) {
-		if (total_channel < SIR_MAX_SUPPORTED_ACS_CHANNEL_LIST) {
-			qdf_mem_copy(&channel_status_list[total_channel++],
-				     channel_stat,
-				     sizeof(*channel_status_list));
-			channel_info->total_channel = total_channel;
-		} else {
-			pe_err("Chan cnt exceed, channel_id=%d", channel_id);
-		}
-	}
-
-	return;
-}
-
 /**
  * @function :  lim_is_channel_valid_for_channel_switch()
  *
@@ -5042,7 +4980,6 @@ bool lim_is_channel_valid_for_channel_switch(tpAniSirGlobal pMac, uint8_t channe
 	uint8_t index;
 	uint32_t validChannelListLen = WNI_CFG_VALID_CHANNEL_LIST_LEN;
 	tSirMacChanNum validChannelList[WNI_CFG_VALID_CHANNEL_LIST_LEN];
-	bool status;
 
 	if (wlan_cfg_get_str(pMac, WNI_CFG_VALID_CHANNEL_LIST,
 			     (uint8_t *) validChannelList,
@@ -5053,13 +4990,8 @@ bool lim_is_channel_valid_for_channel_switch(tpAniSirGlobal pMac, uint8_t channe
 	}
 
 	for (index = 0; index < validChannelListLen; index++) {
-
-		if (validChannelList[index] != channel)
-			continue;
-
-		status = cds_is_valid_channel_for_channel_switch(channel);
-
-		return status;
+		if (validChannelList[index] == channel)
+			return true;
 	}
 
 	/* channel does not belong to list of valid channels */
@@ -6120,7 +6052,7 @@ void lim_set_ht_caps(tpAniSirGlobal p_mac, tpPESession p_session_entry,
 	populate_dot11f_ht_caps(p_mac, p_session_entry, &dot11_ht_cap);
 	p_ie = lim_get_ie_ptr_new(p_mac, p_ie_start, num_bytes,
 			DOT11F_EID_HTCAPS, ONE_BYTE);
-	pe_debug("p_ie: %pK dot11_ht_cap.supportedMCSSet[0]: 0x%x",
+	pe_debug("p_ie: %p dot11_ht_cap.supportedMCSSet[0]: 0x%x",
 		p_ie, dot11_ht_cap.supportedMCSSet[0]);
 	if (p_ie) {
 		/* convert from unpacked to packed structure */
@@ -6387,22 +6319,16 @@ static QDF_STATUS lim_send_ie(tpAniSirGlobal mac_ctx, uint32_t sme_session_id,
 /**
  * lim_get_rx_ldpc() - gets ldpc setting for given channel(band)
  * @mac_ctx: global mac context
- * @ch: channel enum for which ldpc setting is required
- *      Note: ch param is not absolute channel number rather it is
- *            channel number enum.
+ * @ch: channel for which ldpc setting is required
  *
  * Return: true if enabled and false otherwise
  */
-bool lim_get_rx_ldpc(tpAniSirGlobal mac_ctx, enum channel_enum ch,
+bool lim_get_rx_ldpc(tpAniSirGlobal mac_ctx, uint8_t ch,
 				   uint8_t is_hw_mode_dbs)
 {
 	enum hw_mode_dbs_capab hw_mode_to_use;
 	bool ret_val;
 
-	if (ch >= NUM_CHANNELS) {
-		pe_err("invalid number of channels, disable rx ldpc");
-		return false;
-	}
 	hw_mode_to_use = is_hw_mode_dbs ? HW_MODE_DBS : HW_MODE_DBS_NONE;
 	if (mac_ctx->roam.configParam.rx_ldpc_enable &&
 			wma_is_rx_ldpc_supported_for_channel(
@@ -6664,28 +6590,6 @@ tSirRetStatus lim_strip_ie(tpAniSirGlobal mac_ctx,
 
 	return eSIR_SUCCESS;
 }
-
-#ifdef WLAN_FEATURE_11W
-void lim_del_pmf_sa_query_timer(tpAniSirGlobal mac_ctx, tpPESession pe_session)
-{
-	uint32_t associated_sta;
-	tpDphHashNode sta_ds = NULL;
-
-	for (associated_sta = 1;
-			associated_sta < mac_ctx->lim.gLimAssocStaLimit;
-			associated_sta++) {
-		sta_ds = dph_get_hash_entry(mac_ctx, associated_sta,
-				&pe_session->dph.dphHashTable);
-		if (NULL == sta_ds)
-			continue;
-
-		pe_err("Deleting pmfSaQueryTimer for staid: %d",
-			sta_ds->staIndex);
-		tx_timer_deactivate(&sta_ds->pmfSaQueryTimer);
-		tx_timer_delete(&sta_ds->pmfSaQueryTimer);
-	}
-}
-#endif
 
 tSirRetStatus lim_strip_supp_op_class_update_struct(tpAniSirGlobal mac_ctx,
 		uint8_t *addn_ie, uint16_t *addn_ielen,
@@ -7309,9 +7213,9 @@ QDF_STATUS lim_util_get_type_subtype(void *pkt, uint8_t *type,
 
 	hdr = WMA_GET_RX_MAC_HEADER(rxpktinfor);
 	if (hdr->fc.type == SIR_MAC_MGMT_FRAME) {
-		pe_debug("RxBd: %pK mHdr: %pK Type: %d Subtype: %d SizeFC: %zu",
-				rxpktinfor, hdr, hdr->fc.type, hdr->fc.subType,
-				sizeof(tSirMacFrameCtl));
+		pe_debug("RxBd: %p mHdr: %p Type: %d Subtype: %d  SizesFC: %zu",
+		  rxpktinfor, hdr, hdr->fc.type, hdr->fc.subType,
+		  sizeof(tSirMacFrameCtl));
 		*type = hdr->fc.type;
 		*subtype = hdr->fc.subType;
 	} else {
@@ -7319,113 +7223,6 @@ QDF_STATUS lim_util_get_type_subtype(void *pkt, uint8_t *type,
 		return QDF_STATUS_E_INVAL;
 	}
 	return QDF_STATUS_SUCCESS;
-}
-
-/**
- * lim_assoc_rej_get_remaining_delta() - Get remaining time delta for
- * the rssi based disallowed list entry
- * @node: rssi based disallowed list entry
- *
- * Return: remaining delta, can be -ve if time has already expired.
- */
-static inline int
-lim_assoc_rej_get_remaining_delta(struct sir_rssi_disallow_lst *node)
-{
-	qdf_time_t cur_time;
-	uint32_t time_diff;
-
-	cur_time = qdf_do_div(qdf_get_monotonic_boottime(),
-				QDF_MC_TIMER_TO_MS_UNIT);
-	time_diff = cur_time - node->time_during_rejection;
-
-	return node->retry_delay - time_diff;
-}
-
-/**
- * lim_assoc_rej_rem_entry_with_lowest_delta() - Remove the entry
- * with lowest time delta
- * @list: rssi based rejected BSSID list
- *
- * Return: QDF_STATUS
- */
-static QDF_STATUS
-lim_assoc_rej_rem_entry_with_lowest_delta(qdf_list_t *list)
-{
-	struct sir_rssi_disallow_lst *oldest_node = NULL;
-	struct sir_rssi_disallow_lst *cur_node;
-	qdf_list_node_t *cur_list = NULL;
-	qdf_list_node_t *next_list = NULL;
-
-	qdf_list_peek_front(list, &cur_list);
-	while (cur_list) {
-		cur_node = qdf_container_of(cur_list,
-			struct sir_rssi_disallow_lst, node);
-		if (!oldest_node ||
-		   (lim_assoc_rej_get_remaining_delta(oldest_node) >
-		    lim_assoc_rej_get_remaining_delta(cur_node)))
-			oldest_node = cur_node;
-
-		qdf_list_peek_next(list, cur_list, &next_list);
-		cur_list = next_list;
-		next_list = NULL;
-	}
-
-	if (oldest_node) {
-		pe_debug("remove node %pM with lowest delta %d",
-			oldest_node->bssid.bytes,
-			lim_assoc_rej_get_remaining_delta(oldest_node));
-		qdf_list_remove_node(list, &oldest_node->node);
-		qdf_mem_free(oldest_node);
-		return QDF_STATUS_SUCCESS;
-	}
-
-	return QDF_STATUS_E_INVAL;
-}
-
-void lim_assoc_rej_add_to_rssi_based_reject_list(tpAniSirGlobal mac_ctx,
-	tDot11fTLVrssi_assoc_rej  *rssi_assoc_rej,
-	tSirMacAddr bssid, int8_t rssi)
-{
-	struct sir_rssi_disallow_lst *entry;
-	QDF_STATUS status = QDF_STATUS_SUCCESS;
-
-	entry = qdf_mem_malloc(sizeof(*entry));
-	if (!entry) {
-		pe_err("malloc failed for bssid entry");
-		return;
-	}
-
-	pe_debug("%pM: assoc resp rssi %d, delta rssi %d retry delay %d sec and list size %d",
-		bssid, rssi, rssi_assoc_rej->delta_rssi,
-		rssi_assoc_rej->retry_delay,
-		qdf_list_size(&mac_ctx->roam.rssi_disallow_bssid));
-
-	qdf_mem_copy(entry->bssid.bytes,
-		bssid, QDF_MAC_ADDR_SIZE);
-	entry->retry_delay = rssi_assoc_rej->retry_delay *
-		QDF_MC_TIMER_TO_MS_UNIT;
-	entry->expected_rssi = rssi + rssi_assoc_rej->delta_rssi;
-	entry->time_during_rejection =
-		qdf_do_div(qdf_get_monotonic_boottime(),
-		QDF_MC_TIMER_TO_MS_UNIT);
-
-	if (qdf_list_size(&mac_ctx->roam.rssi_disallow_bssid) >=
-		MAX_RSSI_AVOID_BSSID_LIST) {
-		status = lim_assoc_rej_rem_entry_with_lowest_delta(
-					&mac_ctx->roam.rssi_disallow_bssid);
-		if (QDF_IS_STATUS_ERROR(status))
-			pe_err("Failed to remove entry with lowest delta");
-	}
-
-	if (QDF_IS_STATUS_SUCCESS(status))
-		status = qdf_list_insert_back(
-				&mac_ctx->roam.rssi_disallow_bssid,
-				&entry->node);
-
-	if (QDF_IS_STATUS_ERROR(status)) {
-		pe_err("Failed to enqueue bssid entry");
-		qdf_mem_free(entry);
-	}
 }
 
 bool lim_check_if_vendor_oui_match(tpAniSirGlobal mac_ctx,
@@ -7449,7 +7246,7 @@ bool lim_check_if_vendor_oui_match(tpAniSirGlobal mac_ctx,
 		return false;
 }
 
-enum rateid lim_get_min_session_txrate(tpPESession session)
+uint8_t lim_get_min_session_txrate(tpPESession session)
 {
 	enum rateid rid = RATEID_DEFAULT;
 	uint8_t min_rate = SIR_MAC_RATE_54, curr_rate, i;

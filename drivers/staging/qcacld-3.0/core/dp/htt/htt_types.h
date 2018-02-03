@@ -122,34 +122,52 @@ struct htt_rx_hash_bucket {
 };
 
 /*
+ * IPA micro controller
+ * wlan host driver
+ * firmware shared memory structure
+ */
+struct uc_shared_mem_t {
+	uint32_t *vaddr;
+	qdf_dma_addr_t paddr;
+	qdf_dma_mem_context(memctx);
+};
+
+/*
  * Micro controller datapath offload
  * WLAN TX resources
  */
 struct htt_ipa_uc_tx_resource_t {
-	qdf_shared_mem_t *tx_ce_idx;
-	qdf_shared_mem_t *tx_comp_ring;
+	struct uc_shared_mem_t tx_ce_idx;
+	struct uc_shared_mem_t tx_comp_base;
 
 	uint32_t tx_comp_idx_paddr;
-	qdf_shared_mem_t **tx_buf_pool_strg;
+	void **tx_buf_pool_vaddr_strg;
+	qdf_dma_addr_t *paddr_strg;
 	uint32_t alloc_tx_buf_cnt;
 };
 
 /**
  * struct htt_ipa_uc_rx_resource_t
  * @rx_rdy_idx_paddr: rx ready index physical address
- * @rx_ind_ring: rx indication ring memory info
+ * @rx_ind_ring_base: rx indication ring base memory info
  * @rx_ipa_prc_done_idx: rx process done index memory info
- * @rx2_ind_ring: rx2 indication ring memory info
- * @rx2_ipa_prc_done_idx: rx2 process done index memory info
+ * @rx_ind_ring_size: rx process done ring size
+ * @rx2_rdy_idx_paddr: rx process done index physical address
+ * @rx2_ind_ring_base: rx process done indication ring base memory info
+ * @rx2_ipa_prc_done_idx: rx process done index memory info
+ * @rx2_ind_ring_size: rx process done ring size
  */
 struct htt_ipa_uc_rx_resource_t {
 	qdf_dma_addr_t rx_rdy_idx_paddr;
-	qdf_shared_mem_t *rx_ind_ring;
-	qdf_shared_mem_t *rx_ipa_prc_done_idx;
+	struct uc_shared_mem_t rx_ind_ring_base;
+	struct uc_shared_mem_t rx_ipa_prc_done_idx;
+	uint32_t rx_ind_ring_size;
 
 	/* 2nd RX ring */
-	qdf_shared_mem_t *rx2_ind_ring;
-	qdf_shared_mem_t *rx2_ipa_prc_done_idx;
+	qdf_dma_addr_t rx2_rdy_idx_paddr;
+	struct uc_shared_mem_t rx2_ind_ring_base;
+	struct uc_shared_mem_t rx2_ipa_prc_done_idx;
+	uint32_t rx2_ind_ring_size;
 };
 
 /**
@@ -410,7 +428,6 @@ struct htt_pdev_t {
 
 	struct htt_ipa_uc_tx_resource_t ipa_uc_tx_rsc;
 	struct htt_ipa_uc_rx_resource_t ipa_uc_rx_rsc;
-	int is_ipa_uc_enabled;
 
 	struct htt_tx_credit_t htt_tx_credit;
 

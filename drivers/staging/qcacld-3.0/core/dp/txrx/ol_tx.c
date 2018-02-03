@@ -563,10 +563,7 @@ ol_tx_prepare_ll_fast(struct ol_txrx_pdev_t *pdev,
 	}
 
 	htt_tx_desc = tx_desc->htt_tx_desc;
-
-#if defined(HELIUMPLUS)
 	qdf_mem_zero(tx_desc->htt_frag_desc, sizeof(struct msdu_ext_desc_t));
-#endif
 
 	/* Make sure frags num is set to 0 */
 	/*
@@ -635,7 +632,7 @@ ol_tx_prepare_ll_fast(struct ol_txrx_pdev_t *pdev,
 			htt_tx_desc_frag(pdev->htt_pdev, tx_desc->htt_frag_desc,
 					 i - 1, frag_paddr, frag_len);
 #if defined(HELIUMPLUS_DEBUG)
-			qdf_print("%s:%d: htt_fdesc=%pK frag=%d frag_paddr=0x%0llx len=%zu",
+			qdf_print("%s:%d: htt_fdesc=%p frag=%d frag_paddr=0x%0llx len=%zu",
 				  __func__, __LINE__, tx_desc->htt_frag_desc,
 				  i-1, frag_paddr, frag_len);
 			ol_txrx_dump_pkt(netbuf, frag_paddr, 64);
@@ -2017,11 +2014,11 @@ void ol_txrx_dump_frag_desc(char *msg, struct ol_tx_desc_t *tx_desc)
 	uint32_t                *frag_ptr_i_p;
 	int                     i;
 
-	qdf_print("OL TX Descriptor 0x%pK msdu_id %d\n",
+	qdf_print("OL TX Descriptor 0x%p msdu_id %d\n",
 		 tx_desc, tx_desc->id);
-	qdf_print("HTT TX Descriptor vaddr: 0x%pK paddr: %pad",
+	qdf_print("HTT TX Descriptor vaddr: 0x%p paddr: %pad",
 		 tx_desc->htt_tx_desc, &tx_desc->htt_tx_desc_paddr);
-	qdf_print("%s %d: Fragment Descriptor 0x%pK (paddr=%pad)",
+	qdf_print("%s %d: Fragment Descriptor 0x%p (paddr=%pad)",
 		 __func__, __LINE__, tx_desc->htt_frag_desc,
 		 &tx_desc->htt_frag_desc_paddr);
 

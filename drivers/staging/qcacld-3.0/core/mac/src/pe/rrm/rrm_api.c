@@ -353,10 +353,6 @@ rrm_process_neighbor_report_response(tpAniSirGlobal pMac,
 		pe_err("No neighbor report in the frame...Dropping it");
 		return eSIR_FAILURE;
 	}
-	pe_debug("RRM:received num neighbor reports: %d",
-			pNeighborRep->num_NeighborReport);
-	if (pNeighborRep->num_NeighborReport > MAX_SUPPORTED_NEIGHBOR_RPT)
-		pNeighborRep->num_NeighborReport = MAX_SUPPORTED_NEIGHBOR_RPT;
 	length = (sizeof(tSirNeighborReportInd)) +
 		 (sizeof(tSirNeighborBssDescription) *
 		  (pNeighborRep->num_NeighborReport - 1));
@@ -692,7 +688,7 @@ rrm_fill_beacon_ies(tpAniSirGlobal pMac,
 		    uint8_t *eids, uint8_t numEids, tpSirBssDescription pBssDesc)
 {
 	uint8_t len, *pBcnIes, count = 0, i;
-	uint16_t BcnNumIes;
+	uint8_t BcnNumIes;
 
 	if ((pIes == NULL) || (pNumIes == NULL) || (pBssDesc == NULL)) {
 		pe_err("Invalid parameters");
@@ -702,7 +698,7 @@ rrm_fill_beacon_ies(tpAniSirGlobal pMac,
 	numEids = (eids == NULL) ? 0 : numEids;
 
 	pBcnIes = (uint8_t *) &pBssDesc->ieFields[0];
-	BcnNumIes = GET_IE_LEN_IN_BSS(pBssDesc->length);
+	BcnNumIes = (uint8_t) GET_IE_LEN_IN_BSS(pBssDesc->length);
 
 	*pNumIes = 0;
 

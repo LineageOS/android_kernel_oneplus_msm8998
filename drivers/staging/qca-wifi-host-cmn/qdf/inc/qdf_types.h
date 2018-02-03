@@ -136,9 +136,6 @@ typedef __qdf_dma_size_t     qdf_dma_size_t;
  */
 typedef __qdf_dma_context_t qdf_dma_context_t;
 
-typedef __qdf_mem_info_t qdf_mem_info_t;
-typedef __sgtable_t sgtable_t;
-
 /**
  * typedef qdf_dma_dir_t - DMA data direction.
  */
@@ -158,20 +155,6 @@ typedef struct qdf_dma_map_info {
 		qdf_dma_size_t len;
 	} dma_segs[QDF_MAX_SCATTER];
 } qdf_dmamap_info_t;
-
-/**
- * struct qdf_shared_mem - Shared memory resource
- * @mem_info: memory info struct
- * @vaddr: virtual address
- * @sgtable: scatter-gather table
- * @memctx: dma address
- */
-typedef struct qdf_shared_mem {
-	qdf_mem_info_t mem_info;
-	void *vaddr;
-	sgtable_t sgtable;
-	qdf_dma_mem_context(memctx);
-} qdf_shared_mem_t;
 
 #define qdf_iomem_t __qdf_iomem_t;
 
@@ -416,11 +399,7 @@ void __printf(3, 4) qdf_trace_msg(QDF_MODULE_ID module, QDF_TRACE_LEVEL level,
 #define qdf_print(args...) \
 	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR, ## args)
 
-#define qdf_debug(args...) \
-	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_DEBUG, ## args)
-
 #else
-#define qdf_debug printk
 #define qdf_print printk
 #endif /* CONFIG_MCL */
 

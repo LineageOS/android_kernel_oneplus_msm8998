@@ -1994,7 +1994,7 @@ more_watermarks:
 					   HOST_IS_COPY_COMPLETE_MASK);
 	} else {
 		HIF_ERROR("%s: target access is not allowed", __func__);
-		goto unlock_end;
+		return CE_state->receive_count;
 	}
 
 	/*
@@ -2292,7 +2292,7 @@ bool ce_check_rx_pending(struct CE_state *CE_state)
 /**
  * ce_ipa_get_resource() - get uc resource on copyengine
  * @ce: copyengine context
- * @ce_sr: copyengine source ring resource info
+ * @ce_sr_base_paddr: copyengine source ring base physical address
  * @ce_sr_ring_size: copyengine source ring size
  * @ce_reg_paddr: copyengine register physical address
  *
@@ -2305,7 +2305,7 @@ bool ce_check_rx_pending(struct CE_state *CE_state)
  * Return: None
  */
 void ce_ipa_get_resource(struct CE_handle *ce,
-			 qdf_shared_mem_t **ce_sr,
+			 qdf_dma_addr_t *ce_sr_base_paddr,
 			 uint32_t *ce_sr_ring_size,
 			 qdf_dma_addr_t *ce_reg_paddr)
 {
@@ -2316,8 +2316,7 @@ void ce_ipa_get_resource(struct CE_handle *ce,
 	struct hif_softc *scn = CE_state->scn;
 
 	if (CE_UNUSED == CE_state->state) {
-		*qdf_mem_get_dma_addr_ptr(scn->qdf_dev,
-			&CE_state->scn->ipa_ce_ring->mem_info) = 0;
+		*ce_sr_base_paddr = 0;
 		*ce_sr_ring_size = 0;
 		return;
 	}
@@ -2334,8 +2333,8 @@ void ce_ipa_get_resource(struct CE_handle *ce,
 	/* Get BAR address */
 	hif_read_phy_mem_base(CE_state->scn, &phy_mem_base);
 
-	*ce_sr = CE_state->scn->ipa_ce_ring;
-	*ce_sr_ring_size = (uint32_t)(CE_state->src_ring->nentries *
+	*ce_sr_base_paddr = CE_state->src_ring->base_addr_CE_space;
+	*ce_sr_ring_size = (uint32_t) (CE_state->src_ring->nentries *
 		sizeof(struct CE_src_desc));
 	*ce_reg_paddr = phy_mem_base + CE_BASE_ADDRESS(CE_state->id) +
 			SR_WR_INDEX_ADDRESS;

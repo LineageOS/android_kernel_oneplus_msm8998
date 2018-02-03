@@ -238,7 +238,7 @@ static int __wlan_hdd_ipv6_changed(struct notifier_block *nb,
 	ENTER_DEV(ndev);
 
 	if ((pAdapter == NULL) || (WLAN_HDD_ADAPTER_MAGIC != pAdapter->magic)) {
-		hdd_err("Adapter context is invalid %pK", pAdapter);
+		hdd_err("Adapter context is invalid %p", pAdapter);
 		return NOTIFY_DONE;
 	}
 
@@ -810,8 +810,7 @@ static int hdd_set_grat_arp_keepalive(hdd_adapter_t *adapter)
  * This function performs the work initially trigged by a callback
  * from the IPv4 netdev notifier.  Since this means there has been a
  * change in IPv4 state for the interface, the ARP offload is
- * reconfigured. Also, Updates the HLP IE info with IP address info
- * to fw if LFR3 is enabled
+ * reconfigured.
  *
  * Return: None
  */
@@ -824,9 +823,6 @@ static void __hdd_ipv4_notifier_work_queue(struct work_struct *work)
 	int status;
 	bool ndi_connected;
 	bool sta_associated;
-	hdd_wext_state_t *wext_state;
-	tCsrRoamProfile *roam_profile;
-	struct in_ifaddr *ifa;
 
 	hdd_debug("Configuring ARP Offload");
 
@@ -859,19 +855,6 @@ static void __hdd_ipv4_notifier_work_queue(struct work_struct *work)
 
 	if (pHddCtx->config->sta_keepalive_method == HDD_STA_KEEPALIVE_GRAT_ARP)
 		hdd_set_grat_arp_keepalive(pAdapter);
-
-	wext_state = WLAN_HDD_GET_WEXT_STATE_PTR(pAdapter);
-	roam_profile = &wext_state->roamProfile;
-	ifa = hdd_lookup_ifaddr(pAdapter);
-
-	hdd_debug("FILS Roaming support: %d",
-		  pHddCtx->config->is_fils_roaming_supported);
-
-	if (ifa && pHddCtx->config->is_fils_roaming_supported)
-		sme_send_hlp_ie_info(pHddCtx->hHal,
-				pAdapter->sessionId,
-				roam_profile,
-				ifa->ifa_local);
 }
 
 /**
@@ -913,7 +896,7 @@ static int __wlan_hdd_ipv4_changed(struct notifier_block *nb,
 	ENTER_DEV(ndev);
 
 	if ((pAdapter == NULL) || (WLAN_HDD_ADAPTER_MAGIC != pAdapter->magic)) {
-		hdd_err("Adapter context is invalid %pK", pAdapter);
+		hdd_err("Adapter context is invalid %p", pAdapter);
 		return NOTIFY_DONE;
 	}
 
@@ -1456,6 +1439,7 @@ QDF_STATUS hdd_wlan_shutdown(void)
 	hdd_debug("Invoking packetdump deregistration API");
 	wlan_deregister_txrx_packetdump();
 
+	hdd_cleanup_scan_queue(pHddCtx);
 	hdd_reset_all_adapters(pHddCtx);
 
 	/* Flush cached rx frame queue */
@@ -1470,6 +1454,7 @@ QDF_STATUS hdd_wlan_shutdown(void)
 	if (true == pHddCtx->isMcThreadSuspended) {
 		complete(&cds_sched_context->ResumeMcEvent);
 		pHddCtx->isMcThreadSuspended = false;
+		pHddCtx->isWiphySuspended = false;
 	}
 #ifdef QCA_CONFIG_SMP
 	if (true == pHddCtx->is_ol_rx_thread_suspended) {
@@ -1521,37 +1506,6 @@ static inline void hdd_wlan_ssr_reinit_event(void)
 #endif
 
 /**
- * hdd_send_default_scan_ies - send default scan ies to fw
- *
- * This function is used to send default scan ies to fw
- * in case of wlan re-init
- *
- * Return: void
- */
-static void hdd_send_default_scan_ies(hdd_context_t *hdd_ctx)
-{
-	hdd_adapter_list_node_t *adapter_node, *next;
-	hdd_adapter_t *adapter;
-	QDF_STATUS status;
-
-	status = hdd_get_front_adapter(hdd_ctx, &adapter_node);
-	while (NULL != adapter_node && QDF_STATUS_SUCCESS == status) {
-		adapter = adapter_node->pAdapter;
-		if (hdd_is_interface_up(adapter) &&
-		    (adapter->device_mode == QDF_STA_MODE ||
-		    adapter->device_mode == QDF_P2P_DEVICE_MODE)) {
-			sme_set_default_scan_ie(hdd_ctx->hHal,
-				      adapter->sessionId,
-				      adapter->scan_info.default_scan_ies,
-				      adapter->scan_info.default_scan_ies_len);
-		}
-		status = hdd_get_next_adapter(hdd_ctx, adapter_node,
-					      &next);
-		adapter_node = next;
-	}
-}
-
-/**
  * hdd_wlan_re_init() - HDD SSR re-init function
  *
  * This function is called by the HIF to re-initialize the driver after SSR.
@@ -1585,18 +1539,17 @@ QDF_STATUS hdd_wlan_re_init(void)
 	}
 	bug_on_reinit_failure = pHddCtx->config->bug_on_reinit_failure;
 
+	/* The driver should always be initialized in STA mode after SSR */
+	hdd_set_conparam(0);
 	/* Try to get an adapter from mode ID */
 	pAdapter = hdd_get_adapter(pHddCtx, QDF_STA_MODE);
 	if (!pAdapter) {
 		pAdapter = hdd_get_adapter(pHddCtx, QDF_SAP_MODE);
 		if (!pAdapter) {
 			pAdapter = hdd_get_adapter(pHddCtx, QDF_IBSS_MODE);
-			if (!pAdapter) {
-				pAdapter = hdd_get_adapter(pHddCtx,
-							   QDF_MONITOR_MODE);
-				if (!pAdapter)
-					hdd_err("Failed to get adapter");
-			}
+			if (!pAdapter)
+				hdd_err("Failed to get Adapter!");
+
 		}
 	}
 
@@ -1642,7 +1595,6 @@ QDF_STATUS hdd_wlan_re_init(void)
 	sme_set_chip_pwr_save_fail_cb(pHddCtx->hHal,
 				      hdd_chip_pwr_save_fail_detected_cb);
 
-	hdd_send_default_scan_ies(pHddCtx);
 	hdd_info("WLAN host driver reinitiation completed!");
 	goto success;
 
@@ -1690,6 +1642,8 @@ int wlan_hdd_set_powersave(hdd_adapter_t *adapter,
 	if (allow_power_save &&
 	    adapter->device_mode == QDF_STA_MODE &&
 	    !adapter->sessionCtx.station.ap_supports_immediate_power_save) {
+		/* override user's requested flag */
+		allow_power_save = false;
 		timeout = AUTO_PS_DEFER_TIMEOUT_MS;
 		hdd_debug("Defer power-save due to AP spec non-conformance");
 	}
@@ -1710,13 +1664,8 @@ int wlan_hdd_set_powersave(hdd_adapter_t *adapter,
 			 * Enter Power Save command received from GUI
 			 * this means DHCP is completed
 			 */
-			if (timeout)
-				sme_ps_enable_auto_ps_timer(hal,
-							    adapter->sessionId,
-							    timeout);
-			else
-				sme_ps_enable_disable(hal, adapter->sessionId,
-						      SME_PS_ENABLE);
+			sme_ps_enable_disable(hal, adapter->sessionId,
+					SME_PS_ENABLE);
 		} else {
 			hdd_debug("Power Save is not enabled in the cfg");
 		}
@@ -1730,6 +1679,8 @@ int wlan_hdd_set_powersave(hdd_adapter_t *adapter,
 		sme_ps_disable_auto_ps_timer(WLAN_HDD_GET_HAL_CTX(adapter),
 			adapter->sessionId);
 		sme_ps_enable_disable(hal, adapter->sessionId, SME_PS_DISABLE);
+		sme_ps_enable_auto_ps_timer(WLAN_HDD_GET_HAL_CTX(adapter),
+			adapter->sessionId, timeout);
 	}
 
 	return 0;
@@ -2198,9 +2149,9 @@ static int __wlan_hdd_cfg80211_set_power_mgmt(struct wiphy *wiphy,
 	ENTER();
 
 	if (timeout < 0) {
-		hdd_debug("User space timeout: %d; Enter full power or power save",
-			  timeout);
-		timeout = 0;
+		hdd_debug("User space timeout: %d; Using default instead: %d",
+			timeout, AUTO_PS_ENTRY_USER_TIMER_DEFAULT_VALUE);
+		timeout = AUTO_PS_ENTRY_USER_TIMER_DEFAULT_VALUE;
 	}
 
 	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {

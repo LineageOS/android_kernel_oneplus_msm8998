@@ -133,13 +133,6 @@ static bool lim_create_non_ap_timers(tpAniSirGlobal pMac)
 		return false;
 	}
 
-	if (tx_timer_create(pMac, &pMac->lim.limTimers.open_sys_auth_timer,
-			"open system Auth timer", lim_send_open_system_auth, 0,
-			SYS_MS_TO_TICKS(15), 0, TX_NO_ACTIVATE) != TX_SUCCESS) {
-		pe_err("failed to create open system Auth timer");
-		return false;
-	}
-
 	if (wlan_cfg_get_int(pMac, WNI_CFG_ASSOCIATION_FAILURE_TIMEOUT,
 			     &cfgValue) != eSIR_SUCCESS)
 		pe_err("could not retrieve AssocFailureTimeout value");
@@ -375,10 +368,10 @@ uint32_t lim_create_timers(tpAniSirGlobal pMac)
 	return TX_SUCCESS;
 
 err_timer:
-	lim_delete_timers_host_roam(pMac);
 	tx_timer_delete(&pMac->lim.limTimers.gLimDeauthAckTimer);
 	tx_timer_delete(&pMac->lim.limTimers.gLimDisassocAckTimer);
 	tx_timer_delete(&pMac->lim.limTimers.gLimRemainOnChannelTimer);
+	tx_timer_delete(&pMac->lim.limTimers.gLimFTPreAuthRspTimer);
 	tx_timer_delete(&pMac->lim.limTimers.gLimUpdateOlbcCacheTimer);
 	while (((int32_t)-- i) >= 0) {
 		tx_timer_delete(&pMac->lim.limTimers.gpLimCnfWaitTimer[i]);
@@ -386,7 +379,7 @@ err_timer:
 	tx_timer_delete(&pMac->lim.limTimers.gLimProbeAfterHBTimer);
 	tx_timer_delete(&pMac->lim.limTimers.gLimAuthFailureTimer);
 	tx_timer_delete(&pMac->lim.limTimers.gLimAddtsRspTimer);
-	tx_timer_delete(&pMac->lim.limTimers.open_sys_auth_timer);
+	tx_timer_delete(&pMac->lim.limTimers.gLimReassocFailureTimer);
 	tx_timer_delete(&pMac->lim.limTimers.gLimAssocFailureTimer);
 	tx_timer_delete(&pMac->lim.limTimers.gLimJoinFailureTimer);
 	tx_timer_delete(&pMac->lim.limTimers.gLimPeriodicJoinProbeReqTimer);

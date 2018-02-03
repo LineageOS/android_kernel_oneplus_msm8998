@@ -92,10 +92,9 @@ typedef void *hif_handle_t;
 #define TARGET_TYPE_AR6320V3    16
 /* For Tufello1.0 target_reg_tbl ID*/
 #define TARGET_TYPE_QCA9377V1   17
-#endif /* CONFIG_WIN */
-
 /* For Adrastea target */
 #define TARGET_TYPE_ADRASTEA     19
+#endif
 
 #ifdef IPA_OFFLOAD
 #define DMA_COHERENT_MASK_IPA_VER_3_AND_ABOVE   37
@@ -105,26 +104,36 @@ typedef void *hif_handle_t;
 struct CE_state;
 #define CE_COUNT_MAX 12
 
-#ifdef CONFIG_SLUB_DEBUG_ON
+/**
+ * With a max time limit in BH, max_num_messages is now
+ * reduced to 128, which is much higher than what we
+ * observe. We dont need to have different limits
+ * for PERF and SLUB builds.
+ */
 #define QCA_NAPI_BUDGET    64
 #define QCA_NAPI_DEF_SCALE  2
-#else  /* PERF build */
-#define QCA_NAPI_BUDGET    64
-#define QCA_NAPI_DEF_SCALE 16
-#endif /* SLUB_DEBUG_ON */
-#define HIF_NAPI_MAX_RECEIVES (QCA_NAPI_BUDGET * QCA_NAPI_DEF_SCALE)
 
 /* NOTE: "napi->scale" can be changed,
  * but this does not change the number of buckets
  */
-#define QCA_NAPI_NUM_BUCKETS 4
+#define HIF_NAPI_MAX_RECEIVES (QCA_NAPI_BUDGET * QCA_NAPI_DEF_SCALE)
+
+#define QCA_NAPI_MSG_BUCKETS (HIF_NAPI_MAX_RECEIVES)  /* 1 msg granularity */
+
+/**
+ * Note: the following MAX has to be the same as the max
+ *       in the wlan_hdd_cfg.h
+ */
+#define QCA_NAPI_TIME_MAX    10000
+#define QCA_NAPI_TIME_BUCKETS 40
 struct qca_napi_stat {
 	uint32_t napi_schedules;
 	uint32_t napi_polls;
 	uint32_t napi_completes;
 	uint32_t napi_workdone;
 	uint32_t cpu_corrected;
-	uint32_t napi_budget_uses[QCA_NAPI_NUM_BUCKETS];
+	uint32_t napi_msg_budget[QCA_NAPI_MSG_BUCKETS];
+	uint32_t napi_time_budget[QCA_NAPI_TIME_BUCKETS];
 	uint32_t time_limit_reached;
 	uint32_t rxpkt_thresh_reached;
 	unsigned long long napi_max_poll_time;
@@ -462,7 +471,7 @@ static inline void *hif_get_ce_handle(struct hif_opaque_softc *hif_ctx, int ret)
 #define CONFIG_DISABLE_CDC_MAX_PERF_WAR 0
 
 void hif_ipa_get_ce_resource(struct hif_opaque_softc *hif_ctx,
-			     qdf_shared_mem_t **ce_sr,
+			     qdf_dma_addr_t *ce_sr_base_paddr,
 			     uint32_t *ce_sr_ring_size,
 			     qdf_dma_addr_t *ce_reg_paddr);
 
@@ -661,22 +670,6 @@ enum ipa_hw_type hif_get_ipa_hw_type(void)
 {
 	return ipa_get_hw_type();
 }
-
-/**
- * hif_get_ipa_present() - get IPA hw status
- *
- * This API return the IPA hw status.
- *
- * Return: true if IPA is present or false otherwise
- */
-static inline
-bool hif_get_ipa_present(void)
-{
-	if (ipa_uc_reg_rdyCB(NULL) != -EPERM)
-		return true;
-	else
-		return false;
-}
 #endif
 int hif_bus_resume(struct hif_opaque_softc *hif_ctx);
 /**
@@ -782,7 +775,7 @@ hif_reg_based_get_target_info(struct hif_opaque_softc *hif_ctx,
 /**
  * hif_set_ce_service_max_yield_time() - sets CE service max yield time
  * @hif: hif context
- * @ce_service_max_yield_time: CE service max yield time to set
+ * @ce_service_max_yield_time: CE service max yield time to set, in usecs
  *
  * This API storess CE service max yield time in hif context based
  * on ini value.
@@ -796,7 +789,7 @@ void hif_set_ce_service_max_yield_time(struct hif_opaque_softc *hif,
  * hif_get_ce_service_max_yield_time() - get CE service max yield time
  * @hif: hif context
  *
- * This API returns CE service max yield time.
+ * This API returns CE service max yield time, in nsecs.
  *
  * Return: CE service max yield time
  */

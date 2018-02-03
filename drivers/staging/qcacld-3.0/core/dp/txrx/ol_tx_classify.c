@@ -397,12 +397,6 @@ ol_tx_classify(
 
 	TX_SCHED_DEBUG_PRINT("Enter %s\n", __func__);
 	dest_addr = ol_tx_dest_addr_find(pdev, tx_nbuf);
-	if (unlikely(NULL == dest_addr)) {
-		QDF_TRACE(QDF_MODULE_ID_TXRX,
-			QDF_TRACE_LEVEL_ERROR,
-			"Error: dest_addr is NULL.\n");
-		return NULL; /*error*/
-	}
 	if ((IEEE80211_IS_MULTICAST(dest_addr)) ||
 	    (vdev->opmode == wlan_op_mode_ocb)) {
 		txq = &vdev->txqs[OL_TX_VDEV_MCAST_BCAST];
@@ -420,7 +414,7 @@ ol_tx_classify(
 			if (!peer) {
 				QDF_TRACE(QDF_MODULE_ID_TXRX,
 					  QDF_TRACE_LEVEL_ERROR,
-					  "Error: STA %pK (%02x:%02x:%02x:%02x:%02x:%02x) trying to send bcast DA tx data frame w/o association\n",
+					  "Error: STA %p (%02x:%02x:%02x:%02x:%02x:%02x) trying to send bcast DA tx data frame w/o association\n",
 					  vdev,
 					  vdev->mac_addr.raw[0],
 					  vdev->mac_addr.raw[1],
@@ -470,7 +464,7 @@ ol_tx_classify(
 			if (!peer) {
 				QDF_TRACE(QDF_MODULE_ID_TXRX,
 					  QDF_TRACE_LEVEL_ERROR,
-					  "Error: vdev %pK (%02x:%02x:%02x:%02x:%02x:%02x) trying to send bcast/mcast, but no self-peer found\n",
+					  "Error: vdev %p (%02x:%02x:%02x:%02x:%02x:%02x) trying to send bcast/mcast, but no self-peer found\n",
 					  vdev,
 					  vdev->mac_addr.raw[0],
 					  vdev->mac_addr.raw[1],
@@ -536,7 +530,7 @@ ol_tx_classify(
 			 */
 			QDF_TRACE(QDF_MODULE_ID_TXRX,
 				  QDF_TRACE_LEVEL_ERROR,
-				  "Error: vdev %pK (%02x:%02x:%02x:%02x:%02x:%02x) trying to send unicast tx data frame to an unknown peer\n",
+				  "Error: vdev %p (%02x:%02x:%02x:%02x:%02x:%02x) trying to send unicast tx data frame to an unknown peer\n",
 				  vdev,
 				  vdev->mac_addr.raw[0], vdev->mac_addr.raw[1],
 				  vdev->mac_addr.raw[2], vdev->mac_addr.raw[3],
@@ -600,7 +594,7 @@ ol_tx_classify(
 				wlan_op_mode_sta && tx_msdu_info->peer !=
 								NULL) {
 		ol_txrx_dbg(
-			   "%s: remove the peer reference %pK\n",
+			   "%s: remove the peer reference %p\n",
 			   __func__, peer);
 		/* remove the peer reference added above */
 		OL_TXRX_PEER_UNREF_DELETE(tx_msdu_info->peer);
@@ -633,12 +627,6 @@ ol_tx_classify_mgmt(
 
 	TX_SCHED_DEBUG_PRINT("Enter %s\n", __func__);
 	dest_addr = ol_tx_dest_addr_find(pdev, tx_nbuf);
-	if (unlikely(NULL == dest_addr)) {
-		QDF_TRACE(QDF_MODULE_ID_TXRX,
-			QDF_TRACE_LEVEL_ERROR,
-			"Error: dest_addr is NULL.\n");
-		return NULL; /*error*/
-	}
 	if (IEEE80211_IS_MULTICAST(dest_addr)) {
 		/*
 		 * AP:  beacons are broadcast,

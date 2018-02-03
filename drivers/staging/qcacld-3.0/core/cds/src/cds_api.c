@@ -60,12 +60,6 @@
 #include "ol_txrx.h"
 #include "pktlog_ac.h"
 #include "wlan_hdd_ipa.h"
-
-#ifdef ENABLE_SMMU_S1_TRANSLATION
-#include "pld_common.h"
-#include <asm/dma-iommu.h>
-#include <linux/iommu.h>
-#endif
 /* Preprocessor Definitions and Constants */
 
 /* Maximum number of cds message queue get wrapper failures to cause panic */
@@ -664,7 +658,7 @@ QDF_STATUS cds_pre_enable(v_CONTEXT_t cds_context)
 		 * fail gracefully if FW is down allowing re-probing from
 		 * from the platform driver
 		 */
-		if ((!cds_is_fw_down()) && (!cds_is_self_recovery_enabled()))
+		if (!cds_is_fw_down())
 			QDF_BUG(0);
 
 		htc_stop(gp_cds_context->htc_ctx);
@@ -906,10 +900,6 @@ QDF_STATUS cds_post_disable(void)
 	hif_disable_isr(hif_ctx);
 	hif_reset_soc(hif_ctx);
 
-	if (gp_cds_context->htc_ctx) {
-		htc_stop(gp_cds_context->htc_ctx);
-	}
-
 	ol_txrx_pdev_pre_detach(txrx_pdev, 1);
 
 	return QDF_STATUS_SUCCESS;
@@ -938,6 +928,7 @@ QDF_STATUS cds_close(v_CONTEXT_t cds_context)
 	hdd_lro_destroy();
 
 	if (gp_cds_context->htc_ctx) {
+		htc_stop(gp_cds_context->htc_ctx);
 		htc_destroy(gp_cds_context->htc_ctx);
 		gp_cds_context->htc_ctx = NULL;
 	}
@@ -1787,9 +1778,7 @@ static QDF_STATUS cds_force_assert_target(qdf_device_t qdf_ctx)
 		  "Self Recovery not supported via Platform driver assert");
 
 	cds_set_recovery_in_progress(false);
-
-	if (!cds_is_fw_down())
-		QDF_BUG(0);
+	QDF_BUG(0);
 
 	return QDF_STATUS_E_INVAL;
 }
@@ -1870,51 +1859,12 @@ static void cds_trigger_recovery_work(void *param)
 }
 
 /**
- * cds_get_recovery_reason() - get self recovery reason
- * @reason: recovery reason
- *
- * Return: None
- */
-void cds_get_recovery_reason(enum cds_hang_reason *reason)
-{
-	if (!gp_cds_context) {
-		cds_err("gp_cds_context is null");
-		return;
-	}
-
-	*reason = gp_cds_context->recovery_reason;
-}
-
-/**
- * cds_reset_recovery_reason() - reset the reason to unspecified
- *
- * Return: None
- */
-void cds_reset_recovery_reason(void)
-{
-	if (!gp_cds_context) {
-		cds_err("gp_cds_context is null");
-		return;
-	}
-
-	gp_cds_context->recovery_reason = CDS_REASON_UNSPECIFIED;
-}
-
-/**
  * cds_trigger_recovery() - trigger self recovery
- * @reason: recovery reason
  *
  * Return: none
  */
-void cds_trigger_recovery(enum cds_hang_reason reason)
+void cds_trigger_recovery(void)
 {
-	if (!gp_cds_context) {
-		cds_err("gp_cds_context is null");
-		return;
-	}
-
-	gp_cds_context->recovery_reason = reason;
-
 	if (in_atomic()) {
 		qdf_queue_work(0, gp_cds_context->cds_recovery_wq,
 				&gp_cds_context->cds_recovery_work);
@@ -2642,7 +2592,6 @@ QDF_STATUS cds_register_dp_cb(struct cds_dp_cbacks *dp_cbs)
 	cds_ctx->hdd_en_lro_in_cc_cb = dp_cbs->hdd_en_lro_in_cc_cb;
 	cds_ctx->hdd_disable_lro_in_cc_cb = dp_cbs->hdd_disble_lro_in_cc_cb;
 	cds_ctx->hdd_set_rx_mode_rps_cb = dp_cbs->hdd_set_rx_mode_rps_cb;
-	cds_ctx->hdd_ipa_set_mcc_mode_cb = dp_cbs->hdd_ipa_set_mcc_mode_cb;
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -2667,7 +2616,6 @@ QDF_STATUS cds_deregister_dp_cb(void)
 	cds_ctx->hdd_en_lro_in_cc_cb = NULL;
 	cds_ctx->hdd_disable_lro_in_cc_cb = NULL;
 	cds_ctx->hdd_set_rx_mode_rps_cb = NULL;
-	cds_ctx->hdd_ipa_set_mcc_mode_cb = NULL;
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -2767,78 +2715,3 @@ cds_print_htc_credit_history(uint32_t count, qdf_abstract_print *print,
 				 print, print_priv);
 }
 #endif
-
-#ifdef ENABLE_SMMU_S1_TRANSLATION
-void cds_smmu_mem_map_setup(qdf_device_t osdev)
-{
-	int attr = 0;
-	struct dma_iommu_mapping *mapping = pld_smmu_get_mapping(osdev->dev);
-
-	osdev->smmu_s1_enabled = false;
-	if (!mapping) {
-		cds_info("No SMMU mapping present");
-		return;
-	}
-
-	if ((iommu_domain_get_attr(mapping->domain,
-				   DOMAIN_ATTR_S1_BYPASS, &attr) == 0) &&
-				   !attr)
-		osdev->smmu_s1_enabled = true;
-}
-
-#ifdef IPA_OFFLOAD
-int cds_smmu_map_unmap(bool map, uint32_t num_buf, qdf_mem_info_t *buf_arr)
-{
-	return hdd_ipa_uc_smmu_map(map, num_buf, buf_arr);
-}
-#else
-int cds_smmu_map_unmap(bool map, uint32_t num_buf, qdf_mem_info_t *buf_arr)
-{
-	return 0;
-}
-#endif
-
-#else
-void cds_smmu_mem_map_setup(qdf_device_t osdev)
-{
-	osdev->smmu_s1_enabled = false;
-}
-
-int cds_smmu_map_unmap(bool map, uint32_t num_buf, qdf_mem_info_t *buf_arr)
-{
-	return 0;
-}
-#endif
-
-uint32_t cds_get_mcc_to_scc_switch_mode(void)
-{
-	hdd_context_t *hdd_ctx;
-
-	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
-	if (!hdd_ctx) {
-		cds_err("HDD context is NULL");
-		return false;
-	}
-
-	return hdd_ctx->config->WlanMccToSccSwitchMode;
-}
-
-bool cds_is_sta_sap_scc_allowed_on_dfs_channel(void)
-{
-	hdd_context_t *hdd_ctx;
-	bool ret = false;
-
-	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
-
-	if (!hdd_ctx) {
-		cds_err("HDD context is NULL");
-		return false;
-	}
-
-	if ((hdd_ctx->config->WlanMccToSccSwitchMode !=
-				QDF_MCC_TO_SCC_SWITCH_DISABLE) &&
-			(hdd_ctx->config->sta_sap_scc_on_dfs_chan))
-		ret = true;
-
-	return ret;
-}

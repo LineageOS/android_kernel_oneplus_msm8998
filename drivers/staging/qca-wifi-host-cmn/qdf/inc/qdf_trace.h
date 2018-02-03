@@ -164,7 +164,7 @@ typedef struct s_qdf_trace_data {
  * @QDF_DP_TRACE_ARP_PACKET_RECORD - record ARP packet
  * @QDF_DP_TRACE_MGMT_PACKET_RECORD - record MGMT pacekt
  * @QDF_DP_TRACE_ICMP_PACKET_RECORD - record ICMP packet
- * @QDF_DP_TRACE_ICMPv6_PACKET_RECORD - record ICMPv6 packet
+ * @QDF_DP_TRACE_ICMPV6_PACKET_RECORD - record ICMPV6 packet
  * QDF_DP_TRACE_EVENT_RECORD - record events
  * @QDF_DP_TRACE_BASE_VERBOSITY - below this are part of base verbosity
  * @QDF_DP_TRACE_ICMP_PACKET_RECORD - record ICMP packets
@@ -200,7 +200,7 @@ enum  QDF_DP_TRACE_ID {
 	QDF_DP_TRACE_EVENT_RECORD,
 	QDF_DP_TRACE_BASE_VERBOSITY,
 	QDF_DP_TRACE_ICMP_PACKET_RECORD,
-	QDF_DP_TRACE_ICMPv6_PACKET_RECORD,
+	QDF_DP_TRACE_ICMPV6_PACKET_RECORD,
 	QDF_DP_TRACE_HDD_TX_PACKET_RECORD,
 	QDF_DP_TRACE_HDD_RX_PACKET_RECORD,
 	QDF_DP_TRACE_HDD_TX_TIMEOUT,
@@ -584,16 +584,5 @@ qdf_tso_seg_dbg_zero(struct qdf_tso_seg_elem_t *tsoseg)
 #define qdf_trace_hex_dump(x, y, z, q)
 
 #endif /* CONFIG_MCL */
-
-#define QDF_SYMBOL_LEN __QDF_SYMBOL_LEN
-
-/**
- * qdf_sprint_symbol() - prints the name of a symbol into a string buffer
- * @buffer: the string buffer to print into
- * @addr: address of the symbol to lookup and print
- *
- * Return: number of characters printed
- */
-int qdf_sprint_symbol(char *buffer, void *addr);
 
 #endif /* __QDF_TRACE_H */

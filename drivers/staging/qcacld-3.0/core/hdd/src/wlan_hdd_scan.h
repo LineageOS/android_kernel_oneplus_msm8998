@@ -48,10 +48,10 @@
 /* Minimum number of channels for enabling DBS Scan */
 #define HDD_MIN_CHAN_DBS_SCAN_THRESHOLD         8
 
-/* HDD Scan inactivity timeout set to double
- * of the CSR CMD Timeout */
+/* HDD Scan inactivity timeout set to 10 seconds
+ * more than the CSR CMD Timeout */
 #define HDD_SCAN_INACTIVITY_TIMEOUT \
-	(CSR_ACTIVE_SCAN_LIST_CMD_TIMEOUT * 2)
+	(CSR_ACTIVE_SCAN_LIST_CMD_TIMEOUT + (10*1000))
 /*
  * enum scan_source - scan request source
  *
@@ -138,7 +138,7 @@ int wlan_hdd_vendor_abort_scan(
 	struct wiphy *wiphy, struct wireless_dev *wdev,
 	const void *data, int data_len);
 
-void hdd_cleanup_scan_queue(hdd_context_t *hdd_ctx, hdd_adapter_t *p_adapter);
+void hdd_cleanup_scan_queue(hdd_context_t *hdd_ctx);
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 5, 0)) || \
 	defined(CFG80211_ABORT_SCAN)
@@ -162,7 +162,7 @@ void wlan_hdd_cfg80211_abort_scan(struct wiphy *wiphy,
 void wlan_hdd_fill_whitelist_ie_attrs(bool *ie_whitelist,
 				      uint32_t *probe_req_ie_bitmap,
 				      uint32_t *num_vendor_oui,
-				      uint32_t *voui,
+				      struct vendor_oui *voui,
 				      hdd_context_t *hdd_ctx);
 
 /**

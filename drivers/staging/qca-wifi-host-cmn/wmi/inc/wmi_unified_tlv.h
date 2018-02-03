@@ -89,13 +89,6 @@ QDF_STATUS send_suspend_cmd_tlv(wmi_unified_t wmi_handle,
 QDF_STATUS send_resume_cmd_tlv(wmi_unified_t wmi_handle,
 				uint8_t mac_id);
 
-#ifdef FEATURE_WLAN_D0WOW
-QDF_STATUS send_d0wow_enable_cmd_tlv(wmi_unified_t wmi_handle,
-				uint8_t mac_id);
-QDF_STATUS send_d0wow_disable_cmd_tlv(wmi_unified_t wmi_handle,
-				uint8_t mac_id);
-#endif
-
 QDF_STATUS send_wow_enable_cmd_tlv(wmi_unified_t wmi_handle,
 				struct wow_cmd_params *param,
 				uint8_t mac_id);
@@ -273,16 +266,6 @@ QDF_STATUS send_roam_scan_offload_rssi_thresh_cmd_tlv(wmi_unified_t wmi_handle,
 
 QDF_STATUS send_roam_scan_filter_cmd_tlv(wmi_unified_t wmi_handle,
 				struct roam_scan_filter_params *roam_req);
-
-/**
- * send_roam_scan_send_hlp_cmd_tlv() - send HLP info
- * @wmi_handle: wmi handle
- * @params: Pointer to HLP params
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS send_roam_scan_send_hlp_cmd_tlv(wmi_unified_t wmi_handle,
-				struct hlp_params *params);
 
 QDF_STATUS send_set_ric_req_cmd_tlv(wmi_unified_t wmi_handle, void *msg,
 			uint8_t is_add_ts);

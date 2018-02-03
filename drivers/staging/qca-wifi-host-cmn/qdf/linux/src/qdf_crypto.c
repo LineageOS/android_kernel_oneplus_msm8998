@@ -30,7 +30,6 @@
 #include <crypto/skcipher.h>
 
 /* Function Definitions and Documentation */
-#define MAX_HMAC_ELEMENT_CNT 10
 
 /*
  * xor: API to calculate xor
@@ -50,8 +49,28 @@ int qdf_get_hash(uint8_t *type,
 		uint8_t element_cnt, uint8_t *addr[], uint32_t *addr_len,
 		int8_t *hash)
 {
-	return qdf_get_hmac_hash(type, NULL, 0, element_cnt,
-				 addr, addr_len, hash);
+	int i, ret;
+	struct shash_desc desc;
+
+	/* allocate crypto hash type */
+	desc.tfm = crypto_alloc_shash(type, 0, CRYPTO_ALG_ASYNC);
+
+	if (IS_ERR(desc.tfm)) {
+		ret = PTR_ERR(desc.tfm);
+		return -EINVAL;
+	}
+	desc.flags = 0;
+	ret = crypto_shash_init(&desc);
+
+	if (ret)
+		return ret;
+
+	for (i = 0; i < element_cnt ; i++)
+		crypto_shash_update(&desc, addr[i], addr_len[i]);
+
+	crypto_shash_final(&desc, hash);
+	crypto_free_shash(desc.tfm);
+	return 0;
 }
 
 int qdf_get_hmac_hash(uint8_t *type, uint8_t *key,
@@ -59,20 +78,30 @@ int qdf_get_hmac_hash(uint8_t *type, uint8_t *key,
 		uint8_t element_cnt, uint8_t *addr[], uint32_t *addr_len,
 		int8_t *hash)
 {
-	int i;
-	size_t src_len[MAX_HMAC_ELEMENT_CNT];
+	int i, ret;
+	struct shash_desc desc;
 
-	if (element_cnt > MAX_HMAC_ELEMENT_CNT) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  FL("Invalid element count %d"), element_cnt);
+	/* allocate crypto hash type */
+	desc.tfm = crypto_alloc_shash(type, 0, CRYPTO_ALG_ASYNC);
+
+	if (IS_ERR(desc.tfm)) {
+		ret = PTR_ERR(desc.tfm);
 		return -EINVAL;
 	}
+	desc.flags = 0;
+	ret = crypto_shash_setkey(desc.tfm, key, keylen);
 
-	for (i = 0; i < element_cnt; i++)
-		src_len[i] = addr_len[i];
+	crypto_shash_init(&desc);
 
-	return qdf_get_keyed_hash(type, key, keylen, (const uint8_t **)addr,
-				  src_len, element_cnt,  hash);
+	if (ret)
+		return ret;
+
+	for (i = 0; i < element_cnt ; i++)
+		crypto_shash_update(&desc, addr[i], addr_len[i]);
+
+	crypto_shash_final(&desc, hash);
+	crypto_free_shash(desc.tfm);
+	return 0;
 }
 
 /* qdf_update_dbl from RFC 5297. Length of d is AES_BLOCK_SIZE (128 bits) */

@@ -149,12 +149,14 @@ enum htt_tx_status {
  * @param num_msdus - how many MSDUs are referenced by the tx completion
  *      message
  * @param status - whether transmission was successful
- * @param msg_word - the tx completion message
+ * @param tx_msdu_id_iterator - abstract method of finding the IDs for the
+ *      individual MSDUs referenced by the tx completion message, via the
+ *      htt_tx_compl_desc_id API function
  */
 void
 ol_tx_completion_handler(ol_txrx_pdev_handle pdev,
 			 int num_msdus,
-			 enum htt_tx_status status, void *msg_word);
+			 enum htt_tx_status status, void *tx_msdu_id_iterator);
 
 void ol_tx_credit_completion_handler(ol_txrx_pdev_handle pdev, int credits);
 
@@ -419,7 +421,7 @@ void ol_rx_frag_indication_handler(ol_txrx_pdev_handle pdev,
  */
 void
 ol_rx_offload_deliver_ind_handler(ol_txrx_pdev_handle pdev,
-				  qdf_nbuf_t msg, uint16_t msdu_cnt);
+				  qdf_nbuf_t msg, int msdu_cnt);
 
 /**
  * @brief Process a peer map message sent by the target.
@@ -622,8 +624,8 @@ void
 ol_rx_pn_ind_handler(ol_txrx_pdev_handle pdev,
 		     uint16_t peer_id,
 		     uint8_t tid,
-		     uint16_t seq_num_start,
-		     uint16_t seq_num_end, uint8_t pn_ie_cnt, uint8_t *pn_ie);
+		     int seq_num_start,
+		     int seq_num_end, uint8_t pn_ie_cnt, uint8_t *pn_ie);
 
 /**
  * @brief Process a stats message sent by the target.

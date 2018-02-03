@@ -57,13 +57,13 @@ struct index_vht_data_rate_type {
 };
 
 /**
- * enum - data_rate_11ac_max_mcs
+ * enum - eDataRate11ACMaxMcs
  * @DATA_RATE_11AC_MAX_MCS_7: MCS7 rate
  * @DATA_RATE_11AC_MAX_MCS_8: MCS8 rate
  * @DATA_RATE_11AC_MAX_MCS_9: MCS9 rate
  * @DATA_RATE_11AC_MAX_MCS_NA:i Not applicable
  */
-enum data_rate_11ac_max_mcs {
+enum eDataRate11ACMaxMcs {
 	DATA_RATE_11AC_MAX_MCS_7,
 	DATA_RATE_11AC_MAX_MCS_8,
 	DATA_RATE_11AC_MAX_MCS_9,

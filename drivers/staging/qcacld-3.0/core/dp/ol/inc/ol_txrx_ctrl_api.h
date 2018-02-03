@@ -78,7 +78,6 @@
 #define WLAN_TX_QUEUE_STATS         22
 #define WLAN_BUNDLE_STATS           23
 #define WLAN_CREDIT_STATS           24
-#define WLAN_DISCONNECT_STATS       25
 
 /**
  * @brief Set up the data SW subsystem.

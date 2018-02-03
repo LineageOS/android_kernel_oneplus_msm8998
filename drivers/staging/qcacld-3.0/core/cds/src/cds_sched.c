@@ -36,7 +36,6 @@
 #include <cds_api.h>
 #include <ani_global.h>
 #include <sir_types.h>
-#include <qdf_threads.h>
 #include <qdf_types.h>
 #include <lim_api.h>
 #include <sme_api.h>
@@ -598,49 +597,28 @@ pkt_freeqalloc_failure:
 
 #define MC_THRD_WD_TIMEOUT (60 * 1000) /* 60s */
 
-static void cds_mc_thread_watchdog_notify(cds_msg_t *msg)
+static inline void cds_mc_thread_watchdog_warn(uint16_t msg_type_id)
 {
-	char symbol[QDF_SYMBOL_LEN];
-
-	if (!msg) {
-		cds_err("msg is null");
-		return;
-	}
-
-	if (msg->callback)
-		qdf_sprint_symbol(symbol, msg->callback);
-
-	cds_err("Callback %s (type 0x%x) exceeded its allotted time of %ds",
-		msg->callback ? symbol : "<null>", msg->type,
-		MC_THRD_WD_TIMEOUT / 1000);
+	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
+		  "%s: Message type %x has exceeded its alloted time of %ds",
+		  __func__, msg_type_id, MC_THRD_WD_TIMEOUT / 1000);
 }
 
 #ifdef CONFIG_SLUB_DEBUG_ON
-static void cds_mc_thread_watchdog_timeout(void *arg)
+static void cds_mc_thread_watchdog_bite(void *arg)
 {
-	cds_msg_t *msg = *(cds_msg_t **)arg;
-
-	cds_mc_thread_watchdog_notify(msg);
-
-	if (gp_cds_sched_context) {
-		qdf_thread_t *mc_thread =
-			(qdf_thread_t *)gp_cds_sched_context->McThread;
-		if (mc_thread)
-			qdf_print_thread_trace(mc_thread);
-	}
-
+	cds_mc_thread_watchdog_warn(*(uint16_t *)arg);
 	if (cds_is_driver_recovering())
 		return;
 
-	cds_alert("Going down for MC Thread Watchdog Bite!");
+	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
+		  "%s: Going down for MC Thread Watchdog Bite!", __func__);
 	QDF_BUG(0);
 }
 #else
-static inline void cds_mc_thread_watchdog_timeout(void *arg)
+static inline void cds_mc_thread_watchdog_bite(void *arg)
 {
-	cds_msg_t *msg = *(cds_msg_t **)arg;
-
-	cds_mc_thread_watchdog_notify(msg);
+	cds_mc_thread_watchdog_warn(*(uint16_t *)arg);
 }
 #endif
 
@@ -662,7 +640,7 @@ static int cds_mc_thread(void *Arg)
 	hdd_context_t *pHddCtx = NULL;
 	v_CONTEXT_t p_cds_context = NULL;
 	qdf_timer_t wd_timer;
-	cds_msg_t *wd_msg;
+	uint16_t wd_msg_type_id;
 
 	if (Arg == NULL) {
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
@@ -695,8 +673,8 @@ static int cds_mc_thread(void *Arg)
 	}
 
 	/* initialize MC thread watchdog timer */
-	qdf_timer_init(NULL, &wd_timer, &cds_mc_thread_watchdog_timeout,
-		       &wd_msg, QDF_TIMER_TYPE_SW);
+	qdf_timer_init(NULL, &wd_timer, &cds_mc_thread_watchdog_bite,
+		       &wd_msg_type_id, QDF_TIMER_TYPE_SW);
 
 	while (!shutdown) {
 		/* This implements the execution model algorithm */
@@ -752,7 +730,7 @@ static int cds_mc_thread(void *Arg)
 				}
 
 				qdf_timer_start(&wd_timer, MC_THRD_WD_TIMEOUT);
-				wd_msg = pMsgWrapper->pVosMsg;
+				wd_msg_type_id = pMsgWrapper->pVosMsg->type;
 				vStatus =
 					sys_mc_process_msg(pSchedContext->pVContext,
 							   pMsgWrapper->pVosMsg);
@@ -784,7 +762,7 @@ static int cds_mc_thread(void *Arg)
 				}
 
 				qdf_timer_start(&wd_timer, MC_THRD_WD_TIMEOUT);
-				wd_msg = pMsgWrapper->pVosMsg;
+				wd_msg_type_id = pMsgWrapper->pVosMsg->type;
 				vStatus =
 					wma_mc_process_msg(pSchedContext->pVContext,
 							 pMsgWrapper->pVosMsg);
@@ -828,7 +806,7 @@ static int cds_mc_thread(void *Arg)
 				}
 
 				qdf_timer_start(&wd_timer, MC_THRD_WD_TIMEOUT);
-				wd_msg = pMsgWrapper->pVosMsg;
+				wd_msg_type_id = pMsgWrapper->pVosMsg->type;
 				macStatus =
 					pe_process_messages(pMacContext,
 							    (tSirMsgQ *)
@@ -873,7 +851,7 @@ static int cds_mc_thread(void *Arg)
 				}
 
 				qdf_timer_start(&wd_timer, MC_THRD_WD_TIMEOUT);
-				wd_msg = pMsgWrapper->pVosMsg;
+				wd_msg_type_id = pMsgWrapper->pVosMsg->type;
 				vStatus =
 					sme_process_msg((tHalHandle)pMacContext,
 							pMsgWrapper->pVosMsg);

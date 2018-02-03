@@ -473,7 +473,8 @@ void lim_pmf_comeback_timer_callback(void *context)
  */
 void lim_process_mlm_auth_cnf(tpAniSirGlobal mac_ctx, uint32_t *msg)
 {
-	tAniAuthType auth_type;
+	tAniAuthType auth_type, auth_mode;
+	tLimMlmAuthReq *auth_req;
 	tLimMlmAuthCnf *auth_cnf;
 	tpPESession session_entry;
 
@@ -543,18 +544,34 @@ void lim_process_mlm_auth_cnf(tpAniSirGlobal mac_ctx, uint32_t *msg)
 		 * When shared authentication fails with reason
 		 * code "13" and authType set to 'auto switch',
 		 * Try with open Authentication
-		 * There is a possibility that AP does not receive
-		 * ack and retries auth frame. The retry frame could be
-		 * received at host after open sys auth is sent to firmware
-		 * resulting in auth failure. So, to fix this issue, open system
-		 * auth frame is sent to firmware after timer of 15msec expires.
 		 */
-		mac_ctx->lim.limTimers.open_sys_auth_timer.sessionId =
-							    auth_cnf->sessionId;
-		if (tx_timer_activate(&mac_ctx->lim.limTimers.
-				      open_sys_auth_timer) != TX_SUCCESS) {
-			pe_err("failed to activate system Auth timer");
+		auth_mode = eSIR_OPEN_SYSTEM;
+		/* Trigger MAC based Authentication */
+		auth_req = qdf_mem_malloc(sizeof(tLimMlmAuthReq));
+		if (NULL == auth_req) {
+			pe_err("mlmAuthReq :Memory alloc failed");
+			return;
 		}
+		if (session_entry->limSmeState ==
+			eLIM_SME_WT_AUTH_STATE) {
+			sir_copy_mac_addr(auth_req->peerMacAddr,
+				session_entry->bssId);
+		} else {
+			qdf_mem_copy((uint8_t *)&auth_req->peerMacAddr,
+			(uint8_t *)&mac_ctx->lim.gLimPreAuthPeerAddr,
+			sizeof(tSirMacAddr));
+		}
+		auth_req->authType = auth_mode;
+		/* Update PE session Id */
+		auth_req->sessionId = auth_cnf->sessionId;
+		if (wlan_cfg_get_int(mac_ctx,
+			WNI_CFG_AUTHENTICATE_FAILURE_TIMEOUT,
+			(uint32_t *) &auth_req->authFailureTimeout)
+			!= eSIR_SUCCESS) {
+			pe_err("Fail:retrieve AuthFailureTimeout");
+		}
+		lim_post_mlm_message(mac_ctx, LIM_MLM_AUTH_REQ,
+			(uint32_t *) auth_req);
 		return;
 	} else {
 		/* MAC based authentication failure */
@@ -766,12 +783,6 @@ lim_fill_assoc_ind_params(tpAniSirGlobal mac_ctx,
 	sme_assoc_ind->max_mcs_idx = assoc_ind->max_mcs_idx;
 	sme_assoc_ind->rx_mcs_map = assoc_ind->rx_mcs_map;
 	sme_assoc_ind->tx_mcs_map = assoc_ind->tx_mcs_map;
-
-	if (assoc_ind->HTCaps.present)
-		sme_assoc_ind->HTCaps = assoc_ind->HTCaps;
-	if (assoc_ind->VHTCaps.present)
-		sme_assoc_ind->VHTCaps = assoc_ind->VHTCaps;
-
 }
 
 /**
@@ -2689,9 +2700,8 @@ void lim_process_mlm_set_sta_key_rsp(tpAniSirGlobal mac_ctx,
 	tpSirMsgQ msg)
 {
 	uint8_t resp_reqd = 1;
-	struct sLimMlmSetKeysCnf mlm_set_key_cnf;
+	tLimMlmSetKeysCnf mlm_set_key_cnf;
 	uint8_t session_id = 0;
-	uint8_t sme_session_id;
 	tpPESession session_entry;
 	uint16_t key_len;
 	uint16_t result_status;
@@ -2703,16 +2713,11 @@ void lim_process_mlm_set_sta_key_rsp(tpAniSirGlobal mac_ctx,
 		return;
 	}
 	session_id = ((tpSetStaKeyParams) msg->bodyptr)->sessionId;
-	sme_session_id = ((tpSetBssKeyParams) msg->bodyptr)->smesessionId;
 	session_entry = pe_find_session_by_session_id(mac_ctx, session_id);
 	if (session_entry == NULL) {
 		pe_err("session does not exist for given session_id");
 		qdf_mem_free(msg->bodyptr);
 		msg->bodyptr = NULL;
-		lim_send_sme_set_context_rsp(mac_ctx,
-					     mlm_set_key_cnf.peer_macaddr,
-					     0, eSIR_SME_INVALID_SESSION, NULL,
-					     sme_session_id, 0);
 		return;
 	}
 	if (eLIM_MLM_WT_SET_STA_KEY_STATE != session_entry->limMlmState) {
@@ -2773,10 +2778,9 @@ void lim_process_mlm_set_sta_key_rsp(tpAniSirGlobal mac_ctx,
 void lim_process_mlm_set_bss_key_rsp(tpAniSirGlobal mac_ctx,
 	tpSirMsgQ msg)
 {
-	struct sLimMlmSetKeysCnf set_key_cnf;
+	tLimMlmSetKeysCnf set_key_cnf;
 	uint16_t result_status;
 	uint8_t session_id = 0;
-	uint8_t sme_session_id;
 	tpPESession session_entry;
 	tpLimMlmSetKeysReq set_key_req;
 	uint16_t key_len;
@@ -2788,16 +2792,12 @@ void lim_process_mlm_set_bss_key_rsp(tpAniSirGlobal mac_ctx,
 		return;
 	}
 	session_id = ((tpSetBssKeyParams) msg->bodyptr)->sessionId;
-	sme_session_id = ((tpSetBssKeyParams) msg->bodyptr)->smesessionId;
 	session_entry = pe_find_session_by_session_id(mac_ctx, session_id);
 	if (session_entry == NULL) {
 		pe_err("session does not exist for given sessionId [%d]",
 			session_id);
 		qdf_mem_free(msg->bodyptr);
 		msg->bodyptr = NULL;
-		lim_send_sme_set_context_rsp(mac_ctx, set_key_cnf.peer_macaddr,
-					     0, eSIR_SME_INVALID_SESSION, NULL,
-					     sme_session_id, 0);
 		return;
 	}
 	if (eLIM_MLM_WT_SET_BSS_KEY_STATE == session_entry->limMlmState) {
@@ -3108,7 +3108,6 @@ void lim_process_switch_channel_rsp(tpAniSirGlobal pMac, void *body)
 		pe_err("session does not exist for given sessionId");
 		return;
 	}
-	psessionEntry->ch_switch_in_progress = false;
 	/* HAL fills in the tx power used for mgmt frames in this field. */
 	/* Store this value to use in TPC report IE. */
 	rrm_cache_mgmt_tx_power(pMac, pChnlParams->txMgmtPower, psessionEntry);
@@ -3315,27 +3314,4 @@ void lim_process_rx_scan_event(tpAniSirGlobal pMac, void *buf)
 			  pScanEvent->event);
 	}
 	qdf_mem_free(buf);
-}
-
-void lim_process_rx_channel_status_event(tpAniSirGlobal mac_ctx, void *buf)
-{
-	struct lim_channel_status *chan_status = buf;
-
-	if (NULL == chan_status) {
-		QDF_TRACE(QDF_MODULE_ID_PE,
-			  QDF_TRACE_LEVEL_ERROR,
-			  "%s: ACS evt report buf NULL", __func__);
-		return;
-	}
-
-	if (ACS_FW_REPORT_PARAM_CONFIGURED)
-		lim_add_channel_status_info(mac_ctx, chan_status,
-					    chan_status->channel_id);
-	else
-		QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_WARN,
-			  "%s: Error evt report", __func__);
-
-	qdf_mem_free(buf);
-
-	return;
 }

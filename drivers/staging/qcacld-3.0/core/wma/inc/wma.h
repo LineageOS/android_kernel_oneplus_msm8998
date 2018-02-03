@@ -88,8 +88,6 @@
 #endif
 #define WMA_MAX_SUPPORTED_BSS     5
 
-#define WMA_MAX_MGMT_MPDU_LEN 2000
-
 #define FRAGMENT_SIZE 3072
 
 #define MAX_PRINT_FAILURE_CNT 50
@@ -241,9 +239,6 @@ enum ds_mode {
 #define WMA_EXTSCAN_BURST_DURATION      150
 #endif
 
-#define WMA_CHAN_START_RESP             0
-#define WMA_CHAN_END_RESP               1
-
 #define WMA_BCN_BUF_MAX_SIZE 2500
 #define WMA_NOA_IE_SIZE(num_desc) (2 + (13 * (num_desc)))
 #define WMA_MAX_NOA_DESCRIPTORS 4
@@ -276,7 +271,6 @@ enum ds_mode {
 #define WMA_VDEV_STOP_REQUEST_TIMEOUT  (6000)   /* 6 seconds */
 #define WMA_VDEV_HW_MODE_REQUEST_TIMEOUT (5000) /* 5 seconds */
 #define WMA_VDEV_PLCY_MGR_CMD_TIMEOUT (3000)    /* 3 seconds */
-#define WMA_VDEV_SET_KEY_REQUEST_TIMEOUT (1000) /* 1 second */
 
 #define WMA_TGT_INVALID_SNR (0)
 
@@ -510,19 +504,6 @@ enum ds_mode {
 #define WMA_SCAN_END_EVENT	(WMI_SCAN_EVENT_COMPLETED |	\
 				WMI_SCAN_EVENT_DEQUEUED   |	\
 				WMI_SCAN_EVENT_START_FAILED)
-/*
- * PROBE_REQ_TX_DELAY
- * param to specify probe request Tx delay for scans triggered on this VDEV
- */
-#define PROBE_REQ_TX_DELAY 10
-
-/* PROBE_REQ_TX_TIME_GAP
- * param to specify the time gap between each set of probe request transmission.
- * The number of probe requests in each set depends on the ssid_list and,
- * bssid_list in the scan request. This parameter will get applied only,
- * for the scans triggered on this VDEV.
- */
-#define PROBE_REQ_TX_TIME_GAP 20
 
 /**
  * struct probeTime_dwellTime - probe time, dwell time map
@@ -1044,9 +1025,6 @@ typedef struct {
  * @rcpi_req: rcpi request
  * It stores parameters per vdev in wma.
  * @in_bmps : Whether bmps for this interface has been enabled
- * @vdev_start_wakelock: wakelock to protect vdev start op with firmware
- * @vdev_stop_wakelock: wakelock to protect vdev stop op with firmware
- * @vdev_set_key_wakelock: wakelock to protect vdev set key op with firmware
  */
 struct wma_txrx_node {
 	uint8_t addr[IEEE80211_ADDR_LEN];
@@ -1091,7 +1069,6 @@ struct wma_txrx_node {
 	tAniGetPEStatsRsp *stats_rsp;
 	uint8_t fw_stats_set;
 	void *del_staself_req;
-	bool is_del_sta_defered;
 	qdf_atomic_t bss_status;
 	uint8_t rate_flags;
 	uint8_t nss;
@@ -1130,11 +1107,6 @@ struct wma_txrx_node {
 	struct sme_rcpi_req *rcpi_req;
 	struct action_frame_random_filter *action_frame_filter;
 	bool in_bmps;
-	struct beacon_filter_param beacon_filter;
-	bool beacon_filter_enabled;
-	qdf_wake_lock_t vdev_start_wakelock;
-	qdf_wake_lock_t vdev_stop_wakelock;
-	qdf_wake_lock_t vdev_set_key_wakelock;
 };
 
 #if defined(QCA_WIFI_FTM)
@@ -1503,8 +1475,8 @@ struct peer_debug_info {
  * @wmi_cmd_rsp_wake_lock: wmi command response wake lock
  * @wmi_cmd_rsp_runtime_lock: wmi command response bus lock
  * @saved_chan: saved channel list sent as part of WMI_SCAN_CHAN_LIST_CMDID
+ * @fw_mem_dump_enabled: Fw memory dump support
  * @ss_configs: spectral scan config parameters
- * @ito_repeat_count: Indicates ito repeated count
  */
 typedef struct {
 	void *wmi_handle;
@@ -1538,8 +1510,6 @@ typedef struct {
 	uint32_t phy_capability;
 	uint32_t max_frag_entry;
 	uint32_t wmi_service_bitmap[WMI_SERVICE_BM_SIZE];
-	uint32_t wmi_service_ext_offset;
-	uint32_t wmi_service_ext_bitmap[WMI_SERVICE_SEGMENT_BM_SIZE32];
 	wmi_resource_config wlan_resource_config;
 	uint32_t frameTransRequired;
 	tBssSystemRole wmaGlobalSystemRole;
@@ -1709,6 +1679,7 @@ typedef struct {
 	tp_wma_packetdump_cb wma_mgmt_rx_packetdump_cb;
 	bool rcpi_enabled;
 	tSirLLStatsResults *link_stats_results;
+	bool fw_mem_dump_enabled;
 	bool tx_bfee_8ss_enabled;
 	tSirAddonPsReq ps_setting;
 	struct peer_debug_info *peer_dbg;
@@ -1718,10 +1689,6 @@ typedef struct {
 	uint64_t wmi_desc_fail_count;
 #ifdef FEATURE_SPECTRAL_SCAN
 	struct vdev_spectral_configure_params ss_configs;
-#endif
-	uint8_t  ito_repeat_count;
-#ifdef FEATURE_WLAN_D0WOW
-	atomic_t in_d0wow;
 #endif
 } t_wma_handle, *tp_wma_handle;
 
@@ -1906,7 +1873,6 @@ struct wma_set_key_params {
 	uint32_t key_idx;
 	bool unicast;
 	uint8_t key_data[SIR_MAC_MAX_KEY_LENGTH];
-	uint8_t key_rsc[SIR_MAC_MAX_KEY_RSC_LEN];
 };
 
 /**
@@ -2276,7 +2242,6 @@ typedef struct wma_unit_test_cmd {
  * @channel: channel
  * @frame_len: frame length, includs mac header, fixed params and ies
  * @frame_buf: buffer contaning probe response or beacon
- * @is_same_bssid: flag to indicate if roaming is requested for same bssid
  */
 struct wma_roam_invoke_cmd {
 	uint32_t vdev_id;
@@ -2284,7 +2249,6 @@ struct wma_roam_invoke_cmd {
 	uint32_t channel;
 	uint32_t frame_len;
 	uint8_t *frame_buf;
-	uint8_t is_same_bssid;
 };
 
 /**
@@ -2673,26 +2637,4 @@ QDF_STATUS wma_configure_smps_params(uint32_t vdev_id, uint32_t param_id,
  */
 int wma_chan_info_event_handler(void *handle, u_int8_t *event_buf,
 						u_int32_t len);
-
-/**
- * wma_config_bmiss_bcnt_params() - set bmiss config parameters
- * @vdev_id: virtual device for the command
- * @first_cnt: bmiss first value
- * @final_cnt: bmiss final value
- *
- * Return: QDF_STATUS_SUCCESS or non-zero on failure
- */
-QDF_STATUS wma_config_bmiss_bcnt_params(uint32_t vdev_id, uint32_t first_cnt,
-		uint32_t final_cnt);
-
-/**
- * wma_send_action_oui() - send of action oui extensions to firmware
- * @handle: wma handle
- * @action_oui: action oui buffer containg extensions to be send
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS wma_send_action_oui(WMA_HANDLE handle,
-			       struct wmi_action_oui *action_oui);
-
 #endif

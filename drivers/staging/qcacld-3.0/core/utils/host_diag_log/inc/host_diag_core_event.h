@@ -462,32 +462,14 @@ enum host_sta_kickout_events {
    ------------------------------------------------------------------------*/
 /**
  * enum host_datastall_events - Enum containing datastall subtype
- * @DATA_STALL_NONE: Indicate no data stall
- * @FW_VDEV_PAUSE: Indicate FW vdev Pause
- * @HWSCHED_CMD_FILTER:Indicate HW sched command filter
- * @HWSCHED_CMD_FLUSH: Indicate HW sched command flush
- * @FW_RX_REFILL_FAILED:Indicate FW rx refill failed
- * @FW_RX_FCS_LEN_ERROR:Indicate FW fcs len error
- * @FW_WDOG_ERRORS:Indicate watchdog error
- * @FW_BB_WDOG_ERROR:Indicate BB watchdog error
  * @STA_TX_TIMEOUT: Indicate sta tx timeout
  * @SOFTAP_TX_TIMEOUT:Indicate softap tx timeout
- * @NUD_FAILURE: Indicare NUD Failure
  *
  * This enum contains the event subtype
  */
 enum host_datastall_events {
-	DATA_STALL_NONE,
-	FW_VDEV_PAUSE,
-	HWSCHED_CMD_FILTER,
-	HWSCHED_CMD_FLUSH,
-	FW_RX_REFILL_FAILED,
-	FW_RX_FCS_LEN_ERROR,
-	FW_WDOG_ERRORS,
-	FW_BB_WDOG_ERROR,
 	STA_TX_TIMEOUT,
 	SOFTAP_TX_TIMEOUT,
-	NUD_FAILURE,
 };
 
 /*-------------------------------------------------------------------------
@@ -623,7 +605,6 @@ enum wifi_connectivity_events {
  * @WIFI_POWER_EVENT_WAKELOCK_DHCP: DHCP negotiation under way
  * @WIFI_POWER_EVENT_WAKELOCK_MGMT_TX: MGMT Tx wake lock
  * @WIFI_POWER_EVENT_WAKELOCK_CONNECT: connection in progress
- * @WIFI_POWER_EVENT_WAKELOCK_MONITOR_MODE: Montitor mode wakelock
  *
  * Indicates the reason for which the wakelock was taken/released
  */
@@ -649,7 +630,6 @@ enum wake_lock_reason {
 	WIFI_POWER_EVENT_WAKELOCK_DHCP,
 	WIFI_POWER_EVENT_WAKELOCK_MGMT_TX,
 	WIFI_POWER_EVENT_WAKELOCK_CONNECT,
-	WIFI_POWER_EVENT_WAKELOCK_MONITOR_MODE,
 };
 
 #ifdef __cplusplus
