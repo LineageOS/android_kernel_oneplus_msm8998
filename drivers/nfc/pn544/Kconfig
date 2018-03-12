@@ -28,9 +28,3 @@ config NFC_PN544_MEI
 
 	  If you choose to build a module, it'll be called pn544_mei.
 	  Say N if unsure.
-
-config NFC_PN544_OEM
-	tristate "QTI NCI based NFC Controller Driver for NQx"
-	---help---
-	  NXP PN544 core driver, modified by OnePlus.
-	  This is meant to be used with the NXP libnfc library.
