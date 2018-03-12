@@ -71,7 +71,7 @@
 		qcom,mdss-dsi-te-v-sync-rd-ptr-irq-line = <0x2c>;
 		qcom,mdss-dsi-te-v-sync-continue-lines = <0x3c>;
 		qcom,mdss-dsi-te-dcs-command = <1>;
-		//qcom,esd-check-enabled;
+		qcom,esd-check-enabled;
 		qcom,mdss-dsi-panel-status-check-mode = "te_signal_check";
 		qcom,mdss-dsi-te-check-enable;
 		qcom,mdss-dsi-te-using-te-pin;
@@ -189,7 +189,21 @@
 				];		
 			qcom,mdss-dsi-read-mode-command-state = "dsi_hs_mode";
 
-
+			qcom,mdss-dsi-panel-adaption-mode-on-command  = [
+				39 01 00 00 00 00 03 f0 5A 5A
+				39 01 00 00 00 00 02 80 01
+				39 01 00 00 00 00 02 C3 13
+				39 01 00 00 00 00 02 B0 0E
+				39 01 00 00 00 00 16 C3 B8 03 04 45 E2 10 04 07 C1 4B EB D7 B8 0A BF FF ED 14 FF FF FA
+				39 01 00 00 00 00 03 f0 A5 A5
+				];
+			qcom,mdss-dsi-panel-adaption-mode-off-command = [
+				39 01 00 00 00 00 03 F0 5A 5A
+				39 01 00 00 00 00 02 80 00
+				39 01 00 00 00 00 02 C3 10
+				39 01 00 00 00 00 03 F0 A5 A5
+				];
+			qcom,mdss-dsi-adaption-mode-command-state = "dsi_hs_mode";
 /**************************************************************************/	
 	};
 };
