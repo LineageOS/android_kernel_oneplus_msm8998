@@ -16672,7 +16672,7 @@ wlan_hdd_add_monitor_check(struct hdd_context *hdd_ctx,
 module_init(hdd_module_init);
 module_exit(hdd_module_exit);
 #else
-late_initcall(hdd_module_init);
+device_initcall(hdd_module_init);
 #endif
 
 MODULE_LICENSE("Dual BSD/GPL");
