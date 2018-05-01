@@ -105,7 +105,7 @@ config QCOM_DLOAD_MODE
 
 config MSM_PRESERVE_MEM
 	bool "Always preserve memory on restart"
-	depends on POWER_RESET_MSM
+	depends on POWER_RESET_QCOM
 	help
 	  If crash to download mode is disabled and restart reason is null
 	  the system will always perform a hard reset, which wipes out
