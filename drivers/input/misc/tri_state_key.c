@@ -49,6 +49,7 @@ typedef enum {
 #define KEY_MODE_ALARMS_ONLY    601
 #define KEY_MODE_PRIORITY_ONLY  602
 #define KEY_MODE_NONE           603
+#define KEY_MODE_VIBRATION      604
 
 static int current_mode = MODE_UNKNOWN;
 
@@ -186,7 +187,7 @@ switch_dev_get_devtree_pdata(struct device *dev)
 		}\
 		if (sscanf(buf, "%d", &data) != 1)\
 			return t;\
-		if (data < 600 || data > 603)\
+		if (data < 600 || data > 604)\
 			return t;\
 		keyCode_slider_##WHICH = data;\
 		if (current_mode == 1)\
@@ -257,6 +258,7 @@ static int tristate_dev_probe(struct platform_device *pdev)
 	set_bit(KEY_MODE_TOTAL_SILENCE, switch_data->input->keybit);
 	set_bit(KEY_MODE_ALARMS_ONLY, switch_data->input->keybit);
 	set_bit(KEY_MODE_PRIORITY_ONLY, switch_data->input->keybit);
+	set_bit(KEY_MODE_VIBRATION, switch_data->input->keybit);
 	set_bit(KEY_MODE_NONE, switch_data->input->keybit);
 
 	input_set_drvdata(switch_data->input, switch_data);
