@@ -220,6 +220,10 @@
 		qcom,src-sel = <0>;
 		qcom,out-strength = <1>;
 	};
+	/* NFC */
+	gpio@d400 {
+		qcom,pull = <4>;
+	};
 };
 
 &pm8998_rtc {
