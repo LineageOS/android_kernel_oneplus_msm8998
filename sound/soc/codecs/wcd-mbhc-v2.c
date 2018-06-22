@@ -1516,9 +1516,6 @@ enable_supply:
 	else
 		wcd_enable_mbhc_supply(mbhc, plug_type);
 exit:
-	if (plug_type == MBHC_PLUG_TYPE_HEADSET)
-		mbhc->micbias_enable = true;
-
 	if (mbhc->mbhc_cb->mbhc_micbias_control &&
 	    !mbhc->micbias_enable)
 		mbhc->mbhc_cb->mbhc_micbias_control(codec, MIC_BIAS_2,
