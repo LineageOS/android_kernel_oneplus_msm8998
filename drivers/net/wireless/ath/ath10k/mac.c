@@ -4978,6 +4978,15 @@ static int ath10k_add_interface(struct ieee80211_hw *hw,
 		goto err;
 	}
 
+	if ((arvif->vdev_type == WMI_VDEV_TYPE_STA) && QCA_REV_WCN3990(ar)) {
+		ret = ath10k_wmi_csa_offload(ar, arvif->vdev_id, true);
+		if (ret) {
+			ath10k_err(ar, "CSA offload failed for vdev %i: %d\n",
+				   arvif->vdev_id, ret);
+			goto err_vdev_delete;
+		}
+	}
+
 	ar->free_vdev_map &= ~(1LL << arvif->vdev_id);
 	list_add(&arvif->list, &ar->arvifs);
 
@@ -5189,6 +5198,9 @@ static void ath10k_remove_interface(struct ieee80211_hw *hw,
 
 		kfree(arvif->u.ap.noa_data);
 	}
+
+	if ((arvif->vdev_type == WMI_VDEV_TYPE_STA) && QCA_REV_WCN3990(ar))
+		ath10k_wmi_csa_offload(ar, arvif->vdev_id, false);
 
 	ath10k_dbg(ar, ATH10K_DBG_MAC, "mac vdev %i delete (remove interface)\n",
 		   arvif->vdev_id);
@@ -5639,6 +5651,22 @@ static void ath10k_set_key_h_def_keyidx(struct ath10k *ar,
 	if (ret)
 		ath10k_warn(ar, "failed to set vdev %i group key as default key: %d\n",
 			    arvif->vdev_id, ret);
+}
+
+static void ath10k_set_rekey_data(struct ieee80211_hw *hw,
+				  struct ieee80211_vif *vif,
+				  struct cfg80211_gtk_rekey_data *data)
+{
+	struct ath10k *ar = hw->priv;
+	struct ath10k_vif *arvif = ath10k_vif_to_arvif(vif);
+
+	mutex_lock(&ar->conf_mutex);
+	memcpy(&arvif->gtk_rekey_data.kek, data->kek, NL80211_KEK_LEN);
+	memcpy(&arvif->gtk_rekey_data.kck, data->kck, NL80211_KCK_LEN);
+	arvif->gtk_rekey_data.replay_ctr =
+			be64_to_cpup((__be64 *)data->replay_ctr);
+	arvif->gtk_rekey_data.valid = true;
+	mutex_unlock(&ar->conf_mutex);
 }
 
 static int ath10k_set_key(struct ieee80211_hw *hw, enum set_key_cmd cmd,
@@ -7568,6 +7596,7 @@ static const struct ieee80211_ops ath10k_ops = {
 	.bss_info_changed		= ath10k_bss_info_changed,
 	.hw_scan			= ath10k_hw_scan,
 	.cancel_hw_scan			= ath10k_cancel_hw_scan,
+	.set_rekey_data			= ath10k_set_rekey_data,
 	.set_key			= ath10k_set_key,
 	.set_default_unicast_key        = ath10k_set_default_unicast_key,
 	.sta_state			= ath10k_sta_state,
@@ -7603,7 +7632,6 @@ static const struct ieee80211_ops ath10k_ops = {
 	.suspend			= ath10k_wow_op_suspend,
 	.resume				= ath10k_wow_op_resume,
 	.set_wakeup			= ath10k_wow_op_set_wakeup,
-	.set_rekey_data			= ath10k_wow_op_set_rekey_data,
 #endif
 #ifdef CONFIG_MAC80211_DEBUGFS
 	.sta_add_debugfs		= ath10k_sta_add_debugfs,
@@ -8277,6 +8305,7 @@ err_free:
 
 void ath10k_mac_unregister(struct ath10k *ar)
 {
+	ath10k_wow_deinit(ar);
 	ieee80211_unregister_hw(ar->hw);
 
 	if (IS_ENABLED(CONFIG_ATH10K_DFS_CERTIFIED) && ar->dfs_detector)

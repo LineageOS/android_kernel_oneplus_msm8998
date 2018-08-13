@@ -3073,6 +3073,37 @@ ath10k_wmi_tlv_op_gen_tdls_peer_update(struct ath10k *ar,
 }
 
 static struct sk_buff *
+ath10k_wmi_tlv_op_gen_csa_offload(struct ath10k *ar, u32 vdev_id, bool enable)
+{
+	struct wmi_csa_offload_enable_cmd *cmd;
+	struct wmi_tlv *tlv;
+	struct sk_buff *skb;
+	int len;
+
+	len = sizeof(*cmd) + sizeof(*tlv);
+	skb = ath10k_wmi_alloc_skb(ar, len);
+	if (!skb)
+		return ERR_PTR(-ENOMEM);
+
+	tlv = (void *)skb->data;
+	tlv->tag = __cpu_to_le16(WMI_TLV_TAG_STRUCT_CSA_OFFLOAD_ENABLE_CMD);
+	tlv->len = __cpu_to_le16(sizeof(*cmd));
+	cmd = (void *)tlv->value;
+
+	cmd->vdev_id = __cpu_to_le32(vdev_id);
+	if (enable)
+		cmd->csa_offload_enable |=
+			 __cpu_to_le32(WMI_CSA_OFFLOAD_ENABLE);
+	else
+		cmd->csa_offload_enable |=
+			__cpu_to_le32(WMI_CSA_OFFLOAD_DISABLE);
+
+	ath10k_dbg(ar, ATH10K_DBG_WMI,
+		   "wmi CSA offload for vdev: %d\n", vdev_id);
+	return skb;
+}
+
+static struct sk_buff *
 ath10k_wmi_op_gen_gtk_offload(struct ath10k *ar, struct ath10k_vif *arvif)
 {
 	struct wmi_tlv_gtk_offload_cmd *cmd;
@@ -3117,13 +3148,14 @@ ath10k_wmi_tlv_op_gen_set_arp_ns_offload(struct ath10k *ar,
 	void *ptr;
 	int i;
 	struct wmi_ns_arp_offload_req *arp = &arvif->arp_offload;
+	struct wmi_ns_arp_offload_req *ns = &arvif->ns_offload;
 	struct wmi_ns_offload *ns_tuple;
 	struct wmi_arp_offload *arp_tuple;
 
 	len = sizeof(*cmd) + sizeof(*tlv) +
-		sizeof(*tlv) + WMI_MAX_NS_OFFLOADS *
+		sizeof(*tlv) + WMI_NS_ARP_OFFLOAD *
 		(sizeof(struct wmi_ns_offload) + sizeof(*tlv)) +
-		sizeof(*tlv) + WMI_MAX_ARP_OFFLOADS *
+		sizeof(*tlv) + WMI_NS_ARP_OFFLOAD *
 		(sizeof(struct wmi_arp_offload) + sizeof(*tlv));
 
 	skb = ath10k_wmi_alloc_skb(ar, len);
@@ -3141,33 +3173,49 @@ ath10k_wmi_tlv_op_gen_set_arp_ns_offload(struct ath10k *ar,
 	ptr += (sizeof(*tlv) + sizeof(*cmd));
 	tlv = ptr;
 	tlv->tag = __cpu_to_le16(WMI_TLV_TAG_ARRAY_STRUCT);
-	tlv->len = __cpu_to_le16(WMI_MAX_NS_OFFLOADS *
+	tlv->len = __cpu_to_le16(WMI_NS_ARP_OFFLOAD *
 		(sizeof(struct wmi_ns_offload) + sizeof(*tlv)));
 	ptr += sizeof(*tlv);
 	tlv = ptr;
 
-	for (i = 0; i < WMI_MAX_NS_OFFLOADS; i++) {
+	for (i = 0; i < WMI_NS_ARP_OFFLOAD; i++) {
 		tlv->tag = __cpu_to_le16(WMI_TLV_TAG_STRUCT_NS_OFFLOAD_TUPLE);
 		tlv->len = __cpu_to_le16(sizeof(struct wmi_ns_offload));
 		ns_tuple = (struct wmi_ns_offload *)tlv->value;
-		ns_tuple->flags |= __cpu_to_le32(WMI_ARP_NS_OFFLOAD_DISABLE);
+		if (ns->enable_offload) {
+			ns_tuple->flags |=
+				__cpu_to_le32(WMI_ARP_NS_OFF_FLAGS_VALID);
+			if (ns->info.target_addr_valid.s6_addr[i]) {
+				memcpy(&ns_tuple->target_ipaddr[0],
+				       &ns->info.target_addr[i],
+				       sizeof(struct in6_addr));
+			}
+			memcpy(&ns_tuple->solicitation_ipaddr,
+			       &ns->info.self_addr[i], sizeof(struct in6_addr));
+			if (ns->info.target_ipv6_ac.s6_addr[i] == IPV6_ADDR_ANY)
+				ns_tuple->flags |=
+					__cpu_to_le32(WMI_NSOFF_IPV6_ANYCAST);
+		} else {
+			ns_tuple->flags |=
+				__cpu_to_le32(WMI_ARP_NS_OFFLOAD_DISABLE);
+		}
 		ptr += (sizeof(*tlv) + sizeof(struct wmi_ns_offload));
 		tlv = ptr;
 	}
 
 	tlv->tag = __cpu_to_le16(WMI_TLV_TAG_ARRAY_STRUCT);
-	tlv->len = __cpu_to_le16(WMI_MAX_ARP_OFFLOADS *
+	tlv->len = __cpu_to_le16(WMI_NS_ARP_OFFLOAD *
 		(sizeof(struct wmi_arp_offload) + sizeof(*tlv)));
 	ptr += sizeof(*tlv);
 	tlv = ptr;
 
-	for (i = 0; i < WMI_MAX_ARP_OFFLOADS; i++) {
+	for (i = 0; i < WMI_NS_ARP_OFFLOAD; i++) {
 		tlv->tag = __cpu_to_le16(WMI_TLV_TAG_STRUCT_ARP_OFFLOAD_TUPLE);
 		tlv->len = __cpu_to_le16(sizeof(struct wmi_arp_offload));
 		arp_tuple = (struct wmi_arp_offload *)tlv->value;
 		if (arp->enable_offload && (i == 0)) {
 			arp_tuple->flags |=
-				__cpu_to_le32(WMI_ARPOFF_FLAGS_VALID);
+				__cpu_to_le32(WMI_ARP_NS_OFF_FLAGS_VALID);
 			memcpy(&arp_tuple->target_ipaddr,
 			       &arp->params.ipv4_addr,
 			       sizeof(arp_tuple->target_ipaddr));
@@ -3872,6 +3920,7 @@ static const struct wmi_ops wmi_tlv_ops = {
 	.gen_sta_keepalive = ath10k_wmi_tlv_op_gen_sta_keepalive,
 	.gen_set_arp_ns_offload = ath10k_wmi_tlv_op_gen_set_arp_ns_offload,
 	.gen_gtk_offload = ath10k_wmi_op_gen_gtk_offload,
+	.gen_csa_offload = ath10k_wmi_tlv_op_gen_csa_offload,
 	.gen_wow_enable = ath10k_wmi_tlv_op_gen_wow_enable,
 	.gen_wow_add_wakeup_event = ath10k_wmi_tlv_op_gen_wow_add_wakeup_event,
 	.gen_wow_host_wakeup_ind = ath10k_wmi_tlv_gen_wow_host_wakeup_ind,

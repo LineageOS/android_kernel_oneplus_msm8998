@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
  *
@@ -42,6 +42,8 @@
 
 /* timeout in frames waiting for frame done */
 #define SDE_ENCODER_FRAME_DONE_TIMEOUT	60
+
+#define MISR_BUFF_SIZE	256
 
 /*
  * Two to anticipate panels that can do cmd/vid dynamic switching
@@ -600,6 +602,12 @@ static void sde_encoder_underrun_callback(struct drm_encoder *drm_enc,
 	SDE_ATRACE_BEGIN("encoder_underrun_callback");
 	atomic_inc(&phy_enc->underrun_cnt);
 	SDE_EVT32(DRMID(drm_enc), atomic_read(&phy_enc->underrun_cnt));
+
+	trace_sde_encoder_underrun(DRMID(drm_enc),
+		atomic_read(&phy_enc->underrun_cnt));
+	SDE_DBG_CTRL("stop_ftrace");
+	SDE_DBG_CTRL("panic_underrun");
+
 	SDE_ATRACE_END("encoder_underrun_callback");
 }
 
@@ -1046,16 +1054,18 @@ static ssize_t _sde_encoder_misr_set(struct file *file,
 	struct sde_encoder_virt *sde_enc;
 	struct drm_encoder *drm_enc;
 	int i = 0;
-	char buf[10];
+	char buf[MISR_BUFF_SIZE + 1];
+	size_t buff_copy;
 	u32 enable, frame_count;
 
 	drm_enc = file->private_data;
 	sde_enc = to_sde_encoder_virt(drm_enc);
 
-	if (copy_from_user(buf, user_buf, count))
-		return -EFAULT;
+	buff_copy = min_t(size_t, MISR_BUFF_SIZE, count);
+	if (copy_from_user(buf, user_buf, buff_copy))
+		return -EINVAL;
 
-	buf[count] = 0; /* end of string */
+	buf[buff_copy] = 0; /* end of string */
 
 	if (sscanf(buf, "%u %u", &enable, &frame_count) != 2)
 		return -EFAULT;

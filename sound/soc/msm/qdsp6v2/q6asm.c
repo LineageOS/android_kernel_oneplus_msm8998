@@ -46,6 +46,7 @@
 #define FALSE       0x00
 #define SESSION_MAX 9
 #define ASM_MAX_CHANNELS 8
+
 enum {
 	ASM_TOPOLOGY_CAL = 0,
 	ASM_CUSTOM_TOP_CAL,
@@ -285,6 +286,11 @@ static ssize_t audio_output_latency_dbgfs_read(struct file *file,
 		pr_err("%s: out_buffer is null\n", __func__);
 		return 0;
 	}
+	if (count < OUT_BUFFER_SIZE) {
+		pr_err("%s: read size %d exceeds buf size %zd\n", __func__,
+						OUT_BUFFER_SIZE, count);
+		return 0;
+	}
 	snprintf(out_buffer, OUT_BUFFER_SIZE, "%ld,%ld,%ld,%ld,%ld,%ld,",\
 		out_cold_tv.tv_sec, out_cold_tv.tv_usec, out_warm_tv.tv_sec,\
 		out_warm_tv.tv_usec, out_cont_tv.tv_sec, out_cont_tv.tv_usec);
@@ -336,6 +342,11 @@ static ssize_t audio_input_latency_dbgfs_read(struct file *file,
 {
 	if (in_buffer == NULL) {
 		pr_err("%s: in_buffer is null\n", __func__);
+		return 0;
+	}
+	if (count < IN_BUFFER_SIZE) {
+		pr_err("%s: read size %d exceeds buf size %zd\n", __func__,
+						IN_BUFFER_SIZE, count);
 		return 0;
 	}
 	snprintf(in_buffer, IN_BUFFER_SIZE, "%ld,%ld,",\
@@ -1158,7 +1169,9 @@ int q6asm_send_stream_cmd(struct audio_client *ac,
 {
 	char *asm_params = NULL;
 	struct apr_hdr hdr;
-	int sz, rc;
+	int rc;
+	uint32_t sz = 0;
+	uint64_t actual_sz = 0;
 
 	if (!data || !ac) {
 		pr_err("%s: %s is NULL\n", __func__,
@@ -1175,7 +1188,15 @@ int q6asm_send_stream_cmd(struct audio_client *ac,
 		goto done;
 	}
 
-	sz = sizeof(struct apr_hdr) + data->payload_len;
+	actual_sz = sizeof(struct apr_hdr) + data->payload_len;
+	if (actual_sz > U32_MAX) {
+		pr_err("%s: payload size 0x%X exceeds limit\n",
+				__func__, data->payload_len);
+		rc = -EINVAL;
+		goto done;
+	}
+
+	sz = (uint32_t)actual_sz;
 	asm_params = kzalloc(sz, GFP_KERNEL);
 	if (!asm_params) {
 		rc = -ENOMEM;
@@ -2169,8 +2190,11 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 		pr_debug("%s: ASM_STREAM_EVENT payload[0][0x%x] payload[1][0x%x]",
 				 __func__, payload[0], payload[1]);
 		i = is_adsp_raise_event(data->opcode);
-		if (i < 0)
+		if (i < 0) {
+			spin_unlock_irqrestore(
+				&(session[session_id].session_lock), flags);
 			return 0;
+		}
 
 		/* repack payload for asm_stream_pp_event
 		 * package is composed of event type + size + actual payload
@@ -2179,8 +2203,11 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 		pp_event_package = kzalloc(payload_size
 				+ sizeof(struct msm_adsp_event_data),
 				GFP_ATOMIC);
-		if (!pp_event_package)
+		if (!pp_event_package) {
+			spin_unlock_irqrestore(
+				&(session[session_id].session_lock), flags);
 			return -ENOMEM;
+		}
 
 		pp_event_package->event_type = i;
 		pp_event_package->payload_len = payload_size;
@@ -2189,6 +2216,8 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 		ac->cb(data->opcode, data->token,
 			(void *)pp_event_package, ac->priv);
 		kfree(pp_event_package);
+		spin_unlock_irqrestore(
+			&(session[session_id].session_lock), flags);
 		return 0;
 	case ASM_SESSION_CMDRSP_ADJUST_SESSION_CLOCK_V2:
 		pr_debug("%s: ASM_SESSION_CMDRSP_ADJUST_SESSION_CLOCK_V2 sesion %d status 0x%x msw %u lsw %u\n",
