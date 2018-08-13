@@ -145,7 +145,6 @@ typedef enum {
 	 */
 	eSAP_STA_DISASSOC_EVENT,
 
-	eSAP_STA_LOSTLINK_DETECTED,
 	/* Event sent when user called wlansap_set_key_sta */
 	eSAP_STA_SET_KEY_EVENT,
 	/* Event sent whenever there is MIC failure detected */
@@ -236,6 +235,7 @@ typedef enum {
 typedef struct sap_StartBssCompleteEvent_s {
 	uint8_t status;
 	uint8_t operatingChannel;
+	enum phy_ch_width ch_width;
 	uint16_t staId;         /* self StaID */
 	uint8_t sessionId;      /* SoftAP SME session ID */
 } tSap_StartBssCompleteEvent;
@@ -303,6 +303,9 @@ typedef struct sap_StationDisassocCompleteEvent_s {
 	uint32_t statusCode;
 	uint32_t reason_code;
 	eSapDisassocReason reason;
+	int rssi;
+	int tx_rate;
+	int rx_rate;
 } tSap_StationDisassocCompleteEvent;
 
 typedef struct sap_StationSetKeyCompleteEvent_s {

@@ -62,6 +62,14 @@ QDF_STATUS hdd_deinit_tx_rx(hdd_adapter_t *pAdapter);
 QDF_STATUS hdd_rx_packet_cbk(void *context, qdf_nbuf_t rxBuf);
 
 /**
+ * hdd_reset_all_adapters_connectivity_stats() - reset connectivity stats
+ * @hdd_ctx: pointer to HDD Station Context
+ *
+ * Return: None
+ */
+void hdd_reset_all_adapters_connectivity_stats(hdd_context_t *hdd_ctx);
+
+/**
  * hdd_tx_rx_collect_connectivity_stats_info() - collect connectivity stats
  * @skb: pointer to skb data
  * @adapter: pointer to vdev apdapter
@@ -195,5 +203,23 @@ hdd_skb_fill_gso_size (struct net_device *dev,
 				+ tcp_hdrlen(skb));
 	}
 }
+
+#ifdef CONFIG_HL_SUPPORT
+static inline QDF_STATUS
+hdd_skb_nontso_linearize(struct sk_buff *skb)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static inline QDF_STATUS
+hdd_skb_nontso_linearize(struct sk_buff *skb)
+{
+	if (qdf_nbuf_is_nonlinear(skb) && qdf_nbuf_is_tso(skb) == false) {
+		if (qdf_unlikely(skb_linearize(skb)))
+			return QDF_STATUS_E_NOMEM;
+	}
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 
 #endif /* end #if !defined(WLAN_HDD_TX_RX_H) */

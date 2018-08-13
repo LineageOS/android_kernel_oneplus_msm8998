@@ -2558,8 +2558,9 @@ QDF_STATUS sap_open_session(tHalHandle hHal, ptSapContext sapContext,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	status = qdf_wait_single_event(&sapContext->sap_session_opened_evt,
-					SME_CMD_TIMEOUT_VALUE);
+	status = qdf_wait_for_event_completion(
+			&sapContext->sap_session_opened_evt,
+			SME_CMD_TIMEOUT_VALUE);
 
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
 		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_ERROR,
@@ -2867,6 +2868,7 @@ QDF_STATUS sap_signal_hdd_event(ptSapContext sap_ctx,
 			  bss_complete->staId);
 
 		bss_complete->operatingChannel = (uint8_t) sap_ctx->channel;
+		bss_complete->ch_width = sap_ctx->ch_params.ch_width;
 		bss_complete->sessionId = sap_ctx->sessionId;
 		break;
 	case eSAP_DFS_CAC_START:
@@ -2986,22 +2988,6 @@ QDF_STATUS sap_signal_hdd_event(ptSapContext sap_ctx,
 
 		break;
 
-	case eSAP_STA_LOSTLINK_DETECTED:
-		if (!csr_roaminfo) {
-			QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_ERROR,
-				  FL("Invalid CSR Roam Info"));
-			return QDF_STATUS_E_INVAL;
-		}
-		sap_ap_event.sapHddEventCode = eSAP_STA_LOSTLINK_DETECTED;
-		disassoc_comp =
-			&sap_ap_event.sapevt.sapStationDisassocCompleteEvent;
-
-		qdf_copy_macaddr(&disassoc_comp->staMac,
-				 &csr_roaminfo->peerMac);
-		disassoc_comp->reason_code = csr_roaminfo->reasonCode;
-
-		break;
-
 	case eSAP_STA_DISASSOC_EVENT:
 
 		if (!csr_roaminfo) {
@@ -3023,6 +3009,10 @@ QDF_STATUS sap_signal_hdd_event(ptSapContext sap_ctx,
 
 		disassoc_comp->statusCode = csr_roaminfo->statusCode;
 		disassoc_comp->status = (eSapStatus) context;
+		disassoc_comp->rssi = csr_roaminfo->rssi;
+		disassoc_comp->rx_rate = csr_roaminfo->rx_rate;
+		disassoc_comp->tx_rate = csr_roaminfo->tx_rate;
+		disassoc_comp->reason_code = csr_roaminfo->disassoc_reason;
 		break;
 
 	case eSAP_STA_SET_KEY_EVENT:

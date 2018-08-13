@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -2148,6 +2148,53 @@ enum hdd_dot11_mode {
 
 /*
  * <ini>
+ * min_delay_btw_roam_scans - Min duration (in sec) allowed btw two
+ * consecutive roam scans
+ * @Min: 0
+ * @Max: 60
+ * @Default: 10
+ *
+ * Roam scan is not allowed if duration between two consecutive
+ * roam scans is less than this time.
+ *
+ * Related: None
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_MIN_DELAY_BTW_ROAM_SCAN_NAME    "min_delay_btw_roam_scans"
+#define CFG_MIN_DELAY_BTW_ROAM_SCAN_MIN     (0)
+#define CFG_MIN_DELAY_BTW_ROAM_SCAN_MAX     (60)
+#define CFG_MIN_DELAY_BTW_ROAM_SCAN_DEFAULT (10)
+
+/*
+ * <ini>
+ * roam_trigger_reason_bitmask - Contains roam_trigger_reasons
+ * @Min: 0
+ * @Max: 0xFFFFFFFF
+ * @Default: 0xDA
+ *
+ * Bitmask containing roam_trigger_reasons for which
+ * min_delay_btw_roam_scans constraint should be applied.
+ *
+ * Related: None
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ROAM_SCAN_TRIGGER_REASON_BITMASK_NAME "roam_trigger_reason_bitmask"
+#define CFG_ROAM_SCAN_TRIGGER_REASON_BITMASK_MIN     (0)
+#define CFG_ROAM_SCAN_TRIGGER_REASON_BITMASK_MAX     (0xFFFFFFFF)
+#define CFG_ROAM_SCAN_TRIGGER_REASON_BITMASK_DEFAULT (0xDA)
+
+/*
+ * <ini>
  * roam_bad_rssi_thresh_offset_2g - RSSI threshold offset for 2G to 5G roam
  * @Min: 0
  * @Max: 86
@@ -2175,6 +2222,56 @@ enum hdd_dot11_mode {
 #define CFG_ROAM_BG_SCAN_BAD_RSSI_OFFSET_2G_MIN     (0)
 #define CFG_ROAM_BG_SCAN_BAD_RSSI_OFFSET_2G_MAX     (86)
 #define CFG_ROAM_BG_SCAN_BAD_RSSI_OFFSET_2G_DEFAULT (40)
+
+/*
+ * <ini>
+ * ho_delay_for_rx - Delay Hand-off (In msec) by this duration to receive
+ * pending rx frames from current BSS
+ * @Min: 0
+ * @Max: 200
+ * @Default: 0
+ *
+ * For LFR 3.0 roaming scenario, once roam candidate is found, firmware
+ * waits for minimum this much duration to receive pending rx frames from
+ * current BSS before switching to new channel for handoff to new AP.
+ *
+ * Related: None
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ROAM_HO_DELAY_FOR_RX_NAME    "ho_delay_for_rx"
+#define CFG_ROAM_HO_DELAY_FOR_RX_MIN     (0)
+#define CFG_ROAM_HO_DELAY_FOR_RX_MAX     (200)
+#define CFG_ROAM_HO_DELAY_FOR_RX_DEFAULT (0)
+
+/*
+ * <ini>
+ * roam_force_rssi_trigger - To set roam scan mode
+ * irrespective of channel list
+ * @Min: 0
+ * @Max: 1
+ * @Default: 1
+ *
+ * This ini is used to set roam scan mode
+ * WMI_ROAM_SCAN_MODE_RSSI_CHANGE, irrespective of whether
+ * channel list type is CHANNEL_LIST_STATIC or not
+ *
+ * Related: None
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ROAM_FORCE_RSSI_TRIGGER_NAME  "roam_force_rssi_trigger"
+#define CFG_ROAM_FORCE_RSSI_TRIGGER_MIN     (0)
+#define CFG_ROAM_FORCE_RSSI_TRIGGER_MAX     (1)
+#define CFG_ROAM_FORCE_RSSI_TRIGGER_DEFAULT (1)
 
 /*
  * <ini>
@@ -8756,6 +8853,7 @@ enum dot11p_mode {
  *			scan policy disabled.
  * 4 - enable DBS for connection as well as for scan with async
  *			scan policy disabled.
+ * 5 - enable DBS for connection but disable dbs for scan.
  *
  * Note: INI item value should match 'enum dbs_support'
  *
@@ -8769,7 +8867,7 @@ enum dot11p_mode {
  */
 #define CFG_DUAL_MAC_FEATURE_DISABLE               "gDualMacFeatureDisable"
 #define CFG_DUAL_MAC_FEATURE_DISABLE_MIN          (0)
-#define CFG_DUAL_MAC_FEATURE_DISABLE_MAX          (4)
+#define CFG_DUAL_MAC_FEATURE_DISABLE_MAX          (5)
 #define CFG_DUAL_MAC_FEATURE_DISABLE_DEFAULT      (0)
 
 /*
@@ -11495,6 +11593,8 @@ enum hw_filter_mode {
  * <ini>
  * gActionOUIConnect1x1 - Used to specify action OUIs for 1x1 connection
  * @Default: 000C43 00 25 42 001018 06 02FFF02C0000 BC 25 42 001018 06 02FF040C0000 BC 25 42 00037F 00 35 6C
+ * Note: User should strictly add new action OUIs at the end of this
+ * default value.
  *
  * Default OUIs: (All values in Hex)
  * OUI 1 : 000C43
@@ -11535,7 +11635,22 @@ enum hw_filter_mode {
 /*
  * <ini>
  * gActionOUIITOExtension - Used to extend in-activity time for specified APs
- * @Default: Empty string
+ * @Default: 00037F 06 01010000FF7F FC 01 000AEB 02 0100 C0 01
+ * Note: User should strictly add new action OUIs at the end of this
+ * default value.
+ *
+ * Default OUIs: (All values in Hex)
+ * OUI 1: 00037F
+ *   OUI data Len: 06
+ *   OUI Data: 01010000FF7F
+ *   OUI data Mask: FC - 11111100
+ *   Info Mask : 01 - only OUI present in Info mask
+ *
+ * OUI 2: 000AEB
+ *   OUI data Len: 02
+ *   OUI Data: 0100
+ *   OUI data Mask: C0 - 11000000
+ *   Info Mask : 01 - only OUI present in Info mask
  *
  * This ini is used to specify AP OUIs using which station's in-activity time
  * can be extended with the respective APs
@@ -11549,7 +11664,7 @@ enum hw_filter_mode {
  * </ini>
  */
 #define CFG_ACTION_OUI_ITO_EXTENSION_NAME    "gActionOUIITOExtension"
-#define CFG_ACTION_OUI_ITO_EXTENSION_DEFAULT ""
+#define CFG_ACTION_OUI_ITO_EXTENSION_DEFAULT "00037F 06 01010000FF7F FC 01 000AEB 02 0100 C0 01"
 
 /*
  * <ini>
@@ -13181,6 +13296,23 @@ enum hw_filter_mode {
 #define CFG_OFFLOAD_NEIGHBOR_REPORT_MAX_REQ_CAP_MAX     (300)
 #define CFG_OFFLOAD_NEIGHBOR_REPORT_MAX_REQ_CAP_DEFAULT (3)
 
+/*
+ * <ini>
+ * gTxSchDelay - Enable/Disable Tx sch delay
+ * @Min: 0
+ * @Max: 5
+ * @Default: 2
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+
+#define CFG_TX_SCH_DELAY_NAME          "gTxSchDelay"
+#define CFG_TX_SCH_DELAY_MIN           (0)
+#define CFG_TX_SCH_DELAY_MAX           (5)
+#define CFG_TX_SCH_DELAY_DEFAULT       (2)
+
 /*---------------------------------------------------------------------------
    Type declarations
    -------------------------------------------------------------------------*/
@@ -13841,6 +13973,9 @@ struct hdd_config {
 	uint32_t roam_dense_min_aps;
 	int8_t roam_bg_scan_bad_rssi_thresh;
 	uint8_t roam_bad_rssi_thresh_offset_2g;
+	uint32_t ho_delay_for_rx;
+	uint32_t min_delay_btw_roam_scans;
+	uint32_t roam_trigger_reason_bitmask;
 	uint32_t roam_bg_scan_client_bitmap;
 	bool enable_edca_params;
 	uint32_t edca_vo_cwmin;
@@ -14041,6 +14176,8 @@ struct hdd_config {
 	uint32_t neighbor_report_offload_per_threshold_offset;
 	uint32_t neighbor_report_offload_cache_timeout;
 	uint32_t neighbor_report_offload_max_req_cap;
+	uint8_t enable_tx_sch_delay;
+	bool roam_force_rssi_trigger;
 };
 
 #define VAR_OFFSET(_Struct, _Var) (offsetof(_Struct, _Var))

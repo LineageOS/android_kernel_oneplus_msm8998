@@ -2946,9 +2946,9 @@ bool cds_is_connection_in_progress(uint8_t *session_id,
 			hdd_sta_ctx =
 				WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 			if ((eConnectionState_Associated ==
-				hdd_sta_ctx->conn_info.connState)
-				&& (false ==
-				hdd_sta_ctx->conn_info.uIsAuthenticated)) {
+			    hdd_sta_ctx->conn_info.connState)
+			    && sme_is_sta_key_exchange_in_progress(
+			    hdd_ctx->hHal, adapter->sessionId)) {
 				sta_mac = (uint8_t *)
 					&(adapter->macAddressCurrent.bytes[0]);
 				cds_debug("client " MAC_ADDRESS_STR
@@ -5596,6 +5596,11 @@ QDF_STATUS cds_get_pcl(enum cds_con_mode mode,
 		return status;
 	}
 
+	if (mode >= CDS_MAX_NUM_OF_MODE) {
+		cds_err("requested mode:%d is not supported", mode);
+		return status;
+	}
+
 	/* find the current connection state from conc_connection_list*/
 	num_connections = cds_get_connection_count();
 
@@ -7872,8 +7877,7 @@ sap_restart:
 				hdd_ap_ctx->sapConfig.channel, intf_ch);
 	}
 	hdd_ap_ctx->sapConfig.channel = intf_ch;
-	hdd_ap_ctx->sapConfig.ch_params.ch_width =
-		hdd_ap_ctx->sapConfig.ch_width_orig;
+	hdd_ap_ctx->sapConfig.ch_params.ch_width = CH_WIDTH_MAX;
 	hdd_ap_ctx->bss_stop_reason = BSS_STOP_DUE_TO_MCC_SCC_SWITCH;
 	cds_set_channel_params(hdd_ap_ctx->sapConfig.channel,
 			hdd_ap_ctx->sapConfig.sec_ch,
@@ -8503,7 +8507,7 @@ void cds_restart_sap(hdd_adapter_t *ap_adapter)
 		qdf_event_reset(&hostapd_state->qdf_stop_bss_event);
 		if (QDF_STATUS_SUCCESS == wlansap_stop_bss(sap_ctx)) {
 			qdf_status =
-				qdf_wait_single_event(&hostapd_state->
+				qdf_wait_for_event_completion(&hostapd_state->
 					qdf_stop_bss_event,
 					SME_CMD_TIMEOUT_VALUE);
 
@@ -8536,7 +8540,7 @@ void cds_restart_sap(hdd_adapter_t *ap_adapter)
 
 		cds_debug("Waiting for SAP to start");
 		qdf_status =
-			qdf_wait_single_event(&hostapd_state->qdf_event,
+			qdf_wait_for_event_completion(&hostapd_state->qdf_event,
 					SME_CMD_TIMEOUT_VALUE);
 		wlansap_reset_sap_config_add_ie(sap_config,
 				eUPDATE_IE_ALL);
@@ -8968,7 +8972,7 @@ QDF_STATUS qdf_wait_for_connection_update(void)
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	status = qdf_wait_single_event(
+	status = qdf_wait_for_event_completion(
 			&cds_context->connection_update_done_evt,
 			CONNECTION_UPDATE_TIMEOUT);
 

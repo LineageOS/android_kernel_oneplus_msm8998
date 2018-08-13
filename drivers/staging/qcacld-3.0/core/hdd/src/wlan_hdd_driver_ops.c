@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -252,6 +252,7 @@ int hdd_hif_open(struct device *dev, void *bdev, const struct hif_bus_id *bid,
 		ret = qdf_status_to_os_return(status);
 		goto err_hif_close;
 	} else {
+		cds_set_target_ready(true);
 		ret = hdd_napi_create();
 		hdd_debug("hdd_napi_create returned: %d", ret);
 		if (ret == 0)
@@ -1294,14 +1295,31 @@ static void hdd_cleanup_on_fw_down(void)
 	ENTER();
 
 	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
-	cds_set_fw_state(CDS_FW_STATE_DOWN);
+	qdf_complete_wait_events();
 	cds_set_target_ready(false);
 	if (hdd_ctx != NULL)
 		hdd_cleanup_scan_queue(hdd_ctx, NULL);
 	wlan_hdd_purge_notifier();
 
 	EXIT();
+}
 
+/**
+ * wlan_hdd_set_the_pld_uevent() - set the pld event
+ * @uevent: uevent status
+ *
+ * Return: void
+ */
+static void wlan_hdd_set_the_pld_uevent(struct pld_uevent_data *uevent)
+{
+	switch (uevent->uevent) {
+	case PLD_RECOVERY:
+		cds_set_recovery_in_progress(true);
+		break;
+	case PLD_FW_DOWN:
+		cds_set_fw_state(CDS_FW_STATE_DOWN);
+		break;
+	}
 }
 
 /**
@@ -1314,22 +1332,36 @@ static void hdd_cleanup_on_fw_down(void)
 static void wlan_hdd_pld_uevent(struct device *dev,
 				struct pld_uevent_data *uevent)
 {
+	enum cds_driver_state driver_state;
+
 	ENTER();
 
+	mutex_lock(&hdd_init_deinit_lock);
+
 	hdd_info("pld event %d", uevent->uevent);
+
+	driver_state = cds_get_driver_state();
+
+	if (driver_state == CDS_DRIVER_STATE_UNINITIALIZED ||
+	    cds_is_driver_loading()) {
+		wlan_hdd_set_the_pld_uevent(uevent);
+		goto uevent_not_allowed;
+	}
+
+	wlan_hdd_set_the_pld_uevent(uevent);
+
 	switch (uevent->uevent) {
 	case PLD_RECOVERY:
-		cds_set_recovery_in_progress(true);
+		cds_set_target_ready(false);
 		hdd_pld_ipa_uc_shutdown_pipes();
 		wlan_hdd_purge_notifier();
 		break;
 	case PLD_FW_DOWN:
 		hdd_cleanup_on_fw_down();
 		break;
-	case PLD_FW_READY:
-		cds_set_target_ready(true);
-		break;
 	}
+uevent_not_allowed:
+	mutex_unlock(&hdd_init_deinit_lock);
 
 	EXIT();
 	return;
