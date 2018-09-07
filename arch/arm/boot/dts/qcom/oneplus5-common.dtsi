@@ -882,7 +882,7 @@
 	/delete-property/ qcom,efuse-num-bits;
 };
 
-&smb138x_parallel_slave {
+&smb1381_charger {
 	io-channels = <&smb138x_tadc 2>,
 		<&smb138x_tadc 3>,
 		<&smb138x_tadc 14>,
