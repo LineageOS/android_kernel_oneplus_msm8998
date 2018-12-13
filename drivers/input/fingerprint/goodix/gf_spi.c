@@ -704,13 +704,16 @@ static int gf_probe(struct platform_device *pdev)
 		status = gf_pinctrl_init(gf_dev);
 		if (status)
 			goto error_hw;
+#ifdef OEM_DEBUG_SUPPORT
 		if (get_boot_mode() !=  MSM_BOOT_MODE__FACTORY) {
+#endif
 			status = pinctrl_select_state(gf_dev->gf_pinctrl,
 				gf_dev->gpio_state_enable);
 			if (status) {
 				pr_err("can not set %s pins\n", "fp_en_init");
 				goto error_hw;
 			}
+#ifdef OEM_DEBUG_SUPPORT
 		} else {
 			status = pinctrl_select_state(gf_dev->gf_pinctrl,
 				gf_dev->gpio_state_disable);
@@ -719,6 +722,7 @@ static int gf_probe(struct platform_device *pdev)
 				goto error_hw;
 			}
 		}
+#endif
 	}
 	if (status == 0) {
 		/*input device subsystem */
