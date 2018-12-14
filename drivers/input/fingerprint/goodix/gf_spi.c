@@ -41,7 +41,9 @@
 #include <linux/pm_qos.h>
 #include <linux/cpufreq.h>
 #include <linux/wakelock.h>
+#ifdef OEM_DEBUG_SUPPORT
 #include <linux/oneplus/boot_mode.h>
+#endif
 #include "gf_spi.h"
 
 #if defined(USE_SPI_BUS)
