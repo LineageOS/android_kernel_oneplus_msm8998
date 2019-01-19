@@ -1,0 +1,173 @@
+Dynamic SchedTune Boost
+
+===============
+1. INTRODUCTION
+===============
+
+Dynamic SchedTune Boost (herein referred to as DSB) extends the SchedTune
+framework and provides APIs to activate and reset SchedTune boosting.
+
+DSB effectively handles multiple concurrent boost requests for each SchedTune
+group. For a particular SchedTune group, its overall boost value will be the
+maximum boost value of all its ongoing concurrent boost requests.
+
+A slot-based system is used to keep track of all boost requests that have been
+made. The number of boost slots available for each SchedTune group is defined
+by 'DYNAMIC_BOOST_SLOTS_COUNT'. Please see the example further below for details
+on how multiple boost requests are handled by the slot-based system.
+
+It is important that every boost request must be reset when no longer needed,
+otherwise the SchedTune group will remain in a permanently boosted state.
+It is up to the developer to implement this properly.
+
+
+======
+2. API
+======
+
+  int do_stune_boost(char *st_name, int boost, int *slot);
+
+    Boost 'st_name' SchedTune cgroup to the given 'boost' value. A slot is
+    assigned for this new boost request. Returns 0 on success.
+
+  int do_stune_sched_boost(char *st_name, int *slot);
+
+    Boost 'st_name' SchedTune cgroup to the boost value specified in
+    /dev/stune/{st_name}/schedtune.sched_boost. A slot is assigned for this new
+    boost request. Returns 0 on success.
+
+  int reset_stune_boost(char *st_name, int slot);
+
+    Resets the boost request for the specified 'slot' of the 'st_name' SchedTune
+    group. The default boost value of the 'st_name' SchedTune group will be
+    restored if there are no more ongoing boost requests. Otherwise, the boost
+    value will be set to the maximum boost value of the remaining active boost
+    requests. Returns 0 on success.
+
+
+==========
+3. EXAMPLE
+==========
+
+The following example shows how DSB handles three concurrent boost requests for
+the 'top-app' SchedTune group.
+
+
+  /*
+   * [INITIAL STATE]
+   *
+   *                         +---------+
+   *     active_boost_slots  |  Empty  |
+   *                         +---------+  
+   *                         +---------+ +---------+ +---------+ +---------+
+   *  available_boost_slots  |  Slot 0 | |  Slot 1 | |  Slot 2 | |  Slot 3 |
+   *                         +---------+ +---------+ +---------+ +---------+
+   *
+   *  Current boost value: 0
+   */
+
+  /*
+   * Create a slot for each boost request
+   */
+  int slotFirst, slotSecond, slotThird;
+
+
+  do_stune_boost("top-app", 10, &slotFirst);
+  /*
+   * [1ST BOOST REQUEST]
+   *
+   *                         +---------+
+   *                         |  Slot 0 |
+   *     active_boost_slots  +---------+
+   *                         |boost: 10|
+   *                         +---------+
+   *                         +---------+ +---------+ +---------+
+   *  available_boost_slots  |  Slot 1 | |  Slot 2 | |  Slot 3 |
+   *                         +---------+ +---------+ +---------+
+   *
+   *  Current boost value: 10
+   */
+  
+
+  do_stune_boost("top-app", 5, &slotSecond);
+  /*  
+   * [2ND BOOST REQUEST]
+   *
+   *                         +---------+ +---------+
+   *                         |  Slot 0 | |  Slot 1 |
+   *     active_boost_slots  +---------+ +---------+
+   *                         |boost: 10| |boost: 5 |
+   *                         +---------+ +---------+
+   *                         +---------+ +---------+
+   *  available_boost_slots  |  Slot 2 | |  Slot 3 |
+   *                         +---------+ +---------+
+   *
+   *  Current boost value: 10
+   */ 
+
+
+  do_stune_boost("top-app", 20, &slotThird);
+  /*
+   * [3RD BOOST REQUEST]
+   *
+   *                        +---------+ +---------+ +---------+
+   *                        |  Slot 0 | |  Slot 1 | |  Slot 2 |
+   *    active_boost_slots  +---------+ +---------+ +---------+
+   *                        |boost: 10| |boost: 5 | |boost: 20|
+   *                        +---------+ +---------+ +---------+
+   *                        +---------+
+   * available_boost_slots  |  Slot 3 |
+   *                        +---------+
+   *
+   *  Current boost value: 20
+   */
+
+
+  reset_stune_boost("top-app", slotSecond);
+  /*
+   * [RESET 2ND BOOST REQUEST]
+   *
+   *                          +---------+ +---------+
+   *                          |  Slot 0 | |  Slot 2 |
+   *      active_boost_slots  +---------+ +---------+
+   *                          |boost: 10| |boost: 20|
+   *                          +---------+ +---------+
+   *                          +---------+ +---------+
+   *   available_boost_slots  |  Slot 3 | |  Slot 1 |
+   *                          +---------+ +---------+
+   *
+   *  Current boost value: 20
+   */  
+
+
+  reset_stune_boost("top-app", slotThird);
+  /*
+   * [RESET 3RD BOOST REQUEST]
+   *
+   *                          +---------+
+   *                          |  Slot 0 |
+   *      active_boost_slots  +---------+
+   *                          |boost: 10|
+   *                          +---------+
+   *                          +---------+ +---------+ +---------+
+   *   available_boost_slots  |  Slot 3 | |  Slot 1 | |  Slot 2 |
+   *                          +---------+ +---------+ +---------+
+   *
+   *  Current boost value: 10
+   */  
+
+
+  reset_stune_boost("top-app", slotFirst);
+  /*
+   * [RESET 1ST BOOST REQUEST]
+   *
+   *                          +---------+
+   *      active_boost_slots  |  Empty  |
+   *                          +---------+
+   *                          +---------+ +---------+ +---------+ +---------+
+   *   available_boost_slots  |  Slot 3 | |  Slot 1 | |  Slot 2 | |  Slot 0 |
+   *                          +---------+ +---------+ +---------+ +---------+
+   *
+   *  Current boost value: 0
+   */
+
