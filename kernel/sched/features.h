@@ -91,4 +91,4 @@ SCHED_FEAT(STUNE_BOOST_BIAS_BIG, true)
  * If enabled, this can be used to inform the scheduler about capacity
  * restrictions.
  */
-SCHED_FEAT(MIN_CAPACITY_CAPPING, false)
+SCHED_FEAT(MIN_CAPACITY_CAPPING, true)
