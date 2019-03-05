@@ -2399,7 +2399,10 @@ static int do_wp_page(struct mm_struct *mm, struct vm_area_struct *vma,
 	 * Take out anonymous pages first, anonymous shared vmas are
 	 * not dirty accountable.
 	 */
-	if (PageAnon(old_page) && !PageKsm(old_page)) {
+	if (PageAnon(old_page)) {
+    	if (PageKsm(old_page) && (PageSwapCache(old_page) ||
+					   page_count(old_page) != 1))
+			goto copy;
 		if (!trylock_page(old_page)) {
 			page_cache_get(old_page);
 			pte_unmap_unlock(page_table, ptl);
@@ -2413,6 +2416,15 @@ static int do_wp_page(struct mm_struct *mm, struct vm_area_struct *vma,
 				return 0;
 			}
 			page_cache_release(old_page);
+		}
+		if (PageKsm(old_page)) {
+			bool reused = reuse_ksm_page(vmf->page, vmf->vma,
+						     vmf->address);
+			unlock_page(vmf->page);
+			if (!reused)
+				goto copy;
+			wp_page_reuse(vmf);
+			return VM_FAULT_WRITE;
 		}
 		if (reuse_swap_page(old_page)) {
 			/*
@@ -2431,7 +2443,7 @@ static int do_wp_page(struct mm_struct *mm, struct vm_area_struct *vma,
 		return wp_page_shared(mm, vma, address, page_table, pmd,
 				      ptl, orig_pte, old_page);
 	}
-
+copy:
 	/*
 	 * Ok, we need to copy. Oh, well..
 	 */
