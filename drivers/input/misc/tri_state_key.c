@@ -35,30 +35,30 @@
 
 typedef enum {
 	MODE_UNKNOWN,
+    MODE_DO_NOT_DISTURB,
 	MODE_MUTE,
-	MODE_DO_NOT_DISTURB,
 	MODE_NORMAL,
 } tri_mode_t;
 
 /*
- * Target key codes sending to OPPO's Keyhandler
- * see KeyHandler.java in device/oppo/common/keyhandler
+ * Target key codes sending to Keyhandler.
+ * See KeyHandler.java in device/oneplus/msm8998-common/devicesettings
  */
 
 #define KEY_MODE_TOTAL_SILENCE  600
-#define KEY_MODE_ALARMS_ONLY    601
-#define KEY_MODE_PRIORITY_ONLY  602
+#define KEY_MODE_PRIORITY_ONLY  601
+#define KEY_MODE_ALARMS_ONLY    602
 #define KEY_MODE_NONE           603
 
 static int current_mode = MODE_UNKNOWN;
 
 /*
- * Default mapping between OP's sti-state switch and OPPO's key codes
- * see Constants.java in device/oppo/common/configpanel
+ * Default mapping between tri-state switch and key codes.
+ * See Constants.java in device/oneplus/msm8998-common/devicesettings
  */
 
-static int keyCode_slider_top = KEY_MODE_ALARMS_ONLY;
-static int keyCode_slider_middle = KEY_MODE_PRIORITY_ONLY;
+static int keyCode_slider_top = KEY_MODE_PRIORITY_ONLY;
+static int keyCode_slider_middle = KEY_MODE_ALARMS_ONLY;
 static int keyCode_slider_bottom = KEY_MODE_NONE;
 
 struct switch_dev_data {
@@ -66,8 +66,8 @@ struct switch_dev_data {
 	int irq_key2;
 	int irq_key3;
 
-	int key1_gpio; // Mute
-	int key2_gpio; // Do Not Disturb
+	int key1_gpio; // Do Not Disturb
+	int key2_gpio; // Mute
 	int key3_gpio; // Normal
 
 	struct work_struct work;
@@ -107,10 +107,10 @@ static void switch_dev_work(struct work_struct *work)
 	key3 = gpio_get_value(switch_data->key3_gpio);
 
 	if (key1 == 0) {
-		mode = MODE_MUTE;
+		mode = MODE_DO_NOT_DISTURB;
 		keyCode = keyCode_slider_top;
 	} else if (key2 == 0) {
-		mode = MODE_DO_NOT_DISTURB;
+		mode = MODE_MUTE;
 		keyCode = keyCode_slider_middle;
 	} else if (key3 == 0) {
 		mode = MODE_NORMAL;
