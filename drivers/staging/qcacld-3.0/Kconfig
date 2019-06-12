@@ -148,6 +148,10 @@ config WLAN_FEATURE_FILS
 	bool "Enable FILS_SK feature"
 	default n
 
+config WLAN_FEATURE_PKT_CAPTURE
+	bool "Enable packet capture feature"
+	default n
+
 config FEATURE_PKTLOG
 	bool "Packet log"
 	default n
