@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1456,6 +1456,34 @@ enum hdd_dot11_mode {
 
 /*
  * <ini>
+ * honour_nl_scan_policy_flags - This ini will decide whether to honour
+ * NL80211 scan policy flags
+ * @Min: 0
+ * @Max: 1
+ * @Default: 1
+ *
+ * This parameter will decide whether to honour scan flags such as
+ * NL80211_SCAN_FLAG_HIGH_ACCURACY , NL80211_SCAN_FLAG_LOW_SPAN,
+ * NL80211_SCAN_FLAG_LOW_POWER.
+ * Acceptable values for this:
+ * 0: Config is disabled
+ * 1: Config is enabled
+ *
+ * Related: None
+ *
+ * Supported Feature: Scan
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_HONOUR_NL_SCAN_POLICY_FLAGS_NAME     "honour_nl_scan_policy_flags"
+#define CFG_HONOUR_NL_SCAN_POLICY_FLAGS_MIN      (0)
+#define CFG_HONOUR_NL_SCAN_POLICY_FLAGS_MAX      (1)
+#define CFG_HONOUR_NL_SCAN_POLICY_FLAGS_DEFAULT  (1)
+
+/*
+ * <ini>
  * adaptive_dwell_mode_enabled - Enable adaptive dwell mode
  * @Min: 0
  * @Max: 1
@@ -1856,6 +1884,29 @@ enum hdd_dot11_mode {
 
 /*
  * <ini>
+ * nth_beacon_reporting - Enable/Disable the nth beacon reporting offload
+ * @Min: 0
+ * @Max: 65536
+ * @Default: 0
+ *
+ * The configured value will be used by firmware to forward
+ * that beacon to host which is then forwarded to the userspace.
+ *
+ * Related: None
+ *
+ * Supported Feature: Beacon reporting
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_NTH_BEACON_REPORTING_OFFLOAD_NAME      "nth_beacon_reporting"
+#define CFG_NTH_BEACON_REPORTING_OFFLOAD_MIN       (0)
+#define CFG_NTH_BEACON_REPORTING_OFFLOAD_MAX       (65536)
+#define CFG_NTH_BEACON_REPORTING_OFFLOAD_DEFAULT   (0)
+
+/*
+ * <ini>
  * g11agNumTxChains - Number of Tx Chanins in 11ag mode
  * @Min: 0
  * @Max: 2
@@ -2243,6 +2294,30 @@ enum hdd_dot11_mode {
 #define CFG_ROAM_SCAN_TRIGGER_REASON_BITMASK_MIN     (0)
 #define CFG_ROAM_SCAN_TRIGGER_REASON_BITMASK_MAX     (0xFFFFFFFF)
 #define CFG_ROAM_SCAN_TRIGGER_REASON_BITMASK_DEFAULT (0xDA)
+
+/*
+ * <ini>
+ * roaming_scan_policy - To config roaming scan policy
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini is used to configure roaming scan behavior from HOST
+ * 0 : DBS scan
+ * 1 : Non-DBS scan
+ *
+ * Related: None
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ROAM_SCAN_SCAN_POLICY_NAME "roaming_scan_policy"
+#define CFG_ROAM_SCAN_SCAN_POLICY_MIN     (0)
+#define CFG_ROAM_SCAN_SCAN_POLICY_MAX     (1)
+#define CFG_ROAM_SCAN_SCAN_POLICY_DEFAULT (0)
 
 /*
  * <ini>
@@ -3607,6 +3682,20 @@ enum hdd_dot11_mode {
 #define CFG_FW_RSSI_MONITORING_MIN             (0)
 #define CFG_FW_RSSI_MONITORING_MAX             (1)
 #define CFG_FW_RSSI_MONITORING_DEFAULT         (1)
+
+/*
+ * gEnableRTTsupport
+ *
+ * @Min: 0 - Disabled
+ * @Max: 1 - Enabled
+ * @Default: 1 - Enabled
+ *
+ * The param is used to enable/disable support for RTT
+ */
+#define CFG_ENABLE_RTT_SUPPORT            "gEnableRTTSupport"
+#define CFG_ENABLE_RTT_SUPPORT_DEFAULT    (1)
+#define CFG_ENABLE_RTT_SUPPORT_MIN        (0)
+#define CFG_ENABLE_RTT_SUPPORT_MAX        (1)
 
 /*
  * <ini>
@@ -12465,7 +12554,12 @@ enum hw_filter_mode {
  *   OUI data Len : 00
  *   Info Mask : 35 - Check for NSS, VHT Caps and Band
  *   Capabilities: 6C - (NSS == 3 or 4) && VHT Caps Preset && Band == 2G
- *
+ * OUI 5 : 001018
+ *   OUI data Len : 06
+ *   OUI Data : 02FF009C0000
+ *   OUI data Mask: BC - 10111100
+ *   Info Mask : 25 - Check for NSS and Band
+ *   Capabilities: 48 - NSS == 4 && Band == 2G
  * This ini is used to specify the AP OUIs with which only 1x1 connection
  * is allowed.
  *
@@ -12478,7 +12572,7 @@ enum hw_filter_mode {
  * </ini>
  */
 #define CFG_ACTION_OUI_CONNECT_1X1_NAME    "gActionOUIConnect1x1"
-#define CFG_ACTION_OUI_CONNECT_1X1_DEFAULT "000C43 00 25 42 001018 06 02FFF02C0000 BC 25 42 001018 06 02FF040C0000 BC 25 42 00037F 00 35 6C"
+#define CFG_ACTION_OUI_CONNECT_1X1_DEFAULT "000C43 00 25 42 001018 06 02FFF02C0000 BC 25 42 001018 06 02FF040C0000 BC 25 42 00037F 00 35 6C 001018 06 02FF009C0000 BC 25 48"
 
 /*
  * <ini>
@@ -15182,10 +15276,198 @@ enum hw_filter_mode {
 #define CFG_ROAM_PREAUTH_NO_ACK_TIMEOUT_MAX     (50)
 #define CFG_ROAM_PREAUTH_NO_ACK_TIMEOUT_DEFAULT (5)
 
-/*---------------------------------------------------------------------------
-   Type declarations
-   -------------------------------------------------------------------------*/
+/*
+ * <ini>
+ * btm_offload_config - Configure BTM
+ * @Min: 0x00000000
+ * @Max: 0xFFFFFFFF
+ * @Default: 0x00000001
+ *
+ * This ini is used to configure BTM
+ *
+ * Bit 0: Enable/Disable the BTM offload. Set this to 1 will
+ * enable and 0 will disable BTM offload.
+ *
+ * BIT 2, 1: Action on non matching candidate with cache. If a BTM request
+ * is received from AP then the candidate AP's may/may-not be present in
+ * the firmware scan cache . Based on below config firmware will decide
+ * whether to forward BTM frame to host or consume with firmware and proceed
+ * with Roaming to candidate AP.
+ * 00 scan and consume
+ * 01 no scan and forward to host
+ * 10, 11 reserved
+ *
+ * BIT 5, 4, 3: Roaming handoff decisions on multiple candidates match
+ * 000 match if exact BSSIDs are found
+ * 001 match if at least one top priority BSSID only
+ * 010, 011, 100, 101, 110, 111 reserved
+ *
+ * BIT 6: Set this to 1 will send BTM query frame and 0 not sent.
+ *
+ * BIT 7: Roam to BTM candidates based on the roam score instead of BTM
+ * preferred value
+ *
+ * BIT 8: If AP does not support Neighbor report response, STA should
+ * request BTM query to get BTM request and check neighbor report exists
+ * or not. If Neighbor report exists, STA can use this information to update
+ * cached channel information
+ *
+ * BIT 9: When ever roaming is triggered after a successful roam scan a BTM
+ * query is sends to current connected AP which is 11v capable including the
+ * preferred candidate list obtained as part of roam scan with preference filled
+ * based on our internal scoring logic.
+ *
+ * BIT 10-31: Reserved
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_BTM_ENABLE_NAME      "btm_offload_config"
+#define CFG_BTM_ENABLE_MIN       (0x00000000)
+#define CFG_BTM_ENABLE_MAX       (0xffffffff)
+#define CFG_BTM_ENABLE_DEFAULT   (0x00000001)
 
+/*
+ * <ini>
+ * btm_solicited_timeout - timeout value for waiting BTM request
+ * @Min: 1
+ * @Max: 10000
+ * @Default: 100
+ *
+ * This ini is used to configure timeout value for waiting BTM request.
+ * Unit: millionsecond
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_BTM_SOLICITED_TIMEOUT           "btm_solicited_timeout"
+#define CFG_BTM_SOLICITED_TIMEOUT_MIN       (1)
+#define CFG_BTM_SOLICITED_TIMEOUT_MAX       (10000)
+#define CFG_BTM_SOLICITED_TIMEOUT_DEFAULT   (100)
+
+/*
+ * <ini>
+ * btm_max_attempt_cnt - Maximum attempt for sending BTM query to ESS
+ * @Min: 1
+ * @Max: 0xFFFFFFFF
+ * @Default: 3
+ *
+ * This ini is used to configure maximum attempt for sending BTM query to ESS.
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_BTM_MAX_ATTEMPT_CNT           "btm_max_attempt_cnt"
+#define CFG_BTM_MAX_ATTEMPT_CNT_MIN       (0x00000001)
+#define CFG_BTM_MAX_ATTEMPT_CNT_MAX       (0xFFFFFFFF)
+#define CFG_BTM_MAX_ATTEMPT_CNT_DEFAULT   (0x00000003)
+
+/*
+ * <ini>
+ * sticky_time - Stick time after roaming to new AP by BTM
+ * @Min: 1
+ * @Max: 0x0000FFFF
+ * @Default: 300
+ *
+ * This ini is used to configure Stick time after roaming to new AP by BTM.
+ * Unit: seconds
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_BTM_STICKY_TIME           "btm_sticky_time"
+#define CFG_BTM_STICKY_TIME_MIN       (0x00000001)
+#define CFG_BTM_STICKY_TIME_MAX       (0x0000FFFF)
+#define CFG_BTM_STICKY_TIME_DEFAULT   (300)
+
+/*
+ * <ini>
+ * btm_query_bitmask - To send BTM query with candidate list on various roam
+ * scans reasons
+ * @Min: 0
+ * @Max: 0xFFFFFFFF
+ * @Default: 0x8
+ *
+ * This new ini is introduced to configure the bitmask for various roam scan
+ * reasons. Fw sends "BTM query with preferred candidate list" only for those
+ * roam scans which are enable through this bitmask.
+
+ * For Example:
+ * Bitmask : 0x8 (LOW_RSSI) refer enum WMI_ROAM_TRIGGER_REASON_ID
+ * Bitmask : 0xDA (PER, LOW_RSSI, HIGH_RSSI, MAWC, DENSE)
+ * refer enum WMI_ROAM_TRIGGER_REASON_ID
+ *
+ * Related: None
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_BTM_QUERY_BITMASK_NAME    "btm_query_bitmask"
+#define CFG_BTM_QUERY_BITMASK_MIN     (0)
+#define CFG_BTM_QUERY_BITMASK_MAX     (0xFFFFFFFF)
+#define CFG_BTM_QUERY_BITMASK_DEFAULT (0x8)
+
+/*
+ * <ini>
+ * pktcap_mode_enable - Control to decide pktcapture mode enable/disable
+ *
+ * @Min: 0
+ * @Max: 1
+ *
+ * @Default: 0 - disable
+ *           1 - enable
+ *
+ * This ini is used to enable/disable pktcapture mode
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_PKTCAP_MODE_ENABLE_NAME     "pktcap_mode_enable"
+#define CFG_PKTCAP_MODE_ENABLE_MIN      (0)
+#define CFG_PKTCAP_MODE_ENABLE_MAX      (1)
+#define CFG_PKTCAP_MODE_ENABLE_DEFAULT  (0)
+
+/*
+ * pktcapture_mode - Control to decide pktcapture mode
+ *
+ * @Min: 0
+ * @Max: 3
+ *
+ * @Default: 0 - Capture no packets
+ *           1 - Capture Mgmt packets only
+ *           2 - Capture Data packets only
+ *           3 - Capture Both Data & Mgmt packets
+ *
+ * This ini is used to decide pktcapture mode
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_PKTCAPTURE_MODE_NAME     "pktcapture_mode"
+#define CFG_PKTCAPTURE_MODE_MIN      (0)
+#define CFG_PKTCAPTURE_MODE_MAX      (3)
+#define CFG_PKTCAPTURE_MODE_DEFAULT  (0)
+
+/*
+ * Type declarations
+ */
 
 struct hdd_config {
 	/* Bitmap to track what is explicitly configured */
@@ -15869,6 +16151,7 @@ struct hdd_config {
 	uint32_t ho_delay_for_rx;
 	uint32_t min_delay_btw_roam_scans;
 	uint32_t roam_trigger_reason_bitmask;
+	bool roaming_scan_policy;
 	uint32_t roam_bg_scan_client_bitmap;
 	bool enable_edca_params;
 	uint32_t edca_vo_cwmin;
@@ -15898,6 +16181,7 @@ struct hdd_config {
 	bool enable_dp_trace;
 	uint8_t dp_trace_config[DP_TRACE_CONFIG_STRING_LENGTH];
 	bool adaptive_dwell_mode_enabled;
+	bool honour_nl_scan_policy_flags;
 	enum wmi_dwelltime_adaptive_mode scan_adaptive_dwell_mode;
 	enum wmi_dwelltime_adaptive_mode scan_adaptive_dwell_mode_nc;
 	enum wmi_dwelltime_adaptive_mode roamscan_adaptive_dwell_mode;
@@ -16131,6 +16415,16 @@ struct hdd_config {
 	bool roam_force_rssi_trigger;
 	uint32_t roam_preauth_retry_count;
 	uint32_t roam_preauth_no_ack_timeout;
+	uint32_t enable_rtt_support;
+	uint32_t btm_offload_config;
+	uint32_t btm_solicited_timeout;
+	uint32_t btm_max_attempt_cnt;
+	uint32_t btm_sticky_time;
+	uint32_t btm_query_bitmask;
+	uint16_t beacon_reporting;
+
+	bool pktcap_mode_enable;
+	uint8_t pktcapture_mode;
 };
 
 #define VAR_OFFSET(_Struct, _Var) (offsetof(_Struct, _Var))

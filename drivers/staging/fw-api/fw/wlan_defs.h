@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, 2018 The Linux Foundation. All rights reserved.*
+ * Copyright (c) 2013-2016, 2018-2019 The Linux Foundation. All rights reserved.*
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -115,6 +115,8 @@
 #define HE_PET_8_USEC            1
 #define HE_PET_16_USEC           2
 
+#define DEFAULT_OFDMA_RU26_COUNT 0
+
 typedef enum {
     MODE_11A        = 0,   /* 11a Mode */
     MODE_11G        = 1,   /* 11b/g Mode */
@@ -170,11 +172,23 @@ typedef enum {
 #endif
 } WLAN_PHY_MODE;
 
-#ifndef CONFIG_160MHZ_SUPPORT
+#if (!defined(CONFIG_160MHZ_SUPPORT)) && (!defined(SUPPORT_11AX))
 A_COMPILE_TIME_ASSERT(
     mode_unknown_value_consistency_Check,
     MODE_UNKNOWN == MODE_UNKNOWN_NO_160MHZ_SUPPORT);
 #else
+/*
+ * If SUPPORT_11AX is defined but CONFIG_160MHZ_SUPPORT is not defined,
+ * there will be a gap in the mode values, with 14 and 15 being unused.
+ * But MODE_UNKNOWN_NO_160MHZ_SUPPORT will have an invalid value, since
+ * mode values 16 through 23 will be used for 11AX modes.
+ * Thus, MODE_UNKNOWN would still be MODE_UNKNOWN_160MHZ_SUPPORT, for
+ * cases where 160 MHz is not supported by 11AX is supported.
+ * (Ideally, MODE_UNKNOWN_160MHZ_SUPPORT and NO_160MHZ_SUPPORT should be
+ * renamed to cover the 4 permutations of support or no support for
+ * 11AX and 160 MHZ, but that is impractical, due to backwards
+ * compatibility concerns.)
+ */
 A_COMPILE_TIME_ASSERT(
     mode_unknown_value_consistency_Check,
     MODE_UNKNOWN == MODE_UNKNOWN_160MHZ_SUPPORT);
@@ -206,6 +220,7 @@ typedef enum {
         ((mode) == MODE_11AC_VHT80))
 #endif
 
+#if SUPPORT_11AX
 #define IS_MODE_HE(mode) (((mode) == MODE_11AX_HE20) || \
         ((mode) == MODE_11AX_HE40)     || \
         ((mode) == MODE_11AX_HE80)     || \
@@ -214,6 +229,10 @@ typedef enum {
         ((mode) == MODE_11AX_HE20_2G)  || \
         ((mode) == MODE_11AX_HE40_2G)  || \
         ((mode) == MODE_11AX_HE80_2G))
+#define IS_MODE_HE_2G(mode) (((mode) == MODE_11AX_HE20_2G) || \
+        ((mode) == MODE_11AX_HE40_2G) || \
+        ((mode) == MODE_11AX_HE80_2G))
+#endif /* SUPPORT_11AX */
 
 #define IS_MODE_VHT_2G(mode) (((mode) == MODE_11AC_VHT20_2G) || \
         ((mode) == MODE_11AC_VHT40_2G) || \
@@ -235,6 +254,40 @@ typedef enum {
                                  ((mode) == MODE_11NG_HT40))
 #define IS_MODE_11GONLY(mode)   ((mode) == MODE_11GONLY)
 
+#define IS_MODE_LEGACY(phymode)  ((phymode == MODE_11A) || \
+                                  (phymode == MODE_11G) || \
+                                  (phymode == MODE_11B) || \
+                                  (phymode == MODE_11GONLY))
+
+#define IS_MODE_11N(phymode)     ((phymode >= MODE_11NA_HT20) && \
+                                  (phymode <= MODE_11NG_HT40))
+#ifdef CONFIG_160MHZ_SUPPORT
+  #define IS_MODE_11AC(phymode)  ((phymode >= MODE_11AC_VHT20) && \
+                                  (phymode <= MODE_11AC_VHT160))
+#else
+  #define IS_MODE_11AC(phymode)  ((phymode >= MODE_11AC_VHT20) && \
+                                  (phymode <= MODE_11AC_VHT80_2G))
+#endif /* CONFIG_160MHZ_SUPPORT */
+
+#if SUPPORT_11AX
+  #define IS_MODE_80MHZ(phymode) ((phymode == MODE_11AC_VHT80_2G) || \
+                                  (phymode == MODE_11AC_VHT80) || \
+                                  (phymode == MODE_11AX_HE80) || \
+                                  (phymode == MODE_11AX_HE80_2G))
+  #define IS_MODE_40MHZ(phymode) ((phymode == MODE_11AC_VHT40_2G) || \
+                                  (phymode == MODE_11AC_VHT40) || \
+                                  (phymode == MODE_11NG_HT40) || \
+                                  (phymode == MODE_11NA_HT40) || \
+                                  (phymode == MODE_11AX_HE40) || \
+                                  (phymode == MODE_11AX_HE40_2G))
+#else
+  #define IS_MODE_80MHZ(phymode) ((phymode == MODE_11AC_VHT80_2G) || \
+                                  (phymode == MODE_11AC_VHT80))
+  #define IS_MODE_40MHZ(phymode) ((phymode == MODE_11AC_VHT40_2G) || \
+                                  (phymode == MODE_11AC_VHT40) || \
+                                  (phymode == MODE_11NG_HT40) || \
+                                  (phymode == MODE_11NA_HT40))
+#endif /* SUPPORT_11AX */
 
 enum {
     REGDMN_MODE_11A              = 0x00000001,  /* 11a channels */
@@ -318,12 +371,13 @@ typedef struct {
  * In host-based implementation of the rate-control feature, this struture is used to
  * create the payload for HTT message/s from target to host.
  */
-
-#if (NUM_SPATIAL_STREAM > 3)
-  #define A_RATEMASK A_UINT64
-#else
-  #define A_RATEMASK A_UINT32
-#endif
+#ifndef CONFIG_MOVE_RC_STRUCT_TO_MACCORE
+  #if (NUM_SPATIAL_STREAM > 3)
+    #define A_RATEMASK A_UINT64
+  #else
+    #define A_RATEMASK A_UINT32
+  #endif
+#endif /* CONFIG_MOVE_RC_STRUCT_TO_MACCORE */
 
 typedef A_UINT8 A_RATE;
 typedef A_UINT8 A_RATECODE;
@@ -425,6 +479,7 @@ typedef struct {
  * because the host should have no references to these target-only data
  * structures.
  */
+#ifndef CONFIG_MOVE_RC_STRUCT_TO_MACCORE
 #if !((NUM_SPATIAL_STREAM > 4) || SUPPORT_11AX)
   #if defined(CONFIG_AR900B_SUPPORT) || defined(AR900B)
   typedef struct{
@@ -494,6 +549,7 @@ typedef struct {
       A_UINT8     dd_profile;
   } RC_TX_RATE_INFO;
 #endif /* !((NUM_SPATIAL_STREAM > 4) || SUPPORT_11AX) */
+#endif /* CONFIG_MOVE_RC_STRUCT_TO_MACCORE */
 #endif
 
 /*
@@ -525,6 +581,13 @@ typedef struct {
    A_UINT32 ptr;
    /** size of the chunk */
    A_UINT32 size;
+    /** ptr_high
+     * most significant bits of physical address of the memory chunk
+     * Only applicable for addressing more than 32 bit.
+     * This will only be non-zero if the target has set
+     * WMI_SERVICE_SUPPORT_EXTEND_ADDRESS flag.
+     */
+   A_UINT32 ptr_high;
 } wlan_host_memory_chunk;
 
 #define NUM_UNITS_IS_NUM_VDEVS        0x1

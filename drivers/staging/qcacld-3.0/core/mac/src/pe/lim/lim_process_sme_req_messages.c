@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2959,6 +2959,9 @@ __lim_process_sme_set_context_req(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
 	}
 	qdf_mem_copy(set_context_req, msg_buf,
 			sizeof(struct sSirSmeSetContextReq));
+
+	qdf_mem_zero(msg_buf, sizeof(tSirSmeSetContextReq));
+
 	sme_session_id = set_context_req->sessionId;
 	sme_transaction_id = set_context_req->transactionId;
 
@@ -3066,6 +3069,7 @@ __lim_process_sme_set_context_req(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
 				sme_transaction_id);
 	}
 end:
+	qdf_mem_zero(set_context_req, sizeof(tSirSmeSetContextReq));
 	qdf_mem_free(set_context_req);
 	return;
 }
@@ -4029,7 +4033,7 @@ __lim_process_sme_update_apwpsi_es(tpAniSirGlobal pMac, uint32_t *pMsgBuf)
 		     sizeof(tSirAPWPSIEs));
 
 	sch_set_fixed_beacon_fields(pMac, psessionEntry);
-	lim_send_beacon_ind(pMac, psessionEntry);
+	lim_send_beacon_ind(pMac, psessionEntry, REASON_CONFIG_UPDATE);
 
 end:
 	qdf_mem_free(pUpdateAPWPSIEsReq);
@@ -4074,7 +4078,7 @@ static void lim_process_sme_update_config(tpAniSirGlobal mac_ctx,
 
 	if (LIM_IS_AP_ROLE(pe_session)) {
 		sch_set_fixed_beacon_fields(mac_ctx, pe_session);
-		lim_send_beacon_ind(mac_ctx, pe_session);
+		lim_send_beacon_ind(mac_ctx, pe_session, REASON_CONFIG_UPDATE);
 	}
 }
 
@@ -4137,6 +4141,7 @@ static void __lim_process_roam_scan_offload_req(tpAniSirGlobal mac_ctx,
 	local_ie_buf = qdf_mem_malloc(MAX_DEFAULT_SCAN_IE_LEN);
 	if (!local_ie_buf) {
 		pe_err("Mem Alloc failed for local_ie_buf");
+		qdf_mem_zero(req_buffer, sizeof(tSirRoamOffloadScanReq));
 		qdf_mem_free(req_buffer);
 		return;
 	}
@@ -4164,6 +4169,7 @@ static void __lim_process_roam_scan_offload_req(tpAniSirGlobal mac_ctx,
 	status = wma_post_ctrl_msg(mac_ctx, &wma_msg);
 	if (eSIR_SUCCESS != status) {
 		pe_err("Posting WMA_ROAM_SCAN_OFFLOAD_REQ failed");
+		qdf_mem_zero(req_buffer, sizeof(tSirRoamOffloadScanReq));
 		qdf_mem_free(req_buffer);
 	}
 }
@@ -4278,7 +4284,7 @@ static void __lim_process_sme_set_wparsni_es(tpAniSirGlobal pMac, uint32_t *pMsg
 	psessionEntry->privacy = 1;
 
 	sch_set_fixed_beacon_fields(pMac, psessionEntry);
-	lim_send_beacon_ind(pMac, psessionEntry);
+	lim_send_beacon_ind(pMac, psessionEntry, REASON_CONFIG_UPDATE);
 
 end:
 	qdf_mem_free(pUpdateAPWPARSNIEsReq);
@@ -4407,7 +4413,7 @@ static void __lim_process_sme_set_ht2040_mode(tpAniSirGlobal pMac,
 
 	/* Update beacon */
 	sch_set_fixed_beacon_fields(pMac, psessionEntry);
-	lim_send_beacon_ind(pMac, psessionEntry);
+	lim_send_beacon_ind(pMac, psessionEntry, REASON_SET_HT2040);
 
 	/* update OP Mode for each associated peer */
 	for (staId = 0; staId < psessionEntry->dph.dphHashTable.size; staId++) {
@@ -5448,7 +5454,7 @@ static void lim_process_sme_start_beacon_req(tpAniSirGlobal pMac, uint32_t *pMsg
 			  FL("Start Beacon with ssid %s Ch %d"),
 			  psessionEntry->ssId.ssId,
 			  psessionEntry->currentOperChannel);
-		lim_send_beacon_ind(pMac, psessionEntry);
+		lim_send_beacon_ind(pMac, psessionEntry, REASON_DEFAULT);
 	} else {
 		pe_err("Invalid Beacon Start Indication");
 		return;
@@ -6185,6 +6191,55 @@ static void lim_process_ext_change_channel(tpAniSirGlobal mac_ctx,
 }
 
 /**
+ * lim_nss_update_rsp() - send NSS update response to SME
+ * @mac_ctx Pointer to Global MAC structure
+ * @vdev_id: vdev id
+ * @status: nss update status
+ *
+ * Return: None
+ */
+static void lim_nss_update_rsp(tpAniSirGlobal mac_ctx,
+			       uint8_t vdev_id, QDF_STATUS status)
+{
+	cds_msg_t msg = {0};
+	struct sir_bcn_update_rsp *nss_rsp;
+	QDF_STATUS qdf_status;
+
+	nss_rsp = qdf_mem_malloc(sizeof(*nss_rsp));
+	if (!nss_rsp) {
+		pe_err("AllocateMemory failed for nss_rsp");
+		return;
+	}
+
+	nss_rsp->vdev_id = vdev_id;
+	nss_rsp->status = status;
+	nss_rsp->reason = REASON_NSS_UPDATE;
+
+	msg.type = eWNI_SME_NSS_UPDATE_RSP;
+	msg.bodyptr = nss_rsp;
+	msg.bodyval = 0;
+	qdf_status = cds_mq_post_message(QDF_MODULE_ID_SME, &msg);
+	if (QDF_IS_STATUS_ERROR(qdf_status)) {
+		pe_err("Failed to post eWNI_SME_NSS_UPDATE_RSP");
+		qdf_mem_free(nss_rsp);
+	}
+}
+
+void lim_send_bcn_rsp(tpAniSirGlobal mac_ctx, tpSendbeaconParams rsp)
+{
+	if (!rsp) {
+		pe_err("rsp is NULL");
+		return;
+	}
+
+	pe_debug("Send beacon resp status %d for reason %d",
+		 rsp->status, rsp->reason);
+
+	if (rsp->reason == REASON_NSS_UPDATE)
+		lim_nss_update_rsp(mac_ctx, rsp->vdev_id, rsp->status);
+}
+
+/**
  * lim_process_nss_update_request() - process sme nss update req
  *
  * @mac_ctx: Pointer to Global MAC structure
@@ -6200,25 +6255,28 @@ static void lim_process_nss_update_request(tpAniSirGlobal mac_ctx,
 {
 	struct sir_nss_update_request *nss_update_req_ptr;
 	tpPESession session_entry = NULL;
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
+	uint8_t vdev_id;
 
-	if (msg_buf == NULL) {
+	if (!msg_buf) {
 		pe_err("Buffer is Pointing to NULL");
 		return;
 	}
 
 	nss_update_req_ptr = (struct sir_nss_update_request *)msg_buf;
+	vdev_id = nss_update_req_ptr->vdev_id;
 	session_entry = pe_find_session_by_sme_session_id(mac_ctx,
 				nss_update_req_ptr->vdev_id);
-	if (session_entry == NULL) {
+	if (!session_entry) {
 		pe_err("Session not found for given session_id %d",
 			nss_update_req_ptr->vdev_id);
-		return;
+		goto end;
 	}
 
 	if (session_entry->valid && !LIM_IS_AP_ROLE(session_entry)) {
 		pe_err("Invalid SystemRole %d",
 			GET_LIM_SYSTEM_ROLE(session_entry));
-		return;
+		goto end;
 	}
 
 	/* populate nss field in the beacon */
@@ -6230,16 +6288,28 @@ static void lim_process_nss_update_request(tpAniSirGlobal mac_ctx,
 			(session_entry->ch_width > CH_WIDTH_80MHZ))
 		session_entry->gLimOperatingMode.chanWidth = CH_WIDTH_80MHZ;
 
-	pe_debug("ch width %hu", session_entry->gLimOperatingMode.chanWidth);
+	pe_debug("ch width %d Rx NSS %d",
+		 session_entry->gLimOperatingMode.chanWidth,
+		 session_entry->gLimOperatingMode.rxNSS);
 
 	/* Send nss update request from here */
 	if (sch_set_fixed_beacon_fields(mac_ctx, session_entry) !=
-			eSIR_SUCCESS) {
+		eSIR_SUCCESS) {
 		pe_err("Unable to set op mode IE in beacon");
-		return;
+		goto end;
 	}
 
-	lim_send_beacon_ind(mac_ctx, session_entry);
+	status = lim_send_beacon_ind(mac_ctx, session_entry, REASON_NSS_UPDATE);
+	if (QDF_IS_STATUS_SUCCESS(status))
+		return;
+
+	pe_err("Unable to send beacon");
+end:
+	/*
+	 * send resp only in case of failure,
+	 * success case response will be from wma.
+	 */
+	lim_nss_update_rsp(mac_ctx, vdev_id, status);
 }
 
 /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1475,6 +1475,8 @@ QDF_STATUS hdd_wlan_shutdown(void)
 		return QDF_STATUS_E_FAILURE;
 	}
 
+	pHddCtx->is_ssr_in_progress = true;
+
 	cds_clear_concurrent_session_count();
 
 	hdd_debug("Invoking packetdump deregistration API");
@@ -1516,6 +1518,11 @@ QDF_STATUS hdd_wlan_shutdown(void)
 		pHddCtx->is_ol_rx_thread_suspended = false;
 	}
 #endif
+	if (cds_get_pktcap_mode_enable() &&
+	    pHddCtx->is_ol_mon_thread_suspended) {
+		complete(&cds_sched_context->ol_resume_mon_event);
+		pHddCtx->is_ol_mon_thread_suspended = false;
+	}
 
 	hdd_ipa_uc_ssr_deinit();
 
@@ -1691,6 +1698,9 @@ success:
 	if (pHddCtx->config->sap_internal_restart)
 		hdd_ssr_restart_sap(pHddCtx);
 	hdd_is_interface_down_during_ssr(pHddCtx);
+
+	pHddCtx->is_ssr_in_progress = false;
+
 	hdd_wlan_ssr_reinit_event();
 	return QDF_STATUS_SUCCESS;
 }
@@ -1877,6 +1887,13 @@ static int __wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 		pHddCtx->is_ol_rx_thread_suspended = false;
 	}
 #endif
+	/* Resume tlshim mon thread */
+	if (cds_get_pktcap_mode_enable() &&
+	    pHddCtx->is_ol_mon_thread_suspended) {
+		complete(&cds_sched_context->ol_resume_mon_event);
+		pHddCtx->is_ol_mon_thread_suspended = false;
+	}
+
 	hdd_resume_wlan();
 
 	MTRACE(qdf_trace(QDF_MODULE_ID_HDD,
@@ -2156,10 +2173,28 @@ fetch_adapter:
 		clear_bit(RX_SUSPEND_EVENT,
 			  &cds_sched_context->ol_rx_event_flag);
 		hdd_err("Failed to stop tl_shim rx thread");
-		goto resume_all;
+		goto resume_mc;
 	}
 	pHddCtx->is_ol_rx_thread_suspended = true;
 #endif
+	/* Suspend tlshim mon thread */
+	if (cds_get_pktcap_mode_enable()) {
+		set_bit(RX_SUSPEND_EVENT,
+			&cds_sched_context->ol_mon_event_flag);
+		wake_up_interruptible(&cds_sched_context->ol_mon_wait_queue);
+		rc = wait_for_completion_timeout(&cds_sched_context->
+						 ol_suspend_mon_event,
+						 msecs_to_jiffies
+						 (RX_TLSHIM_SUSPEND_TIMEOUT));
+		if (!rc) {
+			clear_bit(RX_SUSPEND_EVENT,
+				  &cds_sched_context->ol_mon_event_flag);
+			hdd_err("Failed to stop tl_shim mon thread");
+			goto resume_all;
+		}
+		pHddCtx->is_ol_mon_thread_suspended = true;
+	}
+
 	MTRACE(qdf_trace(QDF_MODULE_ID_HDD,
 			 TRACE_CODE_HDD_CFG80211_SUSPEND_WLAN,
 			 NO_SESSION, pHddCtx->isWiphySuspended));
@@ -2170,12 +2205,14 @@ fetch_adapter:
 	EXIT();
 	return 0;
 
-#ifdef QCA_CONFIG_SMP
 resume_all:
-
+#ifdef QCA_CONFIG_SMP
+	complete(&cds_sched_context->ol_resume_rx_event);
+	pHddCtx->is_ol_rx_thread_suspended = false;
+#endif
+resume_mc:
 	complete(&cds_sched_context->ResumeMcEvent);
 	pHddCtx->isMcThreadSuspended = false;
-#endif
 
 resume_tx:
 
@@ -2480,6 +2517,11 @@ static int __wlan_hdd_cfg80211_get_txpower(struct wiphy *wiphy,
 	/* Validate adapter sessionId */
 	if (wlan_hdd_validate_session_id(adapter->sessionId)) {
 		hdd_err("invalid session id: %d", adapter->sessionId);
+		return -EINVAL;
+	}
+
+	if (sta_ctx->hdd_ReassocScenario) {
+		hdd_debug("Roaming is in progress, rej this req");
 		return -EINVAL;
 	}
 

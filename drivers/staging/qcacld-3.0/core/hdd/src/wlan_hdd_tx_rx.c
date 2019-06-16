@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -564,6 +564,11 @@ static bool hdd_tx_rx_is_dns_domain_name_match(struct sk_buff *skb,
 	if (adapter->track_dns_domain_len == 0)
 		return false;
 
+	/* check OOB , is strncmp accessing data more than skb->len */
+	if ((adapter->track_dns_domain_len +
+	    QDF_NBUF_PKT_DNS_NAME_OVER_UDP_OFFSET) > qdf_nbuf_len(skb))
+		return false;
+
 	domain_name = qdf_nbuf_get_dns_domain_name(skb,
 						adapter->track_dns_domain_len);
 	if (strncmp(domain_name, adapter->dns_payload,
@@ -1088,17 +1093,15 @@ drop_pkt_and_release_skb:
 	qdf_net_buf_debug_release_skb(skb);
 drop_pkt:
 
-	if (skb) {
-		/* track connectivity stats */
-		if (pAdapter->pkt_type_bitmap)
-			hdd_tx_rx_collect_connectivity_stats_info(skb, pAdapter,
-						PKT_TYPE_TX_DROPPED, &pkt_type);
+	/* track connectivity stats */
+	if (pAdapter->pkt_type_bitmap)
+		hdd_tx_rx_collect_connectivity_stats_info(skb, pAdapter,
+							  PKT_TYPE_TX_DROPPED,
+							  &pkt_type);
 
-		qdf_dp_trace_data_pkt(skb, QDF_DP_TRACE_DROP_PACKET_RECORD, 0,
-				      QDF_TX);
-		kfree_skb(skb);
-		skb = NULL;
-	}
+	qdf_dp_trace_data_pkt(skb, QDF_DP_TRACE_DROP_PACKET_RECORD, 0,
+			      QDF_TX);
+	kfree_skb(skb);
 
 drop_pkt_accounting:
 
@@ -1177,6 +1180,13 @@ static void __hdd_tx_timeout(struct net_device *dev)
 	u64 diff_jiffies;
 	int i = 0;
 
+	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+
+	if (hdd_ctx->hdd_wlan_suspended) {
+		hdd_debug("Device is suspended, ignore WD timeout");
+		return;
+	}
+
 	TX_TIMEOUT_TRACE(dev, QDF_MODULE_ID_HDD_DATA);
 	DPTRACE(qdf_dp_trace(NULL, QDF_DP_TRACE_HDD_TX_TIMEOUT,
 				NULL, 0, QDF_TX));
@@ -1197,7 +1207,6 @@ static void __hdd_tx_timeout(struct net_device *dev)
 
 	QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_DEBUG,
 		  "carrier state: %d", netif_carrier_ok(dev));
-	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	wlan_hdd_display_netif_queue_history(hdd_ctx, QDF_STATS_VERB_LVL_HIGH);
 	ol_tx_dump_flow_pool_info();
 
@@ -2240,6 +2249,7 @@ void wlan_hdd_netif_queue_control(hdd_adapter_t *adapter,
 	enum netif_action_type action, enum netif_reason_type reason)
 {
 	uint32_t temp_map;
+	uint8_t index;
 
 	if ((!adapter) || (WLAN_HDD_ADAPTER_MAGIC != adapter->magic) ||
 		 (!adapter->dev)) {
@@ -2339,21 +2349,49 @@ void wlan_hdd_netif_queue_control(hdd_adapter_t *adapter,
 	spin_lock_bh(&adapter->pause_map_lock);
 	if (adapter->pause_map & (1 << WLAN_PEER_UNAUTHORISED))
 		wlan_hdd_process_peer_unauthorised_pause(adapter);
+
+	index = adapter->history_index++;
+	if (adapter->history_index == WLAN_HDD_MAX_HISTORY_ENTRY)
+		adapter->history_index = 0;
 	spin_unlock_bh(&adapter->pause_map_lock);
 
 	wlan_hdd_update_queue_oper_stats(adapter, action, reason);
 
-	adapter->queue_oper_history[adapter->history_index].time =
-							qdf_system_ticks();
-	adapter->queue_oper_history[adapter->history_index].netif_action =
-									action;
-	adapter->queue_oper_history[adapter->history_index].netif_reason =
-									reason;
-	adapter->queue_oper_history[adapter->history_index].pause_map =
-							adapter->pause_map;
-	if (++adapter->history_index == WLAN_HDD_MAX_HISTORY_ENTRY)
-		adapter->history_index = 0;
+	adapter->queue_oper_history[index].time = qdf_system_ticks();
+	adapter->queue_oper_history[index].netif_action = action;
+	adapter->queue_oper_history[index].netif_reason = reason;
+	adapter->queue_oper_history[index].pause_map = adapter->pause_map;
 }
+
+#ifdef WLAN_FEATURE_PKT_CAPTURE
+/**
+ * hdd_set_mon_mode_cb() - Set pkt capture mode callback
+ * @dev:        Pointer to net_device structure
+ *
+ * Return: 0 on success; non-zero for failure
+ */
+int hdd_set_mon_mode_cb(struct net_device *dev)
+{
+	ol_txrx_mon_callback_fp mon_cb;
+	hdd_adapter_t *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
+
+	mon_cb = hdd_mon_rx_packet_cbk;
+	ol_txrx_mon_cb_register(adapter, mon_cb);
+
+	return 0;
+}
+
+/**
+ * hdd_reset_mon_mode_cb() - Reset pkt capture mode callback
+ * @void
+ *
+ * Return: None
+ */
+void hdd_reset_mon_mode_cb(void)
+{
+	ol_txrx_mon_cb_deregister();
+}
+#endif /* WLAN_FEATURE_PKT_CAPTURE */
 
 /**
  * hdd_set_mon_rx_cb() - Set Monitor mode Rx callback

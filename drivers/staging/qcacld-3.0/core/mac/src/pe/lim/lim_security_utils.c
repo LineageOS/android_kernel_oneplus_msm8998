@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -749,6 +749,7 @@ void lim_post_sme_set_keys_cnf(tpAniSirGlobal pMac,
 			 &pMlmSetKeysReq->peer_macaddr);
 
 	/* Free up buffer allocated for mlmSetKeysReq */
+	qdf_mem_zero(pMlmSetKeysReq, sizeof(tLimMlmSetKeysReq));
 	qdf_mem_free(pMlmSetKeysReq);
 	pMac->lim.gpLimMlmSetKeysReq = NULL;
 
@@ -853,6 +854,8 @@ void lim_send_set_bss_key_req(tpAniSirGlobal pMac,
 
 		/* Respond to SME with LIM_MLM_SETKEYS_CNF */
 		mlmSetKeysCnf.resultCode = eSIR_SME_HAL_SEND_MESSAGE_FAIL;
+		qdf_mem_zero(pSetBssKeyParams, sizeof(tSetBssKeyParams));
+		qdf_mem_free(pSetBssKeyParams);
 	} else
 		return;         /* Continue after WMA_SET_BSSKEY_RSP... */
 
@@ -967,7 +970,6 @@ void lim_send_set_sta_key_req(tpAniSirGlobal pMac,
 					     (uint8_t *) &pMlmSetKeysReq->
 					     key[i], sizeof(tSirKeys));
 			}
-			pSetStaKeyParams->wepType = eSIR_WEP_STATIC;
 			sessionEntry->limMlmState =
 				eLIM_MLM_WT_SET_STA_KEY_STATE;
 			MTRACE(mac_trace
@@ -1025,6 +1027,7 @@ void lim_send_set_sta_key_req(tpAniSirGlobal pMac,
 		return;         /* Continue after WMA_SET_STAKEY_RSP... */
 
 free_sta_key:
+	qdf_mem_zero(pSetStaKeyParams, sizeof(tSetStaKeyParams));
 	qdf_mem_free(pSetStaKeyParams);
 fail:
 	/* Respond to SME with LIM_MLM_SETKEYS_CNF */
