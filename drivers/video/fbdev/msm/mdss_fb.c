@@ -3776,8 +3776,9 @@ static int mdss_fb_pan_display(struct fb_var_screeninfo *var,
 	 * point, so it needs to go through PREPARE first. Abort pan_display
 	 * operations until that happens
 	 */
-	if (mfd->switch_state != MDSS_MDP_NO_UPDATE_REQUESTED) {
-		pr_debug("fb%d: pan_display skipped during switch\n",
+	if ((mfd->switch_state != MDSS_MDP_NO_UPDATE_REQUESTED) ||
+		(mdss_fb_is_hdmi_primary(mfd) && mdata->handoff_pending)) {
+		pr_debug("fb%d: pan_display skipped during switch or handoff\n",
 				mfd->index);
 		return 0;
 	}
