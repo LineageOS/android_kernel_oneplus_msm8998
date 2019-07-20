@@ -2002,7 +2002,7 @@ static int dwc3_msm_prepare_suspend(struct dwc3_msm *mdwc)
 			dwc3_msm_read_reg(mdwc->base, QSCRATCH_USB30_STS_REG));
 		/* Mark fatal error for host mode or USB bus suspend case */
 		if (mdwc->in_host_mode || (mdwc->vbus_active
-			&& mdwc->otg_state == OTG_STATE_B_SUSPEND)) {
+			&& mdwc->drd_state == DRD_STATE_PERIPHERAL_SUSPEND)) {
 			queue_work(mdwc->dwc3_wq, &mdwc->resume_work);
 			dev_err(mdwc->dev, "could not transition HS PHY to L2\n");
 			return -EBUSY;
