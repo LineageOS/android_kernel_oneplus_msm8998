@@ -6274,7 +6274,7 @@ static int parse_bss_select(struct nlattr *nla, struct wiphy *wiphy,
 		bss_select->param.adjust.delta = adj_param->delta;
 		if (!is_band_valid(
 			wiphy,
-			((enum ieee80211_band)(bss_select->param.adjust.band))
+			((enum nl80211_band)(bss_select->param.adjust.band))
 			))
 			return -EINVAL;
 	}
@@ -6986,7 +6986,7 @@ nl80211_parse_sched_scan(struct wiphy *wiphy, struct wireless_dev *wdev,
 		request->rssi_adjust.delta = rssi_adjust->delta;
 		if (!is_band_valid(
 			wiphy,
-			(enum ieee80211_band)(request->rssi_adjust.band)
+			(enum nl80211_band)(request->rssi_adjust.band)
 			)) {
 			err = -EINVAL;
 			goto out_free;
