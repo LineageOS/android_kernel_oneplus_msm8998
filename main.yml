@@ -1,0 +1,24 @@
+name: Build Kernel 
+on:
+  push:
+    branches:    
+      - test
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    steps:
+    - name: Init Repo
+      run: |
+        cd ~
+        git clone https://github.com/kpzhao/android_kernel_oneplus_msm8998 -b test --depth=1 
+    - name: Build With Shell
+      run: |
+        cd ~/android_kernel_oneplus_msm8998
+        bash install_clang_support.sh
+        bash build.sh
+    - name : Upload artifact
+      uses: actions/upload-artifact@master
+      with:
+        name: Image.gz-dtb
+        path: /home/runner/android_kernel_oneplus_msm8998/out/arch/arm64/boot
