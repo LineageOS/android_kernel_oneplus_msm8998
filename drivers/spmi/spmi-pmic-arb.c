@@ -539,35 +539,35 @@ static void cleanup_irq(struct spmi_pmic_arb *pa, u16 apid, int id)
 
 static void init_qpnp_kpdpwr_resume_wakeup_flag(void)
 {
-        resume_qpnp_kpdpwr_wakeup_flag = 0;
+	resume_qpnp_kpdpwr_wakeup_flag = 0;
 }
 
 static int is_speedup_irq(struct irq_desc *desc, char *irq_name)
 {
-        return strstr(desc->action->name, irq_name) != NULL;
+	return strstr(desc->action->name, irq_name) != NULL;
 }
 
 static void set_qpnp_kpdpwr_resume_wakeup_flag(int irq)
 {
-        struct irq_desc *desc;
-        desc = irq_to_desc(irq);
+	struct irq_desc *desc;
+	desc = irq_to_desc(irq);
 
-        if (desc && desc->action && desc->action->name) {
-                if (is_speedup_irq(desc, "qpnp_kpdpwr_status")) {
-                        resume_qpnp_kpdpwr_wakeup_flag = 1;
-                }
-        }
+	if (desc && desc->action && desc->action->name) {
+		if (is_speedup_irq(desc, "qpnp_kpdpwr_status")) {
+			resume_qpnp_kpdpwr_wakeup_flag = 1;
+		}
+	}
 }
 
 int get_qpnp_kpdpwr_resume_wakeup_flag(void)
 {
-        int flag = resume_qpnp_kpdpwr_wakeup_flag;
+	int flag = resume_qpnp_kpdpwr_wakeup_flag;
 
-        pr_debug("%s: flag = %d\n", __func__, flag);
-        /* Clear it for next calling */
-        init_qpnp_kpdpwr_resume_wakeup_flag();
+	pr_debug("%s: flag = %d\n", __func__, flag);
+	/* Clear it for next calling */
+	init_qpnp_kpdpwr_resume_wakeup_flag();
 
-        return flag;
+	return flag;
 }
 
 static void periph_interrupt(struct spmi_pmic_arb *pa, u16 apid, bool show)
@@ -578,7 +578,7 @@ static void periph_interrupt(struct spmi_pmic_arb *pa, u16 apid, bool show)
 	u8 sid = (pa->apid_data[apid].ppid >> 8) & 0xF;
 	u8 per = pa->apid_data[apid].ppid & 0xFF;
 
-        init_qpnp_kpdpwr_resume_wakeup_flag();
+	init_qpnp_kpdpwr_resume_wakeup_flag();
 	status = readl_relaxed(pa->intr + pa->ver_ops->irq_status(apid));
 	while (status) {
 		id = ffs(status) - 1;

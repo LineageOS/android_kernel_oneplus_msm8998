@@ -1,4 +1,3 @@
-
 #ifndef MDSS_DSI_IRISP_API_H
 #define MDSS_DSI_IRISP_API_H
 
@@ -18,4 +17,3 @@ extern void iris_panel_cmd_passthrough(struct mdss_dsi_ctrl_pdata *ctrl, struct 
 extern int iris_power_clock_gate_on(struct msm_fb_data_type *mfd, int *pflag);
 extern void iris_low_power_mode_notify(struct msm_fb_data_type *mfd, int *pflag);
 #endif
-

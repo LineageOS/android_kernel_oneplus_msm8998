@@ -121,38 +121,38 @@ static void find_freq(struct devfreq_dev_profile *p, unsigned long *freq,
 }
 
 static void find_freq_cpubw(struct devfreq_dev_profile *p, unsigned long *freq,
-                        u32 flags)
+			u32 flags)
 {
-        int i;
-        unsigned long atmost, atleast, f;
-        int min_index, max_index;
+	int i;
+	unsigned long atmost, atleast, f;
+	int min_index, max_index;
 
-        if (cpubw_flag) {
-                min_index = qos_request_value.min_devfreq;
-                if (p->max_state > qos_request_value.max_devfreq)
-                        max_index = qos_request_value.max_devfreq;
-                else
-                        max_index = p->max_state;
-        } else {
-                min_index = 0;
-                max_index =  p->max_state;
-        }
+	if (cpubw_flag) {
+		min_index = qos_request_value.min_devfreq;
+		if (p->max_state > qos_request_value.max_devfreq)
+			max_index = qos_request_value.max_devfreq;
+		else
+			max_index = p->max_state;
+	} else {
+		min_index = 0;
+		max_index =  p->max_state;
+	}
 
-        atmost = p->freq_table[min_index];
-        atleast = p->freq_table[max_index-1];
+	atmost = p->freq_table[min_index];
+	atleast = p->freq_table[max_index-1];
 
-        for (i = min_index; i < max_index; i++) {
-                f = p->freq_table[i];
-                if (f <= *freq)
-                        atmost = max(f, atmost);
-                if (f >= *freq)
-                        atleast = min(f, atleast);
-        }
+	for (i = min_index; i < max_index; i++) {
+		f = p->freq_table[i];
+		if (f <= *freq)
+			atmost = max(f, atmost);
+		if (f >= *freq)
+			atleast = min(f, atleast);
+	}
 
-        if (flags & DEVFREQ_FLAG_LEAST_UPPER_BOUND)
-                *freq = atmost;
-        else
-                *freq = atleast;
+	if (flags & DEVFREQ_FLAG_LEAST_UPPER_BOUND)
+		*freq = atmost;
+	else
+		*freq = atleast;
 }
 
 static int devbw_target_cpubw(struct device *dev, unsigned long *freq, u32 flags)
@@ -222,7 +222,7 @@ static int devfreq_qos_handler(struct notifier_block *b, unsigned long val, void
 	return NOTIFY_OK;
 }
 static struct notifier_block devfreq_qos_notifier = {
-        .notifier_call = devfreq_qos_handler,
+	.notifier_call = devfreq_qos_handler,
 };
 
 #define PROP_PORTS "qcom,src-dst-ports"
@@ -338,6 +338,7 @@ int devfreq_add_devbw(struct device *dev)
 		qos_request_value.min_devfreq = 0;
 		qos_request_value.max_devfreq = len;
 	}
+
 	return 0;
 }
 

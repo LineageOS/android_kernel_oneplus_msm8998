@@ -21,17 +21,17 @@
 /* chenneng@camera 20151117 add for product information */
 #include <linux/project_info.h>
 struct camera_vendor_match_tbl {
-    char sensor_name[32];
-    char vendor_name[32];
+	char sensor_name[32];
+	char vendor_name[32];
 };
 static struct camera_vendor_match_tbl match_tbl[] = {
-    {"imx398","Sony"},
-    {"imx362","Sony"},
-    {"imx350","Sony"},
-    {"imx371","Sony"},
-    {"imx179","Sony"},
-    {"s5k3p8sp","SAMSUNG"},
-    {"imx376k","Sony"},
+	{"imx398", "Sony"},
+	{"imx362", "Sony"},
+	{"imx350", "Sony"},
+	{"imx371", "Sony"},
+	{"imx179", "Sony"},
+	{"s5k3p8sp", "SAMSUNG"},
+	{"imx376k", "Sony"},
 };
 
 /* Logging macro */
@@ -767,7 +767,7 @@ int32_t msm_sensor_driver_probe(void *setting,
 	struct msm_camera_sensor_slave_info *slave_info = NULL;
 	struct msm_camera_slave_info        *camera_info = NULL;
 /* chenneng@camera 20151117 add for product information */
-	uint32_t count = 0,i;
+	uint32_t count = 0, i;
 	enum COMPONENT_TYPE CameraID;
 
 	unsigned long                        mount_pos = 0;
@@ -1112,24 +1112,24 @@ CSID_TG:
 	s_ctrl->sensordata->cam_slave_info = slave_info;
 
 /* chenneng@camera 20151117 add for product information */
-    if (0 == slave_info->camera_id)
-        CameraID = R_CAMERA;
-    else if (1 == slave_info->camera_id)
-        CameraID = SECOND_R_CAMERA;
-    else if (2 == slave_info->camera_id)
-        CameraID = F_CAMERA;
+	if (slave_info->camera_id == 0)
+		CameraID = R_CAMERA;
+	else if (slave_info->camera_id == 1)
+		CameraID = SECOND_R_CAMERA;
+	else if (slave_info->camera_id == 2)
+		CameraID = F_CAMERA;
 
-    count = ARRAY_SIZE(match_tbl);
-    for (i = 0;i < count;i++) {
-        if (!strcmp(slave_info->sensor_name,match_tbl[i].sensor_name))
-            break;
-    }
-    if (i >= count)
-        pr_err("%s,Match camera sensor faild!,current sensor name is %s",
-            __func__,slave_info->sensor_name);
-    else
-        push_component_info(CameraID,slave_info->sensor_name,
-            match_tbl[i].vendor_name);
+	count = ARRAY_SIZE(match_tbl);
+	for (i = 0; i < count; i++) {
+	if (!strcmp(slave_info->sensor_name, match_tbl[i].sensor_name))
+		break;
+	}
+	if (i >= count)
+		pr_err("%s,Match camera sensor failed!,current sensor name is %s",
+		__func__, slave_info->sensor_name);
+	else
+		push_component_info(CameraID, slave_info->sensor_name,
+		match_tbl[i].vendor_name);
 
 	msm_sensor_fill_sensor_info(s_ctrl, probed_info, entity_name);
 

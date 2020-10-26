@@ -577,7 +577,7 @@ static struct kmemleak_object *create_object(unsigned long ptr, size_t size,
 	if (in_irq()) {
 		object->pid = 0;
 		strncpy(object->comm, "hardirq", sizeof(object->comm));
-	} else if (in_softirq()) {
+	} else if (in_serving_softirq()) {
 		object->pid = 0;
 		strncpy(object->comm, "softirq", sizeof(object->comm));
 	} else {
@@ -1872,15 +1872,15 @@ void __init kmemleak_init(void)
 {
 	int i;
 	unsigned long flags;
-    if(0 == oem_kmemleak_flag){
+	if(0 == oem_kmemleak_flag){
 #ifdef CONFIG_DEBUG_KMEMLEAK_DEFAULT_OFF
-	if (!kmemleak_skip_disable) {
-		kmemleak_early_log = 0;
-		kmemleak_disable();
-		return;
-	}
+		if (!kmemleak_skip_disable) {
+			kmemleak_early_log = 0;
+			kmemleak_disable();
+			return;
+		}
 #endif
-    }
+	}
 
 	pr_info("Kernel memory leak detector enabled\n");
 
@@ -1992,21 +1992,23 @@ static int __init kmemleak_late_init(void)
 }
 late_initcall(kmemleak_late_init);
 
+//++add by lyb@BSP for kmemleak detect
 static int __init kmem_leak_detect(char *str)
 {
-    if(str == NULL){
-        return -1;
-    }
+	if(str == NULL){
+		return -1;
+	}
 
 	if (strcmp(str, "true") == 0){
 		kmemleak_skip_disable = 1;
-        oem_kmemleak_flag=1;
-		}
+		oem_kmemleak_flag=1;
+	}
 	else {
-	    kmemleak_disable();
-	    oem_kmemleak_flag=0;
-        }
-    return 0;
+		kmemleak_disable();
+		oem_kmemleak_flag=0;
+	}
+	return 0;
 }
 
 early_param("kmemleak_detect", kmem_leak_detect);
+//-- add by lyb@BSP for kmemleak

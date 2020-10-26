@@ -584,7 +584,6 @@ static int camera_v4l2_fh_release(struct file *filep)
 		mutex_destroy(&sp->lock);
 		kzfree(sp);
 	}
-
 	return 0;
 }
 

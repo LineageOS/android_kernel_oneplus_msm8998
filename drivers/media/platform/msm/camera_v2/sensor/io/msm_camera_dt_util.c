@@ -1464,7 +1464,8 @@ int msm_camera_power_up(struct msm_camera_power_ctrl_t *ctrl,
 		switch (power_setting->seq_type) {
 		case SENSOR_CLK:
 			if (power_setting->seq_val >= ctrl->clk_info_size) {
-				pr_err_ratelimited("%s clk index %d >= max %zu\n", __func__,
+				pr_err_ratelimited("%s clk index %d >= max %zu\n",
+					__func__,
 					power_setting->seq_val,
 					ctrl->clk_info_size);
 				goto power_up_failed;
@@ -1476,7 +1477,8 @@ int msm_camera_power_up(struct msm_camera_power_ctrl_t *ctrl,
 				ctrl->clk_info, ctrl->clk_ptr,
 				ctrl->clk_info_size, true);
 			if (rc < 0) {
-				pr_err_ratelimited("%s: clk enable failed\n", __func__);
+				pr_err_ratelimited("%s: clk enable failed\n",
+				__func__);
 				goto power_up_failed;
 			}
 			break;

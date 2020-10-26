@@ -46,6 +46,7 @@ MODULE_PARM_DESC(record_size,
 		"size of each dump done on oops/panic");
 
 static ulong ramoops_console_size = 256*1024UL;
+
 module_param_named(console_size, ramoops_console_size, ulong, 0400);
 MODULE_PARM_DESC(console_size, "size of kernel console log");
 
@@ -517,7 +518,6 @@ void notrace ramoops_console_write_buf(const char *buf, size_t size)
 	struct ramoops_context *cxt = &oops_cxt;
 	persistent_ram_write(cxt->cprz, buf, size);
 }
-
 
 static int ramoops_parse_dt(struct platform_device *pdev,
 		struct ramoops_platform_data *pdata)

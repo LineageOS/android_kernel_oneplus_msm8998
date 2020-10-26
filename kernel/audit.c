@@ -1506,6 +1506,7 @@ void audit_log_format(struct audit_buffer *ab, const char *fmt, ...)
 	if (!ab)
 		return;
 
+	/* add by yangrujin@bsp 2016/4/1, control audit log print, not print audit log when loglevelt < 4 */
 	if (console_loglevel < 4)
 		return;
 

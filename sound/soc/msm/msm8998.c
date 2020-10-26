@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -641,7 +641,6 @@ static int msm_snd_enable_codec_ext_clk(struct snd_soc_codec *codec,
 					int enable, bool dapm);
 static int msm_wsa881x_init(struct snd_soc_component *component);
 
-/*zhiguang.su@MultiMedia.AudioDrv , 2017/6/6, read project string*/
 int op_project_17801;
 
 /*
@@ -3697,7 +3696,6 @@ static const struct snd_soc_dapm_widget msm_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Digital Mic5", NULL),
 };
 
-/*zhiguang.su@MultiMedia.AudioDrv , 2017/06/06, add for 17801 project*/
 static const struct snd_soc_dapm_widget msm_dapm_widgets_17801[] = {
 
 	SND_SOC_DAPM_SUPPLY("MCLK",  SND_SOC_NOPM, 0, 0,
@@ -3716,12 +3714,10 @@ static const struct snd_soc_dapm_widget msm_dapm_widgets_17801[] = {
 	SND_SOC_DAPM_MIC("Headset Mic", NULL),
 	SND_SOC_DAPM_MIC("ANCRight Headset Mic", NULL),
 	SND_SOC_DAPM_MIC("ANCLeft Headset Mic", NULL),
-/*zhiguang.su@MultiMedia.AudioDrv , 2017/05/27, add for analog mic*/
 	SND_SOC_DAPM_MIC("Analog Mic3", NULL),
 	SND_SOC_DAPM_MIC("Analog Mic4", NULL),
 	SND_SOC_DAPM_MIC("Analog Mic5", NULL),
 	SND_SOC_DAPM_MIC("Analog Mic6", NULL),
-
 	SND_SOC_DAPM_MIC("Digital Mic0", NULL),
 	SND_SOC_DAPM_MIC("Digital Mic1", NULL),
 	SND_SOC_DAPM_MIC("Digital Mic2", NULL),
@@ -4366,7 +4362,6 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 		return ret;
 	}
 
-/*zhiguang.su@MultiMedia.AudioDrv , 2017/05/27, add for analog mic*/
 	if (op_project_17801) {
 		snd_soc_dapm_new_controls(dapm, msm_dapm_widgets_17801,
 					ARRAY_SIZE(msm_dapm_widgets_17801));
@@ -4392,7 +4387,6 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_ignore_suspend(dapm, "Digital Mic3");
 	snd_soc_dapm_ignore_suspend(dapm, "Digital Mic4");
 	snd_soc_dapm_ignore_suspend(dapm, "Digital Mic5");
-/*zhiguang.su@MultiMedia.AudioDrv , 2017/05/27, add for analog mic*/
 	if (op_project_17801) {
 		snd_soc_dapm_ignore_suspend(dapm, "Analog Mic3");
 		snd_soc_dapm_ignore_suspend(dapm, "Analog Mic4");
@@ -5024,7 +5018,6 @@ static int msm_set_pinctrl(struct msm_pinctrl_info *pinctrl_info,
 
 	if (pinctrl_info->pinctrl == NULL) {
 		pr_debug("%s: pinctrl_info->pinctrl is NULL\n", __func__);
-		/*ret = -EINVAL;*/
 		goto err;
 	}
 
@@ -8467,7 +8460,6 @@ static int msm_audrx_stub_init(struct snd_soc_pcm_runtime *rtd)
 		return ret;
 	}
 
-/*zhiguang.su@MultiMedia.AudioDrv , 2017/05/27, add for analog mic*/
 	if (op_project_17801) {
 		snd_soc_dapm_new_controls(dapm, msm_dapm_widgets_17801,
 					ARRAY_SIZE(msm_dapm_widgets_17801));
@@ -8806,7 +8798,6 @@ static int msm_init_wsa_dev(struct platform_device *pdev,
 	char *dev_name_str = NULL;
 	int found = 0;
 	int ret = 0;
-/*wangdongdong@MultiMediaService,add to avoid wsa init*/
 	return ret;
 	/* Get maximum WSA device count for this platform */
 	ret = of_property_read_u32(pdev->dev.of_node,
@@ -9073,7 +9064,6 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, card);
 	snd_soc_card_set_drvdata(card, pdata);
 
-/*zhiguang.su@MultiMedia.AudioDrv , 2017/6/6, read project string*/
 	ret = of_property_read_bool(card->dev->of_node, "op,project_17801");
 	if (ret)
 		op_project_17801 = 0;

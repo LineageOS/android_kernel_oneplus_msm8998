@@ -100,4 +100,3 @@ config NFC_PN80T
         help
           This enables the SPI driver for the NXP PN80T-based embedded
           secure element using the NFC_PN5XX driver to control the power.
-

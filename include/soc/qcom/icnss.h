@@ -56,6 +56,8 @@ struct icnss_driver_ops {
 	int (*suspend_noirq)(struct device *dev);
 	int (*resume_noirq)(struct device *dev);
 	int (*uevent)(struct device *dev, struct icnss_uevent_data *uevent);
+	int (*idle_shutdown)(struct device *dev);
+	int (*idle_restart)(struct device *dev);
 };
 
 
@@ -159,6 +161,6 @@ extern u8 *icnss_get_wlan_mac_address(struct device *dev, uint32_t *num);
 extern int icnss_trigger_recovery(struct device *dev);
 extern void icnss_block_shutdown(bool status);
 #if 1
-extern void cnss_set_fw_version(u32 version);
+extern void cnss_set_fw_version(u32 version, u32 ext);
 #endif
 #endif /* _ICNSS_WLAN_H_ */

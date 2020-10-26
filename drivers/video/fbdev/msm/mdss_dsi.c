@@ -426,8 +426,8 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 			__func__, __mdss_dsi_pm_name(DSI_PANEL_PM));
 		return ret;
 	}
-	
-     mdss_dsi_disp_vci_en(pdata, 1);
+
+	mdss_dsi_disp_vci_en(pdata, 1);
 	/*
 	 * If continuous splash screen feature is enabled, then we need to
 	 * request all the GPIOs that have already been configured in the
@@ -459,7 +459,6 @@ static int mdss_dsi_panel_power_ctrl(struct mdss_panel_data *pdata,
 {
 	int ret = 0;
 	struct mdss_panel_info *pinfo;
-
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -898,7 +897,7 @@ static ssize_t mdss_dsi_cmd_write(struct file *file, const char __user *p,
 {
 	struct buf_data *pcmds = file->private_data;
 	ssize_t ret = 0;
-	int blen = 0;
+	unsigned int blen = 0;
 	char *string_buf;
 
 	mutex_lock(&pcmds->dbg_mutex);
@@ -910,6 +909,11 @@ static ssize_t mdss_dsi_cmd_write(struct file *file, const char __user *p,
 
 	/* Allocate memory for the received string */
 	blen = count + (pcmds->sblen);
+	if (blen > U32_MAX - 1) {
+		mutex_unlock(&pcmds->dbg_mutex);
+		return -EINVAL;
+	}
+
 	string_buf = krealloc(pcmds->string_buf, blen + 1, GFP_KERNEL);
 	if (!string_buf) {
 		pr_err("%s: Failed to allocate memory\n", __func__);
@@ -917,6 +921,7 @@ static ssize_t mdss_dsi_cmd_write(struct file *file, const char __user *p,
 		return -ENOMEM;
 	}
 
+	pcmds->string_buf = string_buf;
 	/* Writing in batches is possible */
 	ret = simple_write_to_buffer(string_buf, blen, ppos, p, count);
 	if (ret < 0) {
@@ -926,7 +931,6 @@ static ssize_t mdss_dsi_cmd_write(struct file *file, const char __user *p,
 	}
 
 	string_buf[ret] = '\0';
-	pcmds->string_buf = string_buf;
 	pcmds->sblen = count;
 	mutex_unlock(&pcmds->dbg_mutex);
 	return ret;
@@ -1144,6 +1148,7 @@ static int _mdss_dsi_refresh_cmd(struct buf_data *new_cmds,
 
 	if (new_cmds->sync_flag)
 		return 0;
+
 	bp = new_cmds->buf;
 	len = new_cmds->blen;
 	cnt = 0;
@@ -1165,6 +1170,7 @@ static int _mdss_dsi_refresh_cmd(struct buf_data *new_cmds,
 				bp[0], len);
 		return -EINVAL;
 	}
+
 	/* Reallocate space for dcs commands */
 	cmds = kzalloc(cnt * sizeof(struct dsi_cmd_desc), GFP_KERNEL);
 	if (!cmds) {
@@ -1310,8 +1316,7 @@ static int mdss_dsi_off(struct mdss_panel_data *pdata, int power_state)
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
-    pr_err("%s start\n", __func__);
-//#endif
+	pr_err("%s start\n", __func__);
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
@@ -1373,8 +1378,7 @@ panel_power_ctrl:
 	ctrl_pdata->cur_max_pkt_size = 0;
 end:
 	pr_debug("%s-:\n", __func__);
-    pr_err("%s end\n", __func__);
-//#endif
+	pr_err("%s end\n", __func__);
 	return ret;
 }
 
@@ -1495,8 +1499,7 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
-    pr_err("%s start\n", __func__);
-//#endif
+	pr_err("%s start\n", __func__);
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
@@ -1587,8 +1590,7 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 
 end:
 	pr_debug("%s-:\n", __func__);
-    pr_err("%s end\n", __func__);
-//#endif
+	pr_err("%s end\n", __func__);
 	return ret;
 }
 
@@ -1718,15 +1720,9 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 		mipi->vsync_enable && mipi->hw_vsync_mode) {
 		mdss_dsi_set_tear_on(ctrl_pdata);
 
-   /*delayed_work*/
 		if (mdss_dsi_is_te_based_esd(ctrl_pdata))
 			schedule_delayed_work(&ctrl_pdata->techeck_work,
 			msecs_to_jiffies(3000));
-    /*  #else */
-    /* if (mdss_dsi_is_te_based_esd(ctrl_pdata))
-     *  enable_irq(gpio_to_irq(ctrl_pdata->disp_te_gpio));
-     */
-
 	}
 
 	ctrl_pdata->ctrl_state |= CTRL_STATE_PANEL_INIT;
@@ -1798,12 +1794,7 @@ static int mdss_dsi_blank(struct mdss_panel_data *pdata, int power_state)
 		mipi->vsync_enable && mipi->hw_vsync_mode) {
 		if (mdss_dsi_is_te_based_esd(ctrl_pdata)) {
 
-       /* #ifdef VENDOR */
 		cancel_delayed_work_sync(&ctrl_pdata->techeck_work);
-       /* disable_irq(gpio_to_irq(
-		*	ctrl_pdata->disp_te_gpio));
-		*/
-       /* #endif  */
 				atomic_dec(&ctrl_pdata->te_irq_ready);
 		}
 		mdss_dsi_set_tear_off(ctrl_pdata);
@@ -2678,8 +2669,6 @@ static int mdss_dsi_reset_write_ptr(struct mdss_panel_data *pdata)
 	struct mdss_panel_info *pinfo;
 	int rc = 0;
 
-	 
-	
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
@@ -3138,7 +3127,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 	case MDSS_EVENT_PANEL_GET_SRGB_MODE:
 		rc = mdss_dsi_panel_get_srgb_mode(ctrl_pdata);
 		break;
-
 	case MDSS_EVENT_PANEL_SET_ADOBE_RGB_MODE:
 		ctrl_pdata->Adobe_RGB_mode = (int)(unsigned long) arg;
 		mdss_dsi_panel_set_adobe_rgb_mode(ctrl_pdata,
@@ -3147,7 +3135,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 	case MDSS_EVENT_PANEL_GET_ADOBE_RGB_MODE:
 		rc = mdss_dsi_panel_get_adobe_rgb_mode(ctrl_pdata);
 		break;
-	/* #endif */
 	case MDSS_EVENT_PANEL_SET_DCI_P3_MODE:
 		ctrl_pdata->dci_p3_mode = (int)(unsigned long) arg;
 		if (ctrl_pdata->dci_p3_mode == 1)
@@ -3158,7 +3145,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 	case MDSS_EVENT_PANEL_GET_DCI_P3_MODE:
 		rc = mdss_dsi_panel_get_dci_p3_mode(ctrl_pdata);
 		break;
-	/* #endif */
 	case MDSS_EVENT_PANEL_SET_NIGHT_MODE:
 		ctrl_pdata->night_mode = (int)(unsigned long) arg;
 		mdss_dsi_panel_set_night_mode(ctrl_pdata,
@@ -3184,7 +3170,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 	case MDSS_EVENT_PANEL_GET_ADAPTION_MODE:
 		rc = mdss_dsi_panel_get_adaption_mode(ctrl_pdata);
 		break;
-	/* #endif */
 	case MDSS_EVENT_DSI_TIMING_DB_CTRL:
 		mdss_dsi_timing_db_ctrl(ctrl_pdata, (int)(unsigned long)arg);
 		break;
@@ -3786,12 +3771,11 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 		return rc;
 	}
 
-		if (mdss_dsi_is_te_based_esd(ctrl_pdata)) {
-			init_completion(&ctrl_pdata->te_comp);
-			INIT_DELAYED_WORK(&ctrl_pdata->techeck_work,
-			techeck_work_func);
-		}
-	/* #endif */
+	if (mdss_dsi_is_te_based_esd(ctrl_pdata)) {
+		init_completion(&ctrl_pdata->te_comp);
+		INIT_DELAYED_WORK(&ctrl_pdata->techeck_work,
+		techeck_work_func);
+	}
 
 	if (mdss_dsi_is_te_based_esd(ctrl_pdata)) {
 		rc = devm_request_irq(&pdev->dev,
@@ -4693,6 +4677,7 @@ static int mdss_dsi_parse_gpio_params(struct platform_device *ctrl_pdev,
 		pr_debug("%s:%d mode gpio not specified\n", __func__, __LINE__);
 		ctrl_pdata->lcd_mode_sel_gpio = -EINVAL;
 	}
+
 	ctrl_pdata->disp_vci_en_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
 		"qcom,platform-vci-gpio", 0);
 	if (!gpio_is_valid(ctrl_pdata->disp_vci_en_gpio))
@@ -4705,45 +4690,43 @@ static int mdss_dsi_parse_gpio_params(struct platform_device *ctrl_pdev,
 	if (!gpio_is_valid(ctrl_pdata->disp_poc_en_gpio))
 		   pr_err("%s:%d, poc gpio not specified\n",
 						__func__, __LINE__);
-						
+
 	ctrl_pdata->isp_1v1_en_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
 		"qcom,isp-1v1-en-gpio", 0);
 	if (!gpio_is_valid(ctrl_pdata->isp_1v1_en_gpio))
 		pr_err("%s:%d, isp-1v1-en gpio not specified\n",
 						__func__, __LINE__);
-
-    ctrl_pdata->px_bp_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node, "qcom,px-bp-gpio", 0);
-    if (gpio_is_valid(ctrl_pdata->px_bp_gpio)){
-        if (gpio_request(ctrl_pdata->px_bp_gpio, "px-bp-gpio")){
-            pr_err("%s:%d, px_bp_gpio request fail.\n",
+	ctrl_pdata->px_bp_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node, "qcom,px-bp-gpio", 0);
+	if (gpio_is_valid(ctrl_pdata->px_bp_gpio)){
+		if (gpio_request(ctrl_pdata->px_bp_gpio, "px-bp-gpio")){
+			pr_err("%s:%d, px_bp_gpio request fail.\n",
 						__func__, __LINE__);
-        }else
-            gpio_direction_output(ctrl_pdata->px_bp_gpio, 0);
-    }else{
-        pr_err("%s:%d, px_bp_gpio gpio not specified\n", __func__, __LINE__);
-    }
+	}else
+		gpio_direction_output(ctrl_pdata->px_bp_gpio, 0);
+	}else{
+		pr_err("%s:%d, px_bp_gpio gpio not specified\n", __func__, __LINE__);
+	}
 
-    if (!of_property_read_string(ctrl_pdev->dev.of_node, "qcom,px-ext-clk", &ctrl_pdata->px_clk_src_name)){
-        if (!strcmp(ctrl_pdata->px_clk_src_name, "BBCLK2")) {
-            ctrl_pdata->px_clk_src = clk_get(&ctrl_pdev->dev, "px_ext_clk");
-            if(IS_ERR(ctrl_pdata->px_clk_src)) {
-                pr_err("can not get px_ext_clk\n");
-            }else{
-                 clk_set_rate(ctrl_pdata->px_clk_src, 19200000);
-                 if (clk_prepare_enable(ctrl_pdata->px_clk_src)){
-                    pr_err("Enable px_clk fail!\n");
-                    ctrl_pdata->px_clk_enabled = 0;
-                }else{
-                    ctrl_pdata->px_clk_enabled = 1;
-                }
-            }
-        }
-    }else{
-        pr_err("%s:%d, can not get px_clk_src_name.\n",
+	if (!of_property_read_string(ctrl_pdev->dev.of_node, "qcom,px-ext-clk", &ctrl_pdata->px_clk_src_name)){
+		if (!strcmp(ctrl_pdata->px_clk_src_name, "BBCLK2")) {
+			ctrl_pdata->px_clk_src = clk_get(&ctrl_pdev->dev, "px_ext_clk");
+			if(IS_ERR(ctrl_pdata->px_clk_src)) {
+				pr_err("can not get px_ext_clk\n");
+			}else{
+				clk_set_rate(ctrl_pdata->px_clk_src, 19200000);
+				if (clk_prepare_enable(ctrl_pdata->px_clk_src)){
+					pr_err("Enable px_clk fail!\n");
+					ctrl_pdata->px_clk_enabled = 0;
+				}else{
+					ctrl_pdata->px_clk_enabled = 1;
+				}
+			}
+		}
+	}else{
+		pr_err("%s:%d, can not get px_clk_src_name.\n",
 						__func__, __LINE__);
-    }
-
-/* #endif */
+	}
+//#endif
 	return 0;
 }
 

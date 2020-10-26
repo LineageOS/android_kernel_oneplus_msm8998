@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2017, 2019 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -42,8 +42,6 @@ static int msm_vb2_queue_setup(struct vb2_queue *q,
 			   data->type);
 		goto done;
 	}
-	rc = 0;
-
 done:
 	mutex_unlock(q->lock);
 	return rc;

@@ -29,7 +29,6 @@
 #include <linux/input.h>
 
 #include "config.h"
-/*zhiguang.su@MultiMedia.AudioDrv, 2014-4-14, add for l21 power*/
 #include <linux/regulator/consumer.h>
 
 
@@ -104,7 +103,6 @@ MODULE_PARM_DESC(no_start, "do not start the work queue; for debugging via user\
 struct tfa98xx *g_tfa98xx = NULL;
 EXPORT_SYMBOL_GPL(g_tfa98xx);
 
-/*zhiguang.su@MultiMedia.AudioDrv, 2014-4-14, add for l21 power*/
 struct regulator *bob_power;
 EXPORT_SYMBOL_GPL(bob_power);
 
@@ -116,7 +114,6 @@ static int get_profile_from_list(char *buf, int id);
 static int get_profile_id_for_sr(int id, unsigned int rate); 
 /*zhiguang.su@MultiMediaService,2017-02-09,avoid no sound for ftm*/
 static void tfa98xx_dsp_startInit(struct tfa98xx *tfa98xx);
-/*zhiguang.su@MultiMediaService,2017-04-26,add ftm spk pa rivision test*/
 static int tfa98xx_info_rivision_ctl(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_info *uinfo);
 static int tfa98xx_get_rivision_ctl(struct snd_kcontrol *kcontrol,
@@ -124,11 +121,9 @@ static int tfa98xx_get_rivision_ctl(struct snd_kcontrol *kcontrol,
 static int tfa98xx_set_rivision_ctl(struct snd_kcontrol *kcontrol,
 			     struct snd_ctl_elem_value *ucontrol);
 
-/*zhiguang.su@MultiMedia.AudioDrv, 2015-11-09, add for debug*/
 int testLogOn = 0;
 EXPORT_SYMBOL_GPL(testLogOn);
 
-/*wangdongdong@MultiMediaService,2016/11/30,add for speaker impedence detection*/
 static int tfa98xx_speaker_recalibration(Tfa98xx_handle_t handle,unsigned int *speakerImpedance);
 
 struct tfa98xx_rate {
@@ -148,7 +143,6 @@ static struct tfa98xx_rate rate_to_fssel[] = {
 	{ 48000, 8 },
 };
 
-/*zhiguang.su@MultiMediaService,2017-04-26,add ftm spk pa rivision test*/
 static struct snd_kcontrol_new tfa98xx_at_controls[] = {
 	{
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
@@ -158,6 +152,7 @@ static struct snd_kcontrol_new tfa98xx_at_controls[] = {
 		.put = tfa98xx_set_rivision_ctl,
 	},
 };
+
 static ssize_t tfa98xx_state_store(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t count)
 {
@@ -173,7 +168,6 @@ static ssize_t tfa98xx_state_show(struct device *dev, struct device_attribute *a
     char *str;
 	uint16_t status;
 	int ret, calibrate_done;
-/*wangdongdong@MultiMediaService,2016/11/30,add for speaker impedence detection*/
 	unsigned int speakerImpedance1 = 0;
     if(g_tfa98xx == NULL)
     {
@@ -249,7 +243,6 @@ r_c_err:
 static struct device_attribute tfa98xx_state_attr =
      __ATTR(calibra, 0444, tfa98xx_state_show, tfa98xx_state_store);
 
-/*zhiguang.su@MultiMedia.AudioDrv, 2015-11-05, add for debug*/
 static ssize_t tfa98xx_Log_state_store(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t count)
 {
@@ -279,7 +272,6 @@ static ssize_t tfa98xx_Log_state_show(struct device *dev, struct device_attribut
 
 static struct device_attribute tfa98xx_Log_state_attr =
      __ATTR(Log, S_IWUSR|S_IRUGO, tfa98xx_Log_state_show, tfa98xx_Log_state_store);
-
 
 /* Wrapper for tfa start */
 static enum tfa_error tfa98xx_tfa_start(struct tfa98xx *tfa98xx, int next_profile, int *vstep)
@@ -317,7 +309,7 @@ static int tfa98xx_input_open(struct input_dev *dev)
 	tfa98xx->tapdet_open = true;
 	tfa98xx_tapdet_check_update(tfa98xx);
 
-        return 0;
+	return 0;
 }
 
 static void tfa98xx_input_close(struct input_dev *dev)
@@ -781,7 +773,6 @@ static ssize_t tfa98xx_dbgfs_r_read(struct file *file,
 	char *str;
 	uint16_t status;
 	int ret, calibrate_done;
-/*wangdongdong@MultiMediaService,2016/11/30,add for speaker impedence detection*/
 	unsigned int speakerImpedance1 = 0;
 
 	mutex_lock(&tfa98xx->dsp_lock);
@@ -1152,7 +1143,6 @@ static void tfa98xx_debug_remove(struct tfa98xx *tfa98xx)
 		debugfs_remove_recursive(tfa98xx->dbg_dir);
 }
 #endif
-/*wangdongdong@MultiMediaService,2016/11/30,add for speaker impedence detection*/
 static int tfa98xx_speaker_recalibration(Tfa98xx_handle_t handle,unsigned int *speakerImpedance)
 {
 	int err, error = Tfa98xx_Error_Ok;
@@ -1414,7 +1404,7 @@ static void get_profile_basename(char* buf, char* profile)
 {
 	int cp_len = 0, idx = 0;
 	char *pch;
-            
+
 	pch = strchr(profile, '.');
 	idx = pch - profile;
 	cp_len = (pch != NULL) ? idx : (int) strlen(profile);
@@ -1512,7 +1502,7 @@ static int add_sr_to_profile(struct tfa98xx *tfa98xx, char *basename, int len, i
 
 			/* enter the (container)profile for this samplerate at the corresponding index */
 			bprof->sr_rate_sup[idx] = profile;
-            
+
 			pr_err("added profile:samplerate = [%d:%d] for mixer profile: %s\n", profile, sr, bprof->basename);    
 		}
 	}
@@ -1532,7 +1522,7 @@ static int tfa98xx_info_profile(struct snd_kcontrol *kcontrol,
 
 	if (uinfo->value.enumerated.item >= count)
 		uinfo->value.enumerated.item = count - 1;
-        
+
 	err = get_profile_from_list(profile_name, uinfo->value.enumerated.item);
 	if (err != 0)
 		return -EINVAL;
@@ -1580,7 +1570,6 @@ static int tfa98xx_set_stop_ctl(struct snd_kcontrol *kcontrol,
 	return 1;
 }
 
-/*zhiguang.su@MultiMediaService,2017-04-26,add ftm spk pa rivision test*/
 static int tfa98xx_info_rivision_ctl(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_info *uinfo)
 {
@@ -1674,7 +1663,7 @@ static int tfa98xx_create_controls(struct tfa98xx *tfa98xx)
 		bprofile->len = 0;
 		bprofile->item_id = -1;
 		INIT_LIST_HEAD(&bprofile->list);
-        
+
 		/* copy profile name into basename until the . */
 		get_profile_basename(bprofile->basename, tfaContProfileName(tfa98xx->handle, prof));
 		bprofile->len = strlen(bprofile->basename);
@@ -1696,7 +1685,7 @@ static int tfa98xx_create_controls(struct tfa98xx *tfa98xx)
 				name = devm_kzalloc(tfa98xx->codec->dev, MAX_CONTROL_NAME, GFP_KERNEL);
 				if (!name)
 					return -ENOMEM;
-			        
+
 				scnprintf(name, MAX_CONTROL_NAME, "%s %s Playback Volume",
 				tfa98xx->fw.name, bprofile->basename);
 
@@ -1709,7 +1698,7 @@ static int tfa98xx_create_controls(struct tfa98xx *tfa98xx)
 				mix_index++;
 			}
 		}
-        
+
 		/* look for the basename profile in the list of mixer profiles and add the
 		   container profile index to the supported samplerates of this mixer profile */
 		add_sr_to_profile(tfa98xx, bprofile->basename, bprofile->len, prof);
@@ -1733,7 +1722,6 @@ static int tfa98xx_create_controls(struct tfa98xx *tfa98xx)
 
 	/* set the number of user selectable profiles in the mixer */
 	tfa98xx_mixer_profiles = id;
-/*zhiguang.su@MultiMediaService,2017-04-26,add ftm spk pa rivision test*/
 	snd_soc_add_codec_controls(tfa98xx->codec, tfa98xx_at_controls,
 				   ARRAY_SIZE(tfa98xx_at_controls));
 	return snd_soc_add_codec_controls(tfa98xx->codec,
@@ -3054,7 +3042,6 @@ static int tfa98xx_probe(struct snd_soc_codec *codec)
 
 	INIT_DELAYED_WORK(&tfa98xx->init_work, tfa98xx_dsp_init_work);
 
-
 	INIT_DELAYED_WORK(&tfa98xx->interrupt_work, tfa98xx_interrupt);
 	INIT_DELAYED_WORK(&tfa98xx->tapdet_work, tfa98xx_tapdet_work);
 
@@ -3506,7 +3493,6 @@ static int tfa98xx_i2c_probe(struct i2c_client *i2c,
 		tfa98xx->flags |= TFA98XX_FLAG_SKIP_INTERRUPTS;
 	}
 
-/*zhiguang.su@MultiMedia.AudioDrv, 2014-4-14, add for bob power*/
 	pr_err("%s request bob power\n", __func__);
 	bob_power = NULL;
 	bob_power = regulator_get(&i2c->dev, "bob_power");

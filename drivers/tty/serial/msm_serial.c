@@ -412,10 +412,14 @@ no_rx:
 
 static inline void msm_wait_for_xmitr(struct uart_port *port)
 {
+	unsigned int timeout = 500000;
+
 	while (!(msm_read(port, UART_SR) & UART_SR_TX_EMPTY)) {
 		if (msm_read(port, UART_ISR) & UART_ISR_TX_READY)
 			break;
 		udelay(1);
+		if (!timeout--)
+			break;
 	}
 	msm_write(port, UART_CR_CMD_RESET_TX_READY, UART_CR);
 }
@@ -889,6 +893,7 @@ static void msm_handle_tx(struct uart_port *port)
 	struct circ_buf *xmit = &msm_port->uart.state->xmit;
 	struct msm_dma *dma = &msm_port->tx_dma;
 	unsigned int pio_count, dma_count, dma_min;
+	char buf[4] = { 0 };
 	void __iomem *tf;
 	int err = 0;
 
@@ -898,10 +903,12 @@ static void msm_handle_tx(struct uart_port *port)
 		else
 			tf = port->membase + UART_TF;
 
+		buf[0] = port->x_char;
+
 		if (msm_port->is_uartdm)
 			msm_reset_dm_count(port, 1);
 
-		iowrite8_rep(tf, &port->x_char, 1);
+		iowrite32_rep(tf, buf, 1);
 		port->icount.tx++;
 		port->x_char = 0;
 		return;
@@ -1746,8 +1753,6 @@ msm_serial_early_console_setup_dm(struct earlycon_device *device,
 OF_EARLYCON_DECLARE(msm_serial_dm, "qcom,msm-uartdm",
 		    msm_serial_early_console_setup_dm);
 
-/*Anderson-Config_UARTPIN_as_GPIO+[*/
-
 struct oemconsole {
 	bool default_console;
 	bool force_console;
@@ -1769,7 +1774,6 @@ static int __init parse_console_config(char *str)
 	return 0;
 }
 early_param("console", parse_console_config);
-/*Anderson-Config_UARTPIN_as_GPIO+]*/
 
 static struct uart_driver msm_uart_driver;
 
@@ -1814,10 +1818,8 @@ static int msm_serial_probe(struct platform_device *pdev)
 	struct uart_port *port;
 	const struct of_device_id *id;
 	int irq, line;
-	/*Anderson-Config_UARTPIN_as_GPIO+[*/
 	struct pinctrl *pinctrl = NULL;
 	struct pinctrl_state *set_state = NULL;
-	/*Anderson-Config_UARTPIN_as_GPIO+]*/
 
 	if (pdev->dev.of_node)
 		line = of_alias_get_id(pdev->dev.of_node, "serial");
@@ -1836,7 +1838,6 @@ static int msm_serial_probe(struct platform_device *pdev)
 	port->dev = &pdev->dev;
 	msm_port = UART_TO_MSM(port);
 
-	/*Anderson-Config_UARTPIN_as_GPIO+[*/
 	pinctrl = devm_pinctrl_get(port->dev);
 	if (pinctrl != NULL) {
 		if (!oem_console.default_console &&
@@ -1852,7 +1853,6 @@ static int msm_serial_probe(struct platform_device *pdev)
 				pinctrl_select_state(pinctrl, set_state);
 		}
 	}
-	/*Anderson-Config_UARTPIN_as_GPIO+]*/
 
 	id = of_match_device(msm_uartdm_table, &pdev->dev);
 	if (id)
@@ -1968,7 +1968,6 @@ static int __init msm_serial_init(void)
 	ret = platform_driver_register(&msm_platform_driver);
 	if (unlikely(ret))
 		uart_unregister_driver(&msm_uart_driver);
-	/*Anderson-Config_UARTPIN_as_GPIO*[*/
 	if (!oem_console.default_console && !oem_console.force_console) {
 		platform_driver_unregister(&msm_platform_driver);
 		uart_unregister_driver(&msm_uart_driver);
@@ -1977,7 +1976,6 @@ static int __init msm_serial_init(void)
 		oem_console.console_initialized = 1;
 		pr_info("msm_serial: driver initialized\n");
 	}
-	/*Anderson-Config_UARTPIN_as_GPIO*]*/
 
 	return ret;
 }
@@ -2153,6 +2151,7 @@ static struct platform_driver oem_force_serial_driver = {
 	.probe = oem_force_serial_probe,
 };
 module_platform_driver(oem_force_serial_driver);
+
 module_init(msm_serial_init);
 module_exit(msm_serial_exit);
 

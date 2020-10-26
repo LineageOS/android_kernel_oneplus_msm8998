@@ -108,7 +108,6 @@ TFA_INTERNAL enum Tfa98xx_Error tfa98xx_wait_result(Tfa98xx_handle_t handle, int
 TFA_INTERNAL void tfa98xx_apply_deferred_calibration(Tfa98xx_handle_t handle);
 TFA_INTERNAL void tfa98xx_deferred_calibration_status(Tfa98xx_handle_t handle, int calibrateDone);
 TFA_INTERNAL int print_calibration(Tfa98xx_handle_t handle, char *str, size_t size);
-/*wangdongdong@MultiMedia,2016/11/30,add for calibrate node*/
 TFA_INTERNAL int print_calibration_modify(Tfa98xx_handle_t handle, char *str, size_t size);
 
 #endif /* __TFA_INTERNAL_H__ */

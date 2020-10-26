@@ -26,7 +26,6 @@ const char cmdline_info[MAX_ITEM][MAX_LENGTH] = {
 	"androidboot.serialno=",
 	"androidboot.hw_version=",
 	"androidboot.rf_version=",
-	"androidboot.pcba_number=",
 };
 
 #endif

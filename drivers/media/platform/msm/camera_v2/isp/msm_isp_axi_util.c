@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -601,7 +601,6 @@ static void msm_isp_update_framedrop_reg(struct msm_vfe_axi_stream *stream_info)
 	if (stream_info->undelivered_request_cnt > 0)
 		stream_info->current_framedrop_period =
 			MSM_VFE_STREAM_STOP_PERIOD;
-
 	/*
 	 * re-configure the period pattern, only if it's not already
 	 * set to what we want
@@ -1024,8 +1023,9 @@ void msm_isp_notify(struct vfe_device *vfe_dev, uint32_t event_type,
 			vfe_dev->isp_raw2_debug++;
 		}
 
-		ISP_DBG("%s: vfe %d frame_src %d\n", __func__,
-			vfe_dev->pdev->id, frame_src);
+		pr_err("ISP_EVENT_SOF vfe %d frame_src %d frame id: %u\n",
+		vfe_dev->pdev->id, frame_src,
+		vfe_dev->axi_data.src_info[frame_src].frame_id);
 
 		/*
 		 * Cannot support dual_cam and framedrop same time in union.
@@ -2485,18 +2485,6 @@ int msm_isp_ab_ib_update_lpm_mode(struct vfe_device *vfe_dev, void *arg)
 		rc = -1;
 		return rc;
 	}
-/*	if (ab_ib_vote->num_src >= VFE_AXI_SRC_MAX) {
-		pr_err("%s: ab_ib_vote num_src is exceeding limit\n",
-			__func__);
-		rc = -1;
-		return rc;
-	}
-	if (ab_ib_vote->num_src >= VFE_AXI_SRC_MAX) {
-		pr_err("%s: ab_ib_vote num_src is exceeding limit\n",
-			__func__);
-		rc = -1;
-		return rc;
-	}*/
 	if (ab_ib_vote->lpm_mode) {
 		for (i = 0; i < ab_ib_vote->num_src; i++) {
 			stream_info =
@@ -4157,7 +4145,6 @@ void msm_isp_process_axi_irq_stream(struct vfe_device *vfe_dev,
 	} else if (done_buf && (done_buf->is_drop_reconfig != 1)) {
 		msm_isp_cfg_stream_scratch(stream_info, pingpong_status);
 	}
-
 	if (!done_buf) {
 		if (stream_info->buf_divert) {
 			vfe_dev->error_info.stream_framedrop_count[

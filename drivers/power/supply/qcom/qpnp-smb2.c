@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -631,7 +631,6 @@ static int smb2_usb_set_prop(struct power_supply *psy,
 	int rc = 0;
 
 	mutex_lock(&chg->lock);
-
 	if (!chg->typec_present && psp != POWER_SUPPLY_PROP_OTG_SWITCH) {
 		rc = -EINVAL;
 		goto unlock;
@@ -1883,7 +1882,6 @@ static int smb2_init_hw(struct smb2 *chip)
 		return rc;
 	}
 
-	/*xianglin modify otg current load to 1.5A*/
 	rc = smblib_masked_write(
 	chg, OTG_CURRENT_LIMIT_CFG_REG,
 	OTG_CURRENT_LIMIT_MASK, 0x5);
@@ -1892,6 +1890,7 @@ static int smb2_init_hw(struct smb2 *chip)
 			"Couldn't configure VBUS for SW control rc=%d\n", rc);
 		return rc;
 	}
+
 	val = (ilog2(chip->dt.wd_bark_time / 16) << BARK_WDOG_TIMEOUT_SHIFT) &
 						BARK_WDOG_TIMEOUT_MASK;
 	val |= BITE_WDOG_TIMEOUT_8S;
@@ -2536,6 +2535,7 @@ static const struct file_operations proc_ship_mode_operations = {
 	.llseek		= noop_llseek,
 };
 #endif
+
 static int smb2_probe(struct platform_device *pdev)
 {
 	struct smb2 *chip;
@@ -2707,6 +2707,7 @@ static int smb2_probe(struct platform_device *pdev)
 		 &proc_ship_mode_operations))
 	pr_err("Failed to register proc interface\n");
 #endif
+
 	if (usb_present) {
 		schedule_delayed_work(&chg->non_standard_charger_check_work,
 		msecs_to_jiffies(TIME_1000MS));

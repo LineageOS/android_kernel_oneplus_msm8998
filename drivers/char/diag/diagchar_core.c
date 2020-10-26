@@ -22,6 +22,7 @@
 #include <linux/sched.h>
 #include <linux/ratelimit.h>
 #include <linux/timer.h>
+#include <linux/sched.h>
 #include <linux/platform_device.h>
 #include <linux/msm_mhi.h>
 #ifdef CONFIG_DIAG_OVER_USB
@@ -485,10 +486,6 @@ static void diag_close_logging_process(const int pid)
 	if (diag_mask_clear_param)
 		diag_clear_masks(pid);
 
-	mutex_lock(&driver->diag_maskclear_mutex);
-	driver->mask_clear = 1;
-	mutex_unlock(&driver->diag_maskclear_mutex);
-
 	mutex_lock(&driver->diagchar_mutex);
 
 	p_mask =
@@ -586,9 +583,7 @@ static int diagchar_close(struct inode *inode, struct file *file)
 	DIAG_LOG(DIAG_DEBUG_USERSPACE, "diag: %s process exit with pid = %d\n",
 		current->comm, current->tgid);
 	ret = diag_remove_client_entry(file);
-	mutex_lock(&driver->diag_maskclear_mutex);
-	driver->mask_clear = 0;
-	mutex_unlock(&driver->diag_maskclear_mutex);
+
 	return ret;
 }
 
@@ -1160,7 +1155,7 @@ static void diag_remote_exit(void)
 	return;
 }
 
-int diagfwd_bridge_init(bool use_mhi)
+int diagfwd_bridge_init(int xprt)
 {
 	return 0;
 }
@@ -1716,6 +1711,51 @@ static uint32_t diag_translate_mask(uint32_t peripheral_mask)
 		ret |= (1 << UPD_SENSORS);
 
 	return ret;
+}
+
+static void diag_switch_logging_clear_mask(
+		struct diag_logging_mode_param_t *param, int pid)
+{
+	int new_mode;
+	struct diag_md_session_t *session_info = NULL;
+
+	mutex_lock(&driver->md_session_lock);
+	session_info = diag_md_session_get_pid(pid);
+	if (!session_info) {
+		DIAG_LOG(DIAG_DEBUG_USERSPACE, "Invalid pid: %d\n", pid);
+		mutex_unlock(&driver->md_session_lock);
+		return;
+	}
+	mutex_unlock(&driver->md_session_lock);
+
+	if (!param)
+		return;
+
+	if (!param->peripheral_mask) {
+		DIAG_LOG(DIAG_DEBUG_USERSPACE,
+			"asking for mode switch with no peripheral mask set\n");
+		return;
+	}
+
+	switch (param->req_mode) {
+	case CALLBACK_MODE:
+	case UART_MODE:
+	case SOCKET_MODE:
+	case MEMORY_DEVICE_MODE:
+		new_mode = DIAG_MEMORY_DEVICE_MODE;
+		break;
+	case USB_MODE:
+		new_mode = DIAG_USB_MODE;
+		break;
+	default:
+		DIAG_LOG(DIAG_DEBUG_USERSPACE,
+			"Request to switch to invalid mode: %d\n",
+			param->req_mode);
+		return;
+	}
+	if ((new_mode == DIAG_USB_MODE) && diag_mask_clear_param)
+		diag_clear_masks(pid);
+
 }
 
 static int diag_switch_logging(struct diag_logging_mode_param_t *param)
@@ -2431,6 +2471,7 @@ long diagchar_compat_ioctl(struct file *filp,
 		if (copy_from_user((void *)&mode_param, (void __user *)ioarg,
 				   sizeof(mode_param)))
 			return -EFAULT;
+		diag_switch_logging_clear_mask(&mode_param, current->tgid);
 		mutex_lock(&driver->diagchar_mutex);
 		result = diag_switch_logging(&mode_param);
 		mutex_unlock(&driver->diagchar_mutex);
@@ -2562,6 +2603,7 @@ long diagchar_ioctl(struct file *filp,
 		if (copy_from_user((void *)&mode_param, (void __user *)ioarg,
 				   sizeof(mode_param)))
 			return -EFAULT;
+		diag_switch_logging_clear_mask(&mode_param, current->tgid);
 		mutex_lock(&driver->diagchar_mutex);
 		result = diag_switch_logging(&mode_param);
 		mutex_unlock(&driver->diagchar_mutex);
@@ -3096,13 +3138,13 @@ static int diag_user_process_apps_data(const char __user *buf, int len,
 	mutex_lock(&apps_data_mutex);
 	mutex_lock(&driver->hdlc_disable_mutex);
 	hdlc_disabled = driver->p_hdlc_disabled[APPS_DATA];
+	mutex_unlock(&driver->hdlc_disable_mutex);
 	if (hdlc_disabled)
 		ret = diag_process_apps_data_non_hdlc(user_space_data, len,
 						      pkt_type);
 	else
 		ret = diag_process_apps_data_hdlc(user_space_data, len,
 						  pkt_type);
-	mutex_unlock(&driver->hdlc_disable_mutex);
 	mutex_unlock(&apps_data_mutex);
 
 	diagmem_free(driver, user_space_data, mempool);
@@ -3348,20 +3390,32 @@ exit:
 				DIAG_LOG(DIAG_DEBUG_DCI,
 				"diag: valid task doesn't exist for pid = %d\n",
 				entry->tgid);
+				put_pid(pid_struct);
 				continue;
 			}
-			if (task_s == entry->client)
-				if (entry->client->tgid != current->tgid)
+			if (task_s == entry->client) {
+				if (entry->client->tgid != current->tgid) {
+					put_task_struct(task_s);
+					put_pid(pid_struct);
 					continue;
-			if (!entry->in_service)
+				}
+			}
+			if (!entry->in_service) {
+				put_task_struct(task_s);
+				put_pid(pid_struct);
 				continue;
+			}
 			if (copy_to_user(buf + ret, &data_type, sizeof(int))) {
+				put_task_struct(task_s);
+				put_pid(pid_struct);
 				mutex_unlock(&driver->dci_mutex);
 				goto end;
 			}
 			ret += sizeof(int);
 			if (copy_to_user(buf + ret, &entry->client_info.token,
 				sizeof(int))) {
+				put_task_struct(task_s);
+				put_pid(pid_struct);
 				mutex_unlock(&driver->dci_mutex);
 				goto end;
 			}
@@ -3373,9 +3427,13 @@ exit:
 			atomic_dec(&driver->data_ready_notif[index]);
 			mutex_unlock(&driver->diagchar_mutex);
 			if (exit_stat == 1) {
+				put_task_struct(task_s);
+				put_pid(pid_struct);
 				mutex_unlock(&driver->dci_mutex);
 				goto end;
 			}
+			put_task_struct(task_s);
+			put_pid(pid_struct);
 		}
 		mutex_unlock(&driver->dci_mutex);
 		goto end;
@@ -3771,7 +3829,7 @@ static int diag_mhi_probe(struct platform_device *pdev)
 		diag_remote_exit();
 		return ret;
 	}
-	ret = diagfwd_bridge_init(true);
+	ret = diagfwd_bridge_init(1);
 	if (ret) {
 		diagfwd_bridge_exit();
 		return ret;
@@ -3804,7 +3862,7 @@ static int diagfwd_usb_probe(struct platform_device *pdev)
 		diag_remote_exit();
 		return ret;
 	}
-	ret = diagfwd_bridge_init(false);
+	ret = diagfwd_bridge_init(0);
 	if (ret) {
 		diagfwd_bridge_exit();
 		return ret;
@@ -3824,6 +3882,39 @@ static struct platform_driver diagfwd_usb_driver = {
 		.name = "DIAGFWD USB Platform",
 		.owner = THIS_MODULE,
 		.of_match_table = diagfwd_usb_table,
+	},
+};
+
+static int diagfwd_sdio_probe(struct platform_device *pdev)
+{
+	int ret;
+
+	driver->pdev = pdev;
+	ret = diag_remote_init();
+	if (ret) {
+		diag_remote_exit();
+		return ret;
+	}
+	ret = diagfwd_bridge_init(2);
+	if (ret) {
+		diagfwd_bridge_exit();
+		return ret;
+	}
+	pr_debug("diag: usb device is ready\n");
+	return 0;
+}
+
+static const struct of_device_id diagfwd_sdio_table[] = {
+	{.compatible = "qcom,diagfwd-sdio"},
+	{},
+};
+
+static struct platform_driver diagfwd_sdio_driver = {
+	.probe = diagfwd_sdio_probe,
+	.driver = {
+		.name = "DIAGFWD SDIO Platform",
+		.owner = THIS_MODULE,
+		.of_match_table = diagfwd_sdio_table,
 	},
 };
 
@@ -3877,7 +3968,6 @@ static int __init diagchar_init(void)
 	non_hdlc_data.len = 0;
 	mutex_init(&driver->hdlc_disable_mutex);
 	mutex_init(&driver->diagchar_mutex);
-	mutex_init(&driver->diag_maskclear_mutex);
 	mutex_init(&driver->diag_notifier_mutex);
 	mutex_init(&driver->diag_file_mutex);
 	mutex_init(&driver->delayed_rsp_mutex);
@@ -3954,6 +4044,7 @@ static int __init diagchar_init(void)
 	pr_debug("diagchar initialized now");
 	platform_driver_register(&diag_mhi_driver);
 	platform_driver_register(&diagfwd_usb_driver);
+	platform_driver_register(&diagfwd_sdio_driver);
 	return 0;
 
 fail:

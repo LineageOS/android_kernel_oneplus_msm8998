@@ -139,7 +139,7 @@ bool of_fdt_is_big_endian(const void *blob, unsigned long node)
  * of_fdt_match - Return true if node matches a list of compatible values
  */
 int of_fdt_match(const void *blob, unsigned long node,
-                 const char *const *compat)
+		 const char *const *compat)
 {
 	unsigned int tmp, score = 0;
 
@@ -509,9 +509,9 @@ static int __init __reserved_mem_reserve_reg(unsigned long node,
 			pr_info("Reserved memory: failed to reserve memory for node '%s': base %pa, size %ld MiB\n",
 				uname, &base, (unsigned long)size / SZ_1M);
 
-			if(!strncmp(uname, "param_mem",9)){
-				init_param_mem_base_size(base,size);
-			}
+		if(!strncmp(uname, "param_mem",9)){
+			init_param_mem_base_size(base,size);
+		}
 
 		len -= t_len;
 		if (first) {

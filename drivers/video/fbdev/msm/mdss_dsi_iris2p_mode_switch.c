@@ -1512,4 +1512,3 @@ void iris_mode_switch_reset(struct mdss_dsi_ctrl_pdata *ctrl)
 	iris_cfg->true_cut_enable = false;
 	iris_cfg->current_mode = IRIS_RFB_MODE;
 }
-

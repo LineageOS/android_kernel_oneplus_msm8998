@@ -105,7 +105,6 @@ static void fake_signal_wake_up(struct task_struct *p)
 	}
 }
 
-//huruihuan add for freezing task in cgroup despite of PF_FREEZER_SKIP flag
 bool freeze_cgroup_task(struct task_struct *p)
 {
 	unsigned long flags;

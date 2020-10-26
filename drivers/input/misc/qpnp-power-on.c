@@ -34,14 +34,11 @@
 #include <linux/power_supply.h>
 #include <linux/syscalls.h>
 #include <linux/power/oem_external_fg.h>
+#include <linux/oem_force_dump.h>
 #include <linux/atomic.h>
 #include <linux/param_rw.h>
 #include <linux/oneplus/boot_mode.h>
 
-#define CREATE_MASK(NUM_BITS, POS) \
-	((unsigned char) (((1 << (NUM_BITS)) - 1) << (POS)))
-#define PON_MASK(MSB_BIT, LSB_BIT) \
-	CREATE_MASK(MSB_BIT - LSB_BIT + 1, LSB_BIT)
 #define PMIC_VER_8941           0x01
 #define PMIC_VERSION_REG        0x0105
 #define PMIC_VERSION_REV4_REG   0x0103
@@ -202,9 +199,6 @@ struct pon_regulator {
 	u32			bit;
 	bool			enabled;
 };
-	struct delayed_work	press_work;
-	struct work_struct  up_work;
-	atomic_t       press_count;
 static int pon_ship_mode_en;
 module_param_named(
 	ship_mode_en, pon_ship_mode_en, int, 0600
@@ -812,18 +806,16 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 	switch (cfg->pon_type) {
 	case PON_KPDPWR:
 		pon_rt_bit = QPNP_PON_KPDPWR_N_SET;
-
 		if ((pon_rt_sts & pon_rt_bit) == 0)
 		{
 			printk("Power-Key UP\n");
-            schedule_work(&pon->up_work);
+			schedule_work(&pon->up_work);
 			cancel_delayed_work(&pon->press_work);
-		}else{
+		} else {
 			printk("Power-Key DOWN\n");
 			schedule_delayed_work(&pon->press_work,
 			msecs_to_jiffies(3000));
 		}
-
 		break;
 	case PON_RESIN:
 		pon_rt_bit = QPNP_PON_RESIN_N_SET;
@@ -856,6 +848,7 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 
 	cfg->old_state = !!key_status;
 
+	oem_check_force_dump_key(cfg->key_code, key_status);
 
 	return 0;
 }
@@ -1084,7 +1077,7 @@ static void press_work_func(struct work_struct *work)
 		goto err_return;
 	}
 	if ((pon_rt_sts & QPNP_PON_KPDPWR_N_SET) == 1) {
-        qpnp_powerkey_state_check(pon,1);
+	qpnp_powerkey_state_check(pon,1);
 		dev_err(&pon->pdev->dev, "after 3s Power-Key is still DOWN\n");
     }
 	msleep(20);
@@ -1124,7 +1117,7 @@ static irqreturn_t qpnp_resin_bark_irq(int irq, void *_pon)
 err_exit:
 	return IRQ_HANDLED;
 }
-/*20151106,wujialong add for power dump capture*/
+
 static int qpnp_config_reset(struct qpnp_pon *pon, struct qpnp_pon_config *cfg);
 
 static unsigned int pwr_dump_enabled = -1;
@@ -1209,8 +1202,6 @@ param_set_pwr_dump_enabled, param_get_uint, &pwr_dump_enabled, 0644);
 module_param_call(long_pwr_dump_enabled,
 param_set_long_press_pwr_dump_enabled,
 param_get_uint, &long_pwr_dump_enabled, 0644);
-
-/*20151106,wujialong add for power dump capture*/
 
 static int
 qpnp_config_pull(struct qpnp_pon *pon, struct qpnp_pon_config *cfg)
@@ -2330,6 +2321,7 @@ static struct attribute_group pwr_on_off_attrs_group = {
 		.attrs = pwr_on_off_attrs,
 };
 static struct kobject *pwr_on_off_kobj;
+
 static int qpnp_pon_probe(struct platform_device *pdev)
 {
 	struct qpnp_pon *pon;
@@ -2346,6 +2338,7 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 	unsigned long flags;
 	uint temp = 0;
 	int i, reg;
+
 	pon = devm_kzalloc(&pdev->dev, sizeof(struct qpnp_pon), GFP_KERNEL);
 	if (!pon)
 		return -ENOMEM;
@@ -2520,19 +2513,19 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 	}
 
 	index = ffs(poff_sts) - 1 + reason_index_offset;
-		if (index >= ARRAY_SIZE(qpnp_poff_reason) || index < 0) {
-			dev_info(&pon->pdev->dev,
-				"PMIC@SID%d: POFF_REASON regs :[0x%x] and Unknown Power-off reason\n",
-				to_spmi_device(pon->pdev->dev.parent)->usid,
-				poff_sts);
-		} else {
-			pon->pon_power_off_reason = index;
-			dev_info(&pon->pdev->dev,
-				"PMIC@SID%d: POFF_REASON regs :[0x%x] and Power-off reason: %s\n",
-				to_spmi_device(pon->pdev->dev.parent)->usid,
-				poff_sts,
-				qpnp_poff_reason[index]);
-		}
+	if (index >= ARRAY_SIZE(qpnp_poff_reason) || index < 0) {
+		dev_info(&pon->pdev->dev,
+			"PMIC@SID%d: POFF_REASON regs :[0x%x] and Unknown Power-off reason\n",
+			to_spmi_device(pon->pdev->dev.parent)->usid,
+			poff_sts);
+	} else {
+		pon->pon_power_off_reason = index;
+		dev_info(&pon->pdev->dev,
+			"PMIC@SID%d: POFF_REASON regs :[0x%x] and Power-off reason: %s\n",
+			to_spmi_device(pon->pdev->dev.parent)->usid,
+			poff_sts,
+			qpnp_poff_reason[index]);
+	}
 
 	if (to_spmi_device(pon->pdev->dev.parent)->usid >= 0 &&
 		to_spmi_device(pon->pdev->dev.parent)->usid < PMIC_SID_NUM) {
@@ -2626,7 +2619,7 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 
 	INIT_DELAYED_WORK(&pon->bark_work, bark_work_func);
 	INIT_DELAYED_WORK(&pon->press_work, press_work_func);
-    INIT_WORK(&pon->up_work, up_work_func);
+	INIT_WORK(&pon->up_work, up_work_func);
 	/* register the PON configurations */
 	rc = qpnp_pon_config_init(pon);
 	if (rc) {
@@ -2734,7 +2727,7 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 
 	if (!created_pwr_on_off_obj) {
 		pwr_on_off_kobj = kobject_create_and_add("pwr_on_off_reason",
-		NULL);
+					NULL);
 		if (!pwr_on_off_kobj)
 			dev_err(&pdev->dev, "kobject_create_and_add for pwr_on_off_reason failed.\n");
 		else if (sysfs_create_group(pwr_on_off_kobj,
