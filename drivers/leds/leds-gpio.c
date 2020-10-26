@@ -22,6 +22,7 @@
 #include <linux/slab.h>
 #include <linux/workqueue.h>
 #include <linux/regulator/consumer.h>
+
 struct gpio_led_data {
 	struct led_classdev cdev;
 	struct gpio_desc *gpiod;
@@ -100,6 +101,7 @@ static int create_gpio_led(const struct gpio_led *template,
 {
 	int ret, state;
 	const __be32 *min_uV, *max_uV;
+
 	led_dat->gpiod = template->gpiod;
 	if (!led_dat->gpiod) {
 		/*
@@ -125,8 +127,8 @@ static int create_gpio_led(const struct gpio_led *template,
 			return ret;
 
 		led_dat->gpiod = gpio_to_desc(template->gpio);
-		if (IS_ERR(led_dat->gpiod))
-			return PTR_ERR(led_dat->gpiod);
+		if (!led_dat->gpiod)
+			return -EINVAL;
 	}
 
 	led_dat->cdev.name = template->name;
@@ -138,8 +140,8 @@ static int create_gpio_led(const struct gpio_led *template,
 	min_uV = of_get_property(parent->of_node, "keypad-led-vbob-min", NULL);
 	max_uV = of_get_property(parent->of_node, "keypad-led-vbob-max", NULL);
 	if (!IS_ERR(led_dat->vdd)) {
-		led_dat->vmin_low = be32_to_cpu(*min_uV);;
-		led_dat->vmin_high = be32_to_cpu(*max_uV);;
+		led_dat->vmin_low = be32_to_cpu(*min_uV);
+		led_dat->vmin_high = be32_to_cpu(*max_uV);
 	}
 
 	if (blink_set) {
@@ -267,28 +269,27 @@ static int gpio_led_probe(struct platform_device *pdev)
 	int i, ret = 0;
 
 	if (pdata) {
-      if (pdata->num_leds) {
-		priv = devm_kzalloc(&pdev->dev,
-				sizeof_gpio_leds_priv(pdata->num_leds),
-					GFP_KERNEL);
-		if (!priv)
-			return -ENOMEM;
+		if (pdata->num_leds) {
+			priv = devm_kzalloc(&pdev->dev,
+					sizeof_gpio_leds_priv(pdata->num_leds),
+						GFP_KERNEL);
+			if (!priv)
+				return -ENOMEM;
 
-		priv->num_leds = pdata->num_leds;
-		for (i = 0; i < priv->num_leds; i++) {
-			ret = create_gpio_led(&pdata->leds[i],
-					      &priv->leds[i],
-					      &pdev->dev, pdata->gpio_blink_set);
-			if (ret < 0) {
-				/* On failure: unwind the led creations */
-				for (i = i - 1; i >= 0; i--)
-					delete_gpio_led(&priv->leds[i]);
-				return ret;
+			priv->num_leds = pdata->num_leds;
+			for (i = 0; i < priv->num_leds; i++) {
+				ret = create_gpio_led(&pdata->leds[i],
+						&priv->leds[i],
+						&pdev->dev, pdata->gpio_blink_set);
+				if (ret < 0) {
+					/* On failure: unwind the led creations */
+					for (i = i - 1; i >= 0; i--)
+						delete_gpio_led(&priv->leds[i]);
+					return ret;
+				}
 			}
-		 }
-	  }
-	}
-	else {
+		}
+	} else {
 		priv = gpio_leds_create(pdev);
 		if (IS_ERR(priv))
 			return PTR_ERR(priv);

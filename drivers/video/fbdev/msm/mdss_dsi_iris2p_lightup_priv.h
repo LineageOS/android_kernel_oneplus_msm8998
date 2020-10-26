@@ -366,5 +366,3 @@ typedef union
 
 
 #endif
-
-

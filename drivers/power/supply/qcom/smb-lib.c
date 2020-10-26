@@ -924,6 +924,7 @@ static int set_sdp_current(struct smb_charger *chg, int icl_ua)
 
 	return rc;
 }
+
 int op_usb_icl_set(struct smb_charger *chg, int icl_ua)
 {
 	int rc = 0;
@@ -960,7 +961,6 @@ enable_icl_changed_interrupt:
 	enable_irq(chg->irq_info[USBIN_ICL_CHANGE_IRQ].irq);
 	return rc;
 }
-
 
 static int get_sdp_current(struct smb_charger *chg, int *icl_ua)
 {
@@ -1806,7 +1806,6 @@ int smblib_get_prop_batt_charge_type(struct smb_charger *chg,
 int smblib_get_prop_batt_health(struct smb_charger *chg,
 				union power_supply_propval *val)
 {
-
 	int rc;
 
 	u8 stat;
@@ -1821,8 +1820,7 @@ int smblib_get_prop_batt_health(struct smb_charger *chg,
 		   stat);
 
 	if (stat & CHARGER_ERROR_STATUS_BAT_OV_BIT) {
-        val->intval = POWER_SUPPLY_HEALTH_OVERVOLTAGE;
-
+		val->intval = POWER_SUPPLY_HEALTH_OVERVOLTAGE;
 	}
 
 
@@ -2031,7 +2029,6 @@ int smblib_set_prop_charge_parameter_set(struct smb_charger *chg)
 	op_check_battery_temp(chg);
 	return 0;
 }
-
 
 int smblib_set_prop_batt_capacity(struct smb_charger *chg,
 				  const union power_supply_propval *val)
@@ -2366,6 +2363,7 @@ int smblib_get_prop_usb_online(struct smb_charger *chg,
 		val->intval = true;
 		return rc;
 	}
+
 	rc = smblib_read(chg, POWER_PATH_STATUS_REG, &stat);
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't read POWER_PATH_STATUS rc=%d\n",
@@ -2897,6 +2895,7 @@ static int __smblib_set_prop_pd_active(struct smb_charger *chg, bool pd_active)
 	pr_info("set pd_active=%d\n", pd_active);
 	if (!get_effective_result(chg->pd_allowed_votable))
 		return -EINVAL;
+
 	chg->pd_active = pd_active;
 	if (chg->pd_active) {
 		vote(chg->apsd_disable_votable, PD_VOTER, true, 0);
@@ -3147,6 +3146,7 @@ int smblib_set_prop_pd_in_hard_reset(struct smb_charger *chg,
 
 	if (chg->pd_disabled)
 		return rc;
+
 	if (chg->pd_hard_reset == val->intval)
 		return rc;
 
@@ -3392,7 +3392,6 @@ irqreturn_t smblib_handle_chg_state_change(int irq, void *data)
 	}
 
 	stat = stat & BATTERY_CHARGER_STATUS_MASK;
-
 	if (stat == TERMINATE_CHARGE) {
 		/* charge done, disable charge in software also */
 		chg->chg_done = true;
@@ -3406,6 +3405,7 @@ irqreturn_t smblib_handle_chg_state_change(int irq, void *data)
 			get_prop_batt_temp(chg));
 		op_charging_en(chg, false);
 	}
+
 	power_supply_changed(chg->batt_psy);
 	return IRQ_HANDLED;
 }
@@ -3453,20 +3453,25 @@ irqreturn_t smblib_handle_usbin_uv(int irq, void *data)
 	struct smb_irq_data *irq_data = data;
 	struct smb_charger *chg = irq_data->parent_data;
 	struct storm_watch *wdata;
+
 	chg->dash_on = get_prop_fast_chg_started(chg);
 	if (chg->dash_on) {
 		pr_err("return directly because dash is online\n");
 		return IRQ_HANDLED;
 	}
+
 	smblib_dbg(chg, PR_INTERRUPT, "IRQ: %s\n", irq_data->name);
 	if (!chg->irq_info[SWITCH_POWER_OK_IRQ].irq_data)
 		return IRQ_HANDLED;
 
 	wdata = &chg->irq_info[SWITCH_POWER_OK_IRQ].irq_data->storm_data;
 	reset_storm_count(wdata);
+
 	smblib_err(chg, "DEBUG: RESET STORM COUNT FOR POWER_OK\n");
+
 	return IRQ_HANDLED;
 }
+
 char dump_val[2048];
 static inline void op_dump_reg(struct smb_charger *chip,
 	u16 addr_start, u16 addr_end)
@@ -3494,6 +3499,7 @@ static void op_dump_regs(struct smb_charger *chip)
 	for (addr = 0x1000; addr <= 0x1700; addr += count)
 	op_dump_reg(chip, addr, (addr + count));
 }
+
 
 static void smblib_micro_usb_plugin(struct smb_charger *chg, bool vbus_rising)
 {
@@ -3524,6 +3530,7 @@ void smblib_usb_plugin_hard_reset_locked(struct smb_charger *chg)
 		pr_err("return directly because dash is online\n");
 		return;
 	}
+
 	rc = smblib_read(chg, USBIN_BASE + INT_RT_STS_OFFSET, &stat);
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't read USB_INT_RT_STS rc=%d\n", rc);
@@ -3564,15 +3571,16 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 	struct smb_irq_data *data;
 	struct storm_watch *wdata;
 
-		union power_supply_propval vbus_val;
-		bool last_vbus_present;
+	union power_supply_propval vbus_val;
+	bool last_vbus_present;
 
-		last_vbus_present = chg->vbus_present;
-		chg->dash_on = get_prop_fast_chg_started(chg);
-		if (chg->dash_on) {
-			pr_err("return directly because dash is online\n");
-			return;
-		}
+	last_vbus_present = chg->vbus_present;
+	chg->dash_on = get_prop_fast_chg_started(chg);
+	if (chg->dash_on) {
+		pr_err("return directly because dash is online\n");
+		return;
+	}
+
 	rc = smblib_read(chg, USBIN_BASE + INT_RT_STS_OFFSET, &stat);
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't read USB_INT_RT_STS rc=%d\n", rc);
@@ -3593,16 +3601,19 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 			wake_unlock(&chg->chg_wake_lock);
 		}
 	}
+
 	if (vbus_rising) {
 		rc = smblib_request_dpdm(chg, true);
 		if (rc < 0)
 			smblib_err(chg, "Couldn't to enable DPDM rc=%d\n", rc);
+
 		if (chg->charger_collpse) {
 			op_set_collapse_fet(chg, 0);
 			chg->charger_collpse = false;
 		}
 		schedule_delayed_work(&chg->op_check_apsd_work,
 				msecs_to_jiffies(TIME_1000MS));
+
 		if (chg->fcc_stepper_mode)
 			vote(chg->fcc_votable, FCC_STEPPER_VOTER, false, 0);
 		/* Schedule work to enable parallel charger */
@@ -3634,6 +3645,7 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 
 		if (last_vbus_present != chg->vbus_present)
 			op_handle_usb_removal(chg);
+
 	}
 
 	if (chg->micro_usb_mode)
@@ -3642,6 +3654,7 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 	power_supply_changed(chg->usb_psy);
 	smblib_dbg(chg, PR_INTERRUPT, "IRQ: usbin-plugin %s\n",
 					vbus_rising ? "attached" : "detached");
+
 		if (!vbus_rising) {
 			rc = smblib_get_prop_usb_voltage_now(chg, &vbus_val);
 			if (rc < 0) {
@@ -3672,6 +3685,7 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 	mutex_unlock(&chg->lock);
 	return IRQ_HANDLED;
 }
+
 void op_handle_usb_plugin(struct smb_charger *chg)
 {
 	mutex_lock(&chg->lock);
@@ -3931,6 +3945,7 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 		if (!is_client_vote_enabled(chg->usb_icl_votable,
 								USB_PSY_VOTER))
 			vote(chg->usb_icl_votable, USB_PSY_VOTER, true, 500000);
+
 		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, false, 0);
 		break;
 	case POWER_SUPPLY_TYPE_USB_CDP:
@@ -4014,6 +4029,7 @@ int op_rerun_apsd(struct smb_charger *chg)
 		}
 	return 0;
 }
+
 static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 {
 	int temp_region, current_limit_ua;
@@ -4096,6 +4112,7 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 	/* set allow read extern fg IIC */
 	set_property_on_fg(chg,
 		POWER_SUPPLY_PROP_SET_ALLOW_READ_EXTERN_FG_IIC, true);
+
 	smblib_dbg(chg, PR_INTERRUPT, "IRQ: apsd-done rising; %s detected\n",
 		   apsd_result->name);
 }
@@ -4118,7 +4135,6 @@ irqreturn_t smblib_handle_usb_source_change(int irq, void *data)
 		return IRQ_HANDLED;
 	}
 	smblib_dbg(chg, PR_REGISTER, "APSD_STATUS = 0x%02x\n", stat);
-
 	pr_info("APSD_STATUS=0x%02x\n", stat);
 
 	if (chg->micro_usb_mode && (stat & APSD_DTC_STATUS_DONE_BIT)

@@ -41,6 +41,7 @@
 
 #define MAX_NR_GPIO 300
 #define PS_HOLD_OFFSET 0x820
+
 static int resume_wakeup_flag = 0;
 bool fp_irq_cnt;
 
@@ -448,7 +449,7 @@ static int msm_gpio_get(struct gpio_chip *chip, unsigned offset)
 	return !!(val & BIT(g->in_bit));
 }
 
-/*2017-08-22 add for dash adapter update*/
+/* 2017-08-22 add for dash adapter update */
 static int msm_gpio_get_dash(struct gpio_chip *chip, unsigned offset)
 {
 	const struct msm_pingroup *g;
@@ -462,6 +463,7 @@ static int msm_gpio_get_dash(struct gpio_chip *chip, unsigned offset)
 	val = readl_dash(pctrl->regs + g->io_reg);
 	return !!(val & BIT(g->in_bit));
 }
+
 static void msm_gpio_set(struct gpio_chip *chip, unsigned offset, int value)
 {
 	const struct msm_pingroup *g;
@@ -482,7 +484,8 @@ static void msm_gpio_set(struct gpio_chip *chip, unsigned offset, int value)
 
 	spin_unlock_irqrestore(&pctrl->lock, flags);
 }
-/*2017-08-22 add for dash adapter update*/
+
+/* 2017-08-22 add for dash adapter update */
 static void msm_gpio_set_dash(struct gpio_chip *chip,
 			unsigned offset, int value)
 {
@@ -552,6 +555,7 @@ static void msm_gpio_dbg_show(struct seq_file *s, struct gpio_chip *chip)
 		gpio == 81 || gpio == 82 ||
 		gpio == 83 || gpio == 84)
 			continue;
+
 		msm_gpio_dbg_show_one(s, NULL, chip, i, gpio);
 		seq_puts(s, "\n");
 	}
@@ -565,10 +569,10 @@ static struct gpio_chip msm_gpio_template = {
 	.direction_input  = msm_gpio_direction_input,
 	.direction_output = msm_gpio_direction_output,
 	.get              = msm_gpio_get,
-/*2017-08-22 add for dash adapter update*/
+	/* 2017-08-22 add for dash adapter update */
 	.get_dash	  = msm_gpio_get_dash,
 	.set              = msm_gpio_set,
-/*2017-08-22 add for dash adapter update*/
+	/* 2017-08-22 add for dash adapter update */
 	.set_dash	  = msm_gpio_set_dash,
 	.request          = gpiochip_generic_request,
 	.free             = gpiochip_generic_free,
@@ -820,34 +824,34 @@ static struct irq_chip msm_gpio_irq_chip = {
 
 static void init_resume_wakeup_flag(void)
 {
-        resume_wakeup_flag = 0;
+	resume_wakeup_flag = 0;
 }
 
 static int is_speedup_irq(struct irq_desc *desc, char *irq_name)
 {
-        return strstr(desc->action->name, irq_name) != NULL;
+	return strstr(desc->action->name, irq_name) != NULL;
 }
 
 static void set_resume_wakeup_flag(int irq)
 {
-        struct irq_desc *desc;
-        desc = irq_to_desc(irq);
+	struct irq_desc *desc;
+	desc = irq_to_desc(irq);
 
-        if (desc && desc->action && desc->action->name) {
-                if (is_speedup_irq(desc, "synaptics,s3320"))
-                        resume_wakeup_flag = 1;
-        }
+	if (desc && desc->action && desc->action->name) {
+		if (is_speedup_irq(desc, "synaptics,s3320"))
+			resume_wakeup_flag = 1;
+	}
 }
 
 int get_resume_wakeup_flag(void)
 {
-        int flag = resume_wakeup_flag;
+	int flag = resume_wakeup_flag;
 
-        pr_debug("%s: flag = %d\n", __func__, flag);
-        /* Clear it for next calling */
-        init_resume_wakeup_flag();
+	pr_debug("%s: flag = %d\n", __func__, flag);
+	/* Clear it for next calling */
+	init_resume_wakeup_flag();
 
-        return flag;
+	return flag;
 }
 
 static void msm_gpio_irq_handler(struct irq_desc *desc)
@@ -860,11 +864,13 @@ static void msm_gpio_irq_handler(struct irq_desc *desc)
 	int handled = 0;
 	u32 val;
 	int i;
-       char irq_name[16] = {0};
+
+	char irq_name[16] = {0};
 
 	chained_irq_enter(chip, desc);
 
-        init_resume_wakeup_flag();
+	init_resume_wakeup_flag();
+
 	/*
 	 * Each pin has it's own IRQ status register, so use
 	 * enabled_irq bitmap to limit the number of reads.
@@ -941,11 +947,24 @@ static int msm_gpio_init(struct msm_pinctrl *pctrl)
 		return ret;
 	}
 
-	ret = gpiochip_add_pin_range(&pctrl->chip, dev_name(pctrl->dev), 0, 0, chip->ngpio);
-	if (ret) {
-		dev_err(pctrl->dev, "Failed to add pin range\n");
-		gpiochip_remove(&pctrl->chip);
-		return ret;
+	/*
+	 * For DeviceTree-supported systems, the gpio core checks the
+	 * pinctrl's device node for the "gpio-ranges" property.
+	 * If it is present, it takes care of adding the pin ranges
+	 * for the driver. In this case the driver can skip ahead.
+	 *
+	 * In order to remain compatible with older, existing DeviceTree
+	 * files which don't set the "gpio-ranges" property or systems that
+	 * utilize ACPI the driver has to call gpiochip_add_pin_range().
+	 */
+	if (!of_property_read_bool(pctrl->dev->of_node, "gpio-ranges")) {
+		ret = gpiochip_add_pin_range(&pctrl->chip,
+			dev_name(pctrl->dev), 0, 0, chip->ngpio);
+		if (ret) {
+			dev_err(pctrl->dev, "Failed to add pin range\n");
+			gpiochip_remove(&pctrl->chip);
+			return ret;
+		}
 	}
 
 	ret = gpiochip_irqchip_add(chip,
@@ -1066,6 +1085,69 @@ static struct syscore_ops msm_pinctrl_pm_ops = {
 	.suspend = msm_pinctrl_suspend,
 	.resume = msm_pinctrl_resume,
 };
+
+
+
+#include <linux/gpio/consumer.h>
+#include "../../gpio/gpiolib.h"
+
+#define gpio_reg_set(reg, value) ({__iowmb(); writel_relaxed_no_log(value, reg); })
+
+static unsigned saved_cfg;
+static unsigned saved_inout;
+void oem_gpio_control_enable(unsigned gpio)
+{
+	const struct msm_pingroup *g;
+	struct msm_pinctrl *pctrl;
+	struct gpio_desc *gpio_desc;
+	unsigned long flags;
+
+	void __iomem *io_regs;
+
+	gpio_desc = gpio_to_desc(gpio);
+	pctrl = container_of(gpio_desc->chip, struct msm_pinctrl, chip);
+	g = &pctrl->soc->groups[gpio];
+	io_regs = pctrl->regs + g->io_reg;
+
+	spin_lock_irqsave(&pctrl->lock, flags);
+
+	saved_cfg = readl(pctrl->regs + g->ctl_reg);
+	saved_inout = readl(pctrl->regs + g->io_reg);
+
+
+	writel(0x2c0, pctrl->regs + g->ctl_reg);
+	writel(0x0, pctrl->regs + g->io_reg);
+	readl(pctrl->regs + g->io_reg);
+
+	spin_unlock_irqrestore(&pctrl->lock, flags);
+
+}
+EXPORT_SYMBOL_GPL(oem_gpio_control_enable);
+
+void oem_gpio_control_restore(unsigned gpio)
+{
+	const struct msm_pingroup *g;
+	struct msm_pinctrl *pctrl;
+	struct gpio_desc *gpio_desc;
+	unsigned long flags;
+
+	void __iomem *io_regs;
+
+	gpio_desc = gpio_to_desc(gpio);
+	pctrl = container_of(gpio_desc->chip, struct msm_pinctrl, chip);
+	g = &pctrl->soc->groups[gpio];
+	io_regs = pctrl->regs + g->io_reg;
+
+	spin_lock_irqsave(&pctrl->lock, flags);
+
+
+	writel(saved_cfg, pctrl->regs + g->ctl_reg);
+	writel(saved_inout, pctrl->regs + g->io_reg);
+
+	spin_unlock_irqrestore(&pctrl->lock, flags);
+
+}
+EXPORT_SYMBOL_GPL(oem_gpio_control_restore);
 
 int msm_pinctrl_probe(struct platform_device *pdev,
 		      const struct msm_pinctrl_soc_data *soc_data)

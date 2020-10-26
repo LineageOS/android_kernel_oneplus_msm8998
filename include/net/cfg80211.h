@@ -2430,22 +2430,23 @@ struct cfg80211_external_auth_params {
  * struct cfg80211_update_owe_info - OWE Information
  *
  * This structure provides information needed for the drivers to offload OWE
- * (Oppurtunistic Wireless Encryption) processing to the user space.
+ * (Opportunistic Wireless Encryption) processing to the user space.
  *
- * Commonly used across update_owe request and event interfaces.
+ * Commonly used across update_owe_info request and event interfaces.
  *
- * @bssid: BSSID of the peer from which the OWE processing has to be done.
+ * @peer: MAC address of the peer device for which the OWE processing
+ *	has to be done.
  * @status: status code, %WLAN_STATUS_SUCCESS for successful OWE info
- *	    processing, use %WLAN_STATUS_UNSPECIFIED_FAILURE if user space
- *	    cannot give you the real status code for failures. Used only for
- *	    OWE update response command interface (user space to driver).
- * @ie: IE's obtained from the peer or constructed by the user space. These are
- *	    the IE's of the remote peer in the event from the host driver and
- *	    the constructed IE's by the user space in the request interface.
- * @ie_len: Length of IE's in octets.
+ *	processing, use %WLAN_STATUS_UNSPECIFIED_FAILURE if user space
+ *	cannot give you the real status code for failures. Used only for
+ *	OWE update request command interface (user space to driver).
+ * @ie: IEs obtained from the peer or constructed by the user space. These are
+ *	the IEs of the remote peer in the event from the host driver and
+ *	the constructed IEs by the user space in the request interface.
+ * @ie_len: Length of IEs in octets.
  */
 struct cfg80211_update_owe_info {
-	u8 bssid[ETH_ALEN] __aligned(2);
+	u8 peer[ETH_ALEN] __aligned(2);
 	u16 status;
 	const u8 *ie;
 	size_t ie_len;

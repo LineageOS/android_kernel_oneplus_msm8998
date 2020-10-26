@@ -826,7 +826,7 @@ static int32_t msm_actuator_park_lens(struct msm_actuator_ctrl_t *a_ctrl)
 		(!a_ctrl->i2c_reg_tbl) ||
 		(!a_ctrl->func_tbl) ||
 		(!a_ctrl->func_tbl->actuator_parse_i2c_params)) {
-		pr_err("%s:%d Failed to park lens.\n",
+		pr_err_ratelimited("%s:%d Failed to park lens.\n",
 			__func__, __LINE__);
 		return 0;
 	}
@@ -1439,7 +1439,7 @@ static int32_t msm_actuator_config(struct msm_actuator_ctrl_t *a_ctrl,
 	if (cdata->cfgtype != CFG_ACTUATOR_INIT &&
 		cdata->cfgtype != CFG_ACTUATOR_POWERUP &&
 		a_ctrl->actuator_state == ACT_DISABLE_STATE) {
-		pr_err("actuator disabled %d\n", rc);
+		pr_err_ratelimited("actuator disabled %d\n", rc);
 		mutex_unlock(a_ctrl->actuator_mutex);
 		return rc;
 	}
@@ -1459,7 +1459,7 @@ static int32_t msm_actuator_config(struct msm_actuator_ctrl_t *a_ctrl,
 	case CFG_SET_ACTUATOR_INFO:
 		rc = msm_actuator_set_param(a_ctrl, &cdata->cfg.set_info);
 		if (rc < 0)
-			pr_err("init table failed %d\n", rc);
+			pr_err_ratelimited("init table failed %d\n", rc);
 		break;
 
 	case CFG_SET_DEFAULT_FOCUS:
@@ -1735,7 +1735,8 @@ static long msm_actuator_subdev_do_ioctl(
 		}
 		break;
 	case VIDIOC_MSM_ACTUATOR_CFG:
-		pr_err("%s: invalid cmd 0x%x received\n", __func__, cmd);
+		pr_err_ratelimited("%s: invalid cmd 0x%x received\n",
+			__func__, cmd);
 		return -EINVAL;
 	}
 

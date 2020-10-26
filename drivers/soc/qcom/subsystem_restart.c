@@ -41,6 +41,7 @@
 
 #include "peripheral-loader.h"
 #include <linux/proc_fs.h>
+/* liochen@BSP, 2016/07/26, store crash record in PARAM */
 #include <linux/param_rw.h>
 #include <linux/timer.h>
 #include <linux/timex.h>
@@ -844,7 +845,6 @@ int op_restart_modem(void)
 }
 EXPORT_SYMBOL(op_restart_modem);
 
-
 static int subsys_start(struct subsys_device *subsys)
 {
 	int ret;
@@ -1222,6 +1222,7 @@ static void device_restart_work_hdlr(struct work_struct *work)
 
 }
 
+/* liochen@BSP, 2016/07/26, store crash record in PARAM */
 #define KMSG_BUFSIZE 512
 #define MAX_RECORD_COUNT 16
 #define PARAM_CRASH_RECORD_SIZE 20
@@ -1334,6 +1335,7 @@ int subsystem_restart_dev(struct subsys_device *dev)
 
 	name = dev->desc->name;
 
+	/* liochen@BSP, 2016/07/26, store crash record in PARAM */
 	schedule_work(&dev->crash_record_work);
 
 	/*

@@ -10,7 +10,6 @@
  * GNU General Public License for more details.
  */
 
-
 #include "pxlw-iris-settings.dtsi"
 
 / {
@@ -357,6 +356,7 @@
 		};
 	};
 
+	/*shankai@bsp, add debounce time 2017-3-18*/
 	qcom,pm8998@0{
 		qcom,power-on@800 {
 		    qcom,pon-dbc-delay = <31250>;
@@ -477,6 +477,8 @@
 };
 
 &i2c_7 {
+	qcom,clk-freq-out = <100000>;
+
 	bq27541-battery@55 {
 		status = "ok";
 		compatible = "ti,bq27541-battery";
@@ -962,14 +964,14 @@
 };
 
 &spi_1 {
-    status = "ok";
-    qcom,disable-autosuspend;
+	status = "ok";
+	qcom,disable-autosuspend;
 
-    ese@0 {
-        compatible = "nxp,p61";
-        reg = <0>;
-        spi-max-frequency = <8000000>;
-    };
+	ese@0 {
+		compatible = "nxp,p61";
+		reg = <0>;
+		spi-max-frequency = <8000000>;
+	};
 };
 
 &i2c_6 { /* BLSP1 QUP6 (NFC) */

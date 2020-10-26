@@ -255,7 +255,7 @@ static ssize_t proc_pid_cmdline_read(struct file *file, char __user *buf,
 	 * Inherently racy -- command line shares address space
 	 * with code and data.
 	 */
-	rv = access_remote_vm(mm, arg_end - 1, &c, 1, 0);
+	rv = access_remote_vm(mm, arg_end - 1, &c, 1, FOLL_ANON);
 	if (rv <= 0)
 		goto out_free_page;
 
@@ -273,7 +273,7 @@ static ssize_t proc_pid_cmdline_read(struct file *file, char __user *buf,
 			int nr_read;
 
 			_count = min3(count, len, PAGE_SIZE);
-			nr_read = access_remote_vm(mm, p, page, _count, 0);
+			nr_read = access_remote_vm(mm, p, page, _count, FOLL_ANON);
 			if (nr_read < 0)
 				rv = nr_read;
 			if (nr_read <= 0)
@@ -308,7 +308,7 @@ static ssize_t proc_pid_cmdline_read(struct file *file, char __user *buf,
 			bool final;
 
 			_count = min3(count, len, PAGE_SIZE);
-			nr_read = access_remote_vm(mm, p, page, _count, 0);
+			nr_read = access_remote_vm(mm, p, page, _count, FOLL_ANON);
 			if (nr_read < 0)
 				rv = nr_read;
 			if (nr_read <= 0)
@@ -357,7 +357,7 @@ skip_argv:
 			bool final;
 
 			_count = min3(count, len, PAGE_SIZE);
-			nr_read = access_remote_vm(mm, p, page, _count, 0);
+			nr_read = access_remote_vm(mm, p, page, _count, FOLL_ANON);
 			if (nr_read < 0)
 				rv = nr_read;
 			if (nr_read <= 0)
@@ -471,6 +471,20 @@ static int proc_pid_stack(struct seq_file *m, struct pid_namespace *ns,
 	unsigned long *entries;
 	int err;
 	int i;
+
+	/*
+	 * The ability to racily run the kernel stack unwinder on a running task
+	 * and then observe the unwinder output is scary; while it is useful for
+	 * debugging kernel issues, it can also allow an attacker to leak kernel
+	 * stack contents.
+	 * Doing this in a manner that is at least safe from races would require
+	 * some work to ensure that the remote task can not be scheduled; and
+	 * even then, this would still expose the unwinder as local attack
+	 * surface.
+	 * Therefore, this interface is restricted to root.
+	 */
+	if (!file_ns_capable(m->file, &init_user_ns, CAP_SYS_ADMIN))
+		return -EACCES;
 
 	entries = kmalloc(MAX_STACK_TRACE_DEPTH * sizeof(*entries), GFP_KERNEL);
 	if (!entries)
@@ -855,6 +869,7 @@ static ssize_t mem_rw(struct file *file, char __user *buf,
 	unsigned long addr = *ppos;
 	ssize_t copied;
 	char *page;
+	unsigned int flags;
 
 	if (!mm)
 		return 0;
@@ -867,6 +882,11 @@ static ssize_t mem_rw(struct file *file, char __user *buf,
 	if (!atomic_inc_not_zero(&mm->mm_users))
 		goto free;
 
+	/* Maybe we should limit FOLL_FORCE to actual ptrace users? */
+	flags = FOLL_FORCE;
+	if (write)
+		flags |= FOLL_WRITE;
+
 	while (count > 0) {
 		int this_len = min_t(int, count, PAGE_SIZE);
 
@@ -875,7 +895,7 @@ static ssize_t mem_rw(struct file *file, char __user *buf,
 			break;
 		}
 
-		this_len = access_remote_vm(mm, addr, page, this_len, write);
+		this_len = access_remote_vm(mm, addr, page, this_len, flags);
 		if (!this_len) {
 			if (!copied)
 				copied = -EIO;
@@ -987,8 +1007,7 @@ static ssize_t environ_read(struct file *file, char __user *buf,
 		max_len = min_t(size_t, PAGE_SIZE, count);
 		this_len = min(max_len, this_len);
 
-		retval = access_remote_vm(mm, (env_start + src),
-			page, this_len, 0);
+		retval = access_remote_vm(mm, (env_start + src), page, this_len, FOLL_ANON);
 
 		if (retval <= 0) {
 			ret = retval;
@@ -3036,6 +3055,112 @@ static int proc_pid_personality(struct seq_file *m, struct pid_namespace *ns,
 	return err;
 }
 
+#include <linux/random.h>
+static int va_feature;
+module_param(va_feature, int, 0644);
+unsigned long dbg_pm[8] = { 0 };
+
+static int dbg_buf_store(const char *buf, const struct kernel_param *kp)
+{
+	/* function for debug-only*/
+	if (sscanf(buf, "%lu %lu %lu %lu %lu %lu %lu %lu\n"
+		, &dbg_pm[0], &dbg_pm[1], &dbg_pm[2], &dbg_pm[3]
+		, &dbg_pm[4], &dbg_pm[5], &dbg_pm[6], &dbg_pm[7]) <= 7)
+		return -EINVAL;
+	va_feature = 0x7;
+	return 0;
+}
+
+static struct kernel_param_ops module_param_ops = {
+	.set = dbg_buf_store,
+	.get = param_get_int,
+};
+module_param_cb(dbg_buf, &module_param_ops, &va_feature, 0644);
+
+static ssize_t proc_va_feature_read(struct file *file, char __user *buf,
+		size_t count, loff_t *ppos)
+{
+	struct task_struct *task;
+	struct mm_struct *mm;
+	char buffer[32];
+	int ret;
+
+	if (!test_thread_flag(TIF_32BIT))
+		return -EINVAL;
+
+	task = get_proc_task(file_inode(file));
+	if (!task)
+		return -ESRCH;
+
+	ret = -EINVAL;
+	mm = get_task_mm(task);
+	if (mm) {
+		if (mm->va_feature & 0x4) {
+			ret = snprintf(buffer, sizeof(buffer), "%d\n",
+			(mm->zygoteheap_in_MB > 256) ?
+			mm->zygoteheap_in_MB : 256);
+			if (ret > 0)
+				ret = simple_read_from_buffer(buf, count, ppos,
+						buffer, ret);
+		}
+		mmput(mm);
+	}
+
+	put_task_struct(task);
+
+	return ret;
+}
+
+static ssize_t proc_va_feature_write(struct file *file, const char __user *buf,
+		size_t count, loff_t *ppos)
+{
+	struct task_struct *task;
+	struct mm_struct *mm;
+	int ret;
+	unsigned int heapsize;
+
+	if (!test_thread_flag(TIF_32BIT))
+		return -ENOTTY;
+
+	task = get_proc_task(file_inode(file));
+	if (!task)
+		return -ESRCH;
+
+	ret = kstrtouint_from_user(buf, count, 0, &heapsize);
+	if (ret) {
+		put_task_struct(task);
+		return ret;
+	}
+
+	mm = get_task_mm(task);
+	if (mm) {
+
+		mm->va_feature = va_feature;
+
+		/* useless to print comm, always "main" */
+		if (mm->va_feature & 0x1) {
+			mm->va_feature_rnd =
+				(dbg_pm[6] + (get_random_long() % 0x1e00000))
+					& ~(0xffff);
+			special_arch_pick_mmap_layout(mm);
+		}
+
+		if ((mm->va_feature & 0x4) && (mm->zygoteheap_in_MB == 0))
+			mm->zygoteheap_in_MB = heapsize;
+
+		mmput(mm);
+	}
+
+	put_task_struct(task);
+
+	return count;
+}
+
+static const struct file_operations proc_va_feature_operations = {
+	.read           = proc_va_feature_read,
+	.write          = proc_va_feature_write,
+};
+
 /*
  * Thread groups
  */
@@ -3093,6 +3218,7 @@ static const struct pid_entry tgid_base_stuff[] = {
 #ifdef CONFIG_PROC_PAGE_MONITOR
 	REG("clear_refs", S_IWUSR, proc_clear_refs_operations),
 	REG("smaps",      S_IRUGO, proc_pid_smaps_operations),
+	REG("smaps_rollup", S_IRUGO, proc_pid_smaps_rollup_operations),
 	REG("pagemap",    S_IRUSR, proc_pagemap_operations),
 #endif
 #ifdef CONFIG_SECURITY
@@ -3148,6 +3274,7 @@ static const struct pid_entry tgid_base_stuff[] = {
 #ifdef CONFIG_CPU_FREQ_TIMES
 	ONE("time_in_state", 0444, proc_time_in_state_show),
 #endif
+	REG("va_feature", 0666, proc_va_feature_operations),
 };
 
 static int proc_tgid_base_readdir(struct file *file, struct dir_context *ctx)
@@ -3406,6 +3533,8 @@ int proc_pid_readdir(struct file *file, struct dir_context *ctx)
 	return 0;
 }
 
+
+
 /*
  * proc_tid_comm_permission is a special permission function exclusively
  * used for the node /proc/<pid>/task/<tid>/comm.
@@ -3487,6 +3616,7 @@ static const struct pid_entry tid_base_stuff[] = {
 #ifdef CONFIG_PROC_PAGE_MONITOR
 	REG("clear_refs", S_IWUSR, proc_clear_refs_operations),
 	REG("smaps",     S_IRUGO, proc_tid_smaps_operations),
+	REG("smaps_rollup", S_IRUGO, proc_pid_smaps_rollup_operations),
 	REG("pagemap",    S_IRUSR, proc_pagemap_operations),
 #endif
 #ifdef CONFIG_SECURITY

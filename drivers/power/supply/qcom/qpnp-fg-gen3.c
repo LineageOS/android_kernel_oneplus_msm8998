@@ -421,6 +421,7 @@ void external_battery_gauge_unregister(
 	external_fg = NULL;
 }
 EXPORT_SYMBOL(external_battery_gauge_unregister);
+
 static int fg_sram_dump_period_ms = 20000;
 module_param_named(
 	sram_dump_period_ms, fg_sram_dump_period_ms, int, S_IRUSR | S_IWUSR
@@ -1158,7 +1159,6 @@ static int fg_set_esr_timer(struct fg_chip *chip, int cycles_init,
 
 /* Other functions HERE */
 
-/*set Ibat 500mA by default */
 static void fg_notify_charger(struct fg_chip *chip)
 {
 	union power_supply_propval prop = {0, };
@@ -3548,8 +3548,8 @@ out:
 	return rc;
 }
 
-/* Add dash charging */
 #define DEFALUT_BATT_TEMP	250
+
 static int fg_esr_validate(struct fg_chip *chip)
 {
 	int rc, esr_uohms;
@@ -3761,7 +3761,6 @@ static int fg_psy_get_property(struct power_supply *psy,
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_CAPACITY:
-/* Add dash charging */
 		if (!get_extern_fg_regist_done())
 			pval->intval = get_prop_pre_shutdown_soc();
 		else if (chip->use_external_fg && external_fg
@@ -3769,6 +3768,7 @@ static int fg_psy_get_property(struct power_supply *psy,
 			pval->intval = external_fg->get_battery_soc();
 		else
 			pval->intval = 50;
+
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY_RAW:
 		rc = fg_get_msoc_raw(chip, &pval->intval);
@@ -3779,6 +3779,7 @@ static int fg_psy_get_property(struct power_supply *psy,
 			pval->intval = external_fg->get_battery_mvolts();
 		else
 			pval->intval = 4000000; /* 4000mV */
+
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
 		if (chip->use_external_fg && external_fg
@@ -3786,6 +3787,7 @@ static int fg_psy_get_property(struct power_supply *psy,
 			pval->intval = external_fg->get_average_current();
 		else
 			pval->intval = 0;
+
 		break;
 	case POWER_SUPPLY_PROP_TEMP:
 		if (!get_extern_fg_regist_done()
@@ -3796,6 +3798,7 @@ static int fg_psy_get_property(struct power_supply *psy,
 			pval->intval = external_fg->get_battery_temperature();
 		} else
 			pval->intval = -400;
+
 		break;
 	case POWER_SUPPLY_PROP_COLD_TEMP:
 		rc = fg_get_jeita_threshold(chip, JEITA_COLD, &pval->intval);
@@ -3939,6 +3942,7 @@ static void oneplus_set_allow_read_iic(
 	struct fg_chip *chip, bool status);
 static void oneplus_set_lcd_off_status(
 	struct fg_chip *chip, bool status);
+
 static int fg_psy_set_property(struct power_supply *psy,
 				  enum power_supply_property psp,
 				  const union power_supply_propval *pval)
@@ -3947,7 +3951,6 @@ static int fg_psy_set_property(struct power_supply *psy,
 	int rc = 0;
 
 	switch (psp) {
-
 	case POWER_SUPPLY_PROP_CC_TO_CV_POINT:
 		oem_update_cc_cv_setpoint(chip, pval->intval);
 		break;
@@ -4404,6 +4407,7 @@ static int fg_hw_init(struct fg_chip *chip)
 		pr_err("Error in writing ESR PULL DN, rc=%d\n", rc);
 		return rc;
 	}
+
 	fg_encode(chip->sp, FG_SRAM_ESR_PULSE_THRESH,
 		chip->dt.esr_pulse_thresh_ma, buf);
 	rc = fg_sram_write(chip, chip->sp[FG_SRAM_ESR_PULSE_THRESH].addr_word,
@@ -4427,6 +4431,7 @@ static int fg_hw_init(struct fg_chip *chip)
 		pr_err("Error in writing ESR PULL DN, rc=%d\n", rc);
 		return rc;
 	}
+
 	if (is_debug_batt_id(chip)) {
 		val = ESR_NO_PULL_DOWN;
 		rc = fg_masked_write(chip, BATT_INFO_ESR_PULL_DN_CFG(chip),
@@ -5346,6 +5351,7 @@ static void fg_cleanup(struct fg_chip *chip)
 {
 	if (chip->fg_psy)
 		power_supply_unregister(chip->fg_psy);
+
 	alarm_try_to_cancel(&chip->esr_filter_alarm);
 	power_supply_unreg_notifier(&chip->nb);
 	debugfs_remove_recursive(chip->dfs_root);
@@ -5387,6 +5393,7 @@ static void oneplus_set_lcd_off_status(struct fg_chip *chip, bool status)
 	else
 		pr_info("set lcd off status fail\n");
 }
+
 static int fg_gen3_probe(struct platform_device *pdev)
 {
 	struct fg_chip *chip;

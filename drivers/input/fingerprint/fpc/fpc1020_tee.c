@@ -329,28 +329,22 @@ static ssize_t report_home_set(struct device *dev,
 
 	if(ignor_home_for_ESD)
 		return -EINVAL;
-	if (!strncmp(buf, "down", strlen("down")))
-	{
-            input_report_key(fpc1020->input_dev,
-                            KEY_HOME, 1);
-            input_sync(fpc1020->input_dev);
-	}
-	else if (!strncmp(buf, "up", strlen("up")))
-	{
-            input_report_key(fpc1020->input_dev,
-                            KEY_HOME, 0);
-            input_sync(fpc1020->input_dev);
-	}
-    else if (!strncmp(buf, "timeout", strlen("timeout")))
-    {
-      input_report_key(fpc1020->input_dev,KEY_F2,1);
-      input_sync(fpc1020->input_dev);
-      input_report_key(fpc1020->input_dev,KEY_F2,0);
-      input_sync(fpc1020->input_dev);
-    }
-	else
+	if (!strncmp(buf, "down", strlen("down"))) {
+		input_report_key(fpc1020->input_dev,
+			KEY_HOME, 1);
+		input_sync(fpc1020->input_dev);
+	} else if (!strncmp(buf, "up", strlen("up"))) {
+		input_report_key(fpc1020->input_dev,
+			KEY_HOME, 0);
+		input_sync(fpc1020->input_dev);
+	} else if (!strncmp(buf, "timeout", strlen("timeout"))) {
+		input_report_key(fpc1020->input_dev, KEY_F2, 1);
+		input_sync(fpc1020->input_dev);
+		input_report_key(fpc1020->input_dev, KEY_F2, 0);
+		input_sync(fpc1020->input_dev);
+	} else {
 		return -EINVAL;
-
+	}
 	return count;
 }
 static DEVICE_ATTR(report_home, S_IWUSR, NULL, report_home_set);
@@ -591,10 +585,18 @@ static int fpc1020_probe(struct platform_device *pdev)
 	else
 		fpc1020->project_version = 0x01;
 
+	printk(KERN_INFO "%s  111111111111111\n", __func__);
+
+
+
 	rc = fpc1020_request_named_gpio(fpc1020, "fpc,irq-gpio",
 			&fpc1020->irq_gpio);
 	if (rc)
 		goto exit;
+
+
+	printk(KERN_INFO "%s  222222222222222\n", __func__);
+
 
 	rc = gpio_direction_input(fpc1020->irq_gpio);
 	

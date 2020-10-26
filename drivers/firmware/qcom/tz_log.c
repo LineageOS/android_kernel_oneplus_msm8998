@@ -1032,7 +1032,6 @@ err:
 	return rc;
 }
 
-
 static int  tzdbgfs_init(struct platform_device *pdev)
 {
 	int rc = 0;

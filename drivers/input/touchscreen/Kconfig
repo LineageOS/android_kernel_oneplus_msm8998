@@ -1225,6 +1225,8 @@ config TOUCHSCREEN_GT9XX
 	  report 5 touches at a time.
 
           If unsure, say N.
+
+
 config TOUCHSCREEN_SYNAPTICS_S3320_I2C_RMI
 	tristate "Synaptics s3320 i2c touchscreen"
 	depends on I2C

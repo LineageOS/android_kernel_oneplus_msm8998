@@ -347,7 +347,7 @@
 				 &cam_sensor_front_suspend &led_disable>;
 		gpios = <&tlmm 14 0>,
 			<&tlmm 28 0>,
-			<&pm8998_gpios 9 0>/* delete by xcb, gpio 21 are used by lcd,
+			<&pm8998_gpios 9 0>/*delete by xcb, gpio 21 are used by lcd,
 			<&tlmm 21 0>*/;
 		qcom,gpio-reset = <1>;
 		qcom,gpio-vdig = <2>;

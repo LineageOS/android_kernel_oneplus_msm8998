@@ -1054,7 +1054,6 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 			 */
 		}
 
-
 		/* Set CC back to DRP toggle for the next disconnect */
 		val.intval = POWER_SUPPLY_TYPEC_PR_DUAL;
 		power_supply_set_property(pd->usb_psy,
@@ -1218,7 +1217,6 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 				start_usb_peripheral(pd);
 			}
 		}
-
 
 		ret = power_supply_get_property(pd->usb_psy,
 				POWER_SUPPLY_PROP_PD_ALLOWED, &val);
@@ -1829,7 +1827,6 @@ enable_reg:
 		usbpd_err(&pd->dev, "Unable to enable vbus (%d)\n", ret);
 	else
 		pd->vbus_enabled = true;
-
 
 	return ret;
 }

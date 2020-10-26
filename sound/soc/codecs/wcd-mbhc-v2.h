@@ -12,10 +12,6 @@
 #ifndef __WCD_MBHC_V2_H__
 #define __WCD_MBHC_V2_H__
 
-/*zhiguang.su@MultiMedia.AudioDrv,
- *2015-10-26,
- *Modify for headset uevent report
- */
 #include<linux/switch.h>
 #include <linux/wait.h>
 #include <linux/stringify.h>
@@ -279,10 +275,6 @@ struct wcd_mbhc_config {
 	bool gnd_det_en;
 	int key_code[WCD_MBHC_KEYCODE_NUM];
 	uint32_t linein_th;
-/*zhiguang.su@MultiMedia.AudioDrv,
- *2015-10-26,
- *Modify for headset uevent
- */
 	int headset_type;
 	bool moisture_en;
 	int mbhc_micbias;
@@ -471,7 +463,6 @@ struct wcd_mbhc {
 	struct completion btn_press_compl;
 	struct mutex hphl_pa_lock;
 	struct mutex hphr_pa_lock;
-/*zhiguang.su@MultiMedia.AudioDrv, 2015-10-26, Modify for headset uevent*/
 	struct switch_dev wcd9xxx_sdev;
 
 	unsigned long intr_status;

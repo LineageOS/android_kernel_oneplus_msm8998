@@ -14,6 +14,7 @@
 #include "ufshcd.h"
 #include "ufs_quirks.h"
 
+/* liochen@BSP, 2016/11/30, Add ufs info into *##*37847# */
 #include <linux/project_info.h>
 
 static struct ufs_card_fix ufs_fixups[] = {
@@ -49,6 +50,7 @@ static struct ufs_card_fix ufs_fixups[] = {
 	END_FIX
 };
 
+/* liochen@BSP, 2016/11/30, Add ufs info into *##*37847# */
 static int ufs_get_capacity_info(struct ufs_hba *hba,  u64 *pcapacity)
 {
        int err;
@@ -90,6 +92,7 @@ static char* ufs_get_capacity_size(u64 capacity)
 		return "0G";
 }
 
+/* liochen@BSP, 2016/11/30, Add ufs info into *##*37847# */
 char ufs_vendor_and_rev[32] = {'\0'};
 char ufs_product_id[32] = {'\0'};
 int ufs_fill_info(struct ufs_hba *hba)

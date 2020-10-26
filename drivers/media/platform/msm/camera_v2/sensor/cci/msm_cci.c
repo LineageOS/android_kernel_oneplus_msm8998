@@ -59,7 +59,7 @@
 #define SYNC_QUEUE (QUEUE_1)
 
 static struct mutex msm_cci_init_mutex =
-    __MUTEX_INITIALIZER(msm_cci_init_mutex);
+					__MUTEX_INITIALIZER(msm_cci_init_mutex);
 
 static struct v4l2_subdev *g_cci_subdev;
 
@@ -1666,24 +1666,20 @@ static int32_t msm_cci_config(struct v4l2_subdev *sd,
 	struct msm_camera_cci_ctrl *cci_ctrl)
 {
 	int32_t rc = 0;
-    struct cci_device *cci_dev;
-    cci_dev = v4l2_get_subdevdata(sd);
-    if (!cci_dev || !cci_ctrl) {
-        pr_err("%s:%d failed: invalid params %pK %pK\n", __func__,
-            __LINE__, cci_dev, cci_ctrl);
-        rc = -EINVAL;
-        return rc;
-    }
-
+	struct cci_device *cci_dev;
+	cci_dev = v4l2_get_subdevdata(sd);
+	if (!cci_dev || !cci_ctrl) {
+		pr_err("%s:%d failed: invalid params %pK %pK\n", __func__,
+		__LINE__, cci_dev, cci_ctrl);
+		rc = -EINVAL;
+		return rc;
+	}
 	CDBG("%s line %d cmd %d\n", __func__, __LINE__,
 		cci_ctrl->cmd);
 	switch (cci_ctrl->cmd) {
 	case MSM_CCI_INIT:
-
 		mutex_lock(cci_dev->cci_init_mutex);
-
 		rc = msm_cci_init(sd, cci_ctrl);
-
 		mutex_unlock(cci_dev->cci_init_mutex);
 		break;
 	case MSM_CCI_RELEASE:
@@ -2123,7 +2119,6 @@ static int msm_cci_probe(struct platform_device *pdev)
 	}
 
 	new_cci_dev->cci_init_mutex = &msm_cci_init_mutex;
-
 	new_cci_dev->ref_count = 0;
 	new_cci_dev->base = msm_camera_get_reg_base(pdev, "cci", true);
 	if (!new_cci_dev->base) {

@@ -303,7 +303,6 @@ static void msm_restart_prepare(const char *cmd)
 
 	set_dload_mode(download_mode &&
 			(in_panic || restart_mode == RESTART_DLOAD));
-
 #endif
 
 	if (qpnp_pon_check_hard_reset_stored()) {
@@ -326,7 +325,11 @@ static void msm_restart_prepare(const char *cmd)
 #endif
 
 	/* Hard reset the PMIC unless memory contents must be maintained. */
+#ifdef CONFIG_QCOM_DLOAD_MODE
+	if (need_warm_reset || oem_panic_record) {
+#else
 	if (need_warm_reset) {
+#endif
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
 	} else {
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
