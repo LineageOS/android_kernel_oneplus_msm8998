@@ -1487,6 +1487,7 @@ uint8_t qdf_get_rate_limit_by_type(uint8_t type)
 	}
 }
 
+#ifdef WLAN_DEBUG
 /**
  * qdf_get_pkt_type_string() - Get the string based on pkt type
  * @type: packet type
@@ -1545,7 +1546,9 @@ uint8_t *qdf_get_pkt_type_string(uint8_t type, uint8_t subtype)
 		}
 	}
 }
+#endif
 
+#ifdef WLAN_DEBUG
 /**
  * qdf_get_pkt_status_string() - Get the string based on pkt status
  * @status: packet status
@@ -1570,6 +1573,7 @@ uint8_t *qdf_get_pkt_status_string(uint8_t status)
 		return "unknown";
 	}
 }
+#endif
 
 /**
  * qdf_dp_log_proto_pkt_info() - Send diag log with pkt info
@@ -2079,8 +2083,10 @@ void qdf_dp_display_proto_pkt_always(struct qdf_dp_trace_record_s *record,
 {
 	int loc;
 	char prepend_str[QDF_DP_TRACE_PREPEND_STR_SIZE];
+#ifdef WLAN_DEBUG
 	struct qdf_dp_trace_proto_buf *buf =
 		(struct qdf_dp_trace_proto_buf *)record->data;
+#endif
 
 	qdf_mem_zero(prepend_str, sizeof(prepend_str));
 	loc = qdf_dp_trace_fill_meta_str(prepend_str, sizeof(prepend_str),
