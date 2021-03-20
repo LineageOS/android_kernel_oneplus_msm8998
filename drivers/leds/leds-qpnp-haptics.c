@@ -342,6 +342,8 @@ struct hap_chip {
 	u8				wave_shape;
 	u8				wave_samp_idx;
 	u32				wave_samp[HAP_WAVE_SAMP_SET_LEN];
+	u32				wave_samp_overdrive[HAP_WAVE_SAMP_LEN];
+	u32				wave_samp_normal[HAP_WAVE_SAMP_LEN];
 	u32				brake_pat[HAP_BRAKE_PAT_LEN];
 	bool				en_brake;
 	u32				misc_clk_trim_error_reg;
@@ -359,6 +361,8 @@ struct hap_chip {
 	bool				play_irq_en;
 	bool				auto_res_err_recovery_hw;
 	bool				vcc_pon_enabled;
+	int				resonant_frequency;
+	int				enable_time;
 };
 
 static int qpnp_haptics_parse_buffer_dt(struct hap_chip *chip);
@@ -481,6 +485,45 @@ static bool is_sw_lra_auto_resonance_control(struct hap_chip *chip)
 	return true;
 }
 
+/*static int qpnp_hap_wf_samp_store_all(struct hrtimer *timer,
+		bool use_overdrive)
+{
+	struct hap_chip *chip = container_of(timer, struct hap_chip,
+				stop_timer);
+	memcpy(chip->shadow_wave_samp, use_overdrive ? chip->wave_samp_overdrive :
+				chip->wave_samp_normal, QPNP_HAP_WAV_SAMP_LEN);
+	mutex_lock(&chip->wf_lock);
+	chip->wf_update = true;
+	mutex_unlock(&chip->wf_lock);
+
+	return 0;
+}*/
+
+static ssize_t qpnp_hap_rf_hz_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	u8 lra_auto_res[2];
+	int temp;
+	struct led_classdev *cdev = dev_get_drvdata(dev);
+	struct hap_chip* chip = container_of(cdev, struct hap_chip,
+					 cdev);
+
+	qpnp_haptics_read_reg(chip, HAP_LRA_AUTO_RES_LO_REG(chip),
+						lra_auto_res, 2);
+
+	temp = (lra_auto_res[1] << 8) | (lra_auto_res[0] & 0xff);
+
+	chip->resonant_frequency = ((19200/96)*1000)/temp;
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", chip->resonant_frequency);
+}
+
+static ssize_t qpnp_hap_rf_hz_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	return count;
+}
+
 #define HAPTICS_BACK_EMF_DELAY_US	20000
 static int qpnp_haptics_auto_res_enable(struct hap_chip *chip, bool enable)
 {
@@ -567,8 +610,10 @@ static void qpnp_haptics_update_lra_frequency(struct hap_chip *chip)
 {
 	u8 lra_auto_res[2], val;
 	u32 play_rate_code;
+	u32 temp = 0;
 	u16 rate_cfg;
 	int rc;
+	int lra_init_freq;
 
 	rc = qpnp_haptics_read_reg(chip, HAP_LRA_AUTO_RES_LO_REG(chip),
 				lra_auto_res, 2);
@@ -582,6 +627,18 @@ static void qpnp_haptics_update_lra_frequency(struct hap_chip *chip)
 
 	pr_debug("lra_auto_res_lo = 0x%x lra_auto_res_hi = 0x%x play_rate_code = 0x%x\n",
 		lra_auto_res[0], lra_auto_res[1], play_rate_code);
+
+	lra_auto_res[1] >>= 4;
+	temp |= lra_auto_res[1];
+	temp = temp << 8;
+	temp |= lra_auto_res[0];
+
+	lra_init_freq = 200000/temp;
+
+	if ((abs(lra_init_freq-235)*100/235) >= 5) {
+		lra_auto_res[0] = 0x53;
+		lra_auto_res[1] = 0x3;
+	}
 
 	rc = qpnp_haptics_read_reg(chip, HAP_STATUS_1_REG(chip), &val, 1);
 	if (rc < 0)
@@ -613,7 +670,6 @@ static void qpnp_haptics_update_lra_frequency(struct hap_chip *chip)
 	/*
 	 * bits[7:4] of AUTO_RES_HI should be written to bits[3:0] of RATE_CFG2
 	 */
-	lra_auto_res[1] >>= 4;
 	rate_cfg = lra_auto_res[1] << 8 | lra_auto_res[0];
 	rc = qpnp_haptics_update_rate_cfg(chip, rate_cfg);
 	if (rc < 0)
@@ -756,10 +812,15 @@ static int qpnp_haptics_play(struct hap_chip *chip, bool enable)
 
 		if (chip->play_mode == HAP_BUFFER)
 			time_ms = get_buffer_mode_duration(chip);
-		hrtimer_start(&chip->stop_timer,
+
+		/*if value < 11ms,use overdrive*/
+		//qpnp_hap_wf_samp_store_all(dev, (time_ms < 11?1:0));
+		chip->enable_time = time_ms;
+
+/*		hrtimer_start(&chip->stop_timer,
 			ktime_set(time_ms / MSEC_PER_SEC,
 			(time_ms % MSEC_PER_SEC) * NSEC_PER_MSEC),
-			HRTIMER_MODE_REL);
+			HRTIMER_MODE_REL);*/
 
 		rc = qpnp_haptics_auto_res_enable(chip, true);
 		if (rc < 0) {
@@ -805,6 +866,12 @@ static void qpnp_haptics_work(struct work_struct *work)
 
 	enable = atomic_read(&chip->state);
 	pr_debug("state: %d\n", enable);
+
+	if (enable) {
+		hrtimer_start(&chip->stop_timer,
+		    ktime_set(chip->enable_time / 1000,
+			(chip->enable_time % 1000) * 1000000), HRTIMER_MODE_REL);
+	}
 
 	if (chip->vcc_pon && enable && !chip->vcc_pon_enabled) {
 		rc = regulator_enable(chip->vcc_pon);
@@ -1744,8 +1811,13 @@ static ssize_t qpnp_haptics_store_wf_s_rep_count(struct device *dev,
 static ssize_t qpnp_haptics_show_vmax(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
+	u8 reg = 0;
 	struct led_classdev *cdev = dev_get_drvdata(dev);
 	struct hap_chip *chip = container_of(cdev, struct hap_chip, cdev);
+
+	reg = (reg >> HAP_VMAX_SHIFT);
+
+	chip->vmax_mv = reg * HAP_VMAX_MIN_MV;
 
 	return snprintf(buf, PAGE_SIZE, "%d\n", chip->vmax_mv);
 }
@@ -1816,6 +1888,7 @@ static struct device_attribute qpnp_haptics_attrs[] = {
 	__ATTR(vmax_mv, 0664, qpnp_haptics_show_vmax, qpnp_haptics_store_vmax),
 	__ATTR(lra_auto_mode, 0664, qpnp_haptics_show_lra_auto_mode,
 		qpnp_haptics_store_lra_auto_mode),
+	__ATTR(rf_hz, 0664, qpnp_hap_rf_hz_show, qpnp_hap_rf_hz_store),
 };
 
 /* Dummy functions for brightness */
@@ -2011,6 +2084,14 @@ static int qpnp_haptics_parse_buffer_dt(struct hap_chip *chip)
 				rc);
 			return rc;
 		}
+
+		rc = of_property_read_u32_array(node, "qcom,wave-samples",
+				chip->wave_samp_normal, wf_samp_len);
+		if (rc < 0) {
+			pr_err("Error in reading qcom,wave-samples, rc=%d\n",
+				rc);
+			return rc;
+		}
 	} else {
 		/* Use default values */
 		for (i = 0; i < HAP_WAVE_SAMP_LEN; i++)
@@ -2018,6 +2099,19 @@ static int qpnp_haptics_parse_buffer_dt(struct hap_chip *chip)
 
 		wf_samp_len = HAP_WAVE_SAMP_LEN;
 	}
+
+	rc = of_property_read_u32_array(node, "qcom,wave-samples-overdrive",
+				chip->wave_samp_overdrive, wf_samp_len);
+	if (rc < 0) {
+		pr_err("Error in reading qcom,wave-samples-overdrive, rc=%d\n",
+			rc);
+		/* Use default values */
+		for (i = 0; i < HAP_WAVE_SAMP_LEN; i++)
+			chip->wave_samp_overdrive[i] = HAP_WF_SAMP_MAX;
+
+		return rc;
+	}
+
 	chip->wf_samp_len = wf_samp_len;
 
 	return 0;
