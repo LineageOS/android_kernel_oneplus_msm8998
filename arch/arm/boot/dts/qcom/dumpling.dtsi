@@ -391,7 +391,6 @@
 	qcom,brake-pattern = <0x3 0x3 0x3 0x3>;
 	qcom,lra-auto-res-mode = "qwd";
 	qcom,lra-res-cal-period = <32>;
-	qcom,wave-samples = [28 28 28 28 28 28 28 28];
 };
 
 &spmi_bus {
