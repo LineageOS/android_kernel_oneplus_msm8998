@@ -1795,14 +1795,6 @@ static int autosuspend_check(struct usb_device *udev)
 			 * and so they are permanently active.
 			 */
 
-			/* 2016/07/01, Avoid null pointer if otg device
-			 * filesystem has problem
-			 */
-			if (intf == NULL) {
-				dev_err(&udev->dev, "%s intf = NULL\n",
-						__func__);
-				return -EIO;
-			}
 			if (intf->dev.power.disable_depth)
 				continue;
 			if (atomic_read(&intf->dev.power.usage_count) > 0)
