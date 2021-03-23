@@ -1729,14 +1729,8 @@ static int hub_probe(struct usb_interface *intf, const struct usb_device_id *id)
 	 * - Change autosuspend delay of hub can avoid unnecessary auto
 	 *   suspend timer for hub, also may decrease power consumption
 	 *   of USB bus.
-	 *
-	 * - If user has indicated to prevent autosuspend by passing
-	 *   usbcore.autosuspend = -1 then keep autosuspend disabled.
 	 */
-#ifdef CONFIG_PM
-	if (hdev->dev.power.autosuspend_delay >= 0)
-		pm_runtime_set_autosuspend_delay(&hdev->dev, 0);
-#endif
+	pm_runtime_set_autosuspend_delay(&hdev->dev, 0);
 
 	/*
 	 * Hubs have proper suspend/resume support, except for root hubs
@@ -4307,8 +4301,11 @@ static void hub_set_initial_usb2_lpm_policy(struct usb_device *udev)
 	if (hub)
 		connect_type = hub->ports[udev->portnum - 1]->connect_type;
 
-	if(udev->bos == NULL)
-		return;
+	if ((udev->bos->ext_cap->bmAttributes & cpu_to_le32(USB_BESL_SUPPORT)) ||
+			connect_type == USB_PORT_CONNECT_TYPE_HARD_WIRED) {
+		udev->usb2_hw_lpm_allowed = 1;
+		usb_enable_usb2_hardware_lpm(udev);
+	}
 }
 
 static int hub_enable_device(struct usb_device *udev)
@@ -4794,6 +4791,7 @@ static void hub_port_connect(struct usb_hub *hub, int port1, u16 portstatus,
 			goto done;
 		return;
 	}
+
 	if (deny_new_usb) {
 		dev_err(&port_dev->dev, "denied insert of USB device on port %d\n", port1);
 		goto done;

@@ -362,6 +362,218 @@ static struct usb_gadget_strings *uac1_strings[] = {
  * This function is an ALSA sound card following USB Audio Class Spec 1.0.
  */
 
+/*-------------------------------------------------------------------------*/
+struct f_audio_buf {
+	u8 *buf;
+	int actual;
+	struct list_head list;
+};
+
+static struct f_audio_buf *f_audio_buffer_alloc(int buf_size)
+{
+	struct f_audio_buf *copy_buf;
+
+	copy_buf = kzalloc(sizeof *copy_buf, GFP_ATOMIC);
+	if (!copy_buf)
+		return ERR_PTR(-ENOMEM);
+
+	copy_buf->buf = kzalloc(buf_size, GFP_ATOMIC);
+	if (!copy_buf->buf) {
+		kfree(copy_buf);
+		return ERR_PTR(-ENOMEM);
+	}
+
+	return copy_buf;
+}
+
+static void f_audio_buffer_free(struct f_audio_buf *audio_buf)
+{
+	kfree(audio_buf->buf);
+	kfree(audio_buf);
+}
+/*-------------------------------------------------------------------------*/
+
+struct f_audio {
+	struct gaudio			card;
+
+	/* endpoints handle full and/or high speeds */
+	struct usb_ep			*out_ep;
+
+	spinlock_t			lock;
+	struct f_audio_buf *copy_buf;
+	struct work_struct playback_work;
+	struct list_head play_queue;
+
+	/* Control Set command */
+	struct list_head cs;
+	u8 set_cmd;
+	struct usb_audio_control *set_con;
+};
+
+static inline struct f_audio *func_to_audio(struct usb_function *f)
+{
+	return container_of(f, struct f_audio, card.func);
+}
+
+/*-------------------------------------------------------------------------*/
+
+static void f_audio_playback_work(struct work_struct *data)
+{
+	struct f_audio *audio = container_of(data, struct f_audio,
+					playback_work);
+	struct f_audio_buf *play_buf;
+
+	spin_lock_irq(&audio->lock);
+	if (list_empty(&audio->play_queue)) {
+		spin_unlock_irq(&audio->lock);
+		return;
+	}
+	play_buf = list_first_entry(&audio->play_queue,
+			struct f_audio_buf, list);
+	list_del(&play_buf->list);
+	spin_unlock_irq(&audio->lock);
+
+	u_audio_playback(&audio->card, play_buf->buf, play_buf->actual);
+	f_audio_buffer_free(play_buf);
+}
+
+static int f_audio_out_ep_complete(struct usb_ep *ep, struct usb_request *req)
+{
+	struct f_audio *audio = req->context;
+	struct usb_composite_dev *cdev = audio->card.func.config->cdev;
+	struct f_audio_buf *copy_buf = audio->copy_buf;
+	struct f_uac1_opts *opts;
+	int audio_buf_size;
+	int err;
+
+	opts = container_of(audio->card.func.fi, struct f_uac1_opts,
+			    func_inst);
+	audio_buf_size = opts->audio_buf_size;
+
+	if (!copy_buf)
+		return -EINVAL;
+
+	/* Copy buffer is full, add it to the play_queue */
+	if (audio_buf_size - copy_buf->actual < req->actual) {
+		spin_lock_irq(&audio->lock);
+		list_add_tail(&copy_buf->list, &audio->play_queue);
+		spin_unlock_irq(&audio->lock);
+		schedule_work(&audio->playback_work);
+		copy_buf = f_audio_buffer_alloc(audio_buf_size);
+		if (IS_ERR(copy_buf))
+			return -ENOMEM;
+	}
+
+	memcpy(copy_buf->buf + copy_buf->actual, req->buf, req->actual);
+	copy_buf->actual += req->actual;
+	audio->copy_buf = copy_buf;
+
+	err = usb_ep_queue(ep, req, GFP_ATOMIC);
+	if (err)
+		ERROR(cdev, "%s queue req: %d\n", ep->name, err);
+
+	return 0;
+
+}
+
+static void f_audio_complete(struct usb_ep *ep, struct usb_request *req)
+{
+	struct f_audio *audio = req->context;
+	int status = req->status;
+	u32 data = 0;
+	struct usb_ep *out_ep = audio->out_ep;
+
+	switch (status) {
+
+	case 0:				/* normal completion? */
+		if (ep == out_ep)
+			f_audio_out_ep_complete(ep, req);
+		else if (audio->set_con) {
+			memcpy(&data, req->buf, req->length);
+			audio->set_con->set(audio->set_con, audio->set_cmd,
+					le16_to_cpu(data));
+			audio->set_con = NULL;
+		}
+		break;
+	default:
+		break;
+	}
+}
+
+static int audio_set_intf_req(struct usb_function *f,
+		const struct usb_ctrlrequest *ctrl)
+{
+	struct f_audio		*audio = func_to_audio(f);
+	struct usb_composite_dev *cdev = f->config->cdev;
+	struct usb_request	*req = cdev->req;
+	u8			id = ((le16_to_cpu(ctrl->wIndex) >> 8) & 0xFF);
+	u16			len = le16_to_cpu(ctrl->wLength);
+	u16			w_value = le16_to_cpu(ctrl->wValue);
+	u8			con_sel = (w_value >> 8) & 0xFF;
+	u8			cmd = (ctrl->bRequest & 0x0F);
+	struct usb_audio_control_selector *cs;
+	struct usb_audio_control *con;
+
+	DBG(cdev, "bRequest 0x%x, w_value 0x%04x, len %d, entity %d\n",
+			ctrl->bRequest, w_value, len, id);
+
+	list_for_each_entry(cs, &audio->cs, list) {
+		if (cs->id == id) {
+			list_for_each_entry(con, &cs->control, list) {
+				if (con->type == con_sel) {
+					audio->set_con = con;
+					break;
+				}
+			}
+			break;
+		}
+	}
+
+	audio->set_cmd = cmd;
+	req->context = audio;
+	req->complete = f_audio_complete;
+
+	return len;
+}
+
+static int audio_get_intf_req(struct usb_function *f,
+		const struct usb_ctrlrequest *ctrl)
+{
+	struct f_audio		*audio = func_to_audio(f);
+	struct usb_composite_dev *cdev = f->config->cdev;
+	struct usb_request	*req = cdev->req;
+	int			value = -EOPNOTSUPP;
+	u8			id = ((le16_to_cpu(ctrl->wIndex) >> 8) & 0xFF);
+	u16			len = le16_to_cpu(ctrl->wLength);
+	u16			w_value = le16_to_cpu(ctrl->wValue);
+	u8			con_sel = (w_value >> 8) & 0xFF;
+	u8			cmd = (ctrl->bRequest & 0x0F);
+	struct usb_audio_control_selector *cs;
+	struct usb_audio_control *con;
+
+	DBG(cdev, "bRequest 0x%x, w_value 0x%04x, len %d, entity %d\n",
+			ctrl->bRequest, w_value, len, id);
+
+	list_for_each_entry(cs, &audio->cs, list) {
+		if (cs->id == id) {
+			list_for_each_entry(con, &cs->control, list) {
+				if (con->type == con_sel && con->get) {
+					value = con->get(con, cmd);
+					break;
+				}
+			}
+			break;
+		}
+	}
+
+	req->context = audio;
+	req->complete = f_audio_complete;
+	len = min_t(size_t, sizeof(value), len);
+	memcpy(req->buf, &value, len);
+
+	return len;
+}
+
 static int audio_set_endpoint_req(struct usb_function *f,
 		const struct usb_ctrlrequest *ctrl)
 {

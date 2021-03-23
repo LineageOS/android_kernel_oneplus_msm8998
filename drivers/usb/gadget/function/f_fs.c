@@ -1891,10 +1891,6 @@ static void ffs_data_reset(struct ffs_data *ffs)
 	ffs->setup_state = FFS_NO_SETUP;
 	ffs->flags = 0;
 
-	ffs->ms_os_descs_ext_prop_count = 0;
-	ffs->ms_os_descs_ext_prop_name_len = 0;
-	ffs->ms_os_descs_ext_prop_data_len = 0;
-
 	ffs_log("exit: state %d setup_state %d flag %lu", ffs->state,
 		ffs->setup_state, ffs->flags);
 }
@@ -2100,12 +2096,6 @@ static int ffs_func_eps_enable(struct ffs_function *func)
 			break;
 		}
 
-		/*
-		 * userspace setting maxburst > 1 results more fifo
-		 * allocation than without maxburst. Change maxburst to 1
-		 * only to allocate fifo size of max packet size.
-		 */
-		ep->ep->maxburst = 1;
 		ret = usb_ep_enable(ep->ep);
 		if (likely(!ret)) {
 			epfile->ep = ep;

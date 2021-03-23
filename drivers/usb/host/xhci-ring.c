@@ -68,6 +68,7 @@
 #include <linux/slab.h>
 #include "xhci.h"
 #include "xhci-trace.h"
+extern void kick_usbpd_vbus_sm(void);
 
 /*
  * Returns zero if the TRB isn't in this segment, otherwise it returns the DMA
@@ -1288,6 +1289,14 @@ void xhci_handle_command_timeout(struct work_struct *work)
 		xhci->cmd_ring_state = CMD_RING_STATE_ABORTED;
 		xhci_dbg(xhci, "Command timeout\n");
 		ret = xhci_abort_cmd_ring(xhci, flags);
+		if (ret == -EPERM) {
+			xhci_err(xhci, "Abort command ring failed reset usb device\n");
+			xhci_cleanup_command_queue(xhci);
+			spin_unlock_irqrestore(&xhci->lock, flags);
+			kick_usbpd_vbus_sm();
+			return;
+		}
+
 		if (unlikely(ret == -ESHUTDOWN)) {
 			xhci_err(xhci, "Abort command ring failed\n");
 			xhci_cleanup_command_queue(xhci);
@@ -2733,10 +2742,6 @@ irqreturn_t xhci_irq(struct usb_hcd *hcd)
 	status = readl(&xhci->op_regs->status);
 	if (status == 0xffffffff)
 		goto hw_died;
-
-	if (status & STS_HCE) {
-		xhci_warn(xhci, "WARNING: Host controller Error\n");
-	}
 
 	if (!(status & STS_EINT)) {
 		spin_unlock(&xhci->lock);
