@@ -7,6 +7,8 @@
 #include <linux/socket.h>
 #include <linux/types.h>
 #include <linux/u64_stats_sync.h>
+#include <linux/bitops.h>
+
 #include <net/dsfield.h>
 #include <net/gro_cells.h>
 #include <net/inet_ecn.h>
@@ -48,6 +50,7 @@ struct ip_tunnel_key {
 	__be16			tun_flags;
 	u8			tos;		/* TOS for IPv4, TC for IPv6 */
 	u8			ttl;		/* TTL for IPv4, HL for IPv6 */
+	__be32			label;		/* Flow Label for IPv6 */
 	__be16			tp_src;
 	__be16			tp_dst;
 };
@@ -55,6 +58,11 @@ struct ip_tunnel_key {
 /* Flags for ip_tunnel_info mode. */
 #define IP_TUNNEL_INFO_TX	0x01	/* represents tx tunnel parameters */
 #define IP_TUNNEL_INFO_IPV6	0x02	/* key contains IPv6 addresses */
+
+/* Maximum tunnel options length. */
+#define IP_TUNNEL_OPTS_MAX					\
+	GENMASK((FIELD_SIZEOF(struct ip_tunnel_info,		\
+			      options_len) * BITS_PER_BYTE) - 1, 0)
 
 struct ip_tunnel_info {
 	struct ip_tunnel_key	key;
@@ -177,7 +185,7 @@ int ip_tunnel_encap_del_ops(const struct ip_tunnel_encap_ops *op,
 
 static inline void ip_tunnel_key_init(struct ip_tunnel_key *key,
 				      __be32 saddr, __be32 daddr,
-				      u8 tos, u8 ttl,
+				      u8 tos, u8 ttl, __be32 label,
 				      __be16 tp_src, __be16 tp_dst,
 				      __be64 tun_id, __be16 tun_flags)
 {
@@ -188,6 +196,7 @@ static inline void ip_tunnel_key_init(struct ip_tunnel_key *key,
 	       0, IP_TUNNEL_KEY_IPV4_PAD_LEN);
 	key->tos = tos;
 	key->ttl = ttl;
+	key->label = label;
 	key->tun_flags = tun_flags;
 
 	/* For the tunnel types on the top of IPsec, the tp_src and tp_dst of

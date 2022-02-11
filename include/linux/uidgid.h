@@ -58,6 +58,9 @@ static inline gid_t __kgid_val(kgid_t gid)
 #define INVALID_UID KUIDT_INIT(-1)
 #define INVALID_GID KGIDT_INIT(-1)
 
+#define GLOBAL_SYSTEM_UID KUIDT_INIT(1000)
+
+
 static inline bool uid_eq(kuid_t left, kuid_t right)
 {
 	return __kuid_val(left) == __kuid_val(right);

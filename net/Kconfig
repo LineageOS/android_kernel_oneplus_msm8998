@@ -270,6 +270,7 @@ config XPS
 config CGROUP_NET_PRIO
 	bool "Network priority cgroup"
 	depends on CGROUPS
+	select SOCK_CGROUP_DATA
 	---help---
 	  Cgroup subsystem for use in assigning processes to network priorities on
 	  a per-interface basis.
@@ -277,6 +278,7 @@ config CGROUP_NET_PRIO
 config CGROUP_NET_CLASSID
 	bool "Network classid cgroup"
 	depends on CGROUPS
+	select SOCK_CGROUP_DATA
 	---help---
 	  Cgroup subsystem for use as general purpose socket classid marker that is
 	  being used in cls_cgroup and for netfilter matching.
@@ -299,8 +301,11 @@ config BPF_JIT
 	  Berkeley Packet Filter filtering capabilities are normally handled
 	  by an interpreter. This option allows kernel to generate a native
 	  code when filter is loaded in memory. This should speedup
-	  packet sniffing (libpcap/tcpdump). Note : Admin should enable
-	  this feature changing /proc/sys/net/core/bpf_jit_enable
+	  packet sniffing (libpcap/tcpdump).
+
+	  Note, admin should enable this feature changing:
+	  /proc/sys/net/core/bpf_jit_enable
+	  /proc/sys/net/core/bpf_jit_harden (optional)
 
 config NET_FLOW_LIMIT
 	bool
@@ -421,5 +426,3 @@ endif   # if NET
 config HAVE_BPF_JIT
 	bool
 
-config HAVE_EBPF_JIT
-	bool

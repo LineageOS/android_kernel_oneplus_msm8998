@@ -16,6 +16,12 @@ hostprogs-y += tracex5
 hostprogs-y += tracex6
 hostprogs-y += trace_output
 hostprogs-y += lathist
+hostprogs-y += offwaketime
+hostprogs-y += spintest
+hostprogs-y += map_perf_test
+hostprogs-y += test_overhead
+hostprogs-y += test_cgrp2_array_pin
+hostprogs-y += test_cgrp2_attach
 
 test_verifier-objs := test_verifier.o libbpf.o
 test_maps-objs := test_maps.o libbpf.o
@@ -32,6 +38,12 @@ tracex5-objs := bpf_load.o libbpf.o tracex5_user.o
 tracex6-objs := bpf_load.o libbpf.o tracex6_user.o
 trace_output-objs := bpf_load.o libbpf.o trace_output_user.o
 lathist-objs := bpf_load.o libbpf.o lathist_user.o
+offwaketime-objs := bpf_load.o libbpf.o offwaketime_user.o
+spintest-objs := bpf_load.o libbpf.o spintest_user.o
+map_perf_test-objs := bpf_load.o libbpf.o map_perf_test_user.o
+test_overhead-objs := bpf_load.o libbpf.o test_overhead_user.o
+test_cgrp2_array_pin-objs := libbpf.o test_cgrp2_array_pin.o
+test_cgrp2_attach-objs := libbpf.o test_cgrp2_attach.o
 
 # Tell kbuild to always build the programs
 always := $(hostprogs-y)
@@ -47,6 +59,13 @@ always += tracex6_kern.o
 always += trace_output_kern.o
 always += tcbpf1_kern.o
 always += lathist_kern.o
+always += offwaketime_kern.o
+always += spintest_kern.o
+always += map_perf_test_kern.o
+always += test_overhead_tp_kern.o
+always += test_overhead_kprobe_kern.o
+always += parse_varlen.o parse_simple.o parse_ldabs.o
+always += test_cgrp2_tc_kern.o
 
 HOSTCFLAGS += -I$(objtree)/usr/include
 
@@ -63,6 +82,10 @@ HOSTLOADLIBES_tracex5 += -lelf
 HOSTLOADLIBES_tracex6 += -lelf
 HOSTLOADLIBES_trace_output += -lelf -lrt
 HOSTLOADLIBES_lathist += -lelf
+HOSTLOADLIBES_offwaketime += -lelf
+HOSTLOADLIBES_spintest += -lelf
+HOSTLOADLIBES_map_perf_test += -lelf -lrt
+HOSTLOADLIBES_test_overhead += -lelf -lrt
 
 # point this to your LLVM backend with bpf support
 LLC=$(srctree)/tools/bpf/llvm/bld/Debug+Asserts/bin/llc
@@ -73,6 +96,7 @@ LLC=$(srctree)/tools/bpf/llvm/bld/Debug+Asserts/bin/llc
 $(obj)/%.o: $(src)/%.c
 	clang $(NOSTDINC_FLAGS) $(LINUXINCLUDE) $(EXTRA_CFLAGS) \
 		-D__KERNEL__ -D__ASM_SYSREG_H -Wno-unused-value -Wno-pointer-sign \
+		-Wno-compare-distinct-pointer-types \
 		-O2 -emit-llvm -c $< -o -| $(LLC) -march=bpf -filetype=obj -o $@
 	clang $(NOSTDINC_FLAGS) $(LINUXINCLUDE) $(EXTRA_CFLAGS) \
 		-D__KERNEL__ -D__ASM_SYSREG_H -Wno-unused-value -Wno-pointer-sign \
