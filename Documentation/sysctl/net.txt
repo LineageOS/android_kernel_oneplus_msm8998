@@ -43,6 +43,25 @@ Values :
 	1 - enable the JIT
 	2 - enable the JIT and ask the compiler to emit traces on kernel log.
 
+bpf_jit_harden
+--------------
+
+This enables hardening for the Berkeley Packet Filter Just in Time compiler.
+Supported are eBPF JIT backends. Enabling hardening trades off performance,
+but can mitigate JIT spraying.
+Values :
+	0 - disable JIT hardening (default value)
+	1 - enable JIT hardening for unprivileged users only
+	2 - enable JIT hardening for all users
+
+bpf_jit_limit
+-------------
+
+This enforces a global limit for memory allocations to the BPF JIT
+compiler in order to reject unprivileged JIT requests once it has
+been surpassed. bpf_jit_limit contains the value of the global limit
+in bytes.
+
 dev_weight
 --------------
 

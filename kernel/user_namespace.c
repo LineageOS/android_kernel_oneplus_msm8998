@@ -944,6 +944,20 @@ bool userns_may_setgroups(const struct user_namespace *ns)
 	return allowed;
 }
 
+/*
+ * Returns true if @ns is the same namespace as or a descendant of
+ * @target_ns.
+ */
+bool current_in_userns(const struct user_namespace *target_ns)
+{
+	struct user_namespace *ns;
+	for (ns = current_user_ns(); ns; ns = ns->parent) {
+		if (ns == target_ns)
+			return true;
+	}
+	return false;
+}
+
 static inline struct user_namespace *to_user_ns(struct ns_common *ns)
 {
 	return container_of(ns, struct user_namespace, ns);
@@ -996,12 +1010,36 @@ static int userns_install(struct nsproxy *nsproxy, struct ns_common *ns)
 	return commit_creds(cred);
 }
 
+struct ns_common *ns_get_owner(struct ns_common *ns)
+{
+	struct user_namespace *my_user_ns = current_user_ns();
+	struct user_namespace *owner, *p;
+
+	/* See if the owner is in the current user namespace */
+	owner = p = ns->ops->owner(ns);
+	for (;;) {
+		if (!p)
+			return ERR_PTR(-EPERM);
+		if (p == my_user_ns)
+			break;
+		p = p->parent;
+	}
+
+	return &get_user_ns(owner)->ns;
+}
+
+static struct user_namespace *userns_owner(struct ns_common *ns)
+{
+	return to_user_ns(ns)->parent;
+}
+
 const struct proc_ns_operations userns_operations = {
 	.name		= "user",
 	.type		= CLONE_NEWUSER,
 	.get		= userns_get,
 	.put		= userns_put,
 	.install	= userns_install,
+	.owner		= userns_owner,
 };
 
 static __init int user_namespaces_init(void)

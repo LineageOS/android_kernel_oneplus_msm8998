@@ -28,8 +28,6 @@
 #include <asm/nospec-branch.h>
 #include "bpf_jit.h"
 
-int bpf_jit_enable __read_mostly;
-
 struct bpf_jit {
 	u32 seen;		/* Flags to remember seen eBPF instructions */
 	u32 seen_reg[16];	/* Array to remember which registers are used */
@@ -425,7 +423,7 @@ static void emit_load_skb_data_hlen(struct bpf_jit *jit)
  * Save registers and create stack frame if necessary.
  * See stack frame layout desription in "bpf_jit.h"!
  */
-static void bpf_jit_prologue(struct bpf_jit *jit, bool is_classic)
+static void bpf_jit_prologue(struct bpf_jit *jit)
 {
 	if (jit->seen & SEEN_TAIL_CALL) {
 		/* xc STK_OFF_TCCNT(4,%r15),STK_OFF_TCCNT(%r15) */
@@ -465,15 +463,6 @@ static void bpf_jit_prologue(struct bpf_jit *jit, bool is_classic)
 		/* stg %b1,ST_OFF_SKBP(%r0,%r15) */
 		EMIT6_DISP_LH(0xe3000000, 0x0024, BPF_REG_1, REG_0, REG_15,
 			      STK_OFF_SKBP);
-	/* Clear A (%b0) and X (%b7) registers for converted BPF programs */
-	if (is_classic) {
-		if (REG_SEEN(BPF_REG_A))
-			/* lghi %ba,0 */
-			EMIT4_IMM(0xa7090000, BPF_REG_A, 0);
-		if (REG_SEEN(BPF_REG_X))
-			/* lghi %bx,0 */
-			EMIT4_IMM(0xa7090000, BPF_REG_X, 0);
-	}
 }
 
 /*
@@ -1311,7 +1300,7 @@ static int bpf_jit_prog(struct bpf_jit *jit, struct bpf_prog *fp)
 	jit->lit = jit->lit_start;
 	jit->prg = 0;
 
-	bpf_jit_prologue(jit, bpf_prog_was_classic(fp));
+	bpf_jit_prologue(jit);
 	for (i = 0; i < fp->len; i += insn_count) {
 		insn_count = bpf_jit_insn(jit, fp, i);
 		if (insn_count < 0)
@@ -1338,18 +1327,19 @@ void bpf_jit_compile(struct bpf_prog *fp)
 /*
  * Compile eBPF program "fp"
  */
-void bpf_int_jit_compile(struct bpf_prog *fp)
+struct bpf_prog *bpf_int_jit_compile(struct bpf_prog *fp)
 {
 	struct bpf_binary_header *header;
 	struct bpf_jit jit;
 	int pass;
 
 	if (!bpf_jit_enable)
-		return;
+		return fp;
+
 	memset(&jit, 0, sizeof(jit));
 	jit.addrs = kcalloc(fp->len + 1, sizeof(*jit.addrs), GFP_KERNEL);
 	if (jit.addrs == NULL)
-		return;
+		return fp;
 	/*
 	 * Three initial passes:
 	 *   - 1/2: Determine clobbered registers
@@ -1381,6 +1371,7 @@ void bpf_int_jit_compile(struct bpf_prog *fp)
 	}
 free_addrs:
 	kfree(jit.addrs);
+	return fp;
 }
 
 /*

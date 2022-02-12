@@ -9,6 +9,7 @@
 #define CRAMFS_MAGIC		0x28cd3d45	/* some random number */
 #define CRAMFS_MAGIC_WEND	0x453dcd28	/* magic number with the wrong endianess */
 #define DEBUGFS_MAGIC          0x64626720
+#define CGROUP2_SUPER_MAGIC	0x63677270
 #define SECURITYFS_MAGIC	0x73636673
 #define SELINUX_MAGIC		0xf97cff8c
 #define SMACK_MAGIC		0x43415d53	/* "SMAC" */
@@ -56,7 +57,6 @@
 
 #define SMB_SUPER_MAGIC		0x517B
 #define CGROUP_SUPER_MAGIC	0x27e0eb
-#define CGROUP2_SUPER_MAGIC	0x63677270
 
 
 #define STACK_END_MAGIC		0x57AC6E9D
