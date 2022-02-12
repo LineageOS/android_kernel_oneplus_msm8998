@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "36eb70a2_5871c658",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 5911
+      },
+      "writtenOn": "2022-02-12T08:26:15Z",
+      "side": 1,
+      "message": "rebased, got rid of their \"cleanup\" commit, and killed the revert",
+      "revId": "c794a655dc883b90f718519667f5a91cda4e9204",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
