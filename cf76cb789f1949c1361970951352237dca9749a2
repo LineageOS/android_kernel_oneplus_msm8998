@@ -33,6 +33,23 @@
       "message": "This was supposed to be part of \"your\" eBPF backport. See: https://github.com/LineageOS/android_kernel_fxtec_msm8998/commit/0f73b96f22205d4b4a3c2bab65662c30853b9a18",
       "revId": "cf76cb789f1949c1361970951352237dca9749a2",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "0306dcd8_eaba453d",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 5911
+      },
+      "writtenOn": "2022-04-13T18:52:46Z",
+      "side": 1,
+      "message": "i doubt stuff like CONFIG_LOGO_LINUX_MONO was part of it.",
+      "revId": "cf76cb789f1949c1361970951352237dca9749a2",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
