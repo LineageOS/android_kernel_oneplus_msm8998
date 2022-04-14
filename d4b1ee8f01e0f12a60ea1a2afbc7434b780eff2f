@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "c9266744_796bc104",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 5911
+      },
+      "writtenOn": "2022-04-14T04:18:33Z",
+      "side": 1,
+      "message": "if you want to clean up the config, feel free. just not with a specific commit message like this. and again: cut the attitude timi, just remember all of the shit you commited to our repos we had to remove afterwards.",
+      "revId": "d4b1ee8f01e0f12a60ea1a2afbc7434b780eff2f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
