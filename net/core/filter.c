@@ -79,6 +79,10 @@ int sk_filter_trim_cap(struct sock *sk, struct sk_buff *skb, unsigned int cap)
 	if (skb_pfmemalloc(skb) && !sock_flag(sk, SOCK_MEMALLOC))
 		return -ENOMEM;
 
+	err = BPF_CGROUP_RUN_PROG_INET_INGRESS(sk, skb);
+	if (err)
+		return err;
+
 	err = security_sock_rcv_skb(sk, skb);
 	if (err)
 		return err;
@@ -91,8 +95,8 @@ int sk_filter_trim_cap(struct sock *sk, struct sk_buff *skb, unsigned int cap)
 
 		skb->sk = sk;
 		pkt_len = bpf_prog_run_save_cb(filter->prog, skb);
-		err = pkt_len ? pskb_trim(skb, max(cap, pkt_len)) : -EPERM;
 		skb->sk = save_sk;
+		err = pkt_len ? pskb_trim(skb, max(cap, pkt_len)) : -EPERM;
 	}
 	rcu_read_unlock();
 
@@ -1206,7 +1210,7 @@ static int __reuseport_attach_prog(struct bpf_prog *prog, struct sock *sk)
 	if (bpf_prog_size(prog->len) > sysctl_optmem_max)
 		return -ENOMEM;
 
-	if (sk_unhashed(sk)) {
+	if (sk_unhashed(sk) && sk->sk_reuseport) {
 		err = reuseport_alloc(sk);
 		if (err)
 			return err;
@@ -1233,7 +1237,7 @@ struct bpf_prog *__get_filter(struct sock_fprog *fprog, struct sock *sk)
 		return ERR_PTR(-EPERM);
 
 	/* Make sure new filter is there and in the right amounts. */
-	if (fprog->filter == NULL)
+	if (!bpf_check_basics_ok(fprog->filter, fprog->len))
 		return ERR_PTR(-EINVAL);
 
 	prog = bpf_prog_alloc(bpf_prog_size(fprog->len), 0);
@@ -1636,6 +1640,19 @@ static inline int __bpf_rx_skb(struct net_device *dev, struct sk_buff *skb)
 	return dev_forward_skb(dev, skb);
 }
 
+static inline int __bpf_rx_skb_no_mac(struct net_device *dev,
+				      struct sk_buff *skb)
+{
+	int ret = ____dev_forward_skb(dev, skb);
+
+	if (likely(!ret)) {
+		skb->dev = dev;
+		ret = netif_rx(skb);
+	}
+
+	return ret;
+}
+
 static inline int __bpf_tx_skb(struct net_device *dev, struct sk_buff *skb)
 {
 	int ret;
@@ -1653,6 +1670,54 @@ static inline int __bpf_tx_skb(struct net_device *dev, struct sk_buff *skb)
 	__this_cpu_dec(xmit_recursion);
 
 	return ret;
+}
+
+static int __bpf_redirect_no_mac(struct sk_buff *skb, struct net_device *dev,
+				 u32 flags)
+{
+	/* skb->mac_len is not set on normal egress */
+	unsigned int mlen = skb->network_header - skb->mac_header;
+
+	__skb_pull(skb, mlen);
+
+	/* At ingress, the mac header has already been pulled once.
+	 * At egress, skb_pospull_rcsum has to be done in case that
+	 * the skb is originated from ingress (i.e. a forwarded skb)
+	 * to ensure that rcsum starts at net header.
+	 */
+	if (!skb_at_tc_ingress(skb))
+		skb_postpull_rcsum(skb, skb_mac_header(skb), mlen);
+	skb_pop_mac_header(skb);
+	skb_reset_mac_len(skb);
+	return flags & BPF_F_INGRESS ?
+	       __bpf_rx_skb_no_mac(dev, skb) : __bpf_tx_skb(dev, skb);
+}
+
+static int __bpf_redirect_common(struct sk_buff *skb, struct net_device *dev,
+				 u32 flags)
+{
+	bpf_push_mac_rcsum(skb);
+	return flags & BPF_F_INGRESS ?
+	       __bpf_rx_skb(dev, skb) : __bpf_tx_skb(dev, skb);
+}
+
+static int __bpf_redirect(struct sk_buff *skb, struct net_device *dev,
+			  u32 flags)
+{
+	switch (dev->type) {
+	case ARPHRD_TUNNEL:
+	case ARPHRD_TUNNEL6:
+	case ARPHRD_SIT:
+	case ARPHRD_IPGRE:
+	case ARPHRD_VOID:
+	case ARPHRD_NONE:
+#ifdef ARPHRD_RAWIP
+	case ARPHRD_RAWIP:
+#endif
+		return __bpf_redirect_no_mac(skb, dev, flags);
+	default:
+		return __bpf_redirect_common(skb, dev, flags);
+	}
 }
 
 BPF_CALL_3(bpf_clone_redirect, struct sk_buff *, skb, u32, ifindex, u64, flags)
@@ -1683,10 +1748,7 @@ BPF_CALL_3(bpf_clone_redirect, struct sk_buff *, skb, u32, ifindex, u64, flags)
 		return -ENOMEM;
 	}
 
-	bpf_push_mac_rcsum(clone);
-
-	return flags & BPF_F_INGRESS ?
-	       __bpf_rx_skb(dev, clone) : __bpf_tx_skb(dev, clone);
+	return __bpf_redirect(clone, dev, flags);
 }
 
 static const struct bpf_func_proto bpf_clone_redirect_proto = {
@@ -1730,10 +1792,7 @@ int skb_do_redirect(struct sk_buff *skb)
 		return -EINVAL;
 	}
 
-	bpf_push_mac_rcsum(skb);
-
-	return ri->flags & BPF_F_INGRESS ?
-	       __bpf_rx_skb(dev, skb) : __bpf_tx_skb(dev, skb);
+	return __bpf_redirect(skb, dev, ri->flags);
 }
 
 static const struct bpf_func_proto bpf_redirect_proto = {
@@ -1940,8 +1999,6 @@ static int bpf_skb_proto_4_to_6(struct sk_buff *skb)
 			skb_shinfo(skb)->gso_type |=  SKB_GSO_TCPV6;
 		}
 
-		/* Due to IPv6 header, MSS needs to be downgraded. */
-		skb_shinfo(skb)->gso_size -= len_diff;
 		/* Header must be checked, and gso_segs recomputed. */
 		skb_shinfo(skb)->gso_type |= SKB_GSO_DODGY;
 		skb_shinfo(skb)->gso_segs = 0;
@@ -1976,8 +2033,6 @@ static int bpf_skb_proto_6_to_4(struct sk_buff *skb)
 			skb_shinfo(skb)->gso_type |=  SKB_GSO_TCPV4;
 		}
 
-		/* Due to IPv4 header, MSS can be upgraded. */
-		skb_shinfo(skb)->gso_size += len_diff;
 		/* Header must be checked, and gso_segs recomputed. */
 		skb_shinfo(skb)->gso_type |= SKB_GSO_DODGY;
 		skb_shinfo(skb)->gso_segs = 0;
@@ -2074,10 +2129,7 @@ static u32 __bpf_skb_min_len(const struct sk_buff *skb)
 	return min_len;
 }
 
-static u32 __bpf_skb_max_len(const struct sk_buff *skb)
-{
-	return skb->dev->mtu + skb->dev->hard_header_len;
-}
+#define BPF_SKB_MAX_LEN SKB_MAX_ALLOC
 
 static int bpf_skb_grow_rcsum(struct sk_buff *skb, unsigned int new_len)
 {
@@ -2098,7 +2150,7 @@ static int bpf_skb_trim_rcsum(struct sk_buff *skb, unsigned int new_len)
 BPF_CALL_3(bpf_skb_change_tail, struct sk_buff *, skb, u32, new_len,
 	   u64, flags)
 {
-	u32 max_len = __bpf_skb_max_len(skb);
+	u32 max_len = BPF_SKB_MAX_LEN;
 	u32 min_len = __bpf_skb_min_len(skb);
 	int ret;
 
@@ -2154,6 +2206,7 @@ bool bpf_helper_changes_skb_data(void *func)
 	    func == bpf_skb_change_proto ||
 	    func == bpf_skb_change_tail ||
 	    func == bpf_skb_pull_data ||
+	    func == bpf_clone_redirect ||
 	    func == bpf_l3_csum_replace ||
 	    func == bpf_l4_csum_replace)
 		return true;
@@ -2162,9 +2215,9 @@ bool bpf_helper_changes_skb_data(void *func)
 }
 
 static unsigned long bpf_skb_copy(void *dst_buff, const void *skb,
-				  unsigned long len)
+				  unsigned long off, unsigned long len)
 {
-	void *ptr = skb_header_pointer(skb, 0, len, dst_buff);
+	void *ptr = skb_header_pointer(skb, off, len, dst_buff);
 
 	if (unlikely(!ptr))
 		return len;
@@ -2432,7 +2485,7 @@ BPF_CALL_3(bpf_skb_under_cgroup, struct sk_buff *, skb, struct bpf_map *, map,
 	struct cgroup *cgrp;
 	struct sock *sk;
 
-	sk = skb->sk;
+	sk = skb_to_full_sk(skb);
 	if (!sk || !sk_fullsock(sk))
 		return -ENOENT;
 	if (unlikely(idx >= array->map.max_entries))
@@ -2455,9 +2508,9 @@ static const struct bpf_func_proto bpf_skb_under_cgroup_proto = {
 };
 
 static unsigned long bpf_xdp_copy(void *dst_buff, const void *src_buff,
-				  unsigned long len)
+				  unsigned long off, unsigned long len)
 {
-	memcpy(dst_buff, src_buff, len);
+	memcpy(dst_buff, src_buff + off, len);
 	return 0;
 }
 
@@ -2611,6 +2664,8 @@ xdp_func_proto(enum bpf_func_id func_id)
 	switch (func_id) {
 	case BPF_FUNC_perf_event_output:
 		return &bpf_xdp_event_output_proto;
+	case BPF_FUNC_get_smp_processor_id:
+		return &bpf_get_smp_processor_id_proto;
 	default:
 		return sk_filter_func_proto(func_id);
 	}

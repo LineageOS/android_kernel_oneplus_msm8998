@@ -94,6 +94,35 @@ static const struct bpf_func_proto bpf_probe_read_proto = {
 	.arg3_type	= ARG_ANYTHING,
 };
 
+BPF_CALL_3(bpf_probe_read_str, void *, dst, u32, size, const void *, unsafe_ptr)
+{
+	int ret;
+
+	/*
+	 * The strncpy_from_unsafe() call will likely not fill the entire
+	 * buffer, but that's okay in this circumstance as we're probing
+	 * arbitrary memory anyway similar to bpf_probe_read() and might
+	 * as well probe the stack. Thus, memory is explicitly cleared
+	 * only in error case, so that improper users ignoring return
+	 * code altogether don't copy garbage; otherwise length of string
+	 * is returned that can be used for bpf_perf_event_output() et al.
+	 */
+	ret = strncpy_from_unsafe(dst, unsafe_ptr, size);
+	if (unlikely(ret < 0))
+		memset(dst, 0, size);
+
+	return ret;
+}
+
+static const struct bpf_func_proto bpf_probe_read_str_proto = {
+	.func           = bpf_probe_read_str,
+	.gpl_only       = true,
+	.ret_type       = RET_INTEGER,
+	.arg1_type	= ARG_PTR_TO_RAW_STACK,
+	.arg2_type	= ARG_CONST_STACK_SIZE,
+	.arg3_type	= ARG_ANYTHING,
+};
+
 BPF_CALL_3(bpf_probe_write_user, void *, unsafe_ptr, const void *, src,
 	   u32, size)
 {
@@ -144,7 +173,7 @@ BPF_CALL_5(bpf_trace_printk, char *, fmt, u32, fmt_size, u64, arg1,
 	bool str_seen = false;
 	int mod[3] = {};
 	int fmt_cnt = 0;
-	u64 unsafe_addr;
+	u64 unsafe_addr = 0;
 	char buf[64];
 	int i;
 
@@ -218,10 +247,36 @@ BPF_CALL_5(bpf_trace_printk, char *, fmt, u32, fmt_size, u64, arg1,
 		fmt_cnt++;
 	}
 
-	return __trace_printk(1/* fake ip will not be printed */, fmt,
-			      mod[0] == 2 ? arg1 : mod[0] == 1 ? (long) arg1 : (u32) arg1,
-			      mod[1] == 2 ? arg2 : mod[1] == 1 ? (long) arg2 : (u32) arg2,
-			      mod[2] == 2 ? arg3 : mod[2] == 1 ? (long) arg3 : (u32) arg3);
+/* Horrid workaround for getting va_list handling working with different
+ * argument type combinations generically for 32 and 64 bit archs.
+ */
+#define __BPF_TP_EMIT()	__BPF_ARG3_TP()
+#define __BPF_TP(...)							\
+	__trace_printk(1 /* Fake ip will not be printed. */,		\
+		       fmt, ##__VA_ARGS__)
+
+#define __BPF_ARG1_TP(...)						\
+	((mod[0] == 2 || (mod[0] == 1 && __BITS_PER_LONG == 64))	\
+	  ? __BPF_TP(arg1, ##__VA_ARGS__)				\
+	  : ((mod[0] == 1 || (mod[0] == 0 && __BITS_PER_LONG == 32))	\
+	      ? __BPF_TP((long)arg1, ##__VA_ARGS__)			\
+	      : __BPF_TP((u32)arg1, ##__VA_ARGS__)))
+
+#define __BPF_ARG2_TP(...)						\
+	((mod[1] == 2 || (mod[1] == 1 && __BITS_PER_LONG == 64))	\
+	  ? __BPF_ARG1_TP(arg2, ##__VA_ARGS__)				\
+	  : ((mod[1] == 1 || (mod[1] == 0 && __BITS_PER_LONG == 32))	\
+	      ? __BPF_ARG1_TP((long)arg2, ##__VA_ARGS__)		\
+	      : __BPF_ARG1_TP((u32)arg2, ##__VA_ARGS__)))
+
+#define __BPF_ARG3_TP(...)						\
+	((mod[2] == 2 || (mod[2] == 1 && __BITS_PER_LONG == 64))	\
+	  ? __BPF_ARG2_TP(arg3, ##__VA_ARGS__)				\
+	  : ((mod[2] == 1 || (mod[2] == 0 && __BITS_PER_LONG == 32))	\
+	      ? __BPF_ARG2_TP((long)arg3, ##__VA_ARGS__)		\
+	      : __BPF_ARG2_TP((u32)arg3, ##__VA_ARGS__)))
+
+	return __BPF_TP_EMIT();
 }
 
 static const struct bpf_func_proto bpf_trace_printk_proto = {
@@ -246,9 +301,15 @@ const struct bpf_func_proto *bpf_get_trace_printk_proto(void)
 BPF_CALL_2(bpf_perf_event_read, struct bpf_map *, map, u64, flags)
 {
 	struct bpf_array *array = container_of(map, struct bpf_array, map);
+	unsigned int cpu = smp_processor_id();
+	u64 index = flags & BPF_F_INDEX_MASK;
 	struct bpf_event_entry *ee;
 	struct perf_event *event;
 
+	if (unlikely(flags & ~(BPF_F_INDEX_MASK)))
+		return -EINVAL;
+	if (index == BPF_F_CURRENT_CPU)
+		index = cpu;
 	if (unlikely(index >= array->map.max_entries))
 		return -E2BIG;
 
@@ -262,8 +323,7 @@ BPF_CALL_2(bpf_perf_event_read, struct bpf_map *, map, u64, flags)
 		return -EINVAL;
 
 	/* make sure event is local and doesn't have pmu::count */
-	if (event->oncpu != smp_processor_id() ||
-	    event->pmu->count)
+	if (unlikely(event->oncpu != cpu || event->pmu->count))
 		return -EINVAL;
 
 	if (unlikely(event->attr.type != PERF_TYPE_HARDWARE &&
@@ -291,13 +351,14 @@ __bpf_perf_event_output(struct pt_regs *regs, struct bpf_map *map,
 			u64 flags, struct perf_raw_record *raw)
 {
 	struct bpf_array *array = container_of(map, struct bpf_array, map);
+	unsigned int cpu = smp_processor_id();
 	u64 index = flags & BPF_F_INDEX_MASK;
 	struct perf_sample_data sample_data;
 	struct bpf_event_entry *ee;
 	struct perf_event *event;
 
 	if (index == BPF_F_CURRENT_CPU)
-		index = raw_smp_processor_id();
+		index = cpu;
 	if (unlikely(index >= array->map.max_entries))
 		return -E2BIG;
 
@@ -310,7 +371,7 @@ __bpf_perf_event_output(struct pt_regs *regs, struct bpf_map *map,
 		     event->attr.config != PERF_COUNT_SW_BPF_OUTPUT))
 		return -EINVAL;
 
-	if (unlikely(event->oncpu != smp_processor_id()))
+	if (unlikely(event->oncpu != cpu))
 		return -EOPNOTSUPP;
 
 	perf_sample_data_init(&sample_data, 0, 0);
@@ -419,6 +480,8 @@ static const struct bpf_func_proto *tracing_func_proto(enum bpf_func_id func_id)
 		return &bpf_map_delete_elem_proto;
 	case BPF_FUNC_probe_read:
 		return &bpf_probe_read_proto;
+	case BPF_FUNC_probe_read_str:
+		return &bpf_probe_read_str_proto;
 	case BPF_FUNC_ktime_get_ns:
 		return &bpf_ktime_get_ns_proto;
 	case BPF_FUNC_tail_call:
@@ -473,7 +536,7 @@ static bool kprobe_prog_is_valid_access(int off, int size, enum bpf_access_type 
 	return true;
 }
 
-static struct bpf_verifier_ops kprobe_prog_ops = {
+static const struct bpf_verifier_ops kprobe_prog_ops = {
 	.get_func_proto  = kprobe_prog_func_proto,
 	.is_valid_access = kprobe_prog_is_valid_access,
 };

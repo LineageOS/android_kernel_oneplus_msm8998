@@ -11,6 +11,7 @@
 #include <linux/workqueue.h>
 #include <linux/file.h>
 #include <linux/percpu.h>
+#include <linux/err.h>
 
 struct perf_event;
 struct bpf_map;
@@ -35,7 +36,10 @@ struct bpf_map_ops {
 };
 
 struct bpf_map {
-	atomic_t refcnt;
+	/* 1st cacheline with read-mostly members of which some
+	 * are also accessed in fast-path (e.g. ops, max_entries).
+	 */
+	const struct bpf_map_ops *ops ____cacheline_aligned;
 	enum bpf_map_type map_type;
 	u32 key_size;
 	u32 value_size;
@@ -43,10 +47,15 @@ struct bpf_map {
 	u32 map_flags;
 	u32 pages;
 	bool unpriv_array;
-	struct user_struct *user;
-	const struct bpf_map_ops *ops;
-	struct work_struct work;
+	/* 7 bytes hole */
+
+	/* 2nd cacheline with misc members to avoid false sharing
+	 * particularly with refcounting.
+	 */
+	struct user_struct *user ____cacheline_aligned;
+	atomic_t refcnt;
 	atomic_t usercnt;
+	struct work_struct work;
 #ifdef CONFIG_SECURITY
 	void *security;
 #endif
@@ -227,7 +236,7 @@ bool bpf_prog_array_compatible(struct bpf_array *array, const struct bpf_prog *f
 const struct bpf_func_proto *bpf_get_trace_printk_proto(void);
 
 typedef unsigned long (*bpf_ctx_copy_t)(void *dst, const void *src,
-					unsigned long len);
+					unsigned long off, unsigned long len);
 
 u64 bpf_event_output(struct bpf_map *map, u64 flags, void *meta, u64 meta_size,
 		     void *ctx, u64 ctx_size, bpf_ctx_copy_t ctx_copy);
@@ -249,7 +258,7 @@ struct bpf_prog_array {
 	struct bpf_prog *progs[0];
 };
 
-struct bpf_prog_array __rcu *bpf_prog_array_alloc(u32 prog_cnt, gfp_t flags);
+struct bpf_prog_array *bpf_prog_array_alloc(u32 prog_cnt, gfp_t flags);
 void bpf_prog_array_free(struct bpf_prog_array __rcu *progs);
 
 void bpf_prog_array_delete_safe(struct bpf_prog_array __rcu *progs,

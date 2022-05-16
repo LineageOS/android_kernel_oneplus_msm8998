@@ -89,7 +89,6 @@
 #include <linux/netfilter_ipv4.h>
 #include <linux/random.h>
 #include <linux/slab.h>
-#include <linux/netfilter/xt_qtaguid.h>
 
 #include <asm/uaccess.h>
 
@@ -388,7 +387,11 @@ lookup_protocol:
 		 */
 		inet->inet_sport = htons(inet->inet_num);
 		/* Add to protocol hash chains. */
-		sk->sk_prot->hash(sk);
+		err = sk->sk_prot->hash(sk);
+		if (err) {
+			sk_common_release(sk);
+			goto out;
+		}
 	}
 
 	if (sk->sk_prot->init) {
@@ -416,9 +419,6 @@ int inet_release(struct socket *sock)
 	if (sk) {
 		long timeout;
 
-#ifdef CONFIG_NETFILTER_XT_MATCH_QTAGUID
-		qtaguid_untag(sock, true);
-#endif
 		/* Applications forget to leave groups before exiting */
 		ip_mc_drop_socket(sk);
 
@@ -1163,8 +1163,7 @@ static int inet_sk_reselect_saddr(struct sock *sk)
 	 * Besides that, it does not check for connection
 	 * uniqueness. Wait for troubles.
 	 */
-	__sk_prot_rehash(sk);
-	return 0;
+	return __sk_prot_rehash(sk);
 }
 
 int inet_sk_rebuild_header(struct sock *sk)
