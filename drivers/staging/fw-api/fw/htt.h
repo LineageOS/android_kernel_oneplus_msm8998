@@ -207,9 +207,11 @@
  * 3.83 Shrink seq_idx field in HTT PPDU ID from 3 bits to 2.
  * 3.84 Add fisa_control_bits_v2 def.
  * 3.85 Add HTT_RX_PEER_META_DATA defs.
+ * 3.86 Add HTT_T2H_MSG_TYPE_FSE_CMEM_BASE_SEND def.
+ * 3.87 Add on-chip AST index field to PEER_MAP_V2 msg.
  */
 #define HTT_CURRENT_VERSION_MAJOR 3
-#define HTT_CURRENT_VERSION_MINOR 85
+#define HTT_CURRENT_VERSION_MINOR 87
 
 #define HTT_NUM_TX_FRAG_DESC  1024
 
@@ -6917,6 +6919,8 @@ enum htt_t2h_msg_type {
      */
     HTT_T2H_MSG_TYPE_TX_OFFLOAD_DELIVER_IND   = 0x25,
     HTT_T2H_MSG_TYPE_CHAN_CALDATA             = 0x26,
+    HTT_T2H_MSG_TYPE_FSE_CMEM_BASE_SEND       = 0x27,
+
 
     HTT_T2H_MSG_TYPE_TEST,
     /* keep this last */
@@ -9178,27 +9182,28 @@ PREPACK struct htt_tx_offload_deliver_ind_hdr_t
  * AST 3, check the AST_VALID_MASK(3) to see if the corresponding extension
  * AST is valid.
  *
- * |31    28|27    24|23    20|19 17|16|15              8|7               0|
- * |-----------------------------------------------------------------------|
- * |            SW peer ID             |     VDEV ID     |     msg type    |
- * |-----------------------------------------------------------------------|
- * |    MAC addr 3   |    MAC addr 2   |    MAC addr 1   |    MAC addr 0   |
- * |-----------------------------------------------------------------------|
- * |      HW peer ID / AST index 0     |    MAC addr 5   |    MAC addr 4   |
- * |-----------------------------------------------------------------------|
- * |     Reserved_20_31       |ASTVM|NH|          AST Hash Value           |
- * |-----------------------------------------------------------------------|
- * | ASTFM3 | ASTFM2 | ASTFM1 | ASTFM0 |           AST index 1             |
- * |-----------------------------------------------------------------------|
- * |TID valid low pri| TID valid hi pri|           AST index 2             |
- * |-----------------------------------------------------------------------|
- * |           Reserved_1              |           AST index 3             |
- * |-----------------------------------------------------------------------|
- * |                               Reserved_2                              |
- * |-----------------------------------------------------------------------|
+ * |31    28|27    24|23   21|20|19 17|16|15              8|7               0|
+ * |-------------------------------------------------------------------------|
+ * |              SW peer ID             |     VDEV ID     |     msg type    |
+ * |-------------------------------------------------------------------------|
+ * |    MAC addr 3   |    MAC addr 2     |    MAC addr 1   |    MAC addr 0   |
+ * |-------------------------------------------------------------------------|
+ * |       HW peer ID / AST index 0      |    MAC addr 5   |    MAC addr 4   |
+ * |-------------------------------------------------------------------------|
+ * |     Reserved_21_31      |OA|ASTVM|NH|          AST Hash Value           |
+ * |-------------------------------------------------------------------------|
+ * | ASTFM3 | ASTFM2 |  ASTFM1  | ASTFM0 |           AST index 1             |
+ * |-------------------------------------------------------------------------|
+ * |TID valid low pri|  TID valid hi pri |           AST index 2             |
+ * |-------------------------------------------------------------------------|
+ * |      LMAC/PMAC_RXPCU AST index      |           AST index 3             |
+ * |-------------------------------------------------------------------------|
+ * |                                 Reserved_2                              |
+ * |-------------------------------------------------------------------------|
  * Where:
  *    NH = Next Hop
  *    ASTVM = AST valid mask
+ *    OA = on-chip AST valid bit
  *    ASTFM = AST flow mask
  *
  * The following field definitions describe the format of the rx peer map v2
@@ -9241,6 +9246,10 @@ PREPACK struct htt_tx_offload_deliver_ind_hdr_t
  *   - AST_VALID_MASK
  *     Bits  19:17
  *     Purpose: Indicate if the AST 1 through AST 3 are valid
+ *   - ONCHIP_AST_VALID_FLAG
+ *     Bit 20
+ *     Purpose: Indicate if the on-chip AST index field (ONCHIP_AST_IDX)
+ *         is valid.
  *   - AST_INDEX_1
  *     Bits 15:0
  *     Purpose: indicate the second AST index for this peer
@@ -9268,6 +9277,13 @@ PREPACK struct htt_tx_offload_deliver_ind_hdr_t
  *   - AST_INDEX_3
  *     Bits 15:0
  *     Purpose: indicate the fourth AST index for this peer
+ *   - ONCHIP_AST_IDX / RESERVED
+ *     Bits 31:16
+ *     Purpose: This field is valid only when split AST feature is enabled.
+ *         The ONCHIP_AST_VALID_FLAG identifies whether this field is valid.
+ *         If valid, identifies the HW peer ID corresponding to the peer MAC
+ *         address, this ast_idx is used for LMAC modules for RXPCU.
+ *     Value: ID used by the LMAC HW to identify the peer
  */
 #define HTT_RX_PEER_MAP_V2_VDEV_ID_M        0xff00
 #define HTT_RX_PEER_MAP_V2_VDEV_ID_S        8
@@ -9285,6 +9301,9 @@ PREPACK struct htt_tx_offload_deliver_ind_hdr_t
 #define HTT_RX_PEER_MAP_V2_NEXT_HOP_S       16
 #define HTT_RX_PEER_MAP_V2_AST_VALID_MASK_M     0x000e0000
 #define HTT_RX_PEER_MAP_V2_AST_VALID_MASK_S     17
+
+#define HTT_RX_PEER_MAP_V2_ONCHIP_AST_VALID_FLAG_M 0x00100000
+#define HTT_RX_PEER_MAP_V2_ONCHIP_AST_VALID_FLAG_S 20
 
 #define HTT_RX_PEER_MAP_V2_AST_INDEX_1_M        0xffff
 #define HTT_RX_PEER_MAP_V2_AST_INDEX_1_S        0
@@ -9306,6 +9325,9 @@ PREPACK struct htt_tx_offload_deliver_ind_hdr_t
 
 #define HTT_RX_PEER_MAP_V2_AST_INDEX_3_M        0xffff
 #define HTT_RX_PEER_MAP_V2_AST_INDEX_3_S        0
+
+#define HTT_RX_PEER_MAP_V2_ONCHIP_AST_HASH_VALUE_M 0xffff0000
+#define HTT_RX_PEER_MAP_V2_ONCHIP_AST_HASH_VALUE_S 16
 
 #define HTT_RX_PEER_MAP_V2_VDEV_ID_SET(word, value)           \
     do {                                                      \
@@ -9339,6 +9361,14 @@ PREPACK struct htt_tx_offload_deliver_ind_hdr_t
 #define HTT_RX_PEER_MAP_V2_AST_HASH_VALUE_GET(word) \
     (((word) & HTT_RX_PEER_MAP_V2_AST_HASH_VALUE_M) >> HTT_RX_PEER_MAP_V2_AST_HASH_VALUE_S)
 
+#define HTT_RX_PEER_MAP_V2_ONCHIP_AST_HASH_VALUE_SET(word, value)             \
+    do {                                                                      \
+        HTT_CHECK_SET_VAL(HTT_RX_PEER_MAP_V2_ONCHIP_AST_HASH_VALUE_M, value); \
+        (word) |= (value)  << HTT_RX_PEER_MAP_V2_ONCHIP_AST_HASH_VALUE_S;     \
+    } while (0)
+#define HTT_RX_PEER_MAP_V2_ONCHIP_AST_HASH_VALUE_GET(word) \
+    (((word) & HTT_RX_PEER_MAP_V2_ONCHIP_AST_HASH_VALUE_M) >> HTT_RX_PEER_MAP_V2_ONCHIP_AST_HASH_VALUE_S)
+
 #define HTT_RX_PEER_MAP_V2_NEXT_HOP_SET(word, value)            \
     do {                                                        \
         HTT_CHECK_SET_VAL(HTT_RX_PEER_MAP_V2_NEXT_HOP, value);  \
@@ -9354,6 +9384,14 @@ PREPACK struct htt_tx_offload_deliver_ind_hdr_t
     } while (0)
 #define HTT_RX_PEER_MAP_V2_AST_VALID_MASK_GET(word) \
     (((word) & HTT_RX_PEER_MAP_V2_AST_VALID_MASK_M) >> HTT_RX_PEER_MAP_V2_AST_VALID_MASK_S)
+
+#define HTT_RX_PEER_MAP_V2_ONCHIP_AST_VALID_FLAG_SET(word, value) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_RX_PEER_MAP_V2_ONCHIP_AST_VALID_FLAG_M, value); \
+        (word) |= (value)  << HTT_RX_PEER_MAP_V2_ONCHIP_AST_VALID_FLAG_S; \
+    } while (0)
+#define HTT_RX_PEER_MAP_V2_ONCHIP_AST_VALID_MASK_GET(word) \
+    (((word) & HTT_RX_PEER_MAP_V2_ONCHIP_AST_VALID_FLAG_M) >> HTT_RX_PEER_MAP_V2_ONCHIP_AST_VALID_FLAG_S)
 
 #define HTT_RX_PEER_MAP_V2_AST_INDEX_1_SET(word, value) \
     do { \
@@ -14027,6 +14065,62 @@ PREPACK struct htt_chan_caldata_msg {
         ((_var) |= ((_val) << HTT_CHAN_CALDATA_MSG_FREQ2_S)); \
     } while (0)
 
+
+/**
+ * @brief HTT_T2H_MSG_TYPE_FSE_CMEM_BASE_SEND Message
+ *
+ * @details
+ *  HTT_T2H_MSG_TYPE_FSE_CMEM_BASE_SEND message is sent by the target when
+ *  FSE placement in CMEM is enabled.
+ *
+ *  This message sends the non-secure CMEM base address.
+ *  It will be sent to host in response to message
+ *  HTT_H2T_MSG_TYPE_RX_FSE_SETUP_CFG.
+ *  The message would appear as follows:
+ *
+ *     |31            24|23            16|15             8|7              0|
+ *     |----------------+----------------+----------------+----------------|
+ *     |             reserved            |  num_entries   |   msg_type     |
+ *     |----------------+----------------+----------------+----------------|
+ *     |                        base_address_lo                            |
+ *     |----------------+----------------+----------------+----------------|
+ *     |                        base_address_hi                            |
+ *     |-------------------------------------------------------------------|
+ *
+ * The message is interpreted as follows:
+ * dword0 - b'0:7   - msg_type: This will be set to
+ *                    HTT_T2H_MSG_TYPE_FSE_CMEM_BASE_SEND
+ *          b'8:15  - number_entries: Indicated the number of entries
+ *                    programmed.
+ *          b'16:31 - reserved.
+ * dword1 - b'0:31  - base_address_lo: Indicate lower 32 bits of
+ *                    CMEM base address
+ * dword2 - b'0:31 -  base_address_hi: Indicate upper 32 bits of
+ *                    CMEM base address
+ */
+
+PREPACK struct htt_cmem_base_send_t {
+    A_UINT32 msg_type:      8,
+             num_entries:   8,
+             reserved:      16;
+    A_UINT32 base_address_lo;
+    A_UINT32 base_address_hi;
+} POSTPACK;
+
+#define HTT_CMEM_BASE_SEND_SIZE  (sizeof(struct htt_cmem_base_send_t))
+
+#define HTT_CMEM_BASE_SEND_NUM_ENTRIES_M                0x0000FF00
+#define HTT_CMEM_BASE_SEND_NUM_ENTRIES_S                8
+
+#define HTT_CMEM_BASE_SEND_NUM_ENTRIES_GET(_var) \
+    (((_var) & HTT_CMEM_BASE_SEND_NUM_ENTRIES_M) >> \
+            HTT_CMEM_BASE_SEND_NUM_ENTRIES_S)
+
+#define HTT_CMEM_BASE_SEND_NUM_ENTRIES_SET(_var, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_CMEM_BASE_SEND_NUM_ENTRIES, _val); \
+        ((_var) |= ((_val) << HTT_SRING_SETUP_DONE_PDEV_ID_S)); \
+    } while (0)
 
 /**
  *  @brief - HTT PPDU ID format
