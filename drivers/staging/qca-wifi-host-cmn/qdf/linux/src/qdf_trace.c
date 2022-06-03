@@ -1546,9 +1546,7 @@ uint8_t *qdf_get_pkt_type_string(uint8_t type, uint8_t subtype)
 		}
 	}
 }
-#endif
 
-#ifdef WLAN_DEBUG
 /**
  * qdf_get_pkt_status_string() - Get the string based on pkt status
  * @status: packet status
