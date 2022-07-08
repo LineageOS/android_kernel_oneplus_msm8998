@@ -16,6 +16,24 @@
       "message": "-1 for the whole chain, these should be pickable for us:\nhttps://review.lineageos.org/c/LineageOS/android_kernel_essential_msm8998/+/334026/1\n\nless confusion with different change-ids and kevin\u0027s added correct UPSTREAM/BACKPORT markers",
       "revId": "3bb080492f4cbc31845249e98e8297257de04c52",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "ba267d5f_1f6c9668",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 21651
+      },
+      "writtenOn": "2022-07-08T08:03:53Z",
+      "side": 1,
+      "message": "It is the same commits. The commits had no original change-id.\nMakes no sense to do these things difficult way when these commits are here and working.",
+      "parentUuid": "85422c03_d6f17bcd",
+      "revId": "3bb080492f4cbc31845249e98e8297257de04c52",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
