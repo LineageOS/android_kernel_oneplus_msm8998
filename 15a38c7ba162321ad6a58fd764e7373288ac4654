@@ -16,6 +16,24 @@
       "message": "? doesnt break anything for me, and you also verified some weeks ago?",
       "revId": "15a38c7ba162321ad6a58fd764e7373288ac4654",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "e03ac754_7d08acb0",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 21651
+      },
+      "writtenOn": "2022-07-09T10:15:43Z",
+      "side": 1,
+      "message": "It seems to be unstable. Sometimes it doesn\u0027t work in setupwizard after a wipe.\nNow I have had it working fine for multiple attempts though.",
+      "parentUuid": "020a23fc_ce4db446",
+      "revId": "15a38c7ba162321ad6a58fd764e7373288ac4654",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
