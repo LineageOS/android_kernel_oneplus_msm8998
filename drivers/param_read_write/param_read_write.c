@@ -351,7 +351,7 @@ int add_restart_08_count(void)
 }
 EXPORT_SYMBOL(add_restart_08_count);
 
-static int param_get_restart_08_count(char *val, struct kernel_param *kp)
+static int param_get_restart_08_count(char *val, const struct kernel_param *kp)
 {
 
 	int cnt = 0;
@@ -388,7 +388,7 @@ int add_restart_other_count(void)
 	return ret;
 }
 EXPORT_SYMBOL(add_restart_other_count);
-static int param_get_restart_other_count(char *val, struct kernel_param *kp)
+static int param_get_restart_other_count(char *val, const struct kernel_param *kp)
 {
 
 	int cnt = 0;
