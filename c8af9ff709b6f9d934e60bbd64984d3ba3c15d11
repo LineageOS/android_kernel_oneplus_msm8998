@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "68ad6246_6abb1d22",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2022-10-20T11:11:34Z",
+      "side": 1,
+      "message": "You had this commited to the lineage-18.1 branch. What happened, was it left out during some rebase?",
+      "revId": "c8af9ff709b6f9d934e60bbd64984d3ba3c15d11",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
