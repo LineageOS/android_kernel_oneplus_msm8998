@@ -166,19 +166,19 @@ static int bpf_map_release(struct inode *inode, struct file *filp)
 #ifdef CONFIG_PROC_FS
 static void bpf_map_show_fdinfo(struct seq_file *m, struct file *filp)
 {
-        const struct bpf_map *map = filp->private_data;
+	const struct bpf_map *map = filp->private_data;
 
-        seq_printf(m,
-                   "map_type:\t%u\n"
-                   "key_size:\t%u\n"
-                   "value_size:\t%u\n"
-                   "max_entries:\t%u\n"
-                   "map_flags:\t%#x\n",
-                   map->map_type,
-                   map->key_size,
-                   map->value_size,
-                   map->max_entries,
-                   map->map_flags);
+	seq_printf(m,
+		   "map_type:\t%u\n"
+		   "key_size:\t%u\n"
+		   "value_size:\t%u\n"
+		   "max_entries:\t%u\n"
+		   "map_flags:\t%#x\n",
+		   map->map_type,
+		   map->key_size,
+		   map->value_size,
+		   map->max_entries,
+		   map->map_flags);
 }
 #endif
 
