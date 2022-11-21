@@ -191,8 +191,8 @@ module_param(sido_buck_svs_voltage, int,
 		S_IRUGO | S_IWUSR | S_IWGRP);
 MODULE_PARM_DESC(sido_buck_svs_voltage,
 			"setting for SVS voltage for SIDO BUCK");
-#define TASHA_TX_UNMUTE_DELAY_MS        50
-#define HEADSET_TYPE_NAME_LEN    64
+#define TASHA_TX_UNMUTE_DELAY_MS	50
+#define HEADSET_TYPE_NAME_LEN		64
 
 static int tx_unmute_delay = TASHA_TX_UNMUTE_DELAY_MS;
 module_param(tx_unmute_delay, int,
