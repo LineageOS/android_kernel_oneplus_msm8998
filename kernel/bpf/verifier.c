@@ -3494,7 +3494,7 @@ static int fixup_bpf_calls(struct bpf_verifier_env *env)
 			 * conditional branch in the interpeter for every normal
 			 * call and to prevent accidental JITing by JIT compiler
 			 * that doesn't support bpf_tail_call yet
- 			 */
+			 */
 			insn->imm = 0;
 			insn->code |= BPF_X;
 
