@@ -12,7 +12,7 @@
 #ifndef __WCD_MBHC_V2_H__
 #define __WCD_MBHC_V2_H__
 
-#include<linux/switch.h>
+#include <linux/switch.h>
 #include <linux/wait.h>
 #include <linux/stringify.h>
 #include <linux/power_supply.h>

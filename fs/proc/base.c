@@ -3250,8 +3250,6 @@ int proc_pid_readdir(struct file *file, struct dir_context *ctx)
 	return 0;
 }
 
-
-
 /*
  * proc_tid_comm_permission is a special permission function exclusively
  * used for the node /proc/<pid>/task/<tid>/comm.
