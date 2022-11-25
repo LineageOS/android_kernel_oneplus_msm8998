@@ -1572,7 +1572,6 @@ struct task_struct {
 	atomic_t usage;
 	unsigned int flags;	/* per process flags, defined below */
 	unsigned int ptrace;
-	unsigned int kill_flag;
 	struct timespec ttu;
 
 	/* add for fd leak debug */
