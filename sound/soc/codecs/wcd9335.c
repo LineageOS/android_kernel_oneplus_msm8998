@@ -2330,26 +2330,22 @@ static int tasha_put_Bob_Power(struct snd_kcontrol *kcontrol,
 {
 	int ret = 0;
 	int mode;
-	pr_err("%s value = %d\n",
-	__func__, (uint32_t)ucontrol->value.integer.value[0]);
 
 	if (bob_power == NULL)
 		return 0;
 
 	if (ucontrol->value.integer.value[0] == 1) {
-		pr_err("%s enable vreg_bob power\n", __func__);
 		ret = regulator_set_mode(bob_power, REGULATOR_MODE_FAST);
 		if (ret)
 			pr_err("%s fail to enable vreg_bob power\n", __func__);
 	} else {
-		pr_err("%s disable vreg_bob power\n", __func__);
 		mode = regulator_get_mode(bob_power);
 		if (mode == REGULATOR_MODE_FAST) {
 			ret = regulator_set_mode(bob_power,
 				REGULATOR_MODE_NORMAL);
 			if (ret)
 				pr_err("%s fail to disable vreg_bob power\n",
-				__func__);
+					__func__);
 		}
 	}
 
@@ -13656,8 +13652,6 @@ static int tasha_codec_probe(struct snd_soc_codec *codec)
 	void *ptr = NULL;
 	struct regulator *supply;
 
-	pr_err("%s enter\n", __func__);
-
 	control = dev_get_drvdata(codec->dev->parent);
 
 	dev_info(codec->dev, "%s()\n", __func__);
@@ -14367,7 +14361,6 @@ static int tasha_probe(struct platform_device *pdev)
 	struct wcd9xxx_resmgr_v2 *resmgr;
 	struct wcd9xxx_power_region *cdc_pwr;
 
-	pr_err("%s enter\n", __func__);
 	if (wcd9xxx_get_intf_type() == WCD9XXX_INTERFACE_TYPE_I2C) {
 		if (apr_get_subsys_state() == APR_SUBSYS_DOWN) {
 			dev_err(&pdev->dev, "%s: dsp down\n", __func__);
@@ -14451,8 +14444,6 @@ static int tasha_probe(struct platform_device *pdev)
 			__func__, "wcd_native_clk");
 	else
 		tasha->wcd_native_clk = wcd_native_clk;
-
-	pr_err("%s snd_soc_register_codec\n", __func__);
 
 	if (wcd9xxx_get_intf_type() == WCD9XXX_INTERFACE_TYPE_SLIMBUS)
 		ret = snd_soc_register_codec(&pdev->dev, &soc_codec_dev_tasha,
