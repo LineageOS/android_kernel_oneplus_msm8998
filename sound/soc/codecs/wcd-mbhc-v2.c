@@ -783,8 +783,8 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 			switch_set_state(&mbhc->wcd9xxx_sdev, 0);
 			break;
 		}
-		pr_err("%s: Reporting insertion %d(%x)\n", __func__,
-		jack_type, mbhc->hph_status);
+		pr_debug("%s: Reporting insertion %d(%x)\n", __func__,
+			 jack_type, mbhc->hph_status);
 
 		wcd_mbhc_jack_report(mbhc, &mbhc->headset_jack,
 				    (mbhc->hph_status | SND_JACK_MECHANICAL),
@@ -1269,8 +1269,6 @@ static void wcd_correct_swch_plug(struct work_struct *work)
 		else
 			plug_type = MBHC_PLUG_TYPE_INVALID;
 	}
-	pr_err("%s: Valid plug found, plug type is %d\n",
-			 __func__, plug_type);
 
 	do {
 		cross_conn = wcd_check_cross_conn(mbhc);
@@ -1382,7 +1380,7 @@ correct_plug_type:
 					 * This is due to GND/MIC switch didn't
 					 * work,  Report unsupported plug.
 					 */
-					pr_err("%s: switch didn't work\n",
+					pr_debug("%s: switch didn't work\n",
 						  __func__);
 					plug_type = MBHC_PLUG_TYPE_GND_MIC_SWAP;
 					goto report;
@@ -1409,7 +1407,7 @@ correct_plug_type:
 				 */
 				if (mbhc->mbhc_cfg->swap_gnd_mic &&
 					mbhc->mbhc_cfg->swap_gnd_mic(codec)) {
-					pr_err("%s: US_EU gpio present,flip switch\n"
+					pr_debug("%s: US_EU gpio present,flip switch\n"
 						, __func__);
 					continue;
 				}
@@ -1419,12 +1417,12 @@ correct_plug_type:
 		WCD_MBHC_REG_READ(WCD_MBHC_HPHL_SCHMT_RESULT, hphl_sch);
 		WCD_MBHC_REG_READ(WCD_MBHC_MIC_SCHMT_RESULT, mic_sch);
 		if (hs_comp_res && !(hphl_sch || mic_sch)) {
-			pr_err("%s: cable is extension cable\n", __func__);
+			pr_debug("%s: cable is extension cable\n", __func__);
 			plug_type = MBHC_PLUG_TYPE_HIGH_HPH;
 			wrk_complete = true;
 		} else {
-		pr_err("%s: cable might be headset: %d mbhc->current_plug = %d\n",
-			__func__, plug_type, mbhc->current_plug);
+			pr_debug("%s: cable might be headset: %d\n", __func__,
+					plug_type);
 			if (!(plug_type == MBHC_PLUG_TYPE_GND_MIC_SWAP)) {
 				plug_type = MBHC_PLUG_TYPE_HEADSET;
 				if (!spl_hs_reported &&
@@ -1448,7 +1446,7 @@ correct_plug_type:
 				      MBHC_PLUG_TYPE_ANC_HEADPHONE)) &&
 				    !wcd_swch_level_remove(mbhc) &&
 				    !mbhc->btn_press_intr) {
-					pr_err("%s: cable is %sheadset\n",
+					pr_debug("%s: cable is %sheadset\n",
 						__func__,
 						((spl_hs_count ==
 							WCD_MBHC_SPL_HS_CNT) ?
@@ -1460,7 +1458,7 @@ correct_plug_type:
 		}
 	}
 	if (!wrk_complete && mbhc->btn_press_intr) {
-		pr_err("%s: Can be slow insertion of headphone\n", __func__);
+		pr_debug("%s: Can be slow insertion of headphone\n", __func__);
 		wcd_cancel_btn_work(mbhc);
 		plug_type = MBHC_PLUG_TYPE_HEADPHONE;
 	}
@@ -1470,7 +1468,7 @@ correct_plug_type:
 	 */
 	if (!wrk_complete && ((plug_type == MBHC_PLUG_TYPE_HEADSET) ||
 	    (plug_type == MBHC_PLUG_TYPE_ANC_HEADPHONE))) {
-		pr_err("%s: plug_type:0x%x already reported\n",
+		pr_debug("%s: plug_type:0x%x already reported\n",
 			 __func__, mbhc->current_plug);
 		goto enable_supply;
 	}
@@ -1487,7 +1485,7 @@ correct_plug_type:
 
 report:
 	if (wcd_swch_level_remove(mbhc)) {
-		pr_err("%s: Switch level is low\n", __func__);
+		pr_debug("%s: Switch level is low\n", __func__);
 		goto exit;
 	}
 	if (plug_type == MBHC_PLUG_TYPE_GND_MIC_SWAP && mbhc->btn_press_intr) {
@@ -1495,7 +1493,7 @@ report:
 		wcd_cancel_btn_work(mbhc);
 		plug_type = MBHC_PLUG_TYPE_HEADPHONE;
 	}
-	pr_err("%s: Valid plug found, plug type %d wrk_cmpt %d btn_intr %d\n",
+	pr_debug("%s: Valid plug found, plug type %d wrk_cmpt %d btn_intr %d\n",
 			__func__, plug_type, wrk_complete,
 			mbhc->btn_press_intr);
 	WCD_MBHC_RSC_LOCK(mbhc);
@@ -1899,8 +1897,7 @@ static irqreturn_t wcd_mbhc_hs_rem_irq(int irq, void *data)
 	WCD_MBHC_REG_READ(WCD_MBHC_HPHL_SCHMT_RESULT, hphl_sch);
 	WCD_MBHC_REG_READ(WCD_MBHC_MIC_SCHMT_RESULT, mic_sch);
 	WCD_MBHC_REG_READ(WCD_MBHC_HS_COMP_RESULT, hs_comp_result);
-	pr_debug("%s: hphl_sch %#x, mic_sch %#x, hs_comp_result %#x\n",
-			__func__, hphl_sch, mic_sch, hs_comp_result);
+
 	if (removed) {
 		if (!(hphl_sch && mic_sch && hs_comp_result)) {
 			/*
@@ -2058,9 +2055,6 @@ static irqreturn_t wcd_mbhc_btn_press_handler(int irq, void *data)
 	}
 	mbhc->buttons_pressed |= mask;
 
-	pr_err("%s mbhc->buttons_pressed = %x\n",
-		__func__, mbhc->buttons_pressed);
-
 	mbhc->mbhc_cb->lock_sleep(mbhc, true);
 	if (schedule_delayed_work(&mbhc->mbhc_btn_dwork,
 				msecs_to_jiffies(400)) == 0) {
@@ -2078,7 +2072,7 @@ static irqreturn_t wcd_mbhc_release_handler(int irq, void *data)
 	struct wcd_mbhc *mbhc = data;
 	int ret;
 
-	pr_err("%s\n", __func__);
+	pr_debug("%s: enter\n", __func__);
 	WCD_MBHC_RSC_LOCK(mbhc);
 	if (wcd_swch_level_remove(mbhc)) {
 		pr_debug("%s: Switch level is low ", __func__);
@@ -2098,16 +2092,11 @@ static irqreturn_t wcd_mbhc_release_handler(int irq, void *data)
 	 * headset not headphone.
 	 */
 	if (mbhc->current_plug == MBHC_PLUG_TYPE_HEADPHONE) {
-		pr_err("%s MBHC_PLUG_TYPE_HEADPHONE\n", __func__);
-
 		wcd_mbhc_find_plug_and_report(mbhc, MBHC_PLUG_TYPE_HEADSET);
 		goto exit;
 
 	}
 	if (mbhc->buttons_pressed & WCD_MBHC_JACK_BUTTON_MASK) {
-		pr_err("%s mbhc->buttons_pressed = %x\n", __func__,
-			mbhc->buttons_pressed);
-
 		ret = wcd_cancel_btn_work(mbhc);
 		if (ret == 0) {
 			pr_debug("%s: Reporting long button release event\n",
