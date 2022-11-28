@@ -1110,9 +1110,15 @@ static ssize_t oom_adj_write(struct file *file, const char __user *buf,
 		goto out;
 	}
 
+	task_lock(task);
+	if (!task->mm) {
+		err = -EINVAL;
+		goto err_task_lock;
+	}
+
 	if (!lock_task_sighand(task, &flags)) {
 		err = -ESRCH;
-		goto err_put_task;
+		goto err_task_lock;
 	}
 
 	/*
@@ -1142,7 +1148,8 @@ static ssize_t oom_adj_write(struct file *file, const char __user *buf,
 	trace_oom_score_adj_update(task);
 err_sighand:
 	unlock_task_sighand(task, &flags);
-err_put_task:
+err_task_lock:
+	task_unlock(task);
 	put_task_struct(task);
 out:
 	return err < 0 ? err : count;
