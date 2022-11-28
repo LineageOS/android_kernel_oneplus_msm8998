@@ -1573,9 +1573,6 @@ struct task_struct {
 	unsigned int ptrace;
 	struct timespec ttu;
 
-	/* add for fd leak debug */
-	bool dump_fd_leak;
-
 #ifdef CONFIG_SMP
 	struct llist_node wake_entry;
 	int on_cpu;
