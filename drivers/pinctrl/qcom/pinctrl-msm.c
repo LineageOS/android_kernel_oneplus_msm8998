@@ -45,8 +45,6 @@
 static int resume_wakeup_flag = 0;
 bool fp_irq_cnt;
 
-bool need_show_pinctrl_irq;
-
 /**
  * struct msm_pinctrl - state for a pinctrl-msm device
  * @dev:            device handle.
@@ -882,24 +880,6 @@ static void msm_gpio_irq_handler(struct irq_desc *desc)
 			irq_pin = irq_find_mapping(gc->irqdomain, i);
 			generic_handle_irq(irq_pin);
 			handled++;
-			/* ++add by lyb@bsp for printk wakeup irqs */
-			if (!!need_show_pinctrl_irq) {
-				need_show_pinctrl_irq = false;
-
-				strlcpy(irq_name,
-				irq_to_desc(irq_pin)->action->name, 16);
-				if (strnstr(irq_name,
-					"soc:fpc_fpc1020", 16) != NULL ||
-					strnstr(irq_name, "gf_fp", 6) != NULL) {
-					fp_irq_cnt = true;
-				}
-				set_resume_wakeup_flag(irq_pin);
-
-				pr_warn("hwirq %s [irq_num=%d ]triggered\n",
-				irq_to_desc(irq_pin)->action->name, irq_pin);
-				log_wakeup_reason(irq_pin);
-			}
-			/* -- */
 		}
 	}
 
@@ -1021,26 +1001,6 @@ static void msm_pinctrl_setup_pm_reset(struct msm_pinctrl *pctrl)
 			break;
 		}
 }
-
-static int pm_pm_event(struct notifier_block *notifier,
-		unsigned long pm_event, void *unused)
-{
-	switch (pm_event) {
-	case PM_SUSPEND_PREPARE:
-		/* do nothing */
-		break;
-	case PM_POST_SUSPEND:
-		need_show_pinctrl_irq = false;
-		break;
-	default:
-		break;
-	}
-	return NOTIFY_DONE;
-}
-
-static struct notifier_block pinctrl_pm_notifier_block = {
-	.notifier_call = pm_pm_event,
-};
 
 #ifdef CONFIG_PM
 static int msm_pinctrl_suspend(void)
