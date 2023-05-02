@@ -45,8 +45,6 @@
 static int resume_wakeup_flag = 0;
 bool fp_irq_cnt;
 
-bool need_show_pinctrl_irq;
-
 /**
  * struct msm_pinctrl - state for a pinctrl-msm device
  * @dev:            device handle.
@@ -827,22 +825,6 @@ static void init_resume_wakeup_flag(void)
 	resume_wakeup_flag = 0;
 }
 
-static int is_speedup_irq(struct irq_desc *desc, char *irq_name)
-{
-	return strstr(desc->action->name, irq_name) != NULL;
-}
-
-static void set_resume_wakeup_flag(int irq)
-{
-	struct irq_desc *desc;
-	desc = irq_to_desc(irq);
-
-	if (desc && desc->action && desc->action->name) {
-		if (is_speedup_irq(desc, "synaptics,s3320"))
-			resume_wakeup_flag = 1;
-	}
-}
-
 int get_resume_wakeup_flag(void)
 {
 	int flag = resume_wakeup_flag;
@@ -865,8 +847,6 @@ static void msm_gpio_irq_handler(struct irq_desc *desc)
 	u32 val;
 	int i;
 
-	char irq_name[16] = {0};
-
 	chained_irq_enter(chip, desc);
 
 	init_resume_wakeup_flag();
@@ -882,24 +862,6 @@ static void msm_gpio_irq_handler(struct irq_desc *desc)
 			irq_pin = irq_find_mapping(gc->irqdomain, i);
 			generic_handle_irq(irq_pin);
 			handled++;
-			/* ++add by lyb@bsp for printk wakeup irqs */
-			if (!!need_show_pinctrl_irq) {
-				need_show_pinctrl_irq = false;
-
-				strlcpy(irq_name,
-				irq_to_desc(irq_pin)->action->name, 16);
-				if (strnstr(irq_name,
-					"soc:fpc_fpc1020", 16) != NULL ||
-					strnstr(irq_name, "gf_fp", 6) != NULL) {
-					fp_irq_cnt = true;
-				}
-				set_resume_wakeup_flag(irq_pin);
-
-				pr_warn("hwirq %s [irq_num=%d ]triggered\n",
-				irq_to_desc(irq_pin)->action->name, irq_pin);
-				log_wakeup_reason(irq_pin);
-			}
-			/* -- */
 		}
 	}
 
@@ -1022,26 +984,6 @@ static void msm_pinctrl_setup_pm_reset(struct msm_pinctrl *pctrl)
 		}
 }
 
-static int pm_pm_event(struct notifier_block *notifier,
-		unsigned long pm_event, void *unused)
-{
-	switch (pm_event) {
-	case PM_SUSPEND_PREPARE:
-		/* do nothing */
-		break;
-	case PM_POST_SUSPEND:
-		need_show_pinctrl_irq = false;
-		break;
-	default:
-		break;
-	}
-	return NOTIFY_DONE;
-}
-
-static struct notifier_block pinctrl_pm_notifier_block = {
-	.notifier_call = pm_pm_event,
-};
-
 #ifdef CONFIG_PM
 static int msm_pinctrl_suspend(void)
 {
@@ -1157,10 +1099,7 @@ int msm_pinctrl_probe(struct platform_device *pdev,
 	struct msm_pinctrl *pctrl;
 	struct resource *res;
 	int ret;
-	ret = register_pm_notifier(&pinctrl_pm_notifier_block);
-	if (ret)
-		pr_warn("[%s] failed to register PM notifier %d\n",
-				__func__, ret);
+
 	msm_pinctrl_data = pctrl = devm_kzalloc(&pdev->dev,
 				sizeof(*pctrl), GFP_KERNEL);
 	if (!pctrl) {
@@ -1217,7 +1156,6 @@ int msm_pinctrl_remove(struct platform_device *pdev)
 	gpiochip_remove(&pctrl->chip);
 	pinctrl_unregister(pctrl->pctrl);
 
-	unregister_pm_notifier(&pinctrl_pm_notifier_block);
 	unregister_restart_handler(&pctrl->restart_nb);
 	unregister_syscore_ops(&msm_pinctrl_pm_ops);
 
