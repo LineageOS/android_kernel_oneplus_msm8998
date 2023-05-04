@@ -216,6 +216,11 @@ static struct dsi_cmd_desc backlight_cmd = {
 	{DTYPE_DCS_WRITE1, 1, 0, 0, 1, sizeof(led_pwm1)},
 	led_pwm1
 };
+static char led_pwm2[3] = {0x51, 0x00, 0x00};/* DTYPE_DCS_LWRITE */
+static struct dsi_cmd_desc backlight_cmd2 = {
+	{DTYPE_DCS_LWRITE, 1, 0, 0, 1, sizeof(led_pwm2)},
+	led_pwm2
+};
 
 static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 {
@@ -230,10 +235,29 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 
 	pr_debug("%s: level=%d\n", __func__, level);
 
-	led_pwm1[1] = (unsigned char)level;
+	if (ctrl->bklt_max > 255) {
+		u8 ldata;
+		u8 hdata;
+
+		if (ctrl->bl_high2bit) {
+			ldata = level & 0x0ff;
+			hdata = (level >> 8) & 0x03;
+		} else {
+			ldata = level & 0x03;
+			hdata = (level >> 2) & 0x0ff;
+		}
+
+		led_pwm2[2] = ldata;
+		led_pwm2[1] = hdata;
+	} else {
+		led_pwm1[1] = (unsigned char)level;
+	}
 
 	memset(&cmdreq, 0, sizeof(cmdreq));
-	cmdreq.cmds = &backlight_cmd;
+	if (ctrl->bklt_max > 255)
+		cmdreq.cmds = &backlight_cmd2;
+	else
+		cmdreq.cmds = &backlight_cmd;
 	cmdreq.cmds_cnt = 1;
 	cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL | CMD_REQ_DCS;
 	cmdreq.rlen = 0;
@@ -2963,6 +2987,9 @@ static int mdss_panel_parse_dt(struct device_node *np,
 
 	pinfo->is_dba_panel = of_property_read_bool(np,
 			"qcom,dba-panel");
+
+	ctrl_pdata->bl_high2bit = of_property_read_bool(np,
+					"qcom,mdss-bl-high2bit");
 
 	if (pinfo->is_dba_panel) {
 		bridge_chip_name = of_get_property(np,

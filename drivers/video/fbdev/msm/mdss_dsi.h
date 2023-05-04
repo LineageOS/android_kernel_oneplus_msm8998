@@ -577,6 +577,8 @@ struct mdss_dsi_ctrl_pdata {
 
 	struct dsi_err_container err_cont;
 
+	bool bl_high2bit;
+
 	struct kobject *kobj;
 	int fb_node;
 
