@@ -582,6 +582,7 @@ static struct msm_soc_info cpu_of_id[] = {
 static enum msm_cpu cur_cpu;
 static int current_image;
 static uint32_t socinfo_format;
+uint32_t chip_serial_num;
 
 static struct socinfo_v0_1 dummy_socinfo = {
 	.format = SOCINFO_VERSION(0, 1),
@@ -1606,6 +1607,7 @@ int __init socinfo_init(void)
 	boot_stats_init();
 	socinfo_print();
 	arch_read_hardware_id = msm_read_hardware_id;
+	chip_serial_num = socinfo_get_serial_number();
 	socinfo_init_done = true;
 
 	return 0;
