@@ -193,36 +193,6 @@ struct pon_regulator {
 	u32			bit;
 	bool			enabled;
 };
-
-struct qpnp_pon {
-	struct platform_device	*pdev;
-	struct regmap		*regmap;
-	struct input_dev	*pon_input;
-	struct qpnp_pon_config	*pon_cfg;
-	struct pon_regulator	*pon_reg_cfg;
-	struct list_head	list;
-	struct delayed_work	bark_work;
-	struct dentry		*debugfs;
-	int			pon_trigger_reason;
-	int			pon_power_off_reason;
-	int			num_pon_reg;
-	int			num_pon_config;
-	u32			dbc_time_us;
-	u32			uvlo;
-	int			warm_reset_poff_type;
-	int			hard_reset_poff_type;
-	int			shutdown_poff_type;
-	u16			base;
-	u8			subtype;
-	u8			pon_ver;
-	u8			warm_reset_reason1;
-	u8			warm_reset_reason2;
-	bool			is_spon;
-	bool			store_hard_reset_reason;
-	bool			kpdpwr_dbc_enable;
-	ktime_t			kpdpwr_last_release_time;
-};
-
 static int pon_ship_mode_en;
 module_param_named(
 	ship_mode_en, pon_ship_mode_en, int, 0600
@@ -2001,6 +1971,7 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 	u8 s3_src_reg;
 	unsigned long flags;
 	uint temp = 0;
+	int i, reg;
 
 	pon = devm_kzalloc(&pdev->dev, sizeof(struct qpnp_pon), GFP_KERNEL);
 	if (!pon)
@@ -2063,6 +2034,17 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 		pon->pon_cfg = devm_kzalloc(&pdev->dev,
 				sizeof(struct qpnp_pon_config) *
 				pon->num_pon_config, GFP_KERNEL);
+
+	for (i = 0; i < 16; i++) {
+		rc = regmap_read(pon->regmap, ((pon)->base + 0xC0+i), &reg);
+		dev_info(&pdev->dev, "(0x%x:0x%x)\n",
+			((pon)->base + 0xC0+i), reg);
+		if (rc) {
+			dev_err(&pon->pdev->dev, "Unable to read addr=0x%x, rc(%d)\n",
+			((pon)->base + 0xC0+i), rc);
+			return rc;
+		}
+	}
 
 	/* Read PON_PERPH_SUBTYPE register to get PON type */
 	rc = regmap_read(pon->regmap,
