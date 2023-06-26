@@ -394,6 +394,10 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 		pr_err("%s: failed to disable vregs for %s\n",
 			__func__, __mdss_dsi_pm_name(DSI_PANEL_PM));
 
+	/* POC and vci voltage disable*/
+	mdss_dsi_disp_poc_en(pdata, 0);
+	mdss_dsi_disp_vci_en(pdata, 0);
+
 end:
 	return ret;
 }
@@ -411,6 +415,9 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
+	/* POC voltage enable */
+	mdss_dsi_disp_poc_en(pdata, 1);
+
 	ret = msm_dss_enable_vreg(
 		ctrl_pdata->panel_power_data.vreg_config,
 		ctrl_pdata->panel_power_data.num_vreg, 1);
@@ -420,6 +427,7 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 		return ret;
 	}
 
+	mdss_dsi_disp_vci_en(pdata, 1);
 	/*
 	 * If continuous splash screen feature is enabled, then we need to
 	 * request all the GPIOs that have already been configured in the
@@ -4575,6 +4583,16 @@ static int mdss_dsi_parse_gpio_params(struct platform_device *ctrl_pdev,
 		pr_debug("%s:%d mode gpio not specified\n", __func__, __LINE__);
 		ctrl_pdata->lcd_mode_sel_gpio = -EINVAL;
 	}
+
+	ctrl_pdata->disp_vci_en_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
+		"qcom,platform-vci-gpio", 0);
+	if (!gpio_is_valid(ctrl_pdata->disp_vci_en_gpio))
+		pr_err("%s:%d, vci gpio not specified\n", __func__, __LINE__);
+
+	ctrl_pdata->disp_poc_en_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
+		"qcom,platform-poc-gpio", 0);
+	if (!gpio_is_valid(ctrl_pdata->disp_poc_en_gpio))
+		   pr_err("%s:%d, poc gpio not specified\n", __func__, __LINE__);
 
 	return 0;
 }

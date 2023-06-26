@@ -533,6 +533,81 @@ exit:
 	return rc;
 }
 
+int mdss_dsi_disp_vci_en(struct mdss_panel_data *pdata, int enable)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	struct mdss_panel_info *pinfo = NULL;
+	int rc = 0;
+
+	if (pdata == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+				panel_data);
+
+    if (!gpio_is_valid(ctrl_pdata->disp_vci_en_gpio)) {
+		pr_debug("%s:%d, vci_en_gpio line not configured\n",
+			   __func__, __LINE__);
+		return rc;
+	}
+	pr_debug("%s: vci_en_gpio enable = %d\n", __func__, enable);
+	pinfo = &(ctrl_pdata->panel_data.panel_info);
+
+	if (enable) {
+	    rc = gpio_request(ctrl_pdata->disp_vci_en_gpio,
+					"disp_vci_en");
+		if (rc) {
+			pr_err("request vci_enable gpio failed, rc=%d\n",
+				       rc);
+			return rc;
+		}
+	rc = gpio_direction_output(ctrl_pdata->disp_vci_en_gpio, 1);
+	} else {
+	    gpio_set_value(ctrl_pdata->disp_vci_en_gpio, 0);
+	    gpio_free(ctrl_pdata->disp_vci_en_gpio);
+	}
+	return rc;
+}
+
+int mdss_dsi_disp_poc_en(struct mdss_panel_data *pdata, int enable)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	struct mdss_panel_info *pinfo = NULL;
+	int rc = 0;
+
+	if (pdata == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+			panel_data);
+
+	if (!gpio_is_valid(ctrl_pdata->disp_poc_en_gpio)) {
+		pr_debug("%s:%d, poc_en_gpio line not configured\n",
+			__func__, __LINE__);
+		return rc;
+	}
+	pr_debug("%s: poc_en_gpio enable = %d\n", __func__, enable);
+	pinfo = &(ctrl_pdata->panel_data.panel_info);
+
+	if (enable) {
+		rc = gpio_request(ctrl_pdata->disp_poc_en_gpio,
+			"disp_poc_en");
+		if (rc) {
+			pr_err("request poc_enable gpio failed, rc=%d\n", rc);
+			return rc;
+		}
+		rc = gpio_direction_output(ctrl_pdata->disp_poc_en_gpio, 1);
+	} else {
+		gpio_set_value(ctrl_pdata->disp_poc_en_gpio, 0);
+		gpio_free(ctrl_pdata->disp_poc_en_gpio);
+	}
+	return rc;
+}
+
 /**
  * mdss_dsi_roi_merge() -  merge two roi into single roi
  *
