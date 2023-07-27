@@ -175,7 +175,13 @@ msm8998-qrd-vr1-overlay.dtbo-base :=  msm8998-qrd-vr1.dtb
 msm8998-qrd-skuk-overlay.dtbo-base :=  msm8998-qrd-skuk.dtb
 else
 dtb-$(CONFIG_ARCH_MSM8998) += cheeseburger-v2.1-pvt.dtb \
-	dumpling-v2.1-pvt.dtb
+	dumpling-v2.1-pvt.dtb \
+	cheeseburger-v2.1-dvt1.dtb \
+	cheeseburger-v2.1-pvt1.dtb \
+	cheeseburger-v2.1-backup.dtb \
+	dumpling-v2.1-dvt.dtb \
+	dumpling-v2.1-Second_Resource.dtb \
+	dumpling-v2.1-backup.dtb
 endif
 
 dtb-$(CONFIG_ARCH_MSMHAMSTER) += msmhamster-rumi.dtb
