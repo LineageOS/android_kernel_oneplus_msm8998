@@ -2357,6 +2357,26 @@ unsigned long arch_scale_freq_capacity(struct sched_domain *sd, int cpu)
 }
 #endif
 
+#ifndef arch_scale_max_freq_capacity
+static __always_inline
+unsigned long arch_scale_max_freq_capacity(struct sched_domain *sd, int cpu)
+{
+	return SCHED_CAPACITY_SCALE;
+}
+#endif
+
+#ifndef arch_scale_min_freq_capacity
+static __always_inline
+unsigned long arch_scale_min_freq_capacity(struct sched_domain *sd, int cpu)
+{
+	/*
+	 * Multiplied with any capacity value, this scale factor will return
+	 * 0, which represents an un-capped state
+	 */
+	return 0;
+}
+#endif
+
 #ifndef arch_scale_cpu_capacity
 static __always_inline
 unsigned long arch_scale_cpu_capacity(struct sched_domain *sd, int cpu)
@@ -2382,6 +2402,19 @@ static inline unsigned long capacity_orig_of(int cpu)
 extern unsigned int sysctl_sched_use_walt_cpu_util;
 extern unsigned int walt_ravg_window;
 extern bool walt_disabled;
+
+static inline unsigned long task_util(struct task_struct *p)
+{
+
+#ifdef CONFIG_SCHED_WALT
+	if (!walt_disabled && sysctl_sched_use_walt_task_util) {
+		unsigned long demand = p->ravg.demand;
+		return (demand << 10) / walt_ravg_window;
+	}
+#endif
+	return p->se.avg.util_avg;
+}
+
 
 /*
  * cpu_util returns the amount of capacity of a CPU that is used by CFS
