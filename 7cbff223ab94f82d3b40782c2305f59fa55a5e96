@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "7c1dd526_6ac23aed",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 5911
+      },
+      "writtenOn": "2023-10-02T10:42:52Z",
+      "side": 1,
+      "message": "please try to post this to qcom_msm8998 kernel, as we rebased to that. if it\u0027s not applicable to all other 8998 devices, i\u0027d rather keep the property.",
+      "revId": "7cbff223ab94f82d3b40782c2305f59fa55a5e96",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
