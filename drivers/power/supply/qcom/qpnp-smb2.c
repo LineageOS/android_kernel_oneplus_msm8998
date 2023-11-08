@@ -9,8 +9,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-#define pr_fmt(fmt) "SMB2: %s: " fmt, __func__
-
 #include <linux/debugfs.h>
 #include <linux/delay.h>
 #include <linux/device.h>
@@ -183,29 +181,10 @@ struct smb2 {
 };
 
 static int smbchg_cutoff_volt_with_charger = 3240;
-struct smb_charger *g_chip;
 module_param_named(
 	cutoff_volt_with_charger,
 	smbchg_cutoff_volt_with_charger,
 	int, S_IRUSR | S_IWUSR);
-
-#define OF_PROP_READ(node, dt_property, prop, retval, optional)		\
-do {									\
-	if (retval)							\
-		break;							\
-	if (optional)							\
-		prop = -EINVAL;						\
-									\
-	retval = of_property_read_u32(node,		\
-					dt_property,	\
-					&prop);				\
-									\
-	if ((retval == -EINVAL) && optional)				\
-		retval = 0;						\
-	else if (retval)						\
-		pr_err("Error reading " #dt_property	\
-				" property rc = %d\n", rc);		\
-} while (0)
 
 #ifdef	CONFIG_OP_DEBUG_CHG
 static int __debug_mask = PR_OP_DEBUG;
@@ -245,67 +224,67 @@ static int smb2_parse_dt(struct smb2 *chip)
 	}
 
 	/* read ibatmax setting for different temp regions */
-	OF_PROP_READ(node, "ibatmax-little-cold-ma",
-			chg->ibatmax[BATT_TEMP_LITTLE_COLD], rc, 1);
-	OF_PROP_READ(node, "ibatmax-cool-ma",
-			chg->ibatmax[BATT_TEMP_COOL], rc, 1);
-	OF_PROP_READ(node, "ibatmax-little-cool-ma",
-			chg->ibatmax[BATT_TEMP_LITTLE_COOL], rc, 1);
-	OF_PROP_READ(node, "ibatmax-pre-normal-ma",
-			chg->ibatmax[BATT_TEMP_PRE_NORMAL], rc, 1);
-	OF_PROP_READ(node, "ibatmax-normal-ma",
-			chg->ibatmax[BATT_TEMP_NORMAL], rc, 1);
-	OF_PROP_READ(node, "ibatmax-warm-ma",
-			chg->ibatmax[BATT_TEMP_WARM], rc, 1);
+	of_property_read_u32(node, "ibatmax-little-cold-ma",
+			&chg->ibatmax[BATT_TEMP_LITTLE_COLD]);
+	of_property_read_u32(node, "ibatmax-cool-ma",
+			&chg->ibatmax[BATT_TEMP_COOL]);
+	of_property_read_u32(node, "ibatmax-little-cool-ma",
+			&chg->ibatmax[BATT_TEMP_LITTLE_COOL]);
+	of_property_read_u32(node, "ibatmax-pre-normal-ma",
+			&chg->ibatmax[BATT_TEMP_PRE_NORMAL]);
+	of_property_read_u32(node, "ibatmax-normal-ma",
+			&chg->ibatmax[BATT_TEMP_NORMAL]);
+	of_property_read_u32(node, "ibatmax-warm-ma",
+			&chg->ibatmax[BATT_TEMP_WARM]);
 
 	/* read vbatmax setting for different temp regions */
-	OF_PROP_READ(node, "vbatmax-little-cold-mv",
-			chg->vbatmax[BATT_TEMP_LITTLE_COLD], rc, 1);
-	OF_PROP_READ(node, "vbatmax-cool-mv",
-			chg->vbatmax[BATT_TEMP_COOL], rc, 1);
-	OF_PROP_READ(node, "vbatmax-little-cool-mv",
-			chg->vbatmax[BATT_TEMP_LITTLE_COOL], rc, 1);
-	OF_PROP_READ(node, "vbatmax-pre-normal-mv",
-			chg->vbatmax[BATT_TEMP_PRE_NORMAL], rc, 1);
-	OF_PROP_READ(node, "vbatmax-normal-mv",
-			chg->vbatmax[BATT_TEMP_NORMAL], rc, 1);
-	OF_PROP_READ(node, "vbatmax-warm-mv",
-			chg->vbatmax[BATT_TEMP_WARM], rc, 1);
+	of_property_read_u32(node, "vbatmax-little-cold-mv",
+			&chg->vbatmax[BATT_TEMP_LITTLE_COLD]);
+	of_property_read_u32(node, "vbatmax-cool-mv",
+			&chg->vbatmax[BATT_TEMP_COOL]);
+	of_property_read_u32(node, "vbatmax-little-cool-mv",
+			&chg->vbatmax[BATT_TEMP_LITTLE_COOL]);
+	of_property_read_u32(node, "vbatmax-pre-normal-mv",
+			&chg->vbatmax[BATT_TEMP_PRE_NORMAL]);
+	of_property_read_u32(node, "vbatmax-normal-mv",
+			&chg->vbatmax[BATT_TEMP_NORMAL]);
+	of_property_read_u32(node, "vbatmax-warm-mv",
+			&chg->vbatmax[BATT_TEMP_WARM]);
 
 	/* read vbatdet setting for different temp regions */
-	OF_PROP_READ(node, "vbatdet-little-cold-mv",
-			chg->vbatdet[BATT_TEMP_LITTLE_COLD], rc, 1);
-	OF_PROP_READ(node, "vbatdet-cool-mv",
-			chg->vbatdet[BATT_TEMP_COOL], rc, 1);
-	OF_PROP_READ(node, "vbatdet-little-cool-mv",
-			chg->vbatdet[BATT_TEMP_LITTLE_COOL], rc, 1);
-	OF_PROP_READ(node, "vbatdet-pre-normal-mv",
-			chg->vbatdet[BATT_TEMP_PRE_NORMAL], rc, 1);
-	OF_PROP_READ(node, "vbatdet-normal-mv",
-			chg->vbatdet[BATT_TEMP_NORMAL], rc, 1);
-	OF_PROP_READ(node, "vbatdet-warm-mv",
-			chg->vbatdet[BATT_TEMP_WARM], rc, 1);
+	of_property_read_u32(node, "vbatdet-little-cold-mv",
+			&chg->vbatdet[BATT_TEMP_LITTLE_COLD]);
+	of_property_read_u32(node, "vbatdet-cool-mv",
+			&chg->vbatdet[BATT_TEMP_COOL]);
+	of_property_read_u32(node, "vbatdet-little-cool-mv",
+			&chg->vbatdet[BATT_TEMP_LITTLE_COOL]);
+	of_property_read_u32(node, "vbatdet-pre-normal-mv",
+			&chg->vbatdet[BATT_TEMP_PRE_NORMAL]);
+	of_property_read_u32(node, "vbatdet-normal-mv",
+			&chg->vbatdet[BATT_TEMP_NORMAL]);
+	of_property_read_u32(node, "vbatdet-warm-mv",
+			&chg->vbatdet[BATT_TEMP_WARM]);
 
 	/* read temp region settings */
-	OF_PROP_READ(node, "cold-bat-decidegc",
-			chg->BATT_TEMP_T0, rc, 1);
+	of_property_read_u32(node, "cold-bat-decidegc",
+			&chg->BATT_TEMP_T0);
 	chg->BATT_TEMP_T0 = 0 - chg->BATT_TEMP_T0;
-	OF_PROP_READ(node, "little-cold-bat-decidegc",
-			chg->BATT_TEMP_T1, rc, 1);
-	OF_PROP_READ(node, "cool-bat-decidegc",
-			chg->BATT_TEMP_T2, rc, 1);
-	OF_PROP_READ(node, "little-cool-bat-decidegc",
-			chg->BATT_TEMP_T3, rc, 1);
-	OF_PROP_READ(node, "pre-normal-bat-decidegc",
-			chg->BATT_TEMP_T4, rc, 1);
-	OF_PROP_READ(node, "warm-bat-decidegc",
-			chg->BATT_TEMP_T5, rc, 1);
-	OF_PROP_READ(node, "hot-bat-decidegc",
-			chg->BATT_TEMP_T6, rc, 1);
+	of_property_read_u32(node, "little-cold-bat-decidegc",
+			&chg->BATT_TEMP_T1);
+	of_property_read_u32(node, "cool-bat-decidegc",
+			&chg->BATT_TEMP_T2);
+	of_property_read_u32(node, "little-cool-bat-decidegc",
+			&chg->BATT_TEMP_T3);
+	of_property_read_u32(node, "pre-normal-bat-decidegc",
+			&chg->BATT_TEMP_T4);
+	of_property_read_u32(node, "warm-bat-decidegc",
+			&chg->BATT_TEMP_T5);
+	of_property_read_u32(node, "hot-bat-decidegc",
+			&chg->BATT_TEMP_T6);
 
 	/* read other settings */
-	OF_PROP_READ(node, "qcom,cutoff-voltage-with-charger",
-				smbchg_cutoff_volt_with_charger, rc, 1);
+	of_property_read_u32(node, "qcom,cutoff-voltage-with-charger",
+				&smbchg_cutoff_volt_with_charger);
 
 	chg->chg_enabled = !(of_property_read_bool(node,
 						"qcom,charging-disabled"));
@@ -2540,24 +2519,6 @@ static void smb2_create_debugfs(struct smb2 *chip)
 
 #endif
 
-#ifdef CONFIG_PROC_FS
-static ssize_t write_ship_mode(struct file *file, const char __user *buf,
-				   size_t count, loff_t *ppos)
-{
-
-	if (count) {
-		g_chip->ship_mode = true;
-		pr_err(" * * * XCB * * * write_ship_mode\n");
-	}
-	return count;
-}
-
-static const struct file_operations proc_ship_mode_operations = {
-	.write		= write_ship_mode,
-	.llseek		= noop_llseek,
-};
-#endif
-
 static int smb2_probe(struct platform_device *pdev)
 {
 	struct smb2 *chip;
@@ -2571,7 +2532,6 @@ static int smb2_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	chg = &chip->chg;
-	g_chip = chg;
 	chg->dev = &pdev->dev;
 	chg->param = v1_params;
 	chg->debug_mask = &__debug_mask;
@@ -2724,11 +2684,6 @@ static int smb2_probe(struct platform_device *pdev)
 		goto cleanup;
 	}
 	batt_charge_type = val.intval;
-#ifdef CONFIG_PROC_FS
-	if (!proc_create("ship_mode", S_IFREG | S_IWUSR | S_IRUGO, NULL,
-		 &proc_ship_mode_operations))
-	pr_err("Failed to register proc interface\n");
-#endif
 
 	if (usb_present) {
 		schedule_delayed_work(&chg->non_standard_charger_check_work,
