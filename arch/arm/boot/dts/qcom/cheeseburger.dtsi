@@ -285,9 +285,8 @@
 	};
 	oem_serial_pinctrl {
 		compatible = "oem,oem_serial_pinctrl";
-		pinctrl-names = "uart_pinctrl_active", "uart_pinctrl_deactive";
+		pinctrl-names = "uart_pinctrl_active";
 		pinctrl-0 = <&uart_console_active>;
-		pinctrl-1 = <&uart_console_deactive>;
 	};
 	bootloader_log {
 		compatible = "bootloader_log";
@@ -854,31 +853,6 @@
 	};
 };
 
-/*Anderson-Config_UARTPIN_as_GPIO*[*/
-&soc {
-	tlmm: pinctrl@03400000 {
-		uart_console_deactive: uart_console_deactive {
-			mux {
-				pins = "gpio4", "gpio5";
-				function = "gpio";
-			};
-
-			config {
-				pins = "gpio4", "gpio5";
-				drive-strength = <2>;
-				bias-pull-down;
-			};
-		};
-	};
-};
-
-&uartblsp2dm1 {
-	pinctrl-names = "uart_active", "uart_deactive";
-	pinctrl-0 = <&uart_console_active>;
-	pinctrl-1 = <&uart_console_deactive>;
-};
-/*Anderson-Config_UARTPIN_as_GPIO*]**/
-
 /* External Thermistors */
 &pm8998_vadc {
 	chan@4e {
@@ -1001,27 +975,8 @@
 	};
 };
 
-/*Anderson-Config_UARTPIN_as_GPIO*[*/
-&soc {
-	tlmm: pinctrl@03400000 {
-		uart_console_deactive: uart_console_deactive {
-			mux {
-				pins = "gpio4", "gpio5";
-				function = "gpio";
-			};
-
-			config {
-				pins = "gpio4", "gpio5";
-				drive-strength = <2>;
-				bias-disable;
-			};
-		};
-	};
-};
-
 &uartblsp2dm1 {
-	pinctrl-names = "uart_active", "uart_deactive";
+	pinctrl-names = "uart_active";
 	pinctrl-0 = <&uart_console_active>;
-	pinctrl-1 = <&uart_console_deactive>;
+	status = "okay";
 };
-/*Anderson-Config_UARTPIN_as_GPIO*]**/
