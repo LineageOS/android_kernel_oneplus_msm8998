@@ -1284,9 +1284,7 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 				op_set_fast_chg_allow(chg, false);
 			}
 		}
-		rc = vote(chg->usb_icl_votable, USER_VOTER,
-				!val->intval, 0);
-		rc = vote(chg->dc_suspend_votable, USER_VOTER,
+		rc = vote(chg->chg_disable_votable, USER_VOTER,
 				!val->intval, 0);
 		chg->chg_enabled = (bool)val->intval;
 		break;

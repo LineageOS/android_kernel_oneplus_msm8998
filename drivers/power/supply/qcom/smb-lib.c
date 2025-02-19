@@ -4848,6 +4848,11 @@ static int op_charging_en(struct smb_charger *chg, bool en)
 {
 	int rc;
 
+	if (en && !chg->chg_enabled) {
+		pr_warn("charging disabled by userspace\n");
+		return 0;
+	}
+
 	pr_err("enable=%d\n", en);
 	rc = smblib_masked_write(chg, CHARGING_ENABLE_CMD_REG,
 				 CHARGING_ENABLE_CMD_BIT,
