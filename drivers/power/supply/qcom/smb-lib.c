@@ -4919,6 +4919,10 @@ bool is_fastchg_allowed(struct smb_charger *chg)
 		return false;
 	if (chg->usb_enum_status)
 		return false;
+	if (!chg->chg_enabled) {
+		pr_err("fast charging is not allowed by userspace\n");
+		return false;
+	}
 	if (temp < 165 || temp > 430) {
 		if (temp != pre_temp)
 			pr_err("temp=%d is not allow to swith fastchg\n", temp);
