@@ -16,6 +16,24 @@
       "message": "did you test this? i\u0027ve not done any debugging, but disabling charging doesnt work with this chain.",
       "revId": "87106e1883aadb3fe8bb92aa7d4ee372d438ea51",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "abdb800b_477d6a5e",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 34924
+      },
+      "writtenOn": "2025-02-27T18:25:15Z",
+      "side": 1,
+      "message": "Yes, I tested it on the latest Lineage before submitting the patch. Let me clarify, these two patches are to fix https://gitlab.com/LineageOS/issues/android/-/issues/8115, where the battery icon in the status bar still shows as charging when the charging control threshold is reached, but the current is set to 0. This can be observed through the dmesg output, where the health HAL shows c\u003d0.",
+      "parentUuid": "18127796_b03501d0",
+      "revId": "87106e1883aadb3fe8bb92aa7d4ee372d438ea51",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
