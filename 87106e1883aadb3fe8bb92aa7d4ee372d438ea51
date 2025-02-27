@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "18127796_b03501d0",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 5911
+      },
+      "writtenOn": "2025-02-27T14:07:40Z",
+      "side": 1,
+      "message": "did you test this? i\u0027ve not done any debugging, but disabling charging doesnt work with this chain.",
+      "revId": "87106e1883aadb3fe8bb92aa7d4ee372d438ea51",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
